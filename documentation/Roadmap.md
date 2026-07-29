@@ -86,11 +86,18 @@ Verified end-to-end against the real production backend, D1, and R2 (2026-07-29)
 Source spec's Definition of Done (§96): "Ein Benutzer kann Bücher lesen und später weitermachen" (a user can read books and later continue). Sequenced as three stories in risk order — see `Architecture.md`'s Reader-related decision rows.
 
 - [x] Story 1 — reading-progress infrastructure (migration, `GET/POST /api/reading/*`, upsert) + TXT/Markdown readers, font-size controls, "Lesen" button
-- [ ] Story 2 — EPUB reader (CFI-based resume, chapters, font-size/theme injection)
+- [x] Story 2 — EPUB reader (CFI-based resume, chapters, font-size/theme injection)
 - [ ] Story 3 — PDF reader (canvas rendering, page navigation)
+
+Also landed this phase (not part of the original 3-story scope, added mid-phase per user request): reader-content/upload-form UI polish (issue #62/PR #63 — centered reader content, upload form as a card with a cover preview).
 
 Story 1 verified end-to-end against the real production backend, D1, and the deployed site (2026-07-29): uploaded a real TXT book and a real Markdown book → opened each in the reader → content rendered correctly (Markdown headings/bold/italic/links; `<script>` tags stripped) → scrolled, navigated away, reopened → resumed at the same position → deleted the books afterward. Found and fixed two real bugs during this pass:
 - Issue #57/PR #58 — `reading_progress.position` was saved with a comma decimal separator (`"0,2700"`) instead of a period, because `double.ToString("F4")` used the app's ambient German UI culture. Fixed with explicit `CultureInfo.InvariantCulture`.
 - Issue #59/PR #60 — deleting a book that had a `reading_progress` row failed with `500` (real D1 enforces the FK; the local test double didn't, so this wasn't caught until live testing). Fixed by deleting `reading_progress` in `deleteBook`, and by enabling `PRAGMA foreign_keys` in the test double so this class of bug is caught locally from now on.
 
-Frontend: 24/24 bUnit tests passing. Backend: 42/42 Vitest tests passing.
+Story 2 verified end-to-end against the real production backend, D1, and the deployed site (2026-07-29): uploaded two real EPUB files (a hand-built minimal one and one generated with `ebooklib`, both non-copyrighted test fixtures) → opened in the reader → chapters render, pagination (next/prev) works, font-size control changes rendered text size, CFI-based resume lands on the exact same content after reopening → deleted the books afterward. Found and fixed two real bugs during this pass:
+- Issue #65/PR #66 — book upload rejected a genuinely valid `.epub` file with "content does not match its .epub extension." Chrome on Windows without an ebook reader installed reports `.epub` files as `application/octet-stream` (the generic fallback for extensions with no OS MIME association), which the backend's strict MIME-hint check treated as a mismatch. Fixed by treating `application/octet-stream` as "unknown" (same as an empty `file.type`), not a mismatch.
+- Issue #67/PR #68 — the EPUB reader threw `"No Section Found"` on every open. `bytes.buffer` (from a `byte[]` JS interop parameter) is a view into a reused/pooled buffer, not the exact call data — passing it straight to `ePub()` fed JSZip garbage. Fixed by slicing to `byteOffset`/`byteLength` first.
+- Also diagnosed (not a bug, no fix needed): after both fixes, the reader still appeared to hang when driven through browser automation. Root cause was the automation tab being backgrounded (`document.hidden === true`), which makes Chrome throttle `requestAnimationFrame` — epub.js's paginated layout depends on it. Confirmed by patching `requestAnimationFrame` to fire immediately during diagnosis, at which point rendering, pagination, and CFI resume all worked correctly. Real users with a visible/focused tab are unaffected. Worth remembering for Story 3 (PDF/canvas rendering likely has the same rAF dependency) and any future live-verification of rAF-driven rendering.
+
+Frontend: 25/25 bUnit tests passing. Backend: 44/44 Vitest tests passing.
