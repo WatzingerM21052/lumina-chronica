@@ -30,22 +30,10 @@ const instances = new Map();
 export async function init(elementId, bytes, initialCfi, fontSize) {
     await ensureLibsLoaded();
 
-    // `bytes` (a byte[] parameter) arrives as a Uint8Array view into a
-    // reused/pooled interop buffer -- bytes.buffer is that whole shared
-    // buffer, not just this call's data. Must slice by byteOffset/byteLength
-    // to get the actual EPUB bytes, or JSZip parses garbage (surfaced as
-    // epub.js's rendition.display() throwing "No Section Found").
+    // Defensive: a byte[] interop parameter is *usually* a Uint8Array over
+    // its own exactly-sized buffer, but slicing to byteOffset/byteLength
+    // guards against a pooled/offset view regardless.
     const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-    const view = new Uint8Array(arrayBuffer);
-    throw new Error("DIAG:" + JSON.stringify({
-        ctor: bytes.constructor.name,
-        byteOffset: bytes.byteOffset,
-        byteLength: bytes.byteLength,
-        rawBufferLength: bytes.buffer.byteLength,
-        slicedLength: arrayBuffer.byteLength,
-        first4: [view[0], view[1], view[2], view[3]],
-        last4: [view[view.length - 4], view[view.length - 3], view[view.length - 2], view[view.length - 1]],
-    }));
     const book = ePub(arrayBuffer);
     const rendition = book.renderTo(elementId, { width: "100%", height: "100%", flow: "paginated", spread: "none" });
     rendition.themes.fontSize(`${fontSize}px`);
