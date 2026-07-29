@@ -66,6 +66,10 @@ class FakeD1PreparedStatement {
 
 export function createFakeD1(): D1Database {
     const db = new DatabaseSync(":memory:");
+    // Real D1 enforces foreign keys; SQLite defaults this off, which let a
+    // real bug (deleting a book with a reading_progress row referencing it)
+    // pass locally and only surface against production. See issue #59.
+    db.exec("PRAGMA foreign_keys = ON;");
 
     const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../database/migrations");
     for (const file of readdirSync(migrationsDir).sort()) {
