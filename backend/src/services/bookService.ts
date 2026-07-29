@@ -42,7 +42,14 @@ function validateFile(file: File, allowedExtensions: readonly string[], mimeHint
         throw new ValidationError(`${label} must be one of: ${allowedExtensions.join(", ")}.`);
     }
     const hints = mimeHints[ext] ?? [];
-    if (hints.length > 0 && file.type && !hints.includes(file.type)) {
+    // "application/octet-stream" is the browser's generic fallback when the
+    // OS has no MIME association for the extension -- observed live for
+    // .epub uploads from Chrome on Windows (no ebook reader installed to
+    // register application/epub+zip), which made every real EPUB upload
+    // fail this check. Treated as "unknown", same as an empty file.type,
+    // rather than a mismatch -- an actual mismatch (e.g. a renamed .txt
+    // reporting text/plain) is still rejected.
+    if (hints.length > 0 && file.type && file.type !== "application/octet-stream" && !hints.includes(file.type)) {
         throw new ValidationError(`${label} content does not match its .${ext} extension.`);
     }
     if (file.size > maxBytes) {
