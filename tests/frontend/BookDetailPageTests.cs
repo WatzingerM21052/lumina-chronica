@@ -1,6 +1,7 @@
 using Bunit;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -104,5 +105,39 @@ public class BookDetailPageTests : BunitContext
         Assert.Equal(HttpMethod.Post, capturedRequest?.Method);
         Assert.Equal("/api/books/1/favorite", capturedRequest?.RequestUri?.AbsolutePath);
         Assert.Contains("is-favorite", cut.Find("button.book-detail-favorite").ClassList);
+    }
+
+    [Fact]
+    public void BookDetail_EditForm_ReplacingCover_CallsPutMultipartOnCoverEndpoint()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        HttpRequestMessage? coverRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson))
+            .When(r => r.Method == HttpMethod.Put && r.RequestUri!.AbsolutePath.EndsWith("/cover"), r =>
+            {
+                coverRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(bookJson);
+            })
+            .When(r => r.Method == HttpMethod.Put, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("cover bytes", "cover.jpg"));
+        cut.Find("form").Submit();
+
+        Assert.Equal(HttpMethod.Put, coverRequest?.Method);
+        Assert.Equal("/api/books/1/cover", coverRequest?.RequestUri?.AbsolutePath);
     }
 }

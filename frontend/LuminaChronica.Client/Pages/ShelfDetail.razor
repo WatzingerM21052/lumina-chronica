@@ -1,10 +1,13 @@
 @page "/library/shelves/{Id:int}"
 @attribute [Authorize]
+@implements IDisposable
+@using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
 @inject NavigationManager NavigationManager
 
 <PageTitle>@(_shelf?.Name ?? "Regal") — Lumina Chronica</PageTitle>
@@ -21,6 +24,17 @@ else if (_shelf is null)
 }
 else
 {
+    <div class="book-detail-cover">
+        @if (_coverObjectUrl is not null)
+        {
+            <img src="@_coverObjectUrl" alt="@_shelf.Name" />
+        }
+        else
+        {
+            <div class="book-card-cover-placeholder">📚</div>
+        }
+    </div>
+
     @if (!_isEditing)
     {
         <h1>@_shelf.Name</h1>
@@ -49,6 +63,14 @@ else
             {
                 <p class="form-error">@_saveErrorMessage</p>
             }
+            <div class="form-group">
+                <label for="shelf-edit-cover">Regalbild ersetzen</label>
+                <InputFile id="shelf-edit-cover" OnChange="OnEditCoverSelected" />
+                @if (_coverSaveErrorMessage is not null)
+                {
+                    <p class="form-error">@_coverSaveErrorMessage</p>
+                }
+            </div>
             <div class="form-group">
                 <label for="shelf-edit-name">Name</label>
                 <InputText id="shelf-edit-name" @bind-Value="_editForm.Name" />
@@ -98,9 +120,12 @@ else
     private string? _loadErrorMessage;
     private ShelfBooksResponse? _books;
     private string? _booksErrorMessage;
+    private string? _coverObjectUrl;
 
     private bool _isEditing;
     private string? _saveErrorMessage;
+    private string? _coverSaveErrorMessage;
+    private IBrowserFile? _selectedEditCover;
     private EditFormModel _editForm = new();
     private bool _confirmingDelete;
 
@@ -117,10 +142,28 @@ else
         if (response is { Success: true, Data: not null })
         {
             _shelf = response.Data;
+            await LoadCoverAsync();
         }
         else
         {
             _loadErrorMessage = response?.Error?.Message ?? "Regal konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadCoverAsync()
+    {
+        if (_coverObjectUrl is not null)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
+            _coverObjectUrl = null;
+        }
+
+        if (_shelf?.CoverUrl is null) return;
+
+        var result = await ApiClient.GetBytesAsync(_shelf.CoverUrl);
+        if (result is { } cover)
+        {
+            _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
         }
     }
 
@@ -143,27 +186,54 @@ else
         if (_shelf is null) return;
         _editForm = new EditFormModel { Name = _shelf.Name, Description = _shelf.Description };
         _saveErrorMessage = null;
+        _coverSaveErrorMessage = null;
+        _selectedEditCover = null;
         _isEditing = true;
     }
+
+    private void OnEditCoverSelected(InputFileChangeEventArgs e) => _selectedEditCover = e.File;
 
     private async Task SaveAsync()
     {
         _saveErrorMessage = null;
+        _coverSaveErrorMessage = null;
+
         var response = await ApiClient.PutAsync<UpdateShelfRequest, Shelf>($"/api/shelves/{Id}", new UpdateShelfRequest
         {
             Name = _editForm.Name,
             Description = _editForm.Description,
         });
 
-        if (response is { Success: true, Data: not null })
-        {
-            _shelf = response.Data;
-            _isEditing = false;
-        }
-        else
+        if (response is not { Success: true, Data: not null })
         {
             _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            return;
         }
+
+        _shelf = response.Data;
+
+        if (_selectedEditCover is not null)
+        {
+            const long maxCoverBytes = 5 * 1024 * 1024;
+            using var content = new MultipartFormDataContent();
+            var streamContent = new StreamContent(_selectedEditCover.OpenReadStream(maxCoverBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedEditCover.ContentType) ? "application/octet-stream" : _selectedEditCover.ContentType);
+            content.Add(streamContent, "\"cover\"", $"\"{_selectedEditCover.Name}\"");
+
+            var coverResponse = await ApiClient.PutMultipartAsync<Shelf>($"/api/shelves/{Id}/cover", content);
+            if (coverResponse is { Success: true, Data: not null })
+            {
+                _shelf = coverResponse.Data;
+                await LoadCoverAsync();
+            }
+            else
+            {
+                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? "Regalbild konnte nicht ersetzt werden.";
+                return;
+            }
+        }
+
+        _isEditing = false;
     }
 
     private async Task DeleteShelfAsync()
@@ -187,6 +257,14 @@ else
         {
             await LoadShelfAsync();
             await LoadBooksAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_coverObjectUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
         }
     }
 

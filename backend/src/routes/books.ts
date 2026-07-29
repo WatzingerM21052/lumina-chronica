@@ -14,6 +14,7 @@ import {
     listBooks,
     removeFavorite,
     updateBook,
+    updateBookCover,
     type CreateBookInput,
     type UpdateBookInput,
 } from "../services/bookService";
@@ -109,6 +110,22 @@ booksRoute.put("/:id", requireAuth, async (c) => {
 
     try {
         const book = await updateBook(c.env.DB, c.get("userId"), bookId, body);
+        return c.json(success(book));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+booksRoute.put("/:id/cover", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    const body = await c.req.parseBody().catch(() => null);
+    const cover = body?.cover instanceof File ? body.cover : null;
+    if (!cover) return c.json(failure("VALIDATION_ERROR", "cover is required."), 400);
+
+    try {
+        const book = await updateBookCover(c.env.DB, c.env.STORAGE, c.get("userId"), bookId, cover);
         return c.json(success(book));
     } catch (err) {
         if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);

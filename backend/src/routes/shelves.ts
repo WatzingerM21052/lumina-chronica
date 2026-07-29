@@ -14,6 +14,7 @@ import {
     listShelves,
     removeBookFromShelf,
     updateShelf,
+    updateShelfCover,
     type CreateShelfInput,
     type UpdateShelfInput,
 } from "../services/shelfService";
@@ -68,6 +69,22 @@ shelvesRoute.put("/:id", requireAuth, async (c) => {
 
     try {
         const shelf = await updateShelf(c.env.DB, c.get("userId"), shelfId, body);
+        return c.json(success(shelf));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Shelf not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+shelvesRoute.put("/:id/cover", requireAuth, async (c) => {
+    const shelfId = Number(c.req.param("id"));
+    const body = await c.req.parseBody().catch(() => null);
+    const cover = body?.cover instanceof File ? body.cover : null;
+    if (!cover) return c.json(failure("VALIDATION_ERROR", "cover is required."), 400);
+
+    try {
+        const shelf = await updateShelfCover(c.env.DB, c.env.STORAGE, c.get("userId"), shelfId, cover);
         return c.json(success(shelf));
     } catch (err) {
         if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Shelf not found."), 404);

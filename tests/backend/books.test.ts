@@ -231,6 +231,44 @@ describe("GET/PUT/DELETE /api/books/:id", () => {
         expect(json.data.tags).toEqual(["Updated"]);
     });
 
+    it("replaces the cover via PUT /:id/cover, cleaning up the old R2 object", async () => {
+        const uploadRes = await uploadBook(tokenA, { title: "Book With Cover" }, makeEpubFile());
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const firstCoverForm = new FormData();
+        firstCoverForm.set("cover", new File(["first cover"], "cover.jpg", { type: "image/jpeg" }));
+        const firstRes = await app.request(`/api/books/${bookId}/cover`, { method: "PUT", headers: { Authorization: `Bearer ${tokenA}` }, body: firstCoverForm }, env);
+        expect(firstRes.status).toBe(200);
+        const firstJson = await readJson(firstRes);
+        expect(firstJson.data.coverUrl).toBe(`/api/books/${bookId}/cover`);
+
+        const getFirstCoverRes = await app.request(`/api/books/${bookId}/cover`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(getFirstCoverRes.status).toBe(200);
+
+        // Replace with a different extension -- the old .jpg object must be cleaned up.
+        const secondCoverForm = new FormData();
+        secondCoverForm.set("cover", new File(["second cover"], "cover.png", { type: "image/png" }));
+        const secondRes = await app.request(`/api/books/${bookId}/cover`, { method: "PUT", headers: { Authorization: `Bearer ${tokenA}` }, body: secondCoverForm }, env);
+        expect(secondRes.status).toBe(200);
+
+        const getSecondCoverRes = await app.request(`/api/books/${bookId}/cover`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(getSecondCoverRes.status).toBe(200);
+        expect(getSecondCoverRes.headers.get("Content-Type")).toBe("image/png");
+
+        const oldCoverObject = await env.STORAGE.get(`books/${bookId}/cover.jpg`);
+        expect(oldCoverObject).toBeNull();
+    });
+
+    it("returns 404 replacing another user's book cover", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const form = new FormData();
+        form.set("cover", new File(["cover bytes"], "cover.jpg", { type: "image/jpeg" }));
+        const res = await app.request(`/api/books/${bookId}/cover`, { method: "PUT", headers: { Authorization: `Bearer ${tokenB}` }, body: form }, env);
+        expect(res.status).toBe(404);
+    });
+
     it("deletes a book and its files", async () => {
         const uploadRes = await uploadBook(tokenA);
         const bookId = (await readJson(uploadRes)).data.id;

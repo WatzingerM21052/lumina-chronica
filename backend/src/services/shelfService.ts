@@ -110,6 +110,29 @@ export async function updateShelf(db: D1Database, ownerId: number, shelfId: numb
     return getShelf(db, ownerId, shelfId);
 }
 
+// Separate from updateShelf (JSON metadata only) since a cover replace is a
+// multipart upload -- mirrors bookService.ts's updateBookCover, including
+// best-effort cleanup of the old R2 object.
+export async function updateShelfCover(db: D1Database, storage: R2Bucket, ownerId: number, shelfId: number, cover: File): Promise<ShelfSummary> {
+    const row = await findOwnedShelfRow(db, ownerId, shelfId);
+    if (!row) throw new NotFoundError();
+
+    const coverExt = validateFile(cover, ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, "Cover image");
+    const coverKey = r2ShelfCoverKey(shelfId, coverExt);
+    const previousCoverKey = row.cover_url;
+
+    await storage.put(coverKey, await cover.arrayBuffer(), { httpMetadata: { contentType: cover.type || undefined } });
+    await db.prepare("UPDATE shelves SET cover_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(coverKey, shelfId).run();
+
+    if (previousCoverKey && previousCoverKey !== coverKey) {
+        await storage.delete(previousCoverKey).catch((err) => {
+            console.error(`Failed to delete old R2 cover ${previousCoverKey} after replacing shelf ${shelfId}'s cover:`, err);
+        });
+    }
+
+    return getShelf(db, ownerId, shelfId);
+}
+
 export async function deleteShelf(db: D1Database, storage: R2Bucket, ownerId: number, shelfId: number): Promise<void> {
     const row = await findOwnedShelfRow(db, ownerId, shelfId);
     if (!row) throw new NotFoundError();

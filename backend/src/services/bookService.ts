@@ -351,6 +351,31 @@ export async function updateBook(db: D1Database, ownerId: number, bookId: number
     return detail;
 }
 
+// Separate from updateBook (JSON metadata only) since a cover replace is a
+// multipart upload -- mirrors createBook's cover-handling, plus best-effort
+// cleanup of the old R2 object (the extension can change between covers).
+export async function updateBookCover(db: D1Database, storage: R2Bucket, ownerId: number, bookId: number, cover: File): Promise<BookDetail> {
+    const row = await findOwnedBookRow(db, ownerId, bookId);
+    if (!row) throw new NotFoundError();
+
+    const coverExt = validateFile(cover, ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, "Cover image");
+    const coverKey = r2CoverKey(bookId, coverExt);
+    const previousCoverKey = row.cover_url;
+
+    await storage.put(coverKey, await cover.arrayBuffer(), { httpMetadata: { contentType: cover.type || undefined } });
+    await db.prepare("UPDATE books SET cover_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(coverKey, bookId).run();
+
+    if (previousCoverKey && previousCoverKey !== coverKey) {
+        await storage.delete(previousCoverKey).catch((err) => {
+            console.error(`Failed to delete old R2 cover ${previousCoverKey} after replacing book ${bookId}'s cover:`, err);
+        });
+    }
+
+    const detail = await getBook(db, ownerId, bookId);
+    if (!detail) throw new Error("Book disappeared during cover update.");
+    return detail;
+}
+
 export async function deleteBook(db: D1Database, storage: R2Bucket, ownerId: number, bookId: number): Promise<void> {
     const row = await findOwnedBookRow(db, ownerId, bookId);
     if (!row) throw new NotFoundError();
