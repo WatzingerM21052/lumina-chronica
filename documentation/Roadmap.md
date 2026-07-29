@@ -106,7 +106,7 @@ Story 2 verified end-to-end against the real production backend, D1, and the dep
 Story 3 verified end-to-end against the real production backend, D1, and the deployed site (2026-07-29): uploaded a real PDF from the user's own library → opened in the reader → cover/pages render correctly with no worker-loading console errors on the deployed GitHub Pages subpath (the named risk from the original plan), page navigation and the page-jump input both work, resume lands on the correct page after reopening. No pdf.js-specific bugs found this time — the two regression tests added alongside Story 3 (asserting `EpubReader`/`PdfReader` actually receive the saved position, not a placeholder) meant the Story-2-class bug couldn't recur silently. Live-testing feedback after this story shipped led to the reader UX polish above (issue #79/PR #80).
 Frontend: 28/28 bUnit tests passing. Backend: 44/44 Vitest tests passing.
 
-**Phase 4 (Reader) is now complete** — all three stories shipped and live-verified, plus mid-phase UI/UX polish. Remaining phases per the Master Development Flow: Organization → Dashboard → Offline → v1.0 Release. Metadata extraction (title/cover/etc. auto-filled from uploaded files) was requested by the user mid-phase and is planned as a follow-up story reusing the epub.js/pdf.js libraries vendored here — see memory `phase4-reader-metadata-extraction-plan` — not yet scheduled.
+**Phase 4 (Reader) is now complete** — all three stories shipped and live-verified, plus mid-phase UI/UX polish. Remaining phases per the Master Development Flow: Organization → Dashboard → Offline → v1.0 Release.
 
 ### Cross-cutting design pass (2026-07-29, issue #82/PR #83-84)
 
@@ -117,3 +117,13 @@ After Phase 4 shipped, the user asked for a full app review: check for remaining
 - Live-verified in both library themes (light and dark) across Home, Library, BookDetail, BookUpload, Reader (EPUB + PDF), Settings, and Profile. Two issues found only through live verification and fixed same-day: heading vertical rhythm (h2/h3 had no top margin, so stacked sections looked cramped) and the EPUB theme injection (epub.js's documented `themes.register()`/`.select()` API didn't reliably apply in this build — switched to the `hooks.content` + `Contents.addStylesheetRules()` approach, which does).
 
 Frontend: 29/29 bUnit tests passing.
+
+### Upload metadata extraction (2026-07-29, issue #86/PR #87)
+
+The user's mid-Phase-4 request ("title, description, image, isbn and the other infos gets extracted from the uploaded file if possible") was picked up as a follow-up story once Phase 4's Reader stories had vendored epub.js/pdf.js to reuse — see `Architecture.md`'s "Upload metadata extraction" row.
+
+- Selecting an EPUB or PDF on the Upload page now pre-fills title/author/description/language/publisher/ISBN and the cover preview client-side, without ever overwriting a value the user already typed. TXT/MD are skipped (no container-level metadata to extract).
+- Live-verified against real files in `bookDownloads/` before writing any C# code (probed epub.js's `book.loaded.metadata`/`.cover` and pdf.js's `getMetadata()`/page-render directly in the browser console against real books first): confirmed `metadata.identifier` is a UUID rather than an ISBN for most epubBooks.com/Blyton titles, which shaped the ISBN-shape guard actually shipped, rather than assuming the field was trustworthy.
+- End-to-end verified on the deployed site after merge: uploaded a real EPUB with the extraction path active → book appeared in the library with the real extracted cover, confirming the new `ByteArrayContent` cover-upload path (previously untested, since it never had a caller before this feature) round-trips correctly through the backend and R2.
+
+Frontend: 32/32 bUnit tests passing.
