@@ -24,5 +24,6 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
+builder.Services.AddScoped<BlobUrlService>();
 
 await builder.Build().RunAsync();
