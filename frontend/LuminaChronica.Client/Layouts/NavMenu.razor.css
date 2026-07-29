@@ -1,22 +1,27 @@
 .nav-menu {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    gap: var(--space-1);
 }
 
 .nav-menu ::deep a {
     text-decoration: none;
-    color: var(--color-text-secondary);
+    color: var(--color-text-on-dark);
+    opacity: 0.72;
+    font-size: var(--font-size-small);
     padding: var(--space-1) var(--space-1);
     border-radius: var(--radius);
+    border-bottom: 2px solid transparent;
+    transition: opacity 0.15s ease, border-color 0.15s ease;
 }
 
 .nav-menu ::deep a:hover {
-    background-color: var(--color-bg-paper);
-    color: var(--color-text-primary);
+    opacity: 1;
+    color: var(--color-text-on-dark);
 }
 
 .nav-menu ::deep a.active {
-    color: var(--color-primary);
+    opacity: 1;
     font-weight: 600;
+    border-bottom-color: var(--color-gold-accent);
 }

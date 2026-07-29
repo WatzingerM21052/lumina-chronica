@@ -1,0 +1,59 @@
+/*
+  Self-hosted fonts (SIL Open Font License — see wwwroot/fonts/*-LICENSE.txt),
+  vendored the same way epub.js/pdf.js are: no CDN, no runtime dependency on
+  Google Fonts. Only the Latin subset is needed (covers German ä/ö/ü/ß —
+  U+0000-00FF) and only the specific static weights actually used.
+
+  Fraunces: display serif for headings/wordmark — an old-style serif with
+  real character (ink traps, high contrast), used sparingly at large sizes.
+  Literata: reading serif for the Reader page and long-form book text —
+  designed by Google specifically for on-screen reading comfort.
+*/
+
+@font-face {
+    font-family: "Fraunces";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/fraunces-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Fraunces";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("../fonts/fraunces-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Fraunces";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../fonts/fraunces-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Literata";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/literata-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Literata";
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/literata-latin-400-italic.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Literata";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("../fonts/literata-latin-600-normal.woff2") format("woff2");
+}

@@ -8,12 +8,31 @@
 
 <h2>Theme</h2>
 <div class="theme-picker">
-    <button class="btn" @onclick='() => SetThemeAsync("classic-library")'>Classic Library</button>
-    <button class="btn" @onclick='() => SetThemeAsync("modern-light")'>Modern Light</button>
-    <button class="btn" @onclick='() => SetThemeAsync("dark-library")'>Dark Library</button>
-    <button class="btn" @onclick='() => SetThemeAsync("system")'>System</button>
+    @foreach (var (value, label) in Themes)
+    {
+        <button class="btn @(_currentTheme == value ? "btn-primary" : "")" @onclick="() => SetThemeAsync(value)">@label</button>
+    }
 </div>
 
 @code {
-    private async Task SetThemeAsync(string theme) => await ThemeService.SetThemeAsync(theme);
+    private static readonly (string Value, string Label)[] Themes =
+    [
+        ("classic-library", "Classic Library"),
+        ("modern-light", "Modern Light"),
+        ("dark-library", "Dark Library"),
+        ("system", "System"),
+    ];
+
+    private string? _currentTheme;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentTheme = await ThemeService.GetThemeAsync();
+    }
+
+    private async Task SetThemeAsync(string theme)
+    {
+        await ThemeService.SetThemeAsync(theme);
+        _currentTheme = theme;
+    }
 }

@@ -10,8 +10,15 @@
     aspect-ratio: 2 / 3;
     border-radius: var(--radius, 4px);
     overflow: hidden;
-    background-color: var(--color-bg-light);
+    background-color: var(--color-bg-card);
     border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.book-card:hover .book-card-cover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
 }
 
 .book-card-cover img {
@@ -26,11 +33,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
-    color: var(--color-text-muted);
+    color: var(--color-text-disabled);
+}
+
+.book-card-cover-placeholder svg {
+    width: 40%;
+    height: 40%;
 }
 
 .book-card-title {
+    font-family: var(--font-family-display);
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -54,7 +66,7 @@
 
 .book-card-progress-bar {
     height: 100%;
-    background-color: var(--color-primary);
+    background-color: var(--color-secondary);
 }
 
 .book-card-small {
