@@ -56,7 +56,7 @@
         if (response is { Success: true, Data: not null })
         {
             await AuthStateProvider.MarkUserAsAuthenticatedAsync(response.Data.Token);
-            NavigationManager.NavigateTo("/");
+            NavigationManager.NavigateTo("");
             return;
         }
 

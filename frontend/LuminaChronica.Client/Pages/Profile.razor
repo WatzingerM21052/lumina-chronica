@@ -161,7 +161,7 @@ else
     {
         await ApiClient.PostAsync("/api/auth/logout");
         await AuthStateProvider.MarkUserAsLoggedOutAsync();
-        NavigationManager.NavigateTo("/");
+        NavigationManager.NavigateTo("");
     }
 
     private class ProfileFormModel
