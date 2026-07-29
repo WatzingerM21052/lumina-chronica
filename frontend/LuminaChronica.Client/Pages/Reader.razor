@@ -1,0 +1,156 @@
+@page "/library/books/{Id:int}/read"
+@attribute [Authorize]
+@implements IDisposable
+@using System.Text
+@using Markdig
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject ScrollTrackerService ScrollTracker
+@inject ReaderSettingsService ReaderSettings
+
+<PageTitle>@(_book?.Title ?? "Lesen") — Lumina Chronica</PageTitle>
+
+<a href="@($"library/books/{Id}")">← Zurück zum Buch</a>
+
+@if (_loadErrorMessage is not null)
+{
+    <p class="form-error">@_loadErrorMessage</p>
+}
+else if (_book is null)
+{
+    <LoadingIndicator Text="Buch wird geladen..." />
+}
+else if (_book.File is null)
+{
+    <p class="form-error">Für dieses Buch ist keine Datei hinterlegt.</p>
+}
+else
+{
+    <div class="reader-controls">
+        <button type="button" class="btn" @onclick="DecreaseFontSize">A-</button>
+        <span>@(_fontSize)px</span>
+        <button type="button" class="btn" @onclick="IncreaseFontSize">A+</button>
+    </div>
+
+    @if (_book.File.Format is "TXT" or "MD")
+    {
+        <div id="reader-content" class="reader-content" style="font-size: @(_fontSize)px">
+            @if (_book.File.Format == "TXT")
+            {
+                <pre>@_textContent</pre>
+            }
+            else
+            {
+                @((MarkupString)(_renderedMarkdown ?? string.Empty))
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">Dieses Format wird in einer späteren Story unterstützt.</p>
+    }
+}
+
+@code {
+    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().Build();
+    private static readonly TimeSpan SaveInterval = TimeSpan.FromSeconds(15);
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private Book? _book;
+    private string? _loadErrorMessage;
+    private string? _textContent;
+    private string? _renderedMarkdown;
+    private int _fontSize = 18;
+    private Timer? _saveTimer;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _fontSize = await ReaderSettings.GetFontSizeAsync();
+
+        var bookResponse = await ApiClient.GetAsync<Book>($"/api/books/{Id}");
+        if (bookResponse is not { Success: true, Data: not null })
+        {
+            _loadErrorMessage = bookResponse?.Error?.Message ?? "Buch konnte nicht geladen werden.";
+            return;
+        }
+        _book = bookResponse.Data;
+
+        if (_book.File is null || _book.File.Format is not ("TXT" or "MD"))
+        {
+            return;
+        }
+
+        var fileResult = await ApiClient.GetBytesAsync($"/api/books/{Id}/file");
+        if (fileResult is null)
+        {
+            _loadErrorMessage = "Buchdatei konnte nicht geladen werden.";
+            return;
+        }
+
+        var text = Encoding.UTF8.GetString(fileResult.Value.Bytes);
+        if (_book.File.Format == "MD")
+        {
+            _renderedMarkdown = Markdown.ToHtml(text, MarkdownPipeline);
+        }
+        else
+        {
+            _textContent = text;
+        }
+
+        var progressResponse = await ApiClient.GetAsync<ReadingProgress>($"/api/reading/{Id}");
+        var savedFraction = progressResponse is { Success: true, Data.Position: { } positionText } && double.TryParse(positionText, out var fraction)
+            ? fraction
+            : (double?)null;
+
+        StateHasChanged();
+
+        if (savedFraction is { } resumeFraction)
+        {
+            await Task.Delay(50); // let the content render before restoring scroll position
+            await ScrollTracker.SetScrollFractionAsync("reader-content", resumeFraction);
+        }
+
+        _saveTimer?.Dispose();
+        _saveTimer = new Timer(_ => _ = SaveProgressAsync(), null, SaveInterval, SaveInterval);
+    }
+
+    private async Task SaveProgressAsync()
+    {
+        if (_book?.File is null) return;
+
+        var fraction = await ScrollTracker.GetScrollFractionAsync("reader-content");
+        var request = new SaveProgressRequest
+        {
+            BookId = Id,
+            Position = fraction.ToString("F4"),
+            Percentage = Math.Round(fraction * 100, 1),
+        };
+        await ApiClient.PostAsync<SaveProgressRequest, ReadingProgress>("/api/reading/update", request);
+    }
+
+    private async Task IncreaseFontSize()
+    {
+        _fontSize = Math.Min(_fontSize + 2, 32);
+        await ReaderSettings.SetFontSizeAsync(_fontSize);
+    }
+
+    private async Task DecreaseFontSize()
+    {
+        _fontSize = Math.Max(_fontSize - 2, 12);
+        await ReaderSettings.SetFontSizeAsync(_fontSize);
+    }
+
+    public void Dispose()
+    {
+        _saveTimer?.Dispose();
+        if (_book?.File is not null)
+        {
+            _ = SaveProgressAsync();
+        }
+    }
+}

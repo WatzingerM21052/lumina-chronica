@@ -80,6 +80,10 @@ else
                 </dl>
 
                 <div class="form-actions">
+                    @if (_book.File is not null)
+                    {
+                        <a class="btn btn-primary" href="@($"library/books/{Id}/read")">Lesen</a>
+                    }
                     <button type="button" id="edit-button" class="btn" @onclick="StartEditing">Bearbeiten</button>
                     @if (!_confirmingDelete)
                     {
