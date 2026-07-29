@@ -1,0 +1,292 @@
+@page "/library/books/{Id:int}"
+@attribute [Authorize]
+@implements IDisposable
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_book?.Title ?? "Buch") — Lumina Chronica</PageTitle>
+
+<a href="library">← Zurück zur Bibliothek</a>
+
+@if (_loadErrorMessage is not null)
+{
+    <p class="form-error">@_loadErrorMessage</p>
+}
+else if (_book is null)
+{
+    <LoadingIndicator Text="Buch wird geladen..." />
+}
+else
+{
+    <div class="book-detail">
+        <div class="book-detail-cover">
+            @if (_coverObjectUrl is not null)
+            {
+                <img src="@_coverObjectUrl" alt="@_book.Title" />
+            }
+            else
+            {
+                <div class="book-card-cover-placeholder">📖</div>
+            }
+        </div>
+
+        <div class="book-detail-info">
+            @if (!_isEditing)
+            {
+                <h1>@_book.Title</h1>
+                @if (!string.IsNullOrWhiteSpace(_book.Author))
+                {
+                    <p class="text-muted">@_book.Author</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(_book.Description))
+                {
+                    <p>@_book.Description</p>
+                }
+
+                <dl class="book-detail-meta">
+                    @if (!string.IsNullOrWhiteSpace(_book.Genre))
+                    {
+                        <dt>Genre</dt><dd>@_book.Genre</dd>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_book.Language))
+                    {
+                        <dt>Sprache</dt><dd>@_book.Language</dd>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_book.Isbn))
+                    {
+                        <dt>ISBN</dt><dd>@_book.Isbn</dd>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_book.Publisher))
+                    {
+                        <dt>Verlag</dt><dd>@_book.Publisher</dd>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_book.ReleaseDate))
+                    {
+                        <dt>Erscheinungsdatum</dt><dd>@_book.ReleaseDate</dd>
+                    }
+                    @if (_book.Pages is { } pages)
+                    {
+                        <dt>Seiten</dt><dd>@pages</dd>
+                    }
+                    @if (_book.Tags.Count > 0)
+                    {
+                        <dt>Tags</dt><dd>@string.Join(", ", _book.Tags)</dd>
+                    }
+                </dl>
+
+                <div class="form-actions">
+                    <button type="button" id="edit-button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+                    @if (!_confirmingDelete)
+                    {
+                        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+                    }
+                    else
+                    {
+                        <span>Wirklich löschen?</span>
+                        <button type="button" class="btn" @onclick="DeleteAsync">Ja, löschen</button>
+                        <button type="button" class="btn" @onclick="() => _confirmingDelete = false">Abbrechen</button>
+                    }
+                </div>
+            }
+            else
+            {
+                <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+                    @if (_saveErrorMessage is not null)
+                    {
+                        <p class="form-error">@_saveErrorMessage</p>
+                    }
+
+                    <div class="form-group">
+                        <label for="edit-title">Titel</label>
+                        <InputText id="edit-title" @bind-Value="_editForm.Title" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-author">Autor</label>
+                        <InputText id="edit-author" @bind-Value="_editForm.Author" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-description">Beschreibung</label>
+                        <InputTextArea id="edit-description" @bind-Value="_editForm.Description" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-genre">Genre</label>
+                        <InputText id="edit-genre" @bind-Value="_editForm.Genre" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-language">Sprache</label>
+                        <InputText id="edit-language" @bind-Value="_editForm.Language" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-tags">Tags (durch Komma getrennt)</label>
+                        <InputText id="edit-tags" @bind-Value="_editForm.Tags" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-isbn">ISBN</label>
+                        <InputText id="edit-isbn" @bind-Value="_editForm.Isbn" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-publisher">Verlag</label>
+                        <InputText id="edit-publisher" @bind-Value="_editForm.Publisher" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-releaseDate">Erscheinungsdatum</label>
+                        <InputText id="edit-releaseDate" @bind-Value="_editForm.ReleaseDate" placeholder="JJJJ-MM-TT" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-pages">Seiten</label>
+                        <InputNumber id="edit-pages" @bind-Value="_editForm.Pages" />
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" disabled="@_isSaving">Speichern</button>
+                        <button type="button" class="btn" @onclick="CancelEditing">Abbrechen</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Book? _book;
+    private string? _loadErrorMessage;
+    private string? _coverObjectUrl;
+
+    private bool _isEditing;
+    private bool _isSaving;
+    private string? _saveErrorMessage;
+    private EditFormModel _editForm = new();
+
+    private bool _confirmingDelete;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadBookAsync();
+    }
+
+    private async Task LoadBookAsync()
+    {
+        _loadErrorMessage = null;
+        var response = await ApiClient.GetAsync<Book>($"/api/books/{Id}");
+        if (response is { Success: true, Data: not null })
+        {
+            _book = response.Data;
+            await LoadCoverAsync();
+        }
+        else
+        {
+            _loadErrorMessage = response?.Error?.Message ?? "Buch konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadCoverAsync()
+    {
+        if (_book?.CoverUrl is null) return;
+
+        var result = await ApiClient.GetBytesAsync(_book.CoverUrl);
+        if (result is { } cover)
+        {
+            _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+        }
+    }
+
+    private void StartEditing()
+    {
+        if (_book is null) return;
+
+        _editForm = new EditFormModel
+        {
+            Title = _book.Title,
+            Author = _book.Author,
+            Description = _book.Description,
+            Genre = _book.Genre,
+            Language = _book.Language,
+            Tags = string.Join(", ", _book.Tags),
+            Isbn = _book.Isbn,
+            Publisher = _book.Publisher,
+            ReleaseDate = _book.ReleaseDate,
+            Pages = _book.Pages,
+        };
+        _saveErrorMessage = null;
+        _isEditing = true;
+    }
+
+    private void CancelEditing() => _isEditing = false;
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _saveErrorMessage = null;
+
+        var request = new UpdateBookRequest
+        {
+            Title = _editForm.Title,
+            Author = _editForm.Author,
+            Description = _editForm.Description,
+            Genre = _editForm.Genre,
+            Language = _editForm.Language,
+            Tags = _editForm.Tags?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() ?? [],
+            Isbn = _editForm.Isbn,
+            Publisher = _editForm.Publisher,
+            ReleaseDate = _editForm.ReleaseDate,
+            Pages = _editForm.Pages,
+        };
+
+        var response = await ApiClient.PutAsync<UpdateBookRequest, Book>($"/api/books/{Id}", request);
+        if (response is { Success: true, Data: not null })
+        {
+            _book = response.Data;
+            _isEditing = false;
+        }
+        else
+        {
+            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen. Bitte versuche es erneut.";
+        }
+
+        _isSaving = false;
+    }
+
+    private async Task DeleteAsync()
+    {
+        var deleted = await ApiClient.DeleteAsync($"/api/books/{Id}");
+        if (deleted)
+        {
+            NavigationManager.NavigateTo("library");
+        }
+        else
+        {
+            _confirmingDelete = false;
+            _loadErrorMessage = "Löschen fehlgeschlagen. Bitte versuche es erneut.";
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_coverObjectUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
+        }
+    }
+
+    private class EditFormModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string? Author { get; set; }
+        public string? Description { get; set; }
+        public string? Genre { get; set; }
+        public string? Language { get; set; }
+        public string? Tags { get; set; }
+        public string? Isbn { get; set; }
+        public string? Publisher { get; set; }
+        public string? ReleaseDate { get; set; }
+        public int? Pages { get; set; }
+    }
+}
