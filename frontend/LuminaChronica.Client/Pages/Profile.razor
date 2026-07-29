@@ -1,0 +1,179 @@
+@page "/profile"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject LuminaAuthStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Profil — Lumina Chronica</PageTitle>
+
+<h1>Profil</h1>
+
+@if (_profile is null)
+{
+    <LoadingIndicator Text="Profil wird geladen..." />
+}
+else
+{
+    <h2>Konto</h2>
+    <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form">
+        @if (_profileErrorMessage is not null)
+        {
+            <p class="form-error">@_profileErrorMessage</p>
+        }
+        @if (_profileSuccessMessage is not null)
+        {
+            <p class="form-success">@_profileSuccessMessage</p>
+        }
+
+        <div class="form-group">
+            <label for="username">Benutzername</label>
+            <InputText id="username" @bind-Value="_profileForm.Username" />
+        </div>
+
+        <div class="form-group">
+            <label for="email">E-Mail</label>
+            <InputText id="email" type="email" @bind-Value="_profileForm.Email" />
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" disabled="@_isSavingProfile">Speichern</button>
+        </div>
+    </EditForm>
+
+    <h2>Passwort ändern</h2>
+    <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form">
+        @if (_passwordErrorMessage is not null)
+        {
+            <p class="form-error">@_passwordErrorMessage</p>
+        }
+        @if (_passwordSuccessMessage is not null)
+        {
+            <p class="form-success">@_passwordSuccessMessage</p>
+        }
+
+        <div class="form-group">
+            <label for="currentPassword">Aktuelles Passwort</label>
+            <InputText id="currentPassword" type="password" @bind-Value="_passwordForm.CurrentPassword" />
+        </div>
+
+        <div class="form-group">
+            <label for="newPassword">Neues Passwort</label>
+            <InputText id="newPassword" type="password" @bind-Value="_passwordForm.NewPassword" />
+        </div>
+
+        <div class="form-group">
+            <label for="confirmNewPassword">Neues Passwort bestätigen</label>
+            <InputText id="confirmNewPassword" type="password" @bind-Value="_passwordForm.ConfirmNewPassword" />
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" disabled="@_isSavingPassword">Passwort ändern</button>
+        </div>
+    </EditForm>
+
+    <div class="form-actions">
+        <button type="button" class="btn" @onclick="LogoutAsync">Abmelden</button>
+    </div>
+}
+
+@code {
+    private UserProfile? _profile;
+    private ProfileFormModel _profileForm = new();
+    private PasswordFormModel _passwordForm = new();
+
+    private bool _isSavingProfile;
+    private string? _profileErrorMessage;
+    private string? _profileSuccessMessage;
+
+    private bool _isSavingPassword;
+    private string? _passwordErrorMessage;
+    private string? _passwordSuccessMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await ApiClient.GetAsync<UserProfile>("/api/users/me");
+        if (response is { Success: true, Data: not null })
+        {
+            _profile = response.Data;
+            _profileForm = new ProfileFormModel { Username = _profile.Username, Email = _profile.Email };
+        }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        _isSavingProfile = true;
+        _profileErrorMessage = null;
+        _profileSuccessMessage = null;
+
+        var request = new UpdateProfileRequest { Username = _profileForm.Username, Email = _profileForm.Email };
+        var response = await ApiClient.PutAsync<UpdateProfileRequest, UserProfile>("/api/users/me", request);
+
+        if (response is { Success: true, Data: not null })
+        {
+            _profile = response.Data;
+            _profileSuccessMessage = "Gespeichert.";
+        }
+        else
+        {
+            _profileErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen. Bitte versuche es erneut.";
+        }
+
+        _isSavingProfile = false;
+    }
+
+    private async Task ChangePasswordAsync()
+    {
+        _passwordErrorMessage = null;
+        _passwordSuccessMessage = null;
+
+        if (_passwordForm.NewPassword != _passwordForm.ConfirmNewPassword)
+        {
+            _passwordErrorMessage = "Die neuen Passwörter stimmen nicht überein.";
+            return;
+        }
+
+        _isSavingPassword = true;
+
+        var request = new UpdateProfileRequest
+        {
+            CurrentPassword = _passwordForm.CurrentPassword,
+            NewPassword = _passwordForm.NewPassword,
+        };
+        var response = await ApiClient.PutAsync<UpdateProfileRequest, UserProfile>("/api/users/me", request);
+
+        if (response is { Success: true })
+        {
+            _passwordSuccessMessage = "Passwort geändert.";
+            _passwordForm = new PasswordFormModel();
+        }
+        else
+        {
+            _passwordErrorMessage = response?.Error?.Message ?? "Passwort ändern fehlgeschlagen. Bitte versuche es erneut.";
+        }
+
+        _isSavingPassword = false;
+    }
+
+    private async Task LogoutAsync()
+    {
+        await ApiClient.PostAsync("/api/auth/logout");
+        await AuthStateProvider.MarkUserAsLoggedOutAsync();
+        NavigationManager.NavigateTo("/");
+    }
+
+    private class ProfileFormModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    private class PasswordFormModel
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+        public string ConfirmNewPassword { get; set; } = string.Empty;
+    }
+}

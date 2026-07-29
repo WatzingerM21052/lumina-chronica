@@ -103,3 +103,42 @@ button,
 .loading-progress-text {
     text-align: center;
 }
+
+/* Minimal form styling for Login/Register/Profile -- real visual design
+   lands with the dedicated frontend-design pass, same as the rest of the
+   app's placeholder tokens. */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-width: 24rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.form-group input {
+    font-family: inherit;
+    font-size: var(--font-size-body);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-light);
+    color: var(--color-text-primary);
+}
+
+.form-error {
+    color: var(--color-error);
+}
+
+.form-success {
+    color: var(--color-success);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--space-1);
+}

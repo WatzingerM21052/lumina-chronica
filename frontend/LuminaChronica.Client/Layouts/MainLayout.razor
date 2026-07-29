@@ -5,7 +5,14 @@
     <header class="app-header">
         <a class="app-logo" href="">Lumina Chronica</a>
         <NavMenu />
-        <a class="app-profile" href="login">👤 Profil</a>
+        <AuthorizeView>
+            <Authorized>
+                <a class="app-profile" href="profile">👤 Profil</a>
+            </Authorized>
+            <NotAuthorized>
+                <a class="app-profile" href="login">👤 Anmelden</a>
+            </NotAuthorized>
+        </AuthorizeView>
     </header>
 
     <main class="app-content">
