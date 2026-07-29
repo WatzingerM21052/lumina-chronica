@@ -156,7 +156,7 @@
 
         using var content = new MultipartFormDataContent
         {
-            { new StringContent(_form.Title), "title" }
+            { new StringContent(_form.Title), QuoteFieldName("title") }
         };
         AddIfPresent(content, _form.Author, "author");
         AddIfPresent(content, _form.Description, "description");
@@ -166,12 +166,12 @@
         AddIfPresent(content, _form.Isbn, "isbn");
         AddIfPresent(content, _form.Publisher, "publisher");
         AddIfPresent(content, _form.ReleaseDate, "releaseDate");
-        if (_form.Pages is { } pages) content.Add(new StringContent(pages.ToString()), "pages");
+        if (_form.Pages is { } pages) content.Add(new StringContent(pages.ToString()), QuoteFieldName("pages"));
 
-        content.Add(BuildFileContent(_selectedFile, MaxFileBytes), "file", _selectedFile.Name);
+        content.Add(BuildFileContent(_selectedFile, MaxFileBytes), QuoteFieldName("file"), QuoteFieldName(_selectedFile.Name));
         if (_selectedCover is not null)
         {
-            content.Add(BuildFileContent(_selectedCover, MaxCoverBytes), "cover", _selectedCover.Name);
+            content.Add(BuildFileContent(_selectedCover, MaxCoverBytes), QuoteFieldName("cover"), QuoteFieldName(_selectedCover.Name));
         }
 
         var response = await ApiClient.PostMultipartAsync<Book>("/api/books/upload", content);
@@ -187,8 +187,19 @@
 
     private static void AddIfPresent(MultipartFormDataContent content, string? value, string name)
     {
-        if (!string.IsNullOrWhiteSpace(value)) content.Add(new StringContent(value), name);
+        if (!string.IsNullOrWhiteSpace(value)) content.Add(new StringContent(value), QuoteFieldName(name));
     }
+
+    // .NET's MultipartFormDataContent only quotes a Content-Disposition
+    // name/filename when it contains characters outside the plain HTTP
+    // "token" grammar -- "title" or "book.epub" don't, so it emits
+    // `name=title` unquoted. That's valid generic HTTP header syntax, but
+    // RFC 7578 (multipart/form-data) requires name/filename to always be a
+    // quoted-string, and the backend's parser (workerd's request.formData())
+    // enforces that strictly and rejects the unquoted form. Pre-wrapping the
+    // value in literal quotes forces .NET to emit it already-quoted instead
+    // of re-deriving quoting from the token grammar.
+    private static string QuoteFieldName(string value) => $"\"{value}\"";
 
     private static StreamContent BuildFileContent(IBrowserFile file, long maxBytes)
     {
