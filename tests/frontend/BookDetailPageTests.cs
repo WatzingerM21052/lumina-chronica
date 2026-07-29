@@ -51,4 +51,23 @@ public class BookDetailPageTests : BunitContext
 
         Assert.NotNull(cut.Find("#edit-title"));
     }
+
+    [Fact]
+    public void BookDetail_Tags_RenderAsLinksToFilteredLibrary()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":["Science Fiction","Classics"],"file":{"format":"EPUB","size":1000}
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        var tagLinks = cut.FindAll("dd a").ToList();
+
+        Assert.Equal(2, tagLinks.Count);
+        Assert.Equal("library?tag=Science%20Fiction", tagLinks[0].GetAttribute("href"));
+        Assert.Equal("Science Fiction", tagLinks[0].TextContent);
+    }
 }

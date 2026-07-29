@@ -75,7 +75,14 @@ else
                     }
                     @if (_book.Tags.Count > 0)
                     {
-                        <dt>Tags</dt><dd>@string.Join(", ", _book.Tags)</dd>
+                        <dt>Tags</dt>
+                        <dd>
+                            @for (var i = 0; i < _book.Tags.Count; i++)
+                            {
+                                var tag = _book.Tags[i];
+                                <a href="@($"library?tag={Uri.EscapeDataString(tag)}")">@tag</a>@(i < _book.Tags.Count - 1 ? ", " : "")
+                            }
+                        </dd>
                     }
                 </dl>
 

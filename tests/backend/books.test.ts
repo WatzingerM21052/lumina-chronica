@@ -131,6 +131,18 @@ describe("GET /api/books", () => {
         expect(pageJson.data.items).toHaveLength(2);
         expect(pageJson.data.total).toBe(3);
     });
+
+    it("filters by tag", async () => {
+        await uploadBook(tokenA, { title: "Dragon Tales", tags: "Fantasy, Dragons" });
+        await uploadBook(tokenA, { title: "Space Odyssey", tags: "Science Fiction" });
+        await uploadBook(tokenA, { title: "Dragon Riders", tags: "Fantasy" });
+
+        const res = await app.request("/api/books?tag=Fantasy", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.items).toHaveLength(2);
+        expect(json.data.items.map((b: { title: string }) => b.title).sort()).toEqual(["Dragon Riders", "Dragon Tales"]);
+    });
 });
 
 describe("GET/PUT/DELETE /api/books/:id", () => {

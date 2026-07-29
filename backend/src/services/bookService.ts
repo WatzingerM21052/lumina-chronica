@@ -235,6 +235,7 @@ export type ListBooksQuery = {
     page: number;
     pageSize: number;
     genre?: string;
+    tag?: string;
     search?: string;
     sort: string;
     order: "asc" | "desc";
@@ -249,6 +250,10 @@ export async function listBooks(db: D1Database, ownerId: number, query: ListBook
     if (query.genre) {
         conditions.push("genre = ?");
         params.push(query.genre);
+    }
+    if (query.tag) {
+        conditions.push("EXISTS (SELECT 1 FROM book_tags JOIN tags ON tags.id = book_tags.tag_id WHERE book_tags.book_id = books.id AND tags.name = ?)");
+        params.push(query.tag);
     }
     if (query.search) {
         conditions.push("(title LIKE ? OR author LIKE ?)");

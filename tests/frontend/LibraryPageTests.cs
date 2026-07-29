@@ -1,6 +1,7 @@
 using Bunit;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -42,5 +43,37 @@ public class LibraryPageTests : BunitContext
         Assert.Contains("Dune", cut.Markup);
         Assert.Contains("The Hobbit", cut.Markup);
         Assert.Equal(2, cut.FindAll("a.book-card").Count);
+    }
+
+    [Fact]
+    public void Library_TagFilterInput_IncludedInRequestQueryString()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler().When(r =>
+        {
+            capturedRequest = r;
+            return true;
+        }, _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Library>();
+        cut.Find("input[placeholder='Tag']").Input("Fantasy");
+        cut.Find("form").Submit();
+
+        Assert.Contains("tag=Fantasy", capturedRequest?.RequestUri?.Query);
+    }
+
+    [Fact]
+    public void Library_ReadsTagFromUrl_OnLoad()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+        Services.GetRequiredService<NavigationManager>().NavigateTo("library?tag=Fantasy");
+
+        var cut = Render<Library>();
+
+        Assert.Equal("Fantasy", cut.Find("input[placeholder='Tag']").GetAttribute("value"));
     }
 }
