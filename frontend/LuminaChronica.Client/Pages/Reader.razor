@@ -51,7 +51,7 @@ else
     }
     else if (_book.File.Format == "EPUB" && _epubBytes is not null)
     {
-        <EpubReader Bytes="_epubBytes" InitialCfi="_initialCfi" FontSize="_fontSize" OnProgress="HandleEpubProgress" />
+        <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" OnProgress="HandleEpubProgress" />
     }
     else
     {
