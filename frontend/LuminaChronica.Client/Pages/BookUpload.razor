@@ -1,0 +1,213 @@
+@page "/library/upload"
+@attribute [Authorize]
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Buch hinzufügen — Lumina Chronica</PageTitle>
+
+<h1>Buch hinzufügen</h1>
+
+<EditForm Model="_form" OnValidSubmit="SubmitAsync" class="auth-form">
+    @if (_errorMessage is not null)
+    {
+        <p class="form-error">@_errorMessage</p>
+    }
+
+    <div class="form-group">
+        <label for="title">Titel</label>
+        <InputText id="title" @bind-Value="_form.Title" />
+    </div>
+
+    <div class="form-group">
+        <label for="author">Autor</label>
+        <InputText id="author" @bind-Value="_form.Author" />
+    </div>
+
+    <div class="form-group">
+        <label for="description">Beschreibung</label>
+        <InputTextArea id="description" @bind-Value="_form.Description" />
+    </div>
+
+    <div class="form-group">
+        <label for="genre">Genre</label>
+        <InputText id="genre" @bind-Value="_form.Genre" />
+    </div>
+
+    <div class="form-group">
+        <label for="language">Sprache</label>
+        <InputText id="language" @bind-Value="_form.Language" />
+    </div>
+
+    <div class="form-group">
+        <label for="tags">Tags (durch Komma getrennt)</label>
+        <InputText id="tags" @bind-Value="_form.Tags" />
+    </div>
+
+    <div class="form-group">
+        <label for="isbn">ISBN</label>
+        <InputText id="isbn" @bind-Value="_form.Isbn" />
+    </div>
+
+    <div class="form-group">
+        <label for="publisher">Verlag</label>
+        <InputText id="publisher" @bind-Value="_form.Publisher" />
+    </div>
+
+    <div class="form-group">
+        <label for="releaseDate">Erscheinungsdatum</label>
+        <InputText id="releaseDate" @bind-Value="_form.ReleaseDate" placeholder="JJJJ-MM-TT" />
+    </div>
+
+    <div class="form-group">
+        <label for="pages">Seitenzahl</label>
+        <InputNumber id="pages" @bind-Value="_form.Pages" />
+    </div>
+
+    <div class="form-group">
+        <label for="file">Buchdatei (.epub, .pdf, .txt, .md — max. 50MB)</label>
+        <InputFile id="file" OnChange="OnFileSelectedAsync" />
+        @if (_fileError is not null)
+        {
+            <p class="form-error">@_fileError</p>
+        }
+    </div>
+
+    <div class="form-group">
+        <label for="cover">Cover (optional, .jpg/.png/.webp — max. 5MB)</label>
+        <InputFile id="cover" OnChange="OnCoverSelectedAsync" />
+        @if (_coverError is not null)
+        {
+            <p class="form-error">@_coverError</p>
+        }
+    </div>
+
+    @if (_isSubmitting)
+    {
+        <LoadingIndicator Text="Wird hochgeladen..." />
+    }
+    else
+    {
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Hochladen</button>
+        </div>
+    }
+</EditForm>
+
+@code {
+    private const long MaxFileBytes = 50 * 1024 * 1024;
+    private const long MaxCoverBytes = 5 * 1024 * 1024;
+    private static readonly string[] AllowedFileExtensions = [".epub", ".pdf", ".txt", ".md"];
+    private static readonly string[] AllowedCoverExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+
+    private readonly UploadFormModel _form = new();
+    private IBrowserFile? _selectedFile;
+    private IBrowserFile? _selectedCover;
+    private string? _fileError;
+    private string? _coverError;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    private void OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _fileError = ValidateFile(e.File, AllowedFileExtensions, MaxFileBytes);
+    }
+
+    private void OnCoverSelectedAsync(InputFileChangeEventArgs e)
+    {
+        _selectedCover = e.File;
+        _coverError = ValidateFile(e.File, AllowedCoverExtensions, MaxCoverBytes);
+    }
+
+    private static string? ValidateFile(IBrowserFile file, string[] allowedExtensions, long maxBytes)
+    {
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+        if (!allowedExtensions.Contains(extension))
+        {
+            return $"Dateityp muss eines von {string.Join(", ", allowedExtensions)} sein.";
+        }
+        if (file.Size > maxBytes)
+        {
+            return $"Datei überschreitet das {maxBytes / (1024 * 1024)}MB-Limit.";
+        }
+        return null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        _errorMessage = null;
+
+        if (_selectedFile is null)
+        {
+            _errorMessage = "Bitte wähle eine Buchdatei aus.";
+            return;
+        }
+        if (_fileError is not null || _coverError is not null)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(_form.Title), "title" }
+        };
+        AddIfPresent(content, _form.Author, "author");
+        AddIfPresent(content, _form.Description, "description");
+        AddIfPresent(content, _form.Genre, "genre");
+        AddIfPresent(content, _form.Language, "language");
+        AddIfPresent(content, _form.Tags, "tags");
+        AddIfPresent(content, _form.Isbn, "isbn");
+        AddIfPresent(content, _form.Publisher, "publisher");
+        AddIfPresent(content, _form.ReleaseDate, "releaseDate");
+        if (_form.Pages is { } pages) content.Add(new StringContent(pages.ToString()), "pages");
+
+        content.Add(BuildFileContent(_selectedFile, MaxFileBytes), "file", _selectedFile.Name);
+        if (_selectedCover is not null)
+        {
+            content.Add(BuildFileContent(_selectedCover, MaxCoverBytes), "cover", _selectedCover.Name);
+        }
+
+        var response = await ApiClient.PostMultipartAsync<Book>("/api/books/upload", content);
+        if (response is { Success: true, Data: not null })
+        {
+            NavigationManager.NavigateTo("library");
+            return;
+        }
+
+        _errorMessage = response?.Error?.Message ?? "Hochladen fehlgeschlagen. Bitte versuche es erneut.";
+        _isSubmitting = false;
+    }
+
+    private static void AddIfPresent(MultipartFormDataContent content, string? value, string name)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) content.Add(new StringContent(value), name);
+    }
+
+    private static StreamContent BuildFileContent(IBrowserFile file, long maxBytes)
+    {
+        var streamContent = new StreamContent(file.OpenReadStream(maxBytes));
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType);
+        return streamContent;
+    }
+
+    private class UploadFormModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string? Author { get; set; }
+        public string? Description { get; set; }
+        public string? Genre { get; set; }
+        public string? Language { get; set; }
+        public string? Tags { get; set; }
+        public string? Isbn { get; set; }
+        public string? Publisher { get; set; }
+        public string? ReleaseDate { get; set; }
+        public int? Pages { get; set; }
+    }
+}
