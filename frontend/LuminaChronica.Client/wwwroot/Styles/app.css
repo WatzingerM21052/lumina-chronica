@@ -318,3 +318,28 @@ button,
     overflow: hidden;
     background-color: var(--color-bg-light);
 }
+
+.pdf-reader-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 48rem;
+    margin: 0 auto var(--space-1);
+}
+
+.pdf-reader-frame {
+    max-width: 48rem;
+    max-height: calc(100vh - 16rem);
+    margin: 0 auto;
+    overflow: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-light);
+    display: flex;
+    justify-content: center;
+}
+
+.pdf-reader-frame canvas {
+    max-width: 100%;
+    height: auto;
+}

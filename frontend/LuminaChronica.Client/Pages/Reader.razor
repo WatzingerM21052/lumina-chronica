@@ -53,6 +53,10 @@ else
     {
         <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" OnProgress="HandleEpubProgress" />
     }
+    else if (_book.File.Format == "PDF" && _pdfBytes is not null)
+    {
+        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" OnProgress="HandlePdfProgress" />
+    }
     else
     {
         <p class="text-muted">Dieses Format wird in einer späteren Story unterstützt.</p>
@@ -73,6 +77,9 @@ else
     private byte[]? _epubBytes;
     private string? _initialCfi;
     private EpubProgress? _latestEpubProgress;
+    private byte[]? _pdfBytes;
+    private int _initialPage = 1;
+    private PdfProgress? _latestPdfProgress;
     private int _fontSize = 18;
     private Timer? _saveTimer;
 
@@ -88,7 +95,7 @@ else
         }
         _book = bookResponse.Data;
 
-        if (_book.File is null || _book.File.Format is not ("TXT" or "MD" or "EPUB"))
+        if (_book.File is null || _book.File.Format is not ("TXT" or "MD" or "EPUB" or "PDF"))
         {
             return;
         }
@@ -107,6 +114,17 @@ else
         {
             _epubBytes = fileResult.Value.Bytes;
             _initialCfi = savedPosition;
+            _saveTimer?.Dispose();
+            _saveTimer = new Timer(_ => _ = SaveProgressAsync(), null, SaveInterval, SaveInterval);
+            return;
+        }
+
+        if (_book.File.Format == "PDF")
+        {
+            _pdfBytes = fileResult.Value.Bytes;
+            _initialPage = savedPosition is { } pageText && int.TryParse(pageText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var page)
+                ? page
+                : 1;
             _saveTimer?.Dispose();
             _saveTimer = new Timer(_ => _ = SaveProgressAsync(), null, SaveInterval, SaveInterval);
             return;
@@ -145,6 +163,12 @@ else
         return Task.CompletedTask;
     }
 
+    private Task HandlePdfProgress(PdfProgress progress)
+    {
+        _latestPdfProgress = progress;
+        return Task.CompletedTask;
+    }
+
     private async Task SaveProgressAsync()
     {
         if (_book?.File is null) return;
@@ -159,6 +183,17 @@ else
                 Chapter = epubProgress.ChapterIndex,
                 Position = epubProgress.Cfi,
                 Percentage = epubProgress.Percentage,
+            };
+        }
+        else if (_book.File.Format == "PDF")
+        {
+            if (_latestPdfProgress is not { } pdfProgress) return;
+            request = new SaveProgressRequest
+            {
+                BookId = Id,
+                Chapter = pdfProgress.Page,
+                Position = pdfProgress.Page.ToString(CultureInfo.InvariantCulture),
+                Percentage = pdfProgress.PageCount > 0 ? Math.Round(pdfProgress.Page * 100.0 / pdfProgress.PageCount, 1) : 0,
             };
         }
         else

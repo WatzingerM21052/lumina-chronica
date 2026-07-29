@@ -1,4 +1,5 @@
 using Bunit;
+using LuminaChronica.Client.Components;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,6 +99,59 @@ public class ReaderPageTests : BunitContext
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
 
         Assert.Contains("epub-reader-frame", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_PassesSavedCfiToEpubReader_NotALiteralPlaceholder()
+    {
+        // Regression test for issue #75: <EpubReader InitialCfi="_initialCfi" ...>
+        // (missing the @ prefix) compiled fine but bound the literal string
+        // "_initialCfi" instead of the field's actual value, since InitialCfi
+        // is string-typed and a bare identifier type-checks as a string
+        // literal. This asserts the real saved CFI reaches the child
+        // component's parameter, not the field's own name.
+        const string progressJson = """{"success":true,"data":{"chapter":2,"position":"epubcfi(/6/8!/4/2/1:0)","percentage":25.0}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
+            .WhenPathEndsWith("/api/reading/1", progressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        var epubReader = cut.FindComponent<EpubReader>();
+        Assert.Equal("epubcfi(/6/8!/4/2/1:0)", epubReader.Instance.InitialCfi);
+    }
+
+    [Fact]
+    public void Reader_RendersPdfReaderWithoutThrowing()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("PDF"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake pdf bytes", "application/pdf");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("pdf-reader-frame", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_PassesSavedPageToPdfReader_NotALiteralPlaceholder()
+    {
+        // Same regression class as above, for PdfReader.InitialPage.
+        const string progressJson = """{"success":true,"data":{"chapter":7,"position":"7","percentage":50.0}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("PDF"))
+            .WhenPathEndsWith("/api/reading/1", progressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake pdf bytes", "application/pdf");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        var pdfReader = cut.FindComponent<PdfReader>();
+        Assert.Equal(7, pdfReader.Instance.InitialPage);
     }
 
     [Fact]
