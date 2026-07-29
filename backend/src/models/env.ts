@@ -1,7 +1,8 @@
-// Cloudflare Worker bindings, configured in wrangler.toml (DB) and as a
+// Cloudflare Worker bindings, configured in wrangler.toml (DB, STORAGE) and as a
 // secret via `wrangler secret put JWT_SECRET` (never committed).
 export type Bindings = {
     DB: D1Database;
+    STORAGE: R2Bucket;
     JWT_SECRET: string;
 };
 

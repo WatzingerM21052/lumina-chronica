@@ -7,3 +7,7 @@ binding = "DB"
 database_name = "lumina-chronica-db"
 database_id = "58529253-b434-4051-9d5f-9b97f4d095dc"
 migrations_dir = "../database/migrations"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "lumina-chronica-storage"
