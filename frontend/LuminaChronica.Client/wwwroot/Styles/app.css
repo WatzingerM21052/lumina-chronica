@@ -274,6 +274,15 @@ select:focus-visible {
     color: var(--color-text-primary);
 }
 
+.library-favorite-filter {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
 .library-view-toggle {
     display: flex;
     gap: var(--space-1);
@@ -329,6 +338,26 @@ select:focus-visible {
 .book-detail-info {
     flex: 1;
     min-width: 0;
+}
+
+.book-detail-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.book-detail-favorite {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: var(--font-size-h2);
+    line-height: 1;
+    color: var(--color-text-disabled);
+    padding: 0;
+}
+
+.book-detail-favorite.is-favorite {
+    color: var(--color-gold-accent);
 }
 
 .book-detail-meta {

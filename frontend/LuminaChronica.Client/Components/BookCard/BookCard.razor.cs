@@ -27,9 +27,20 @@ public partial class BookCard : ComponentBase, IDisposable
 
     private string? _coverObjectUrl;
     private string? _loadedCoverUrl;
+    private bool _isFavorite;
+    private int? _loadedBookId;
 
     protected override async Task OnParametersSetAsync()
     {
+        // Book.IsFavorite only reflects the value at last fetch -- re-sync
+        // local state whenever a different book is bound, but let a toggle
+        // click's own optimistic update stand until the next real fetch.
+        if (Book.Id != _loadedBookId)
+        {
+            _loadedBookId = Book.Id;
+            _isFavorite = Book.IsFavorite;
+        }
+
         if (Book.CoverUrl == _loadedCoverUrl) return;
 
         if (_coverObjectUrl is not null)
@@ -45,6 +56,21 @@ public partial class BookCard : ComponentBase, IDisposable
         if (result is { } cover)
         {
             _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+        }
+    }
+
+    private async Task ToggleFavoriteAsync()
+    {
+        var wasFavorite = _isFavorite;
+        _isFavorite = !wasFavorite;
+
+        var succeeded = wasFavorite
+            ? await ApiClient.DeleteAsync($"/api/books/{Book.Id}/favorite")
+            : await ApiClient.PostAsync($"/api/books/{Book.Id}/favorite");
+
+        if (!succeeded)
+        {
+            _isFavorite = wasFavorite;
         }
     }
 

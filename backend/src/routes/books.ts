@@ -5,12 +5,14 @@ import { requireAuth } from "../middleware/auth";
 import {
     NotFoundError,
     ValidationError,
+    addFavorite,
     createBook,
     deleteBook,
     getBook,
     getBookCoverObject,
     getBookFileObject,
     listBooks,
+    removeFavorite,
     updateBook,
     type CreateBookInput,
     type UpdateBookInput,
@@ -84,6 +86,7 @@ booksRoute.get("/", requireAuth, async (c) => {
         pageSize,
         genre: q.genre || undefined,
         tag: q.tag || undefined,
+        favorite: q.favorite === "true",
         search: q.search || undefined,
         sort,
         order,
@@ -117,6 +120,28 @@ booksRoute.delete("/:id", requireAuth, async (c) => {
     const bookId = Number(c.req.param("id"));
     try {
         await deleteBook(c.env.DB, c.env.STORAGE, c.get("userId"), bookId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        throw err;
+    }
+});
+
+booksRoute.post("/:id/favorite", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    try {
+        await addFavorite(c.env.DB, c.get("userId"), bookId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        throw err;
+    }
+});
+
+booksRoute.delete("/:id/favorite", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    try {
+        await removeFavorite(c.env.DB, c.get("userId"), bookId);
         return c.body(null, 204);
     } catch (err) {
         if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);

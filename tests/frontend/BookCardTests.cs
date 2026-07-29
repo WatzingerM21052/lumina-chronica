@@ -49,4 +49,29 @@ public class BookCardTests : BunitContext
 
         Assert.Equal("library/books/1", cut.Find("a.book-card").GetAttribute("href"));
     }
+
+    [Fact]
+    public void BookCard_FavoriteToggle_CallsPostAndFlipsVisualState()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler().When(r =>
+        {
+            capturedRequest = r;
+            return true;
+        }, _ => RoutedFakeHttpMessageHandler.JsonResponse("{}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        // Overrides the ctor's canned "not found" client -- must be
+        // registered before Render triggers ApiClient's first resolution.
+        Services.AddSingleton(httpClient);
+
+        var cut = Render<BookCard>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        Assert.DoesNotContain("is-favorite", cut.Find("button.book-card-favorite").ClassList);
+
+        cut.Find("button.book-card-favorite").Click();
+
+        Assert.Equal(HttpMethod.Post, capturedRequest?.Method);
+        Assert.Equal("/api/books/1/favorite", capturedRequest?.RequestUri?.AbsolutePath);
+        Assert.Contains("is-favorite", cut.Find("button.book-card-favorite").ClassList);
+    }
 }
