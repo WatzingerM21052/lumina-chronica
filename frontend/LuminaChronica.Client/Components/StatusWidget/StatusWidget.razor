@@ -1,0 +1,30 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient Api
+
+@if (_loading)
+{
+    <LoadingIndicator Text="Verbinde mit Backend..." />
+}
+else if (_response is { Success: true, Data: not null })
+{
+    <p class="status-ok">Backend: @_response.Data.Status</p>
+}
+else
+{
+    <p class="status-error">
+        Backend nicht erreichbar@(_response?.Error is not null ? $" ({_response.Error.Message})" : "").
+    </p>
+}
+
+@code {
+    private bool _loading = true;
+    private ApiResponse<StatusResult>? _response;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _response = await Api.GetAsync<StatusResult>("/api/status");
+        _loading = false;
+    }
+}

@@ -1,0 +1,55 @@
+/*
+  System theme (Teil 5 §61.2 — "Übernimmt Betriebssystem"): follows the
+  OS light/dark preference. Reuses Modern Light for light mode and Dark
+  Library for dark mode rather than inventing a 5th palette.
+*/
+
+@media (prefers-color-scheme: light) {
+    [data-theme="system"] {
+        --color-primary: #3b6fe0;
+        --color-primary-hover: #2f5bc0;
+        --color-primary-active: #274ba3;
+        --color-secondary: #6b7280;
+        --color-secondary-hover: #565c69;
+        --color-gold-accent: #c9a227;
+        --color-info: #3b82c4;
+        --color-success: #2f8f4e;
+        --color-warning: #c48a1f;
+        --color-error: #c0392b;
+        --color-bg-paper: #f4f5f7;
+        --color-bg-light: #ffffff;
+        --color-bg-dark: #1f2328;
+        --color-bg-card: #ffffff;
+        --color-bg-reader: #ffffff;
+        --color-text-primary: #1f2328;
+        --color-text-secondary: #4b5563;
+        --color-text-muted: #8a93a3;
+        --color-text-disabled: #c3c9d1;
+        --color-border: #e2e5ea;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] {
+        --color-primary: #d9b04c;
+        --color-primary-hover: #c49a35;
+        --color-primary-active: #ad8526;
+        --color-secondary: #8a7358;
+        --color-secondary-hover: #766247;
+        --color-gold-accent: #d9b04c;
+        --color-info: #6fa8c9;
+        --color-success: #6fae6f;
+        --color-warning: #d9a441;
+        --color-error: #d9695c;
+        --color-bg-paper: #241b14;
+        --color-bg-light: #2e241b;
+        --color-bg-dark: #17110c;
+        --color-bg-card: #2b2118;
+        --color-bg-reader: #211a13;
+        --color-text-primary: #ece3d4;
+        --color-text-secondary: #c2b6a3;
+        --color-text-muted: #8f8371;
+        --color-text-disabled: #5f574a;
+        --color-border: #3c2f22;
+    }
+}

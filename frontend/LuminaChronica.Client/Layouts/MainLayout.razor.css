@@ -1,0 +1,39 @@
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background-color: var(--color-bg-light);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.app-logo {
+    font-weight: 700;
+    font-size: var(--font-size-h3);
+    color: var(--color-text-primary);
+    text-decoration: none;
+}
+
+.app-profile {
+    margin-left: auto;
+    text-decoration: none;
+    color: var(--color-text-secondary);
+}
+
+.app-content {
+    flex: 1;
+    padding: var(--space-3);
+}
+
+.app-footer {
+    padding: var(--space-2) var(--space-3);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--font-size-small);
+    text-align: center;
+}

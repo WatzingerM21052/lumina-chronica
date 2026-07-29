@@ -1,0 +1,12 @@
+@namespace LuminaChronica.Client.Components
+
+<div class="loading-indicator">
+    <svg class="loading-progress">
+        <circle r="40%" cx="50%" cy="50%" />
+        <circle r="40%" cx="50%" cy="50%" />
+    </svg>
+    @if (!string.IsNullOrWhiteSpace(Text))
+    {
+        <div class="loading-progress-text">@Text</div>
+    }
+</div>

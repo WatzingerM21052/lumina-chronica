@@ -33,6 +33,9 @@ jobs:
       - name: Publish Blazor WebAssembly app
         run: dotnet publish frontend/LuminaChronica.Client/LuminaChronica.Client.csproj -c Release -o release --nologo
 
+      - name: Set base href to the repo subpath (GitHub Pages project site)
+        run: sed -i 's|<base href="/" />|<base href="/lumina-chronica/" />|' release/wwwroot/index.html
+
       - name: Add .nojekyll (so Pages serves Blazor's _framework/ folder)
         run: touch release/wwwroot/.nojekyll
 

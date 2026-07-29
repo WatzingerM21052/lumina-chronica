@@ -1,0 +1,14 @@
+@page "/not-found"
+@layout MainLayout
+@using LuminaChronica.Client.Components
+
+<PageTitle>Nicht gefunden — Lumina Chronica</PageTitle>
+
+<EmptyState Message="Diese Seite konnte nicht gefunden werden." ActionText="Zur Startseite" OnAction="GoHome" />
+
+@code {
+    [Inject]
+    private Microsoft.AspNetCore.Components.NavigationManager Nav { get; set; } = default!;
+
+    private void GoHome() => Nav.NavigateTo("");
+}

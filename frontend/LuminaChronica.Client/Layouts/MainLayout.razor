@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+@using LuminaChronica.Client.Components
+
+<div class="app-shell">
+    <header class="app-header">
+        <a class="app-logo" href="">Lumina Chronica</a>
+        <NavMenu />
+        <a class="app-profile" href="login">👤 Profil</a>
+    </header>
+
+    <main class="app-content">
+        <ErrorPage>
+            @Body
+        </ErrorPage>
+    </main>
+
+    <footer class="app-footer">
+        <span class="text-muted">Lumina Chronica — Where stories become knowledge and knowledge becomes worlds.</span>
+    </footer>
+</div>

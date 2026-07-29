@@ -1,0 +1,13 @@
+@namespace LuminaChronica.Client.Components
+
+<ErrorBoundary @ref="_errorBoundary">
+    <ChildContent>
+        @ChildContent
+    </ChildContent>
+    <ErrorContent>
+        <div class="error-state">
+            <p class="error-state-message">@Message</p>
+            <button class="btn btn-primary" @onclick="Reset">Erneut versuchen</button>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>

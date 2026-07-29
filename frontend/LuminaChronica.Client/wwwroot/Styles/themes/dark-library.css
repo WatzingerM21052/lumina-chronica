@@ -1,0 +1,32 @@
+/*
+  Dark Library theme (Teil 5 §61.2 — "dunkle Holztöne, angenehmer Nachtmodus").
+  Placeholder values, see classic-library.css for the reasoning.
+*/
+
+[data-theme="dark-library"] {
+    --color-primary: #d9b04c;
+    --color-primary-hover: #c49a35;
+    --color-primary-active: #ad8526;
+
+    --color-secondary: #8a7358;
+    --color-secondary-hover: #766247;
+
+    --color-gold-accent: #d9b04c;
+    --color-info: #6fa8c9;
+    --color-success: #6fae6f;
+    --color-warning: #d9a441;
+    --color-error: #d9695c;
+
+    --color-bg-paper: #241b14;
+    --color-bg-light: #2e241b;
+    --color-bg-dark: #17110c;
+    --color-bg-card: #2b2118;
+    --color-bg-reader: #211a13;
+
+    --color-text-primary: #ece3d4;
+    --color-text-secondary: #c2b6a3;
+    --color-text-muted: #8f8371;
+    --color-text-disabled: #5f574a;
+
+    --color-border: #3c2f22;
+}

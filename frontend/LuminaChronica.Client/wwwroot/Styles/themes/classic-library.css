@@ -1,0 +1,38 @@
+/*
+  Classic Library theme (Teil 5 §61.2 — marked "Standard"/default).
+  Values are placeholders: warm/parchment direction is specified in the
+  source docs, exact hex is not — real values land during the dedicated
+  frontend-design pass, not invented blind during scaffolding.
+  Applied both as the document default (:root) and explicitly via
+  [data-theme="classic-library"] so switching back to it after another
+  theme works the same way as switching to any other theme.
+*/
+
+:root,
+[data-theme="classic-library"] {
+    --color-primary: #7b4b2a;
+    --color-primary-hover: #6b3f22;
+    --color-primary-active: #5a351c;
+
+    --color-secondary: #a67c52;
+    --color-secondary-hover: #8f6942;
+
+    --color-gold-accent: #c9a227;
+    --color-info: #4a7a96;
+    --color-success: #4f7942;
+    --color-warning: #b8862b;
+    --color-error: #a23b2e;
+
+    --color-bg-paper: #f5ede0;
+    --color-bg-light: #ffffff;
+    --color-bg-dark: #2b211a;
+    --color-bg-card: #fbf6ec;
+    --color-bg-reader: #f7f0e3;
+
+    --color-text-primary: #2b211a;
+    --color-text-secondary: #5a4b3c;
+    --color-text-muted: #8a7a68;
+    --color-text-disabled: #b8ac9c;
+
+    --color-border: #ddd0ba;
+}

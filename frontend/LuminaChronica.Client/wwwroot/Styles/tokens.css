@@ -1,0 +1,39 @@
+/*
+  Design tokens that don't vary by theme.
+  Spacing values are exact per Technical Standards §1 (8px grid).
+  Font sizes are a placeholder scale — real values land alongside real
+  hex colors when the pages are actually designed (frontend-design pass),
+  not invented blind during scaffolding.
+*/
+
+:root {
+    /* Spacing (8px grid) */
+    --space-1: 8px;
+    --space-2: 16px;
+    --space-3: 24px;
+    --space-4: 32px;
+    --space-5: 48px;
+    --space-6: 64px;
+
+    /* Type scale — placeholder, see comment above */
+    --font-size-h1: 2rem;
+    --font-size-h2: 1.5rem;
+    --font-size-h3: 1.25rem;
+    --font-size-body-lg: 1.125rem;
+    --font-size-body: 1rem;
+    --font-size-small: 0.875rem;
+    --font-size-caption: 0.75rem;
+
+    /* UI typeface — no font is named in the source docs for UI chrome; a
+       plain system font stack until a real choice is made. */
+    --font-family-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    /* Reader typeface candidates per Teil 5 §62.2 — default to Georgia
+       (widely available) until the actual default is chosen. */
+    --font-family-reader: Literata, Merriweather, Georgia, serif;
+
+    /* Radius / shadow — not specified anywhere in the source docs;
+       conservative placeholders. */
+    --radius: 6px;
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
