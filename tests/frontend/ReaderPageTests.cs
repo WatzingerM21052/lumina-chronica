@@ -83,6 +83,24 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
+    public void Reader_RendersEpubReaderWithoutThrowing()
+    {
+        // Full epub.js behavior isn't practically unit-testable (real DOM/
+        // iframe rendering); this only proves the EPUB branch wires up and
+        // renders its container without an exception -- live verification
+        // covers CFI resume and pagination, same approach as covers/blob-URLs.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("epub-reader-frame", cut.Markup);
+    }
+
+    [Fact]
     public void Reader_ShowsErrorWhenBookHasNoFile()
     {
         const string noFileJson = """
