@@ -26,7 +26,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     {
         if (!firstRender) return;
 
-        _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/epubReader.js");
+        _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/epubReaderV2.js");
         if (_module is null) return; // no JS runtime backing this call (e.g. bUnit's default Loose mode)
 
         _dotNetRef = DotNetObjectReference.Create(this);
