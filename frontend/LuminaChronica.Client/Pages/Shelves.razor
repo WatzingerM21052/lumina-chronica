@@ -1,0 +1,148 @@
+@page "/library/shelves"
+@attribute [Authorize]
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Regale — Lumina Chronica</PageTitle>
+
+<div class="library-header">
+    <h1>Regale</h1>
+    <button type="button" class="btn btn-primary" @onclick="() => _showCreateForm = !_showCreateForm">
+        @(_showCreateForm ? "Abbrechen" : "Regal anlegen")
+    </button>
+</div>
+
+@if (_showCreateForm)
+{
+    <EditForm Model="_createForm" OnValidSubmit="CreateShelfAsync" class="book-form-card">
+        @if (_createErrorMessage is not null)
+        {
+            <p class="form-error">@_createErrorMessage</p>
+        }
+        <div class="form-group">
+            <label for="shelf-name">Name</label>
+            <InputText id="shelf-name" @bind-Value="_createForm.Name" />
+        </div>
+        <div class="form-group">
+            <label for="shelf-description">Beschreibung</label>
+            <InputTextArea id="shelf-description" @bind-Value="_createForm.Description" />
+        </div>
+        <div class="form-group">
+            <label for="shelf-cover">Regalbild (optional)</label>
+            <InputFile id="shelf-cover" OnChange="OnCoverSelected" />
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Anlegen</button>
+        </div>
+    </EditForm>
+}
+
+@if (_errorMessage is not null)
+{
+    <p class="form-error">@_errorMessage</p>
+}
+else if (_shelves is null)
+{
+    <LoadingIndicator Text="Regale werden geladen..." />
+}
+else if (_shelves.Count == 0)
+{
+    <EmptyState Message="Du hast noch keine Regale angelegt. Erstelle dein erstes Regal, um Bücher zu gruppieren."
+                ActionText="Regal anlegen"
+                OnAction="() => _showCreateForm = true" />
+}
+else
+{
+    <div class="library-grid">
+        @foreach (var shelf in _shelves)
+        {
+            <ShelfCard Shelf="shelf" />
+        }
+    </div>
+}
+
+@code {
+    private List<Shelf>? _shelves;
+    private string? _errorMessage;
+    private bool _showCreateForm;
+    private string? _createErrorMessage;
+    private readonly CreateShelfFormModel _createForm = new();
+    private IBrowserFile? _selectedCover;
+
+    protected override Task OnInitializedAsync() => LoadShelvesAsync();
+
+    private async Task LoadShelvesAsync()
+    {
+        _errorMessage = null;
+        var response = await ApiClient.GetAsync<List<Shelf>>("/api/shelves");
+        if (response is { Success: true, Data: not null })
+        {
+            _shelves = response.Data;
+        }
+        else
+        {
+            _errorMessage = response?.Error?.Message ?? "Regale konnten nicht geladen werden.";
+        }
+    }
+
+    private void OnCoverSelected(InputFileChangeEventArgs e) => _selectedCover = e.File;
+
+    private async Task CreateShelfAsync()
+    {
+        _createErrorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_createForm.Name))
+        {
+            _createErrorMessage = "Bitte gib einen Namen ein.";
+            return;
+        }
+
+        const long maxCoverBytes = 5 * 1024 * 1024;
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(_createForm.Name), QuoteFieldName("name") }
+        };
+        if (!string.IsNullOrWhiteSpace(_createForm.Description))
+        {
+            content.Add(new StringContent(_createForm.Description), QuoteFieldName("description"));
+        }
+        if (_selectedCover is not null)
+        {
+            var streamContent = new StreamContent(_selectedCover.OpenReadStream(maxCoverBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedCover.ContentType) ? "application/octet-stream" : _selectedCover.ContentType);
+            content.Add(streamContent, QuoteFieldName("cover"), QuoteFieldName(_selectedCover.Name));
+        }
+
+        var response = await ApiClient.PostMultipartAsync<Shelf>("/api/shelves", content);
+        if (response is { Success: true, Data: not null })
+        {
+            _showCreateForm = false;
+            _createForm.Name = string.Empty;
+            _createForm.Description = null;
+            _selectedCover = null;
+            await LoadShelvesAsync();
+        }
+        else
+        {
+            _createErrorMessage = response?.Error?.Message ?? "Regal konnte nicht angelegt werden.";
+        }
+    }
+
+    // Same RFC 7578 quoting requirement as BookUpload.razor's QuoteFieldName --
+    // .NET's MultipartFormDataContent only quotes a Content-Disposition
+    // name/filename when it contains characters outside the plain HTTP
+    // "token" grammar, but the backend's parser requires it always quoted.
+    private static string QuoteFieldName(string value) => $"\"{value}\"";
+
+    private class CreateShelfFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+}

@@ -1,0 +1,27 @@
+@namespace LuminaChronica.Client.Components
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+
+<a class="shelf-card" href="@($"library/shelves/{Shelf.Id}")">
+    <div class="shelf-card-cover">
+        @if (_coverObjectUrl is not null)
+        {
+            <img src="@_coverObjectUrl" alt="@Shelf.Name" />
+        }
+        else
+        {
+            <div class="shelf-card-cover-placeholder" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M4 4h16v3H4z" />
+                    <path d="M4 10.5h16v3H4z" />
+                    <path d="M4 17h16v3H4z" />
+                </svg>
+            </div>
+        }
+    </div>
+    <div class="shelf-card-info">
+        <div class="shelf-card-name">@Shelf.Name</div>
+        <div class="shelf-card-count">@Shelf.BookCount Bücher</div>
+    </div>
+</a>

@@ -17,6 +17,7 @@ import {
     type CreateBookInput,
     type UpdateBookInput,
 } from "../services/bookService";
+import { listShelfIdsForBook } from "../services/shelfService";
 
 export const booksRoute = new Hono<AppEnv>();
 
@@ -147,6 +148,17 @@ booksRoute.delete("/:id/favorite", requireAuth, async (c) => {
         if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
         throw err;
     }
+});
+
+// Used by Book Detail's "add to shelf" picker to render each shelf's
+// checkbox state.
+booksRoute.get("/:id/shelves", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    const book = await getBook(c.env.DB, c.get("userId"), bookId);
+    if (!book) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+
+    const shelfIds = await listShelfIdsForBook(c.env.DB, c.get("userId"), bookId);
+    return c.json(success(shelfIds));
 });
 
 const CONTENT_TYPES: Record<string, string> = {
