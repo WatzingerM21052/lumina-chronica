@@ -1,0 +1,49 @@
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish Blazor WebAssembly app
+        run: dotnet publish frontend/LuminaChronica.Client/LuminaChronica.Client.csproj -c Release -o release --nologo
+
+      - name: Add .nojekyll (so Pages serves Blazor's _framework/ folder)
+        run: touch release/wwwroot/.nojekyll
+
+      - name: Add 404.html fallback for client-side routing
+        run: cp release/wwwroot/index.html release/wwwroot/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: release/wwwroot
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

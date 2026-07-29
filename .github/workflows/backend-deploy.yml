@@ -1,0 +1,31 @@
+name: Deploy backend to Cloudflare Workers
+
+# Manual trigger only until CLOUDFLARE_API_TOKEN is added as a repo secret
+# (Settings → Secrets and variables → Actions). See documentation/Architecture.md
+# for why this isn't automated on push yet.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+
+      - run: npm ci
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: backend
+          command: deploy
