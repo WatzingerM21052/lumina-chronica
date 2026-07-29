@@ -98,6 +98,26 @@ public class ApiClient(HttpClient httpClient)
         }
     }
 
+    // For cover replacement -- a multipart/form-data body against an
+    // existing resource, mirroring PostMultipartAsync's shape but for PUT.
+    public async Task<ApiResponse<TResponse>?> PutMultipartAsync<TResponse>(
+        string relativeUrl, MultipartFormDataContent content, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PutAsync(relativeUrl, content, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return new ApiResponse<TResponse>
+            {
+                Success = false,
+                Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
+            };
+        }
+    }
+
     public async Task<bool> DeleteAsync(string relativeUrl, CancellationToken cancellationToken = default)
     {
         try

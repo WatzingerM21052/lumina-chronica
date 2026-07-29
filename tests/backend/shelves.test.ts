@@ -132,6 +132,28 @@ describe("PUT/DELETE /api/shelves/:id", () => {
         const bookRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
         expect(bookRes.status).toBe(200);
     });
+
+    it("replaces the cover via PUT /:id/cover", async () => {
+        const shelfId = await createShelf(tokenA);
+
+        const form = new FormData();
+        form.set("cover", new File(["cover bytes"], "cover.png", { type: "image/png" }));
+        const res = await app.request(`/api/shelves/${shelfId}/cover`, { method: "PUT", headers: { Authorization: `Bearer ${tokenA}` }, body: form }, env);
+        expect(res.status).toBe(200);
+        expect((await readJson(res)).data.coverUrl).toBe(`/api/shelves/${shelfId}/cover`);
+
+        const coverRes = await app.request(`/api/shelves/${shelfId}/cover`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(coverRes.status).toBe(200);
+    });
+
+    it("returns 404 replacing another user's shelf cover", async () => {
+        const shelfId = await createShelf(tokenA);
+
+        const form = new FormData();
+        form.set("cover", new File(["cover bytes"], "cover.jpg", { type: "image/jpeg" }));
+        const res = await app.request(`/api/shelves/${shelfId}/cover`, { method: "PUT", headers: { Authorization: `Bearer ${tokenB}` }, body: form }, env);
+        expect(res.status).toBe(404);
+    });
 });
 
 describe("POST/DELETE /api/shelves/:id/books/:bookId", () => {

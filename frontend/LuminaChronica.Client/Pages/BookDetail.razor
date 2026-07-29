@@ -1,6 +1,7 @@
 @page "/library/books/{Id:int}"
 @attribute [Authorize]
 @implements IDisposable
+@using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
@@ -135,6 +136,14 @@ else
                     }
 
                     <div class="form-group">
+                        <label for="edit-cover">Cover ersetzen</label>
+                        <InputFile id="edit-cover" OnChange="OnEditCoverSelected" />
+                        @if (_coverSaveErrorMessage is not null)
+                        {
+                            <p class="form-error">@_coverSaveErrorMessage</p>
+                        }
+                    </div>
+                    <div class="form-group">
                         <label for="edit-title">Titel</label>
                         <InputText id="edit-title" @bind-Value="_editForm.Title" />
                     </div>
@@ -196,6 +205,8 @@ else
     private bool _isEditing;
     private bool _isSaving;
     private string? _saveErrorMessage;
+    private string? _coverSaveErrorMessage;
+    private IBrowserFile? _selectedEditCover;
     private EditFormModel _editForm = new();
 
     private bool _confirmingDelete;
@@ -263,6 +274,12 @@ else
 
     private async Task LoadCoverAsync()
     {
+        if (_coverObjectUrl is not null)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
+            _coverObjectUrl = null;
+        }
+
         if (_book?.CoverUrl is null) return;
 
         var result = await ApiClient.GetBytesAsync(_book.CoverUrl);
@@ -307,15 +324,20 @@ else
             Pages = _book.Pages,
         };
         _saveErrorMessage = null;
+        _coverSaveErrorMessage = null;
+        _selectedEditCover = null;
         _isEditing = true;
     }
 
     private void CancelEditing() => _isEditing = false;
 
+    private void OnEditCoverSelected(InputFileChangeEventArgs e) => _selectedEditCover = e.File;
+
     private async Task SaveAsync()
     {
         _isSaving = true;
         _saveErrorMessage = null;
+        _coverSaveErrorMessage = null;
 
         var request = new UpdateBookRequest
         {
@@ -332,16 +354,38 @@ else
         };
 
         var response = await ApiClient.PutAsync<UpdateBookRequest, Book>($"/api/books/{Id}", request);
-        if (response is { Success: true, Data: not null })
-        {
-            _book = response.Data;
-            _isEditing = false;
-        }
-        else
+        if (response is not { Success: true, Data: not null })
         {
             _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen. Bitte versuche es erneut.";
+            _isSaving = false;
+            return;
         }
 
+        _book = response.Data;
+
+        if (_selectedEditCover is not null)
+        {
+            const long maxCoverBytes = 5 * 1024 * 1024;
+            using var content = new MultipartFormDataContent();
+            var streamContent = new StreamContent(_selectedEditCover.OpenReadStream(maxCoverBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedEditCover.ContentType) ? "application/octet-stream" : _selectedEditCover.ContentType);
+            content.Add(streamContent, "\"cover\"", $"\"{_selectedEditCover.Name}\"");
+
+            var coverResponse = await ApiClient.PutMultipartAsync<Book>($"/api/books/{Id}/cover", content);
+            if (coverResponse is { Success: true, Data: not null })
+            {
+                _book = coverResponse.Data;
+                await LoadCoverAsync();
+            }
+            else
+            {
+                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? "Cover konnte nicht ersetzt werden.";
+                _isSaving = false;
+                return;
+            }
+        }
+
+        _isEditing = false;
         _isSaving = false;
     }
 
