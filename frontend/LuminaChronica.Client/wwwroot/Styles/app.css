@@ -237,3 +237,26 @@ button,
 .book-detail-meta dt {
     color: var(--color-text-secondary);
 }
+
+.reader-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: var(--space-2) 0;
+}
+
+.reader-content {
+    max-width: 42rem;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-light);
+    line-height: 1.6;
+}
+
+.reader-content pre {
+    white-space: pre-wrap;
+    font-family: inherit;
+}
