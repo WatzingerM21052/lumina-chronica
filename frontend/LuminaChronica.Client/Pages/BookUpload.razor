@@ -7,16 +7,30 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
+@inject BlobUrlService BlobUrlService
+@implements IDisposable
 
 <PageTitle>Buch hinzufügen — Lumina Chronica</PageTitle>
 
 <h1>Buch hinzufügen</h1>
 
-<EditForm Model="_form" OnValidSubmit="SubmitAsync" class="auth-form">
+<EditForm Model="_form" OnValidSubmit="SubmitAsync" class="book-form-card">
     @if (_errorMessage is not null)
     {
         <p class="form-error">@_errorMessage</p>
     }
+
+    <div class="book-form-cover-preview">
+        @if (_coverPreviewUrl is not null)
+        {
+            <img src="@_coverPreviewUrl" alt="Cover-Vorschau" />
+        }
+        else
+        {
+            <div class="cover-placeholder"></div>
+        }
+        <span class="text-muted">Cover-Vorschau</span>
+    </div>
 
     <div class="form-group">
         <label for="title">Titel</label>
@@ -109,6 +123,7 @@
     private IBrowserFile? _selectedCover;
     private string? _fileError;
     private string? _coverError;
+    private string? _coverPreviewUrl;
     private bool _isSubmitting;
     private string? _errorMessage;
 
@@ -118,10 +133,33 @@
         _fileError = ValidateFile(e.File, AllowedFileExtensions, MaxFileBytes);
     }
 
-    private void OnCoverSelectedAsync(InputFileChangeEventArgs e)
+    private async Task OnCoverSelectedAsync(InputFileChangeEventArgs e)
     {
         _selectedCover = e.File;
         _coverError = ValidateFile(e.File, AllowedCoverExtensions, MaxCoverBytes);
+
+        if (_coverPreviewUrl is not null)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(_coverPreviewUrl);
+            _coverPreviewUrl = null;
+        }
+
+        if (_coverError is null)
+        {
+            using var stream = e.File.OpenReadStream(MaxCoverBytes);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var contentType = string.IsNullOrWhiteSpace(e.File.ContentType) ? "application/octet-stream" : e.File.ContentType;
+            _coverPreviewUrl = await BlobUrlService.CreateObjectUrlAsync(memoryStream.ToArray(), contentType);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_coverPreviewUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_coverPreviewUrl);
+        }
     }
 
     private static string? ValidateFile(IBrowserFile file, string[] allowedExtensions, long maxBytes)
