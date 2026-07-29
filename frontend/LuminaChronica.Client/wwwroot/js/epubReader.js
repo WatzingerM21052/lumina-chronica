@@ -37,7 +37,7 @@ export async function init(elementId, bytes, initialCfi, fontSize) {
     // epub.js's rendition.display() throwing "No Section Found").
     const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     const view = new Uint8Array(arrayBuffer);
-    console.log("[epubReader diag]", JSON.stringify({
+    throw new Error("DIAG:" + JSON.stringify({
         ctor: bytes.constructor.name,
         byteOffset: bytes.byteOffset,
         byteLength: bytes.byteLength,
