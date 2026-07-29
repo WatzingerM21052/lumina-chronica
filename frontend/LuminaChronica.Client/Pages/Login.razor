@@ -1,7 +1,66 @@
 @page "/login"
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject LuminaAuthStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>Anmelden — Lumina Chronica</PageTitle>
 
 <h1>Anmelden</h1>
 
-<p class="text-muted">Anmeldung und Registrierung folgen in Phase 2 (Authentication).</p>
+<EditForm Model="_request" OnValidSubmit="SubmitAsync" class="auth-form">
+    <DataAnnotationsValidator />
+
+    @if (_errorMessage is not null)
+    {
+        <p class="form-error">@_errorMessage</p>
+    }
+
+    <div class="form-group">
+        <label for="email">E-Mail</label>
+        <InputText id="email" type="email" @bind-Value="_request.Email" />
+    </div>
+
+    <div class="form-group">
+        <label for="password">Passwort</label>
+        <InputText id="password" type="password" @bind-Value="_request.Password" />
+    </div>
+
+    @if (_isSubmitting)
+    {
+        <LoadingIndicator Text="Anmelden..." />
+    }
+    else
+    {
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Anmelden</button>
+        </div>
+    }
+</EditForm>
+
+<p class="text-muted">Noch kein Konto? <a href="/register">Registrieren</a></p>
+
+@code {
+    private readonly LoginRequest _request = new();
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    private async Task SubmitAsync()
+    {
+        _isSubmitting = true;
+        _errorMessage = null;
+
+        var response = await ApiClient.PostAsync<LoginRequest, AuthResult>("/api/auth/login", _request);
+
+        if (response is { Success: true, Data: not null })
+        {
+            await AuthStateProvider.MarkUserAsAuthenticatedAsync(response.Data.Token);
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        _errorMessage = response?.Error?.Message ?? "Anmeldung fehlgeschlagen. Bitte versuche es erneut.";
+        _isSubmitting = false;
+    }
+}

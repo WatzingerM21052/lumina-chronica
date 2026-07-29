@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace LuminaChronica.Client.Services;
@@ -79,10 +80,16 @@ public class LuminaAuthStateProvider(TokenStore tokenStore) : AuthenticationStat
         return Convert.FromBase64String(padded);
     }
 
+    // Backend (crypto.ts) signs `{ sub, role, iat, exp }` -- lowercase keys.
     private class JwtPayload
     {
+        [JsonPropertyName("sub")]
         public int Sub { get; set; }
+
+        [JsonPropertyName("role")]
         public string Role { get; set; } = string.Empty;
+
+        [JsonPropertyName("exp")]
         public long Exp { get; set; }
     }
 }
