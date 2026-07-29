@@ -21,9 +21,13 @@ async function renderPage(elementId) {
     if (!container) return;
 
     const page = await entry.doc.getPage(entry.currentPage);
-    const containerWidth = container.clientWidth || 600;
     const unscaledViewport = page.getViewport({ scale: 1 });
-    const scale = containerWidth / unscaledViewport.width;
+    // Fit within both the container's width AND height so the whole page
+    // is visible without cropping/scrolling, regardless of the PDF's own
+    // page aspect ratio (portrait, landscape, wide illustrated pages, etc).
+    const availableWidth = container.clientWidth || 600;
+    const availableHeight = container.clientHeight || 800;
+    const scale = Math.min(availableWidth / unscaledViewport.width, availableHeight / unscaledViewport.height);
     const viewport = page.getViewport({ scale });
 
     let canvas = container.querySelector("canvas");
@@ -67,6 +71,17 @@ export async function prev(elementId) {
     if (!entry || entry.currentPage <= 1) return;
     entry.currentPage -= 1;
     await renderPage(elementId);
+}
+
+export async function goToPage(elementId, page) {
+    const entry = instances.get(elementId);
+    if (!entry) return 1;
+    const target = Math.min(Math.max(page, 1), entry.doc.numPages);
+    if (target !== entry.currentPage) {
+        entry.currentPage = target;
+        await renderPage(elementId);
+    }
+    return entry.currentPage;
 }
 
 export function destroy(elementId) {

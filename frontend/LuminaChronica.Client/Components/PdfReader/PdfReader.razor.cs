@@ -48,6 +48,15 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
         await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
     }
 
+    private async Task OnPageInputChangedAsync(ChangeEventArgs e)
+    {
+        if (_module is null) return;
+        if (!int.TryParse(e.Value?.ToString(), out var requestedPage)) return;
+
+        _currentPage = await _module.InvokeAsync<int>("goToPage", _elementId, requestedPage);
+        await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_module is not null)

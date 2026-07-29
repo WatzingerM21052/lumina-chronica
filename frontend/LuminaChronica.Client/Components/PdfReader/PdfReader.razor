@@ -4,7 +4,11 @@
 
 <div class="pdf-reader-nav">
     <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
-    <span>Seite @_currentPage / @_pageCount</span>
+    <span>
+        Seite
+        <input type="number" min="1" max="@_pageCount" value="@_currentPage" @onchange="OnPageInputChangedAsync" />
+        / @_pageCount
+    </span>
     <button type="button" class="btn" @onclick="NextAsync">Weiter ▶</button>
 </div>
 <div id="@_elementId" class="pdf-reader-frame"></div>
