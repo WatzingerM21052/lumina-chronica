@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using LuminaChronica.Client;
@@ -10,7 +11,17 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
     ?? throw new InvalidOperationException("ApiBaseUrl is not configured (wwwroot/appsettings.json).");
 
-builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<TokenStore>();
+builder.Services.AddScoped<LuminaAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<LuminaAuthStateProvider>());
+
+builder.Services.AddTransient<AuthHeaderHandler>();
+builder.Services
+    .AddHttpClient("LuminaChronicaApi", client => client.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<AuthHeaderHandler>();
+builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("LuminaChronicaApi"));
+
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 
