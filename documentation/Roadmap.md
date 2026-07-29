@@ -31,8 +31,27 @@ Definition of Done (Implementation Blueprint §93 / Execution Blueprint §116):
 
 Frontend and backend test suites both passing (2/2 bUnit, 3/3 Vitest). Backend CI deploy (`backend-deploy.yml`) exists but needs a `CLOUDFLARE_API_TOKEN` repo secret added by the repo owner before it can run — see Architecture.md.
 
-## Next phase: v1.0 (not yet planned in detail)
+## v1.0 — in progress
 
-Per the Execution Blueprint's Master Development Flow (§114): Authentication → Library → Reader → Organization → Dashboard → Offline → **v1.0 Release**. Each will be planned in its own pass once v0.2 is verified working, per the phase-gating rule above.
+Per the Execution Blueprint's Master Development Flow (§114): Authentication → Library → Reader → Organization → Dashboard → Offline → **v1.0 Release**. Each phase is planned in its own pass, per the phase-gating rule above.
 
-**Open decision to make when the Library phase is planned:** where book files (EPUB/PDF/TXT/Markdown) and covers actually get stored. R2 was the Master Project Bible's original assumption, but it requires adding a payment method to the Cloudflare account, which the user wants to avoid for a hobby project. Google Drive and Supabase Storage were evaluated as card-free alternatives (2026-07-29) — see `Architecture.md`'s "File storage" row for the tradeoffs. Decide this before starting the Library phase's implementation.
+### Phase 2 — Authentication (complete)
+
+Source spec's Definition of Done (§117): "Ein Benutzer kann sich vollständig anmelden und verwalten" (a user can fully register/log in/manage their account).
+
+- [x] Registrierung — `POST /api/auth/register`, creates `users` + `user_settings`
+- [x] Login — `POST /api/auth/login`
+- [x] Logout — `POST /api/auth/logout`
+- [x] Session — JWT in `localStorage`, `AuthenticationStateProvider`/`<AuthorizeView>` wired up
+- [x] Rollen — `USER`/`ADMIN` carried in the token, no role-gated endpoints yet (nothing needs one)
+- [x] Benutzerprofil — `/profile` page, `GET`/`PUT /api/users/me`, password change
+
+**Explicitly deferred** (spec §117 lists these too, but each pulls in a dependency this project has deliberately not taken on yet):
+- **Passwort zurücksetzen / E-Mail-Bestätigung** — need an email-sending provider, not yet evaluated (same cost-avoidance concern already raised about R2).
+- **Avatar** — needs file upload, which needs the file-storage backend decision below (deferred to Phase 3).
+
+Verified end-to-end against the real production backend and D1 (2026-07-29): register → JWT issued → login → profile update persists → password change + re-login → real remote `users.password_hash` confirmed hashed, not plaintext. Frontend: 7/7 bUnit tests passing. Backend: 20/20 Vitest tests passing (`auth.test.ts`, `users.test.ts`). See `Architecture.md`'s "Password hashing"/"Auth token"/"Token storage"/"Auth middleware" rows for the decisions made.
+
+### Next: Phase 3 — Library (not yet planned in detail)
+
+**Open decision to make when this phase is planned:** where book files (EPUB/PDF/TXT/Markdown) and covers actually get stored. R2 was the Master Project Bible's original assumption, but it requires adding a payment method to the Cloudflare account, which the user wants to avoid for a hobby project. Google Drive and Supabase Storage were evaluated as card-free alternatives (2026-07-29) — see `Architecture.md`'s "File storage" row for the tradeoffs. Decide this before starting the Library phase's implementation.
