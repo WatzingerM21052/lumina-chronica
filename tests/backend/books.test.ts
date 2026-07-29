@@ -77,6 +77,22 @@ describe("POST /api/books/upload", () => {
         expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
     });
 
+    it("rejects a file whose content type genuinely mismatches its extension", async () => {
+        const file = new File(["not an epub"], "book.epub", { type: "text/plain" });
+        const res = await uploadBook(tokenA, {}, file);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("accepts a file with a generic/unknown content type (no OS MIME association)", async () => {
+        // Observed live: Chrome on Windows without an ebook reader installed
+        // reports .epub files as application/octet-stream, not
+        // application/epub+zip -- must not be treated as a mismatch.
+        const file = new File(["fake epub bytes"], "book.epub", { type: "application/octet-stream" });
+        const res = await uploadBook(tokenA, {}, file);
+        expect(res.status).toBe(201);
+    });
+
     it("rejects an oversized file", async () => {
         const big = new File([new Uint8Array(51 * 1024 * 1024)], "book.epub", { type: "application/epub+zip" });
         const res = await uploadBook(tokenA, {}, big);
