@@ -27,6 +27,26 @@ function ensureLibsLoaded() {
 
 const instances = new Map();
 
+// epub.js renders into an isolated iframe, so it never sees the app's own
+// CSS -- without this, EPUB content is always black-on-white regardless of
+// the active theme, which reads as broken next to a dark theme's chrome.
+// Reads the *current* theme's resolved colors/reader font at open time
+// (rather than hardcoding a palette here) so it stays correct if the theme
+// tokens change.
+function applyAppTheme(rendition) {
+    const styles = getComputedStyle(document.documentElement);
+    const background = styles.getPropertyValue("--color-bg-reader").trim() || "#ffffff";
+    const color = styles.getPropertyValue("--color-text-primary").trim() || "#000000";
+    const linkColor = styles.getPropertyValue("--color-primary").trim() || color;
+    const fontFamily = styles.getPropertyValue("--font-family-reader").trim() || "serif";
+
+    rendition.themes.register("app", {
+        body: { background: `${background} !important`, color: `${color} !important`, "font-family": `${fontFamily} !important` },
+        a: { color: `${linkColor} !important` },
+    });
+    rendition.themes.select("app");
+}
+
 export async function init(elementId, bytes, initialCfi, fontSize) {
     await ensureLibsLoaded();
 
@@ -37,6 +57,7 @@ export async function init(elementId, bytes, initialCfi, fontSize) {
     const book = ePub(arrayBuffer);
     const rendition = book.renderTo(elementId, { width: "100%", height: "100%", flow: "paginated", spread: "none" });
     rendition.themes.fontSize(`${fontSize}px`);
+    applyAppTheme(rendition);
 
     instances.set(elementId, { book, rendition });
 

@@ -1,6 +1,7 @@
 /*
   Dark Library theme (Teil 5 §61.2 — "dunkle Holztöne, angenehmer Nachtmodus").
-  Placeholder values, see classic-library.css for the reasoning.
+  "Reading room by candlelight": the same brass/oxblood/paper materials as
+  Classic Library, lit from a single warm source instead of daylight.
 */
 
 [data-theme="dark-library"] {
@@ -8,8 +9,8 @@
     --color-primary-hover: #c49a35;
     --color-primary-active: #ad8526;
 
-    --color-secondary: #8a7358;
-    --color-secondary-hover: #766247;
+    --color-secondary: #b24b54;
+    --color-secondary-hover: #9c3e46;
 
     --color-gold-accent: #d9b04c;
     --color-info: #6fa8c9;
@@ -17,16 +18,17 @@
     --color-warning: #d9a441;
     --color-error: #d9695c;
 
-    --color-bg-paper: #241b14;
-    --color-bg-light: #2e241b;
-    --color-bg-dark: #17110c;
-    --color-bg-card: #2b2118;
-    --color-bg-reader: #211a13;
+    --color-bg-paper: #1c1510;
+    --color-bg-light: #251c14;
+    --color-bg-dark: #120d09;
+    --color-bg-card: #241c15;
+    --color-bg-reader: #201810;
 
-    --color-text-primary: #ece3d4;
-    --color-text-secondary: #c2b6a3;
+    --color-text-primary: #efe4d0;
+    --color-text-secondary: #c7b89c;
     --color-text-muted: #8f8371;
     --color-text-disabled: #5f574a;
+    --color-text-on-dark: #efe4d0;
 
     --color-border: #3c2f22;
 }

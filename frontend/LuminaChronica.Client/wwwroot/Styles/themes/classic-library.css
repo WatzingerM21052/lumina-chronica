@@ -1,38 +1,42 @@
 /*
   Classic Library theme (Teil 5 §61.2 — marked "Standard"/default).
-  Values are placeholders: warm/parchment direction is specified in the
-  source docs, exact hex is not — real values land during the dedicated
-  frontend-design pass, not invented blind during scaffolding.
-  Applied both as the document default (:root) and explicitly via
-  [data-theme="classic-library"] so switching back to it after another
-  theme works the same way as switching to any other theme.
+  "Reading room by day": aged paper, iron-gall ink, gilt-brass lettering,
+  oxblood leather bindings. Applied both as the document default (:root)
+  and explicitly via [data-theme="classic-library"] so switching back to
+  it after another theme works the same way as switching to any other.
 */
 
 :root,
 [data-theme="classic-library"] {
-    --color-primary: #7b4b2a;
-    --color-primary-hover: #6b3f22;
-    --color-primary-active: #5a351c;
+    /* Brass / gilt-lettering — primary interactive accent */
+    --color-primary: #8c6a24;
+    --color-primary-hover: #78591d;
+    --color-primary-active: #644a18;
 
-    --color-secondary: #a67c52;
-    --color-secondary-hover: #8f6942;
+    /* Oxblood leather — secondary/structural accent (progress fills,
+       active-nav underline, tags) */
+    --color-secondary: #6e2e34;
+    --color-secondary-hover: #5c262b;
 
-    --color-gold-accent: #c9a227;
-    --color-info: #4a7a96;
+    --color-gold-accent: #b08d2b;
+    --color-info: #3e7a93;
     --color-success: #4f7942;
     --color-warning: #b8862b;
     --color-error: #a23b2e;
 
-    --color-bg-paper: #f5ede0;
-    --color-bg-light: #ffffff;
-    --color-bg-dark: #2b211a;
+    --color-bg-paper: #f2e9d8;
+    --color-bg-light: #fbf6ec;
+    --color-bg-dark: #241a12;
     --color-bg-card: #fbf6ec;
     --color-bg-reader: #f7f0e3;
 
-    --color-text-primary: #2b211a;
-    --color-text-secondary: #5a4b3c;
-    --color-text-muted: #8a7a68;
+    --color-text-primary: #241a12;
+    --color-text-secondary: #5c4a37;
+    --color-text-muted: #8a7660;
     --color-text-disabled: #b8ac9c;
+    /* Fixed light text for content sitting on --color-bg-dark (the header),
+       which stays dark regardless of the light/dark mode this theme is in. */
+    --color-text-on-dark: #efe4d0;
 
-    --color-border: #ddd0ba;
+    --color-border: #dccba8;
 }

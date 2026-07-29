@@ -1,5 +1,11 @@
 @page "/"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject NavigationManager NavigationManager
 
 <PageTitle>Lumina Chronica</PageTitle>
 
@@ -8,9 +14,53 @@
 <StatusWidget />
 
 <h2>Deine Bibliothek</h2>
-<EmptyState Message="Deine Bibliothek ist noch leer. Füge dein erstes Buch hinzu und beginne deine Sammlung."
-            ActionText="Buch hinzufügen" />
+@if (_books is null)
+{
+    <LoadingIndicator Text="Bibliothek wird geladen..." />
+}
+else if (_books.Count == 0)
+{
+    <EmptyState Message="Deine Bibliothek ist noch leer. Füge dein erstes Buch hinzu und beginne deine Sammlung."
+                ActionText="Buch hinzufügen"
+                OnAction="GoToUpload" />
+}
+else
+{
+    <div class="library-grid">
+        @foreach (var book in _books)
+        {
+            <BookCard Book="book" />
+        }
+    </div>
+    @if (_totalBooks > _books.Count)
+    {
+        <p><a href="library">Ganze Bibliothek ansehen (@_totalBooks)</a></p>
+    }
+}
 
 <h2>Aktuelle Projekte</h2>
 <EmptyState Message="Du hast noch keine Projekte erstellt. Beginne mit deiner ersten Welt, Geschichte oder Kampagne."
             ActionText="Projekt erstellen" />
+
+@code {
+    private const int RecentBooksLimit = 6;
+
+    private List<Book>? _books;
+    private int _totalBooks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?sort=createdAt&order=desc&pageSize={RecentBooksLimit}");
+        if (response is { Success: true, Data: not null })
+        {
+            _books = response.Data.Items;
+            _totalBooks = response.Data.Total;
+        }
+        else
+        {
+            _books = [];
+        }
+    }
+
+    private void GoToUpload() => NavigationManager.NavigateTo("library/upload");
+}

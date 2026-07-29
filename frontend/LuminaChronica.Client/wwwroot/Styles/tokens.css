@@ -1,9 +1,12 @@
 /*
   Design tokens that don't vary by theme.
   Spacing values are exact per Technical Standards §1 (8px grid).
-  Font sizes are a placeholder scale — real values land alongside real
-  hex colors when the pages are actually designed (frontend-design pass),
-  not invented blind during scaffolding.
+
+  Typography: Fraunces (display serif, self-hosted — see fonts.css) for
+  headings/wordmark, used sparingly at larger sizes; Literata (reading
+  serif, self-hosted) for the Reader page and long-form book text; the
+  system UI stack for chrome (nav, buttons, forms, labels), so the display
+  serif's personality doesn't get diluted by overuse.
 */
 
 :root {
@@ -15,25 +18,35 @@
     --space-5: 48px;
     --space-6: 64px;
 
-    /* Type scale — placeholder, see comment above */
-    --font-size-h1: 2rem;
-    --font-size-h2: 1.5rem;
+    /* Type scale */
+    --font-size-h1: 2.75rem;
+    --font-size-h2: 1.75rem;
     --font-size-h3: 1.25rem;
     --font-size-body-lg: 1.125rem;
     --font-size-body: 1rem;
     --font-size-small: 0.875rem;
     --font-size-caption: 0.75rem;
 
-    /* UI typeface — no font is named in the source docs for UI chrome; a
-       plain system font stack until a real choice is made. */
+    --line-height-heading: 1.15;
+    --line-height-body: 1.6;
+
+    /* UI typeface — chrome (nav, buttons, forms, labels). No system font is
+       named in the source docs; a fast, always-available stack, kept plain
+       on purpose so it doesn't compete with the display serif. */
     --font-family-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-    /* Reader typeface candidates per Teil 5 §62.2 — default to Georgia
-       (widely available) until the actual default is chosen. */
-    --font-family-reader: Literata, Merriweather, Georgia, serif;
+    /* Display typeface — page titles, section headings, the wordmark. An
+       old-style serif with real ink-trap character (see fonts.css). */
+    --font-family-display: "Fraunces", Georgia, "Times New Roman", serif;
 
-    /* Radius / shadow — not specified anywhere in the source docs;
-       conservative placeholders. */
+    /* Reader typeface — the Reader page and other long-form book text
+       (descriptions, etc.). Designed by Google specifically for on-screen
+       reading comfort. */
+    --font-family-reader: "Literata", Georgia, "Times New Roman", serif;
+
+    /* Radius / shadow */
     --radius: 6px;
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
+    --radius-lg: 10px;
+    --shadow-card: 0 1px 3px rgba(30, 20, 10, 0.14), 0 1px 2px rgba(30, 20, 10, 0.08);
+    --shadow-card-hover: 0 8px 20px rgba(30, 20, 10, 0.18), 0 2px 6px rgba(30, 20, 10, 0.1);
 }
