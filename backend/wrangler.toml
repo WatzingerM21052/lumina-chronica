@@ -5,5 +5,5 @@ compatibility_date = "2026-07-29"
 [[d1_databases]]
 binding = "DB"
 database_name = "lumina-chronica-db"
-database_id = "PLACEHOLDER_SET_AFTER_D1_CREATE"
+database_id = "58529253-b434-4051-9d5f-9b97f4d095dc"
 migrations_dir = "../database/migrations"
