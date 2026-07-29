@@ -1,0 +1,10 @@
+@namespace LuminaChronica.Client.Components
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+
+<div class="pdf-reader-nav">
+    <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
+    <span>Seite @_currentPage / @_pageCount</span>
+    <button type="button" class="btn" @onclick="NextAsync">Weiter ▶</button>
+</div>
+<div id="@_elementId" class="pdf-reader-frame"></div>

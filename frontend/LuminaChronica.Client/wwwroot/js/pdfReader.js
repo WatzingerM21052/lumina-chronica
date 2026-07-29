@@ -1,0 +1,77 @@
+// Wraps vendored pdf.js (wwwroot/lib/pdfjs/) for the Reader page's PDF
+// branch. Modern pdf.js (v4+) only ships ES module builds -- no UMD/classic
+// script build exists anymore -- so this file is loaded as a module (same
+// dynamic import() mechanism already used for scrollTracker.js/blobUrl.js)
+// and imports pdf.min.mjs directly via a relative specifier, rather than
+// the <script>-injection approach epubReader.js uses for epub.js's UMD build.
+import * as pdfjsLib from "../lib/pdfjs/pdf.min.mjs";
+
+// Resolved relative to *this module's own URL* (import.meta.url), not the
+// page URL or a leading-slash absolute path -- the same class of bug as
+// issue #38 (works at dotnet run's "/" base href, silently breaks on the
+// deployed "/lumina-chronica/" subpath) if done wrong.
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("../lib/pdfjs/pdf.worker.min.mjs", import.meta.url).href;
+
+const instances = new Map();
+
+async function renderPage(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    const container = document.getElementById(elementId);
+    if (!container) return;
+
+    const page = await entry.doc.getPage(entry.currentPage);
+    const containerWidth = container.clientWidth || 600;
+    const unscaledViewport = page.getViewport({ scale: 1 });
+    const scale = containerWidth / unscaledViewport.width;
+    const viewport = page.getViewport({ scale });
+
+    let canvas = container.querySelector("canvas");
+    if (!canvas) {
+        canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+    }
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    const context = canvas.getContext("2d");
+    await page.render({ canvasContext: context, viewport }).promise;
+}
+
+export async function init(elementId, bytes, initialPage) {
+    // Same interop-buffer gotcha as epubReader.js: bytes.buffer is a
+    // reused/pooled buffer, not the exact call data -- must slice first.
+    const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    const doc = await pdfjsLib.getDocument({ data }).promise;
+    const page = Math.min(Math.max(initialPage || 1, 1), doc.numPages);
+
+    instances.set(elementId, { doc, currentPage: page });
+    await renderPage(elementId);
+
+    return doc.numPages;
+}
+
+export function getCurrentPage(elementId) {
+    return instances.get(elementId)?.currentPage ?? 1;
+}
+
+export async function next(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry || entry.currentPage >= entry.doc.numPages) return;
+    entry.currentPage += 1;
+    await renderPage(elementId);
+}
+
+export async function prev(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry || entry.currentPage <= 1) return;
+    entry.currentPage -= 1;
+    await renderPage(elementId);
+}
+
+export function destroy(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    entry.doc.destroy();
+    instances.delete(elementId);
+}
