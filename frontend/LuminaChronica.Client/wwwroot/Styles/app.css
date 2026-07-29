@@ -305,13 +305,14 @@ button,
 .epub-reader-nav {
     display: flex;
     justify-content: space-between;
-    max-width: 42rem;
+    max-width: 72rem;
     margin: 0 auto var(--space-1);
 }
 
 .epub-reader-frame {
-    max-width: 42rem;
-    height: calc(100vh - 16rem);
+    max-width: 72rem;
+    width: 100%;
+    height: calc(100vh - 11rem);
     margin: 0 auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
@@ -323,23 +324,46 @@ button,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 48rem;
+    max-width: 72rem;
     margin: 0 auto var(--space-1);
 }
 
+.pdf-reader-nav input[type="number"] {
+    width: 4rem;
+    text-align: center;
+    font-family: inherit;
+    font-size: var(--font-size-body);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-light);
+    color: var(--color-text-primary);
+    /* Hide the native up/down spinner -- it eats into the already-narrow
+       input and isn't needed since Enter/blur triggers the jump. */
+    -moz-appearance: textfield;
+}
+
+.pdf-reader-nav input[type="number"]::-webkit-outer-spin-button,
+.pdf-reader-nav input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .pdf-reader-frame {
-    max-width: 48rem;
-    max-height: calc(100vh - 16rem);
+    max-width: 72rem;
+    width: 100%;
+    height: calc(100vh - 11rem);
     margin: 0 auto;
-    overflow: auto;
+    overflow: hidden;
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     background-color: var(--color-bg-light);
     display: flex;
+    align-items: center;
     justify-content: center;
 }
 
 .pdf-reader-frame canvas {
     max-width: 100%;
-    height: auto;
+    max-height: 100%;
 }
