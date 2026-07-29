@@ -7,11 +7,12 @@ This document records the technical architecture of Lumina Chronica and — crit
 Not to be changed without explicit justification:
 
 - **Blazor WebAssembly** (frontend)
-- **Cloudflare architecture** (Workers / D1 / R2)
+- **Cloudflare architecture** (Workers / D1)
 - **Monorepo** (single repository for frontend + backend + docs)
 - **D1 database**
-- **R2 storage**
 - **Modular structure** (feature-based modules: Reader, Library, Project, Community, AI)
+
+**R2 storage is explicitly *not* in this protected list right now** — unlike the Master Project Bible's original assumption, the file-storage backend is an open decision pending Phase 3 (see the table below). Whatever gets chosen there becomes protected once decided.
 
 ## Stack
 
@@ -53,7 +54,7 @@ Every decision below follows the project's own priority order (Technical Standar
 |---|---|---|
 | Backend router | [Hono](https://hono.dev) | No router is named in the Master Project Bible. Hono is the standard lightweight, Workers-native router; its built-in `hono/cors` middleware directly handles cross-origin requests between the GitHub Pages frontend and the `workers.dev` backend, including OPTIONS preflight. CORS is configured to allow only the known frontend origin(s), per Technical Standards §7 ("CORS wird restriktiv konfiguriert"). |
 | D1 binding | Database `lumina-chronica-db`, Worker binding name `DB` | Not specified anywhere in the source docs; simple conventional name. |
-| R2 binding | Bucket `lumina-chronica-storage`, binding name `STORAGE`. Created in Phase 3 (file uploads), not Phase 0/1 — R2 requires a one-time manual enablement in the Cloudflare dashboard that cannot be done via API/CLI. Key layout per Technical Standards §4. | Deferred because it isn't needed yet and needs a manual account step first. |
+| File storage (books/covers/maps/etc.) | **Open decision, not yet made** — deferred to Phase 3 (Library/file uploads), when it's actually needed. R2 (as originally specified — 10GB free, no egress fees, but requires adding a card to the Cloudflare account and has a documented small verification hold) is one option; Google Drive and Supabase Storage (both card-free, but Drive doesn't scale to multi-user later and Supabase's free tier auto-pauses after 7 days idle) were also evaluated on 2026-07-29. See Roadmap.md's Phase 3 notes. | The user explicitly doesn't want to add a payment method for a hobby project without being sure it's needed — this is exactly the kind of protected-architecture change the AI Dev Guidelines require justifying before deciding, not baking in silently. Revisit when Phase 3 is actually planned. |
 | Migrations | `database/migrations/0001_initial.sql`, `0002_...` — 4-digit, per Technical Standards §3. Existing migrations are never edited; every schema change is a new file. | Explicit, binding convention; also matches `wrangler d1 migrations`' own default numbering, so no tooling mismatch. |
 | API response envelope | Every JSON response: success → `{"success": true, "data": {...}}`; error → `{"success": false, "error": {"code": "...", "message": "..."}}`. Standard HTTP status codes per Technical Standards §2. | Explicit, binding convention (Technical Standards §2) — supersedes the one bare `{"status":"online"}` example in the Implementation Blueprint, which predates this convention. |
 | Password hashing | WebCrypto `PBKDF2` via `crypto.subtle`, native to the Workers runtime. | bcrypt/argon2 rely on native modules unavailable in Workers. PBKDF2 is part of the Web Crypto standard library and satisfies "passwords werden ausschließlich gehasht gespeichert" (Technical Standards §7 / Teil 4 §58). Implemented in Phase 2. |
