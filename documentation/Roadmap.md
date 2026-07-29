@@ -52,6 +52,31 @@ Source spec's Definition of Done (§117): "Ein Benutzer kann sich vollständig a
 
 Verified end-to-end against the real production backend and D1 (2026-07-29): register → JWT issued → login → profile update persists → password change + re-login → real remote `users.password_hash` confirmed hashed, not plaintext. Frontend: 7/7 bUnit tests passing. Backend: 20/20 Vitest tests passing (`auth.test.ts`, `users.test.ts`). See `Architecture.md`'s "Password hashing"/"Auth token"/"Token storage"/"Auth middleware" rows for the decisions made.
 
-### Next: Phase 3 — Library (not yet planned in detail)
+Same-day follow-ups (2026-07-29): login now accepts a username *or* email (`identifier` field, issue #41/PR #42, see `Architecture.md`'s "Login identifier" row); OAuth (Google/GitHub) was explicitly deferred to a later phase rather than built now (backlog issue #40, no milestone).
 
-**Open decision to make when this phase is planned:** where book files (EPUB/PDF/TXT/Markdown) and covers actually get stored. R2 was the Master Project Bible's original assumption, but it requires adding a payment method to the Cloudflare account, which the user wants to avoid for a hobby project. Google Drive and Supabase Storage were evaluated as card-free alternatives (2026-07-29) — see `Architecture.md`'s "File storage" row for the tradeoffs. Decide this before starting the Library phase's implementation.
+### Phase 3 — Library (complete)
+
+Source spec's Definition of Done (§118): "Eigene Bücher können vollständig verwaltet werden" (a user's own books can be fully created/read/updated/deleted, browsed/searched/filtered/sorted).
+
+- [x] Buchmodell — `books`/`book_files`/`book_metadata`/`tags`/`book_tags` (migration `0002_books.sql`)
+- [x] Upload — `POST /api/books/upload` (multipart, metadata + file + optional cover)
+- [x] EPUB / PDF / TXT / Markdown — accepted upload formats (validated by extension/MIME, stored as-is; content *parsing* is Phase 4/Reader scope, see `Architecture.md`)
+- [x] Metadaten — title/author/description/genre/language/isbn/publisher/releaseDate/pages/tags, entered manually on upload and editable afterwards (`PUT /api/books/:id`)
+- [x] Cover — optional upload, served via an auth-checked streaming endpoint + frontend blob-URL pattern (not a public bucket URL)
+- [x] Bibliotheksübersicht — `/library` page
+- [x] Grid — grid view with `BookCard` (Normal size)
+- [x] Listenansicht — list view with `BookCard` (Small size)
+- [x] Suche — title/author search (`?search=`)
+- [x] Filter — genre filter (`?genre=`)
+- [x] Sortierung — sort by created date/title/author, asc/desc (`?sort=&order=`)
+
+**File-storage decision resolved** (was the open item blocking this phase): **Cloudflare R2** — the user chose it explicitly after seeing the concrete tradeoffs of the card-free alternatives (Supabase's 1GB cap + 7-day auto-pause; Google Drive's OAuth complexity). See `Architecture.md`'s "File storage" row.
+
+**Explicitly out of scope this phase:**
+- **Shelves** (`shelves`/`shelf_books`) — not in this phase's item list, belongs to the Organization epic (#7).
+- **EPUB/PDF content parsing** (metadata auto-extraction, chapter/page counts) — deferred to Phase 4 (Reader), which has to parse these formats to render them anyway; see `Architecture.md`'s "Metadata extraction on upload" row.
+- **Public/shared book browsing** — `visibility` column exists but every list/get is owner-scoped only; no Discovery/sharing surface exists yet.
+
+Frontend: 20/20 bUnit tests passing. Backend: 34/34 Vitest tests passing (`auth.test.ts`, `users.test.ts`, `books.test.ts`, `status.test.ts`). See `Architecture.md`'s "File storage"/"R2 key layout"/"Upload limits"/"Metadata extraction on upload"/"`GET /api/books` scope"/"Book file/cover serving" rows for the decisions made. *(End-to-end live verification against the deployed site in progress — this line will be updated once complete.)*
+
+### Next: Phase 4 — Reader (not yet planned in detail)
