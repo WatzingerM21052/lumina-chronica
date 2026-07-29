@@ -49,6 +49,10 @@ else
             }
         </div>
     }
+    else if (_book.File.Format == "EPUB" && _epubBytes is not null)
+    {
+        <EpubReader Bytes="_epubBytes" InitialCfi="_initialCfi" FontSize="_fontSize" OnProgress="HandleEpubProgress" />
+    }
     else
     {
         <p class="text-muted">Dieses Format wird in einer späteren Story unterstützt.</p>
@@ -66,6 +70,9 @@ else
     private string? _loadErrorMessage;
     private string? _textContent;
     private string? _renderedMarkdown;
+    private byte[]? _epubBytes;
+    private string? _initialCfi;
+    private EpubProgress? _latestEpubProgress;
     private int _fontSize = 18;
     private Timer? _saveTimer;
 
@@ -81,7 +88,7 @@ else
         }
         _book = bookResponse.Data;
 
-        if (_book.File is null || _book.File.Format is not ("TXT" or "MD"))
+        if (_book.File is null || _book.File.Format is not ("TXT" or "MD" or "EPUB"))
         {
             return;
         }
@@ -90,6 +97,18 @@ else
         if (fileResult is null)
         {
             _loadErrorMessage = "Buchdatei konnte nicht geladen werden.";
+            return;
+        }
+
+        var progressResponse = await ApiClient.GetAsync<ReadingProgress>($"/api/reading/{Id}");
+        var savedPosition = progressResponse is { Success: true, Data: not null } ? progressResponse.Data.Position : null;
+
+        if (_book.File.Format == "EPUB")
+        {
+            _epubBytes = fileResult.Value.Bytes;
+            _initialCfi = savedPosition;
+            _saveTimer?.Dispose();
+            _saveTimer = new Timer(_ => _ = SaveProgressAsync(), null, SaveInterval, SaveInterval);
             return;
         }
 
@@ -103,8 +122,7 @@ else
             _textContent = text;
         }
 
-        var progressResponse = await ApiClient.GetAsync<ReadingProgress>($"/api/reading/{Id}");
-        var savedFraction = progressResponse is { Success: true, Data.Position: { } positionText } &&
+        var savedFraction = savedPosition is { } positionText &&
             double.TryParse(positionText, NumberStyles.Float, CultureInfo.InvariantCulture, out var fraction)
             ? fraction
             : (double?)null;
@@ -121,17 +139,39 @@ else
         _saveTimer = new Timer(_ => _ = SaveProgressAsync(), null, SaveInterval, SaveInterval);
     }
 
+    private Task HandleEpubProgress(EpubProgress progress)
+    {
+        _latestEpubProgress = progress;
+        return Task.CompletedTask;
+    }
+
     private async Task SaveProgressAsync()
     {
         if (_book?.File is null) return;
 
-        var fraction = await ScrollTracker.GetScrollFractionAsync("reader-content");
-        var request = new SaveProgressRequest
+        SaveProgressRequest request;
+        if (_book.File.Format == "EPUB")
         {
-            BookId = Id,
-            Position = fraction.ToString("F4", CultureInfo.InvariantCulture),
-            Percentage = Math.Round(fraction * 100, 1),
-        };
+            if (_latestEpubProgress is not { } epubProgress) return;
+            request = new SaveProgressRequest
+            {
+                BookId = Id,
+                Chapter = epubProgress.ChapterIndex,
+                Position = epubProgress.Cfi,
+                Percentage = epubProgress.Percentage,
+            };
+        }
+        else
+        {
+            var fraction = await ScrollTracker.GetScrollFractionAsync("reader-content");
+            request = new SaveProgressRequest
+            {
+                BookId = Id,
+                Position = fraction.ToString("F4", CultureInfo.InvariantCulture),
+                Percentage = Math.Round(fraction * 100, 1),
+            };
+        }
+
         await ApiClient.PostAsync<SaveProgressRequest, ReadingProgress>("/api/reading/update", request);
     }
 
