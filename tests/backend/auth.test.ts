@@ -83,8 +83,17 @@ describe("POST /api/auth/login", () => {
         );
     });
 
-    it("returns a token for correct credentials", async () => {
-        const res = await app.request("/api/auth/login", jsonRequest({ email: "alice@example.com", password: "correct horse" }), env);
+    it("returns a token for correct credentials using the email", async () => {
+        const res = await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "correct horse" }), env);
+        const json = await readJson(res);
+
+        expect(res.status).toBe(200);
+        expect(json.success).toBe(true);
+        expect(typeof json.data.token).toBe("string");
+    });
+
+    it("returns a token for correct credentials using the username", async () => {
+        const res = await app.request("/api/auth/login", jsonRequest({ identifier: "alice", password: "correct horse" }), env);
         const json = await readJson(res);
 
         expect(res.status).toBe(200);
@@ -93,14 +102,14 @@ describe("POST /api/auth/login", () => {
     });
 
     it("rejects an incorrect password with 401", async () => {
-        const res = await app.request("/api/auth/login", jsonRequest({ email: "alice@example.com", password: "wrong password" }), env);
+        const res = await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "wrong password" }), env);
 
         expect(res.status).toBe(401);
         expect((await readJson(res)).error.code).toBe("INVALID_CREDENTIALS");
     });
 
-    it("rejects an unknown email with 401", async () => {
-        const res = await app.request("/api/auth/login", jsonRequest({ email: "nobody@example.com", password: "correct horse" }), env);
+    it("rejects an unknown identifier with 401", async () => {
+        const res = await app.request("/api/auth/login", jsonRequest({ identifier: "nobody@example.com", password: "correct horse" }), env);
 
         expect(res.status).toBe(401);
         expect((await readJson(res)).error.code).toBe("INVALID_CREDENTIALS");

@@ -15,16 +15,16 @@ public class LoginPageTests : BunitContext
     }
 
     [Fact]
-    public void Login_RendersEmailAndPasswordFields()
+    public void Login_RendersIdentifierAndPasswordFields()
     {
-        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"Email or password is incorrect."}}""");
+        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"Username/email or password is incorrect."}}""");
         Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
         Services.AddSingleton<ApiClient>();
         RegisterAuthServices(this);
 
         var cut = Render<Login>();
 
-        Assert.NotNull(cut.Find("#email"));
+        Assert.NotNull(cut.Find("#identifier"));
         Assert.NotNull(cut.Find("#password"));
         Assert.NotNull(cut.Find("button[type=submit]"));
     }
@@ -32,16 +32,16 @@ public class LoginPageTests : BunitContext
     [Fact]
     public void Login_FailedSubmit_ShowsErrorMessage()
     {
-        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"Email or password is incorrect."}}""");
+        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"Username/email or password is incorrect."}}""");
         Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
         Services.AddSingleton<ApiClient>();
         RegisterAuthServices(this);
 
         var cut = Render<Login>();
-        cut.Find("#email").Change("nobody@example.com");
+        cut.Find("#identifier").Change("nobody");
         cut.Find("#password").Change("wrong password");
         cut.Find("form").Submit();
 
-        Assert.Contains("Email or password is incorrect.", cut.Markup);
+        Assert.Contains("Username/email or password is incorrect.", cut.Markup);
     }
 }

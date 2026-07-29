@@ -103,7 +103,7 @@ describe("PUT /api/users/me", () => {
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: "alice@example.com", password: "new password 123" }),
+                body: JSON.stringify({ identifier: "alice@example.com", password: "new password 123" }),
             },
             env
         );
