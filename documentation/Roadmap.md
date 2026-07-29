@@ -107,3 +107,13 @@ Story 3 verified end-to-end against the real production backend, D1, and the dep
 Frontend: 28/28 bUnit tests passing. Backend: 44/44 Vitest tests passing.
 
 **Phase 4 (Reader) is now complete** — all three stories shipped and live-verified, plus mid-phase UI/UX polish. Remaining phases per the Master Development Flow: Organization → Dashboard → Offline → v1.0 Release. Metadata extraction (title/cover/etc. auto-filled from uploaded files) was requested by the user mid-phase and is planned as a follow-up story reusing the epub.js/pdf.js libraries vendored here — see memory `phase4-reader-metadata-extraction-plan` — not yet scheduled.
+
+### Cross-cutting design pass (2026-07-29, issue #82/PR #83-84)
+
+After Phase 4 shipped, the user asked for a full app review: check for remaining errors, and give the app a real visual design pass ("professional and modern, but still old library and old books"). `Architecture.md`'s "Color tokens"/"Typography" rows had explicitly deferred real values to exactly this pass since Phase 1 scaffolding. Landed:
+
+- **Real bug found and fixed**: `Home.razor` was fully static placeholder markup left over from early scaffolding, never wired to the books API — always showed "library is empty" regardless of real data. Now shows the 6 most recently added books.
+- Self-hosted Fraunces (display serif) + Literata (reading serif, previously referenced but never actually loaded). Real color tokens for `classic-library`/`dark-library` (brass/gilt + oxblood-leather palette). A chapter-heading-style double-rule signature under every page `<h1>`. Dark "wood paneling" header/nav frame. EPUB reader content now picks up the app's actual theme instead of always rendering black-on-white. Visible keyboard focus added everywhere. Fixed every non-primary button (Filtern, A-/A+, Zurück/Weiter, Abmelden, etc.), which had been falling back to unstyled native browser chrome since only `.btn-primary` had real styling.
+- Live-verified in both library themes (light and dark) across Home, Library, BookDetail, BookUpload, Reader (EPUB + PDF), Settings, and Profile. Two issues found only through live verification and fixed same-day: heading vertical rhythm (h2/h3 had no top margin, so stacked sections looked cramped) and the EPUB theme injection (epub.js's documented `themes.register()`/`.select()` API didn't reliably apply in this build — switched to the `hooks.content` + `Contents.addStylesheetRules()` approach, which does).
+
+Frontend: 29/29 bUnit tests passing.
