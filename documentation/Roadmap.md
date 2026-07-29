@@ -127,3 +127,17 @@ The user's mid-Phase-4 request ("title, description, image, isbn and the other i
 - End-to-end verified on the deployed site after merge: uploaded a real EPUB with the extraction path active → book appeared in the library with the real extracted cover, confirming the new `ByteArrayContent` cover-upload path (previously untested, since it never had a caller before this feature) round-trips correctly through the backend and R2.
 
 Frontend: 32/32 bUnit tests passing.
+
+### Phase 5 — Organization (complete)
+
+Epic #7, "Personal organization: shelves, tags, favorites." The source spec's own "Phase 5 — Organisation" (§120) lists 7 items; this phase scoped to the epic's own 3-item description and explicitly excluded "Zuletzt gelesen"/"Leseverlauf" (Dashboard epic #8), "Offline-Bibliothek" (Offline epic #13), and "Mehrfachzuordnung" (inherent to `shelf_books`'s many-to-many schema, not a separate story).
+
+- [x] Story 1 — Tags browsing/filtering (issue #89/PR #92): `GET /api/books?tag=<name>` filter mirroring the existing `genre` filter shape; Library toolbar `Tag` input; Book Detail's tags render as clickable links deep-linking back into the filtered Library view. Purely additive — tag storage already existed end-to-end since Phase 3.
+- [x] Story 2 — Favorites (issue #90/PR #93): new `favorites` table, `POST`/`DELETE /api/books/:id/favorite` nested under books, star toggle on `BookCard` and Book Detail, "Nur Favoriten" filter checkbox. `isFavorite` computed via a correlated subquery on the existing book-row query rather than a second round trip.
+- [x] Story 3 — Shelves (issue #91/PR #94): `shelves`/`shelf_books` tables per the source spec's schema, `shelfService.ts`/`routes/shelves.ts` mirroring the Reader's `readingService.ts` shape, `Pages/Shelves.razor`/`ShelfDetail.razor`, `Components/ShelfCard`, and a shelf-picker on Book Detail.
+
+Verified end-to-end against the real production backend, D1, and the deployed site (2026-07-29) after each story: filtered the real library by an existing tag and confirmed the tag-link round trip; toggled favorite on a real book from both the grid and detail view and confirmed it persisted and the favorites-only filter worked; created a real shelf, added/removed a real book via the Book Detail picker, confirmed the shelf's book count and grid updated, and confirmed deleting the shelf left the book itself untouched in the library.
+
+Backend: 61/61 Vitest tests passing. Frontend: 42/42 bUnit tests passing.
+
+**Phase 5 (Organization) is now complete.** Remaining phases per the Master Development Flow: Dashboard → Offline → v1.0 Release.

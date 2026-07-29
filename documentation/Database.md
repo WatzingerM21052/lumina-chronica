@@ -42,6 +42,14 @@ Registration, login, logout, profile view/edit, and password change (PR #33/#34)
 
 - **`reading_progress`** — `id`, `user_id` (FK → `users.id`), `book_id` (FK → `books.id`), `chapter` (nullable, format-specific), `position` (**`TEXT`**, not the `FLOAT` in Teil 4 §48.1's field table — see `Architecture.md`'s "`reading_progress.position` type" row for the per-format meaning and reasoning), `percentage` (`FLOAT`, default 0), `last_opened`. `UNIQUE(user_id, book_id)` — one progress row per user per book, upserted on every save. Indexed on `book_id`. Per Teil 4 §48.1.
 
+### `0004_organization.sql` (Phase 5 — Organization)
+
+- **`favorites`** — `id`, `user_id` (FK → `users.id`), `book_id` (FK → `books.id`), `created_at`. `UNIQUE(user_id, book_id)` — toggle-add is idempotent, mirroring `reading_progress`'s upsert pattern. **Not in the source spec's schema section** (only a one-line bullet mentioning the table, no column list) — designed as the simplest shape satisfying "toggle + list + filter."
+- **`shelves`** — `id`, `owner_id` (FK → `users.id`), `name`, `description`, `cover_url` (R2 key, nullable), `visibility` (`PRIVATE`/`SHARED`/`PUBLIC`, defaults `PRIVATE`, unenforced this phase — same treatment as `books.visibility`), `created_at`, `updated_at`. Per Teil 4 §47.1.
+- **`shelf_books`** — `shelf_id`, `book_id` (composite PK, both FKs). Many-to-many join table. Per Teil 4 §47.2.
+
+`deleteBook` and `deleteShelf` both clean up their respective join-table rows (`favorites`/`shelf_books`/`book_tags`/`reading_progress` for a deleted book; `shelf_books` for a deleted shelf) before the parent row, since real D1 enforces foreign keys (see the `fakeD1.ts` note under Phase 4 Story 1's lessons in `Roadmap.md`).
+
 ## Planned schema (not yet migrated)
 
-The rest of the full schema from Teil 4 (§47, §49–§51) — `shelves`, `shelf_books`, `bookmarks` (explicitly "Spätere Version" in the source), `projects`, `project_members`, `characters`, `locations`, `timeline_events`, `project_files`, `followers`, `ratings`, `comments`, `user_statistics` — will be migrated incrementally as each phase needs them (Organization/shelves in Phase 5, etc.), per the project's phase-gating rule. See `documentation/master-project-bible/extracted-spec-summary.md` for the full extracted column list, and `Technical-Standards.md` for the R2 file-key structure used alongside these tables.
+The rest of the full schema from Teil 4 (§49–§51) — `bookmarks` (explicitly "Spätere Version" in the source), `projects`, `project_members`, `characters`, `locations`, `timeline_events`, `project_files`, `followers`, `ratings`, `comments`, `user_statistics` — will be migrated incrementally as each phase needs them, per the project's phase-gating rule. See `documentation/master-project-bible/extracted-spec-summary.md` for the full extracted column list, and `Technical-Standards.md` for the R2 file-key structure used alongside these tables.
