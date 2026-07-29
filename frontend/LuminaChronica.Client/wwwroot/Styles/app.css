@@ -27,13 +27,14 @@ h3 {
     font-family: var(--font-family-display);
     font-weight: 600;
     line-height: var(--line-height-heading);
-    margin: 0 0 var(--space-2);
+    margin: var(--space-4) 0 var(--space-2);
 }
 
 h1 {
     font-size: var(--font-size-h1);
     font-weight: 700;
     width: fit-content;
+    margin-top: 0;
     /* Signature device: a chapter-heading-style rule under every page
        title, echoing the divider under a chapter number in an old book —
        not decoration, a consistent marker of "this is where a page/chapter
