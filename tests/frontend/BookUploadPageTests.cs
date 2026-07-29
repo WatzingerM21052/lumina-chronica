@@ -15,6 +15,7 @@ public class BookUploadPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
     }
 
     [Fact]

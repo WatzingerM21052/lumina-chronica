@@ -143,6 +143,45 @@ button,
     gap: var(--space-1);
 }
 
+/* Upload form presented as a centered card rather than a full-width page,
+   with a cover preview -- distinct from .auth-form since it carries far
+   more fields and a file preview. */
+.book-form-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-width: 34rem;
+    margin: var(--space-3) auto;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-light);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.book-form-cover-preview {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.book-form-cover-preview img {
+    width: 6rem;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-bg-paper);
+}
+
+.book-form-cover-preview .cover-placeholder {
+    width: 6rem;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius);
+    border: 1px dashed var(--color-border);
+    background-color: var(--color-bg-paper);
+}
+
 /* Minimal Library layout -- same placeholder-styling stance as .auth-form
    above, real visual design lands with the dedicated frontend-design pass. */
 .library-header {
@@ -242,14 +281,16 @@ button,
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    margin: var(--space-2) 0;
+    max-width: 42rem;
+    margin: var(--space-2) auto;
 }
 
 .reader-content {
     max-width: 42rem;
-    max-height: 70vh;
+    max-height: calc(100vh - 14rem);
+    margin: 0 auto;
     overflow-y: auto;
-    padding: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     background-color: var(--color-bg-light);
