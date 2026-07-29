@@ -40,17 +40,17 @@ authRoute.post("/register", async (c) => {
 });
 
 authRoute.post("/login", async (c) => {
-    const body = await c.req.json<{ email?: string; password?: string }>().catch(() => null);
-    if (!body?.email || !body?.password) {
-        return c.json(failure("VALIDATION_ERROR", "email and password are required."), 400);
+    const body = await c.req.json<{ identifier?: string; password?: string }>().catch(() => null);
+    if (!body?.identifier || !body?.password) {
+        return c.json(failure("VALIDATION_ERROR", "identifier and password are required."), 400);
     }
 
     try {
-        const result = await loginUser(c.env.DB, c.env.JWT_SECRET, { email: body.email, password: body.password });
+        const result = await loginUser(c.env.DB, c.env.JWT_SECRET, { identifier: body.identifier, password: body.password });
         return c.json(success(result));
     } catch (err) {
         if (err instanceof InvalidCredentialsError) {
-            return c.json(failure("INVALID_CREDENTIALS", "Email or password is incorrect."), 401);
+            return c.json(failure("INVALID_CREDENTIALS", "Username/email or password is incorrect."), 401);
         }
         throw err;
     }

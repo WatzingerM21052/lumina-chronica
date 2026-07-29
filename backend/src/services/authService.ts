@@ -60,15 +60,15 @@ export async function registerUser(
 export async function loginUser(
     db: D1Database,
     jwtSecret: string,
-    input: { email: string; password: string }
+    input: { identifier: string; password: string }
 ): Promise<AuthResult> {
     const user = await db
-        .prepare("SELECT id, password_hash, role_id FROM users WHERE email = ? AND deleted_at IS NULL")
-        .bind(input.email)
+        .prepare("SELECT id, password_hash, role_id FROM users WHERE (email = ?1 OR username = ?1) AND deleted_at IS NULL")
+        .bind(input.identifier)
         .first<UserRow>();
 
-    // Wrong email and wrong password both fail the same way -- don't leak
-    // which one was incorrect.
+    // Wrong identifier and wrong password both fail the same way -- don't
+    // leak which one was incorrect, or whether the identifier even exists.
     if (!user || !(await verifyPassword(input.password, user.password_hash))) {
         throw new InvalidCredentialsError();
     }
