@@ -1,0 +1,9 @@
+name = "lumina-chronica-api"
+main = "src/index.ts"
+compatibility_date = "2026-07-29"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lumina-chronica-db"
+database_id = "PLACEHOLDER_SET_AFTER_D1_CREATE"
+migrations_dir = "../database/migrations"
