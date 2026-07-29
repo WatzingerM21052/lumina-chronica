@@ -36,6 +36,16 @@ export async function init(elementId, bytes, initialCfi, fontSize) {
     // to get the actual EPUB bytes, or JSZip parses garbage (surfaced as
     // epub.js's rendition.display() throwing "No Section Found").
     const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    const view = new Uint8Array(arrayBuffer);
+    console.log("[epubReader diag]", JSON.stringify({
+        ctor: bytes.constructor.name,
+        byteOffset: bytes.byteOffset,
+        byteLength: bytes.byteLength,
+        rawBufferLength: bytes.buffer.byteLength,
+        slicedLength: arrayBuffer.byteLength,
+        first4: [view[0], view[1], view[2], view[3]],
+        last4: [view[view.length - 4], view[view.length - 3], view[view.length - 2], view[view.length - 1]],
+    }));
     const book = ePub(arrayBuffer);
     const rendition = book.renderTo(elementId, { width: "100%", height: "100%", flow: "paginated", spread: "none" });
     rendition.themes.fontSize(`${fontSize}px`);
