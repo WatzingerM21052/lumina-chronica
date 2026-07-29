@@ -1,0 +1,198 @@
+@page "/library/shelves/{Id:int}"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_shelf?.Name ?? "Regal") — Lumina Chronica</PageTitle>
+
+<a href="library/shelves">← Zurück zu den Regalen</a>
+
+@if (_loadErrorMessage is not null)
+{
+    <p class="form-error">@_loadErrorMessage</p>
+}
+else if (_shelf is null)
+{
+    <LoadingIndicator Text="Regal wird geladen..." />
+}
+else
+{
+    @if (!_isEditing)
+    {
+        <h1>@_shelf.Name</h1>
+        @if (!string.IsNullOrWhiteSpace(_shelf.Description))
+        {
+            <p>@_shelf.Description</p>
+        }
+        <div class="form-actions">
+            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+            @if (!_confirmingDelete)
+            {
+                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+            }
+            else
+            {
+                <span>Wirklich löschen?</span>
+                <button type="button" class="btn" @onclick="DeleteShelfAsync">Ja, löschen</button>
+                <button type="button" class="btn" @onclick="() => _confirmingDelete = false">Abbrechen</button>
+            }
+        </div>
+    }
+    else
+    {
+        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+            @if (_saveErrorMessage is not null)
+            {
+                <p class="form-error">@_saveErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="shelf-edit-name">Name</label>
+                <InputText id="shelf-edit-name" @bind-Value="_editForm.Name" />
+            </div>
+            <div class="form-group">
+                <label for="shelf-edit-description">Beschreibung</label>
+                <InputTextArea id="shelf-edit-description" @bind-Value="_editForm.Description" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+            </div>
+        </EditForm>
+    }
+
+    @if (_booksErrorMessage is not null)
+    {
+        <p class="form-error">@_booksErrorMessage</p>
+    }
+    else if (_books is null)
+    {
+        <LoadingIndicator Text="Bücher werden geladen..." />
+    }
+    else if (_books.Items.Count == 0)
+    {
+        <p class="text-muted">Dieses Regal enthält noch keine Bücher.</p>
+    }
+    else
+    {
+        <div class="library-grid">
+            @foreach (var book in _books.Items)
+            {
+                <div class="shelf-book-entry">
+                    <BookCard Book="book" />
+                    <button type="button" class="btn shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)">Vom Regal entfernen</button>
+                </div>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Shelf? _shelf;
+    private string? _loadErrorMessage;
+    private ShelfBooksResponse? _books;
+    private string? _booksErrorMessage;
+
+    private bool _isEditing;
+    private string? _saveErrorMessage;
+    private EditFormModel _editForm = new();
+    private bool _confirmingDelete;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadShelfAsync();
+        await LoadBooksAsync();
+    }
+
+    private async Task LoadShelfAsync()
+    {
+        _loadErrorMessage = null;
+        var response = await ApiClient.GetAsync<Shelf>($"/api/shelves/{Id}");
+        if (response is { Success: true, Data: not null })
+        {
+            _shelf = response.Data;
+        }
+        else
+        {
+            _loadErrorMessage = response?.Error?.Message ?? "Regal konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadBooksAsync()
+    {
+        _booksErrorMessage = null;
+        var response = await ApiClient.GetAsync<ShelfBooksResponse>($"/api/shelves/{Id}/books");
+        if (response is { Success: true, Data: not null })
+        {
+            _books = response.Data;
+        }
+        else
+        {
+            _booksErrorMessage = response?.Error?.Message ?? "Bücher konnten nicht geladen werden.";
+        }
+    }
+
+    private void StartEditing()
+    {
+        if (_shelf is null) return;
+        _editForm = new EditFormModel { Name = _shelf.Name, Description = _shelf.Description };
+        _saveErrorMessage = null;
+        _isEditing = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saveErrorMessage = null;
+        var response = await ApiClient.PutAsync<UpdateShelfRequest, Shelf>($"/api/shelves/{Id}", new UpdateShelfRequest
+        {
+            Name = _editForm.Name,
+            Description = _editForm.Description,
+        });
+
+        if (response is { Success: true, Data: not null })
+        {
+            _shelf = response.Data;
+            _isEditing = false;
+        }
+        else
+        {
+            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+        }
+    }
+
+    private async Task DeleteShelfAsync()
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/shelves/{Id}");
+        if (succeeded)
+        {
+            NavigationManager.NavigateTo("library/shelves");
+        }
+        else
+        {
+            _confirmingDelete = false;
+            _loadErrorMessage = "Löschen fehlgeschlagen.";
+        }
+    }
+
+    private async Task RemoveBookAsync(int bookId)
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/shelves/{Id}/books/{bookId}");
+        if (succeeded)
+        {
+            await LoadShelfAsync();
+            await LoadBooksAsync();
+        }
+    }
+
+    private class EditFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+}

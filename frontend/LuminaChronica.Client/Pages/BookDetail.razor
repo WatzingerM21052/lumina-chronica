@@ -110,6 +110,21 @@ else
                         <button type="button" class="btn" @onclick="() => _confirmingDelete = false">Abbrechen</button>
                     }
                 </div>
+
+                @if (_shelves is { Count: > 0 })
+                {
+                    <div class="book-detail-shelves">
+                        <span class="text-muted">Zu Regal hinzufügen</span>
+                        @foreach (var shelf in _shelves)
+                        {
+                            <label class="book-detail-shelf-option">
+                                <input type="checkbox" checked="@_shelfIds.Contains(shelf.Id)"
+                                       @onchange="e => ToggleShelfAsync(shelf.Id, (bool)e.Value!)" />
+                                @shelf.Name
+                            </label>
+                        }
+                    </div>
+                }
             }
             else
             {
@@ -185,9 +200,13 @@ else
 
     private bool _confirmingDelete;
 
+    private List<Shelf>? _shelves;
+    private HashSet<int> _shelfIds = [];
+
     protected override async Task OnParametersSetAsync()
     {
         await LoadBookAsync();
+        await LoadShelvesAsync();
     }
 
     private async Task LoadBookAsync()
@@ -202,6 +221,43 @@ else
         else
         {
             _loadErrorMessage = response?.Error?.Message ?? "Buch konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadShelvesAsync()
+    {
+        // The shelf picker is supplementary to the book's own data -- a
+        // failure here (including a response shape mismatch) shouldn't take
+        // down the rest of the page.
+        try
+        {
+            var shelvesResponse = await ApiClient.GetAsync<List<Shelf>>("/api/shelves");
+            if (shelvesResponse is { Success: true, Data: not null })
+            {
+                _shelves = shelvesResponse.Data;
+            }
+
+            var shelfIdsResponse = await ApiClient.GetAsync<List<int>>($"/api/books/{Id}/shelves");
+            if (shelfIdsResponse is { Success: true, Data: not null })
+            {
+                _shelfIds = [.. shelfIdsResponse.Data];
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+    }
+
+    private async Task ToggleShelfAsync(int shelfId, bool addToShelf)
+    {
+        var succeeded = addToShelf
+            ? await ApiClient.PostAsync($"/api/shelves/{shelfId}/books/{Id}")
+            : await ApiClient.DeleteAsync($"/api/shelves/{shelfId}/books/{Id}");
+
+        if (succeeded)
+        {
+            if (addToShelf) _shelfIds.Add(shelfId);
+            else _shelfIds.Remove(shelfId);
         }
     }
 

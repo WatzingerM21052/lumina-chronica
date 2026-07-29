@@ -2,13 +2,13 @@
 // ("File storage" / "Upload limits" rows) and documentation/Database.md for the
 // full schema. R2 key layout: books/{book-id}/original.{ext}, books/{book-id}/cover.{ext}.
 
+import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
+
 export class NotFoundError extends Error {}
-export class ValidationError extends Error {}
+export { ValidationError };
 
 const ALLOWED_BOOK_EXTENSIONS = ["epub", "pdf", "txt", "md"] as const;
-const ALLOWED_COVER_EXTENSIONS = ["jpg", "jpeg", "png", "webp"] as const;
 const MAX_BOOK_FILE_BYTES = 50 * 1024 * 1024; // benchmarked against real workerd, see documentation/Architecture.md
-const MAX_COVER_FILE_BYTES = 5 * 1024 * 1024;
 
 const BOOK_MIME_HINTS: Record<string, string[]> = {
     epub: ["application/epub+zip"],
@@ -18,45 +18,12 @@ const BOOK_MIME_HINTS: Record<string, string[]> = {
     txt: [],
     md: [],
 };
-const COVER_MIME_HINTS: Record<string, string[]> = {
-    jpg: ["image/jpeg"],
-    jpeg: ["image/jpeg"],
-    png: ["image/png"],
-    webp: ["image/webp"],
-};
 
 const SORT_COLUMNS: Record<string, string> = {
     createdAt: "created_at",
     title: "title",
     author: "author",
 };
-
-function extensionOf(filename: string): string {
-    const dot = filename.lastIndexOf(".");
-    return dot === -1 ? "" : filename.slice(dot + 1).toLowerCase();
-}
-
-function validateFile(file: File, allowedExtensions: readonly string[], mimeHints: Record<string, string[]>, maxBytes: number, label: string): string {
-    const ext = extensionOf(file.name);
-    if (!allowedExtensions.includes(ext as never)) {
-        throw new ValidationError(`${label} must be one of: ${allowedExtensions.join(", ")}.`);
-    }
-    const hints = mimeHints[ext] ?? [];
-    // "application/octet-stream" is the browser's generic fallback when the
-    // OS has no MIME association for the extension -- observed live for
-    // .epub uploads from Chrome on Windows (no ebook reader installed to
-    // register application/epub+zip), which made every real EPUB upload
-    // fail this check. Treated as "unknown", same as an empty file.type,
-    // rather than a mismatch -- an actual mismatch (e.g. a renamed .txt
-    // reporting text/plain) is still rejected.
-    if (hints.length > 0 && file.type && file.type !== "application/octet-stream" && !hints.includes(file.type)) {
-        throw new ValidationError(`${label} content does not match its .${ext} extension.`);
-    }
-    if (file.size > maxBytes) {
-        throw new ValidationError(`${label} exceeds the ${Math.floor(maxBytes / (1024 * 1024))}MB limit.`);
-    }
-    return ext;
-}
 
 function r2BookKey(bookId: number, ext: string): string {
     return `books/${bookId}/original.${ext}`;
@@ -88,7 +55,7 @@ export type BookDetail = BookSummary & {
     file: { format: string; size: number } | null;
 };
 
-type BookRow = {
+export type BookRow = {
     id: number;
     title: string;
     author: string | null;
@@ -105,10 +72,13 @@ type BookRow = {
 // a bind parameter: every query using this column is already owner-scoped
 // (`WHERE owner_id = ?`/`id = ? AND owner_id = ?`), so `favorites.user_id`
 // and `books.owner_id` are always the same value here -- no extra param needed.
-const BOOK_ROW_COLUMNS = `id, title, author, description, cover_url, genre, language, visibility, created_at,
+// Exported so shelfService.ts's listShelfBooks can reuse it -- shelf_books
+// membership queries are owner-scoped the same way (a book can only be on a
+// shelf its owner also owns, enforced by addBookToShelf's ownership check).
+export const BOOK_ROW_COLUMNS = `id, title, author, description, cover_url, genre, language, visibility, created_at,
     EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = books.owner_id) AS is_favorite`;
 
-function toSummary(row: BookRow): BookSummary {
+export function toSummary(row: BookRow): BookSummary {
     return {
         id: row.id,
         title: row.title,

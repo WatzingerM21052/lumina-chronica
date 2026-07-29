@@ -10,7 +10,10 @@
 
 <div class="library-header">
     <h1>Bibliothek</h1>
-    <a class="btn btn-primary" href="library/upload">Buch hinzufügen</a>
+    <div class="form-actions">
+        <a class="btn" href="library/shelves">Regale</a>
+        <a class="btn btn-primary" href="library/upload">Buch hinzufügen</a>
+    </div>
 </div>
 
 <form class="library-toolbar" @onsubmit="LoadBooksAsync">
