@@ -8,6 +8,7 @@
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
 @inject BlobUrlService BlobUrlService
+@inject IJSRuntime JsRuntime
 @implements IDisposable
 
 <PageTitle>Buch hinzufügen — Lumina Chronica</PageTitle>
@@ -124,19 +125,84 @@
     private string? _fileError;
     private string? _coverError;
     private string? _coverPreviewUrl;
+    private byte[]? _extractedCoverBytes;
+    private string? _extractedCoverContentType;
     private bool _isSubmitting;
     private string? _errorMessage;
+    private IJSObjectReference? _metadataModule;
 
-    private void OnFileSelectedAsync(InputFileChangeEventArgs e)
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
         _selectedFile = e.File;
         _fileError = ValidateFile(e.File, AllowedFileExtensions, MaxFileBytes);
+
+        if (_fileError is not null)
+        {
+            return;
+        }
+
+        var extension = Path.GetExtension(e.File.Name).ToLowerInvariant();
+        if (extension is not (".epub" or ".pdf"))
+        {
+            // TXT/MD carry no container-level metadata to extract.
+            return;
+        }
+
+        try
+        {
+            using var stream = e.File.OpenReadStream(MaxFileBytes);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var bytes = memoryStream.ToArray();
+
+            _metadataModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/metadataExtractor.js");
+
+            var metadata = extension == ".epub"
+                ? await _metadataModule.InvokeAsync<ExtractedMetadata>("extractEpub", bytes)
+                : await _metadataModule.InvokeAsync<ExtractedMetadata>("extractPdf", bytes);
+
+            // Extraction only fills fields the user hasn't already typed
+            // into -- it never overwrites a manually entered value.
+            if (string.IsNullOrWhiteSpace(_form.Title) && !string.IsNullOrWhiteSpace(metadata.Title)) _form.Title = metadata.Title;
+            if (string.IsNullOrWhiteSpace(_form.Author) && !string.IsNullOrWhiteSpace(metadata.Author)) _form.Author = metadata.Author;
+            if (string.IsNullOrWhiteSpace(_form.Description) && !string.IsNullOrWhiteSpace(metadata.Description)) _form.Description = metadata.Description;
+            if (string.IsNullOrWhiteSpace(_form.Language) && !string.IsNullOrWhiteSpace(metadata.Language)) _form.Language = metadata.Language;
+            if (string.IsNullOrWhiteSpace(_form.Publisher) && !string.IsNullOrWhiteSpace(metadata.Publisher)) _form.Publisher = metadata.Publisher;
+            if (string.IsNullOrWhiteSpace(_form.Isbn) && !string.IsNullOrWhiteSpace(metadata.Isbn)) _form.Isbn = metadata.Isbn;
+
+            if (metadata.HasCover && _selectedCover is null)
+            {
+                var coverBytes = await _metadataModule.InvokeAsync<byte[]?>("getCoverBytes");
+                if (coverBytes is { Length: > 0 })
+                {
+                    var contentType = await _metadataModule.InvokeAsync<string?>("getCoverContentType");
+
+                    if (_coverPreviewUrl is not null)
+                    {
+                        await BlobUrlService.RevokeObjectUrlAsync(_coverPreviewUrl);
+                    }
+
+                    _extractedCoverBytes = coverBytes;
+                    _extractedCoverContentType = string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType;
+                    _coverPreviewUrl = await BlobUrlService.CreateObjectUrlAsync(coverBytes, _extractedCoverContentType);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Extraction is a convenience, not a requirement -- an unusual
+            // or malformed file (or any other interop failure) just leaves
+            // the manual form fields as-is rather than blocking the upload.
+        }
     }
 
     private async Task OnCoverSelectedAsync(InputFileChangeEventArgs e)
     {
         _selectedCover = e.File;
         _coverError = ValidateFile(e.File, AllowedCoverExtensions, MaxCoverBytes);
+        // A manually chosen cover always wins over an extracted one.
+        _extractedCoverBytes = null;
+        _extractedCoverContentType = null;
 
         if (_coverPreviewUrl is not null)
         {
@@ -159,6 +225,10 @@
         if (_coverPreviewUrl is not null)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(_coverPreviewUrl);
+        }
+        if (_metadataModule is not null)
+        {
+            _ = _metadataModule.DisposeAsync();
         }
     }
 
@@ -211,6 +281,10 @@
         {
             content.Add(BuildFileContent(_selectedCover, MaxCoverBytes), QuoteFieldName("cover"), QuoteFieldName(_selectedCover.Name));
         }
+        else if (_extractedCoverBytes is not null)
+        {
+            content.Add(BuildExtractedCoverContent(_extractedCoverBytes, _extractedCoverContentType), QuoteFieldName("cover"), QuoteFieldName(ExtractedCoverFileName(_extractedCoverContentType)));
+        }
 
         var response = await ApiClient.PostMultipartAsync<Book>("/api/books/upload", content);
         if (response is { Success: true, Data: not null })
@@ -245,6 +319,23 @@
         streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType);
         return streamContent;
     }
+
+    // Same RFC 7578 quoting requirement as QuoteFieldName above applies to
+    // this content's own name/filename when it's added to the multipart
+    // body -- handled by the caller passing already-quoted values.
+    private static ByteArrayContent BuildExtractedCoverContent(byte[] bytes, string? contentType)
+    {
+        var byteContent = new ByteArrayContent(bytes);
+        byteContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType);
+        return byteContent;
+    }
+
+    private static string ExtractedCoverFileName(string? contentType) => contentType switch
+    {
+        "image/png" => "cover.png",
+        "image/webp" => "cover.webp",
+        _ => "cover.jpg",
+    };
 
     private class UploadFormModel
     {
