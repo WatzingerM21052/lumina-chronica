@@ -40,6 +40,9 @@ public class Book
     [JsonPropertyName("createdAt")]
     public string CreatedAt { get; set; } = string.Empty;
 
+    [JsonPropertyName("isFavorite")]
+    public bool IsFavorite { get; set; }
+
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 

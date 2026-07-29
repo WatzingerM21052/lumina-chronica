@@ -145,6 +145,51 @@ describe("GET /api/books", () => {
     });
 });
 
+describe("POST/DELETE /api/books/:id/favorite", () => {
+    it("toggles favorite state, is idempotent, and filters via favorite=true", async () => {
+        const uploadResA = await uploadBook(tokenA, { title: "Favorite Me" });
+        const bookId = (await readJson(uploadResA)).data.id;
+        await uploadBook(tokenA, { title: "Not Favorited" });
+
+        const favRes = await app.request(`/api/books/${bookId}/favorite`, { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(favRes.status).toBe(204);
+
+        // Adding again must not duplicate the row / error.
+        const favAgainRes = await app.request(`/api/books/${bookId}/favorite`, { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(favAgainRes.status).toBe(204);
+
+        const getRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect((await readJson(getRes)).data.isFavorite).toBe(true);
+
+        const filterRes = await app.request("/api/books?favorite=true", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const filterJson = await readJson(filterRes);
+        expect(filterJson.data.items).toHaveLength(1);
+        expect(filterJson.data.items[0].title).toBe("Favorite Me");
+        expect(filterJson.data.items[0].isFavorite).toBe(true);
+
+        const unfavRes = await app.request(`/api/books/${bookId}/favorite`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(unfavRes.status).toBe(204);
+
+        // Removing again (already absent) must not error.
+        const unfavAgainRes = await app.request(`/api/books/${bookId}/favorite`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(unfavAgainRes.status).toBe(204);
+
+        const getAfterRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect((await readJson(getAfterRes)).data.isFavorite).toBe(false);
+    });
+
+    it("returns 404 for another user's book", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const favRes = await app.request(`/api/books/${bookId}/favorite`, { method: "POST", headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(favRes.status).toBe(404);
+
+        const unfavRes = await app.request(`/api/books/${bookId}/favorite`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(unfavRes.status).toBe(404);
+    });
+});
+
 describe("GET/PUT/DELETE /api/books/:id", () => {
     it("returns 404 for a book owned by another user", async () => {
         const uploadRes = await uploadBook(tokenA);

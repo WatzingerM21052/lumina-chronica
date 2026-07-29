@@ -28,6 +28,11 @@
         <option value="asc">Aufsteigend</option>
     </select>
 
+    <label class="library-favorite-filter">
+        <input type="checkbox" @bind="_favoritesOnly" />
+        Nur Favoriten
+    </label>
+
     <button type="submit" class="btn">Filtern</button>
 
     <div class="library-view-toggle">
@@ -74,10 +79,11 @@ else
     private string _searchTerm = string.Empty;
     private string _genreFilter = string.Empty;
     private string _tagFilter = string.Empty;
+    private bool _favoritesOnly;
     private string _sort = "createdAt";
     private string _order = "desc";
 
-    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || !string.IsNullOrWhiteSpace(_genreFilter) || !string.IsNullOrWhiteSpace(_tagFilter);
+    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || !string.IsNullOrWhiteSpace(_genreFilter) || !string.IsNullOrWhiteSpace(_tagFilter) || _favoritesOnly;
 
     protected override Task OnInitializedAsync()
     {
@@ -107,6 +113,7 @@ else
         if (!string.IsNullOrWhiteSpace(_searchTerm)) query.Add($"search={Uri.EscapeDataString(_searchTerm)}");
         if (!string.IsNullOrWhiteSpace(_genreFilter)) query.Add($"genre={Uri.EscapeDataString(_genreFilter)}");
         if (!string.IsNullOrWhiteSpace(_tagFilter)) query.Add($"tag={Uri.EscapeDataString(_tagFilter)}");
+        if (_favoritesOnly) query.Add("favorite=true");
 
         var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}");
         if (response is { Success: true, Data: not null })

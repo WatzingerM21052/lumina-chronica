@@ -38,7 +38,14 @@ else
         <div class="book-detail-info">
             @if (!_isEditing)
             {
-                <h1>@_book.Title</h1>
+                <div class="book-detail-title-row">
+                    <h1>@_book.Title</h1>
+                    <button type="button" class="book-detail-favorite @(_book.IsFavorite ? "is-favorite" : "")"
+                            title="@(_book.IsFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
+                            @onclick="ToggleFavoriteAsync">
+                        @(_book.IsFavorite ? "★" : "☆")
+                    </button>
+                </div>
                 @if (!string.IsNullOrWhiteSpace(_book.Author))
                 {
                     <p class="text-muted">@_book.Author</p>
@@ -206,6 +213,23 @@ else
         if (result is { } cover)
         {
             _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+        }
+    }
+
+    private async Task ToggleFavoriteAsync()
+    {
+        if (_book is null) return;
+
+        var wasFavorite = _book.IsFavorite;
+        _book.IsFavorite = !wasFavorite;
+
+        var succeeded = wasFavorite
+            ? await ApiClient.DeleteAsync($"/api/books/{Id}/favorite")
+            : await ApiClient.PostAsync($"/api/books/{Id}/favorite");
+
+        if (!succeeded)
+        {
+            _book.IsFavorite = wasFavorite;
         }
     }
 

@@ -75,6 +75,7 @@ export type BookSummary = {
     language: string | null;
     visibility: string;
     createdAt: string;
+    isFavorite: boolean;
 };
 
 export type BookDetail = BookSummary & {
@@ -97,9 +98,15 @@ type BookRow = {
     language: string | null;
     visibility: string;
     created_at: string;
+    is_favorite: number;
 };
 
-const BOOK_ROW_COLUMNS = "id, title, author, description, cover_url, genre, language, visibility, created_at";
+// `is_favorite` is a correlated subquery against `books.owner_id` rather than
+// a bind parameter: every query using this column is already owner-scoped
+// (`WHERE owner_id = ?`/`id = ? AND owner_id = ?`), so `favorites.user_id`
+// and `books.owner_id` are always the same value here -- no extra param needed.
+const BOOK_ROW_COLUMNS = `id, title, author, description, cover_url, genre, language, visibility, created_at,
+    EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = books.owner_id) AS is_favorite`;
 
 function toSummary(row: BookRow): BookSummary {
     return {
@@ -111,6 +118,7 @@ function toSummary(row: BookRow): BookSummary {
         language: row.language,
         visibility: row.visibility,
         createdAt: row.created_at,
+        isFavorite: !!row.is_favorite,
     };
 }
 
@@ -236,6 +244,7 @@ export type ListBooksQuery = {
     pageSize: number;
     genre?: string;
     tag?: string;
+    favorite?: boolean;
     search?: string;
     sort: string;
     order: "asc" | "desc";
@@ -254,6 +263,9 @@ export async function listBooks(db: D1Database, ownerId: number, query: ListBook
     if (query.tag) {
         conditions.push("EXISTS (SELECT 1 FROM book_tags JOIN tags ON tags.id = book_tags.tag_id WHERE book_tags.book_id = books.id AND tags.name = ?)");
         params.push(query.tag);
+    }
+    if (query.favorite) {
+        conditions.push("EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = books.owner_id)");
     }
     if (query.search) {
         conditions.push("(title LIKE ? OR author LIKE ?)");
@@ -289,6 +301,16 @@ async function findOwnedBookRow(db: D1Database, ownerId: number, bookId: number)
         .prepare(`SELECT ${BOOK_ROW_COLUMNS} FROM books WHERE id = ? AND owner_id = ?`)
         .bind(bookId, ownerId)
         .first<BookRow>();
+}
+
+export async function addFavorite(db: D1Database, ownerId: number, bookId: number): Promise<void> {
+    if (!(await findOwnedBookRow(db, ownerId, bookId))) throw new NotFoundError();
+    await db.prepare("INSERT OR IGNORE INTO favorites (user_id, book_id) VALUES (?, ?)").bind(ownerId, bookId).run();
+}
+
+export async function removeFavorite(db: D1Database, ownerId: number, bookId: number): Promise<void> {
+    if (!(await findOwnedBookRow(db, ownerId, bookId))) throw new NotFoundError();
+    await db.prepare("DELETE FROM favorites WHERE user_id = ? AND book_id = ?").bind(ownerId, bookId).run();
 }
 
 export async function getBook(db: D1Database, ownerId: number, bookId: number): Promise<BookDetail | null> {
@@ -370,6 +392,8 @@ export async function deleteBook(db: D1Database, storage: R2Bucket, ownerId: num
         db.prepare("DELETE FROM book_tags WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM book_metadata WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM book_files WHERE book_id = ?").bind(bookId),
+        db.prepare("DELETE FROM favorites WHERE book_id = ?").bind(bookId),
+        db.prepare("DELETE FROM shelf_books WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM books WHERE id = ?").bind(bookId),
     ]);
 
