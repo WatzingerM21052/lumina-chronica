@@ -77,4 +77,59 @@ public class ApiClient(HttpClient httpClient)
             return false;
         }
     }
+
+    // For book upload -- a multipart/form-data body (metadata fields + the
+    // book file + an optional cover), not JSON.
+    public async Task<ApiResponse<TResponse>?> PostMultipartAsync<TResponse>(
+        string relativeUrl, MultipartFormDataContent content, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PostAsync(relativeUrl, content, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return new ApiResponse<TResponse>
+            {
+                Success = false,
+                Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
+            };
+        }
+    }
+
+    public async Task<bool> DeleteAsync(string relativeUrl, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.DeleteAsync(relativeUrl, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+    }
+
+    // For authenticated binary fetches (book covers/files) -- HttpClient
+    // attaches the bearer token via AuthHeaderHandler like any other call,
+    // which a bare <img src="..."> can't do. Content-Type is returned
+    // alongside the bytes since the caller needs it to build an accurate
+    // Blob (see BlobUrlService).
+    public async Task<(byte[] Bytes, string ContentType)?> GetBytesAsync(string relativeUrl, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.GetAsync(relativeUrl, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            return (bytes, contentType);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
 }

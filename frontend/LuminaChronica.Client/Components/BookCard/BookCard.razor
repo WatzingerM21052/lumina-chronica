@@ -1,0 +1,30 @@
+@namespace LuminaChronica.Client.Components
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+
+<a class="book-card book-card-@Size.ToString().ToLowerInvariant()" href="@($"library/books/{Book.Id}")">
+    <div class="book-card-cover">
+        @if (_coverObjectUrl is not null)
+        {
+            <img src="@_coverObjectUrl" alt="@Book.Title" />
+        }
+        else
+        {
+            <div class="book-card-cover-placeholder">📖</div>
+        }
+    </div>
+    <div class="book-card-info">
+        <div class="book-card-title">@Book.Title</div>
+        @if (!string.IsNullOrWhiteSpace(Book.Author))
+        {
+            <div class="book-card-author">@Book.Author</div>
+        }
+        @if (ProgressPercentage is { } progress)
+        {
+            <div class="book-card-progress">
+                <div class="book-card-progress-bar" style="width: @(progress)%"></div>
+            </div>
+        }
+    </div>
+</a>

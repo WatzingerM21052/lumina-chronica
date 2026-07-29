@@ -142,3 +142,60 @@ button,
     display: flex;
     gap: var(--space-1);
 }
+
+/* Minimal Library layout -- same placeholder-styling stance as .auth-form
+   above, real visual design lands with the dedicated frontend-design pass. */
+.library-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.library-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    align-items: center;
+    margin: var(--space-2) 0;
+}
+
+.library-toolbar input,
+.library-toolbar select {
+    font-family: inherit;
+    font-size: var(--font-size-body);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-light);
+    color: var(--color-text-primary);
+}
+
+.library-view-toggle {
+    display: flex;
+    gap: var(--space-1);
+    margin-left: auto;
+}
+
+.library-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.library-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.library-list .book-card {
+    flex-direction: row;
+    align-items: center;
+    width: auto;
+}
+
+.library-list .book-card-cover {
+    width: 3rem;
+    flex-shrink: 0;
+}

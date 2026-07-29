@@ -1,9 +1,104 @@
 @page "/library"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject NavigationManager NavigationManager
 
 <PageTitle>Bibliothek — Lumina Chronica</PageTitle>
 
-<h1>Bibliothek</h1>
+<div class="library-header">
+    <h1>Bibliothek</h1>
+    <a class="btn btn-primary" href="library/upload">Buch hinzufügen</a>
+</div>
 
-<EmptyState Message="Deine Bibliothek ist noch leer. Füge dein erstes Buch hinzu und beginne deine Sammlung."
-            ActionText="Buch hinzufügen" />
+<form class="library-toolbar" @onsubmit="LoadBooksAsync">
+    <input type="search" placeholder="Titel oder Autor suchen..." @bind="_searchTerm" @bind:event="oninput" />
+    <input type="text" placeholder="Genre" @bind="_genreFilter" @bind:event="oninput" />
+
+    <select @bind="_sort">
+        <option value="createdAt">Hinzugefügt</option>
+        <option value="title">Titel</option>
+        <option value="author">Autor</option>
+    </select>
+    <select @bind="_order">
+        <option value="desc">Absteigend</option>
+        <option value="asc">Aufsteigend</option>
+    </select>
+
+    <button type="submit" class="btn">Filtern</button>
+
+    <div class="library-view-toggle">
+        <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Raster</button>
+        <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Liste</button>
+    </div>
+</form>
+
+@if (_errorMessage is not null)
+{
+    <p class="form-error">@_errorMessage</p>
+}
+else if (_result is null)
+{
+    <LoadingIndicator Text="Bibliothek wird geladen..." />
+}
+else if (_result.Total == 0 && !HasActiveFilters)
+{
+    <EmptyState Message="Deine Bibliothek ist noch leer. Füge dein erstes Buch hinzu und beginne deine Sammlung."
+                ActionText="Buch hinzufügen"
+                OnAction="GoToUpload" />
+}
+else if (_result.Items.Count == 0)
+{
+    <p class="text-muted">Keine Bücher gefunden.</p>
+}
+else
+{
+    <div class="@(_viewMode == LibraryViewMode.Grid ? "library-grid" : "library-list")">
+        @foreach (var book in _result.Items)
+        {
+            <BookCard Book="book" Size="@(_viewMode == LibraryViewMode.Grid ? BookCardSize.Normal : BookCardSize.Small)" />
+        }
+    </div>
+}
+
+@code {
+    private enum LibraryViewMode { Grid, List }
+
+    private BookListResponse? _result;
+    private string? _errorMessage;
+    private LibraryViewMode _viewMode = LibraryViewMode.Grid;
+
+    private string _searchTerm = string.Empty;
+    private string _genreFilter = string.Empty;
+    private string _sort = "createdAt";
+    private string _order = "desc";
+
+    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || !string.IsNullOrWhiteSpace(_genreFilter);
+
+    protected override Task OnInitializedAsync() => LoadBooksAsync();
+
+    private void SetViewMode(LibraryViewMode mode) => _viewMode = mode;
+
+    private void GoToUpload() => NavigationManager.NavigateTo("library/upload");
+
+    private async Task LoadBooksAsync()
+    {
+        _errorMessage = null;
+
+        var query = new List<string> { $"sort={_sort}", $"order={_order}" };
+        if (!string.IsNullOrWhiteSpace(_searchTerm)) query.Add($"search={Uri.EscapeDataString(_searchTerm)}");
+        if (!string.IsNullOrWhiteSpace(_genreFilter)) query.Add($"genre={Uri.EscapeDataString(_genreFilter)}");
+
+        var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}");
+        if (response is { Success: true, Data: not null })
+        {
+            _result = response.Data;
+        }
+        else
+        {
+            _errorMessage = response?.Error?.Message ?? "Bibliothek konnte nicht geladen werden.";
+        }
+    }
+}
