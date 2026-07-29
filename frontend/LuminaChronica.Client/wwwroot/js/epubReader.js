@@ -30,7 +30,13 @@ const instances = new Map();
 export async function init(elementId, bytes, initialCfi, fontSize) {
     await ensureLibsLoaded();
 
-    const book = ePub(bytes.buffer);
+    // `bytes` (a byte[] parameter) arrives as a Uint8Array view into a
+    // reused/pooled interop buffer -- bytes.buffer is that whole shared
+    // buffer, not just this call's data. Must slice by byteOffset/byteLength
+    // to get the actual EPUB bytes, or JSZip parses garbage (surfaced as
+    // epub.js's rendition.display() throwing "No Section Found").
+    const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    const book = ePub(arrayBuffer);
     const rendition = book.renderTo(elementId, { width: "100%", height: "100%", flow: "paginated", spread: "none" });
     rendition.themes.fontSize(`${fontSize}px`);
 
