@@ -17,7 +17,9 @@ function loadScript(src) {
     });
 }
 
-function ensureLibsLoaded() {
+// Exported so metadataExtractor.js (Upload page) can reuse the same lazy
+// jszip/epub.min.js load instead of injecting the scripts a second time.
+export function ensureLibsLoaded() {
     if (!libsLoadedPromise) {
         libsLoadedPromise = loadScript("lib/epubjs/jszip.min.js")
             .then(() => loadScript("lib/epubjs/epub.min.js"));

@@ -1,4 +1,5 @@
 using Bunit;
+using LuminaChronica.Client.Models;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components.Forms;
@@ -64,5 +65,56 @@ public class BookUploadPageTests : BunitContext
         cut.Find("form").Submit();
 
         Assert.Contains("Upload rejected by server.", cut.Markup);
+    }
+
+    [Fact]
+    public void BookUpload_EpubSelection_PrefillsEmptyFieldsFromExtractedMetadata()
+    {
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+        JSInterop.SetupModule("./js/metadataExtractor.js")
+            .Setup<ExtractedMetadata>("extractEpub", _ => true)
+            .SetResult(new ExtractedMetadata
+            {
+                Title = "Extracted Title",
+                Author = "Extracted Author",
+                Language = "de",
+                HasCover = false,
+            });
+
+        var cut = Render<BookUpload>();
+        cut.FindComponents<InputFile>()[0].UploadFiles(InputFileContent.CreateFromText("epub-bytes", "book.epub"));
+
+        Assert.Equal("Extracted Title", cut.Find("#title").GetAttribute("value"));
+        Assert.Equal("Extracted Author", cut.Find("#author").GetAttribute("value"));
+        Assert.Equal("de", cut.Find("#language").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void BookUpload_EpubSelection_DoesNotOverwriteManuallyEnteredTitle()
+    {
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+        JSInterop.SetupModule("./js/metadataExtractor.js")
+            .Setup<ExtractedMetadata>("extractEpub", _ => true)
+            .SetResult(new ExtractedMetadata { Title = "Extracted Title", HasCover = false });
+
+        var cut = Render<BookUpload>();
+        cut.Find("#title").Change("My Own Title");
+        cut.FindComponents<InputFile>()[0].UploadFiles(InputFileContent.CreateFromText("epub-bytes", "book.epub"));
+
+        Assert.Equal("My Own Title", cut.Find("#title").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void BookUpload_TxtSelection_DoesNotAttemptExtraction()
+    {
+        // No JSInterop.SetupModule configured -- if the TXT branch tried to
+        // extract metadata anyway, the unconfigured JS call would throw and
+        // surface as a client-side error, unlike a real skip.
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+
+        var cut = Render<BookUpload>();
+        cut.FindComponents<InputFile>()[0].UploadFiles(InputFileContent.CreateFromText("plain text", "notes.txt"));
+
+        Assert.DoesNotContain("form-error", cut.Markup);
     }
 }
