@@ -53,7 +53,8 @@ export async function init(elementId, bytes, initialCfi, fontSize) {
     } catch (e) {
         throw new Error("DIAG-display-failed: " + String(e && e.message || e) + " | spineLength=" + (book.spine?.length ?? "?") +
             " | initialCfi=" + JSON.stringify(initialCfi) +
-            " | firstSpineItem=" + JSON.stringify(book.spine?.items?.[0] ? { href: book.spine.items[0].href, idref: book.spine.items[0].idref } : null));
+            " | firstSpineItem=" + JSON.stringify(book.spine?.items?.[0] ? { href: book.spine.items[0].href, idref: book.spine.items[0].idref } : null) +
+            " | documentHidden=" + document.hidden + " | visibilityState=" + document.visibilityState);
     }
 }
 
