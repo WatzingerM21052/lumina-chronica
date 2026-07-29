@@ -1,0 +1,32 @@
+/*
+  Modern Light theme (Teil 5 §61.2 — "hell, minimalistisch, clean").
+  Placeholder values, see classic-library.css for the reasoning.
+*/
+
+[data-theme="modern-light"] {
+    --color-primary: #3b6fe0;
+    --color-primary-hover: #2f5bc0;
+    --color-primary-active: #274ba3;
+
+    --color-secondary: #6b7280;
+    --color-secondary-hover: #565c69;
+
+    --color-gold-accent: #c9a227;
+    --color-info: #3b82c4;
+    --color-success: #2f8f4e;
+    --color-warning: #c48a1f;
+    --color-error: #c0392b;
+
+    --color-bg-paper: #f4f5f7;
+    --color-bg-light: #ffffff;
+    --color-bg-dark: #1f2328;
+    --color-bg-card: #ffffff;
+    --color-bg-reader: #ffffff;
+
+    --color-text-primary: #1f2328;
+    --color-text-secondary: #4b5563;
+    --color-text-muted: #8a93a3;
+    --color-text-disabled: #c3c9d1;
+
+    --color-border: #e2e5ea;
+}

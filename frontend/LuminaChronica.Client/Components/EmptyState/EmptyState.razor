@@ -1,0 +1,9 @@
+@namespace LuminaChronica.Client.Components
+
+<div class="empty-state">
+    <p class="empty-state-message">@Message</p>
+    @if (!string.IsNullOrWhiteSpace(ActionText) && OnAction.HasDelegate)
+    {
+        <button class="btn btn-primary" @onclick="OnAction">@ActionText</button>
+    }
+</div>
