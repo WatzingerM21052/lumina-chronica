@@ -83,6 +83,7 @@ booksRoute.get("/", requireAuth, async (c) => {
         page,
         pageSize,
         genre: q.genre || undefined,
+        tag: q.tag || undefined,
         search: q.search || undefined,
         sort,
         order,

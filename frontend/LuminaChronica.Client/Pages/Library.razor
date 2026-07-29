@@ -16,6 +16,7 @@
 <form class="library-toolbar" @onsubmit="LoadBooksAsync">
     <input type="search" placeholder="Titel oder Autor suchen..." @bind="_searchTerm" @bind:event="oninput" />
     <input type="text" placeholder="Genre" @bind="_genreFilter" @bind:event="oninput" />
+    <input type="text" placeholder="Tag" @bind="_tagFilter" @bind:event="oninput" />
 
     <select @bind="_sort">
         <option value="createdAt">Hinzugefügt</option>
@@ -72,12 +73,27 @@ else
 
     private string _searchTerm = string.Empty;
     private string _genreFilter = string.Empty;
+    private string _tagFilter = string.Empty;
     private string _sort = "createdAt";
     private string _order = "desc";
 
-    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || !string.IsNullOrWhiteSpace(_genreFilter);
+    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || !string.IsNullOrWhiteSpace(_genreFilter) || !string.IsNullOrWhiteSpace(_tagFilter);
 
-    protected override Task OnInitializedAsync() => LoadBooksAsync();
+    protected override Task OnInitializedAsync()
+    {
+        // Supports deep-linking from a tag link on Book Detail (library?tag=X).
+        var query = new Uri(NavigationManager.Uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts[0] == "tag" && parts.Length == 2)
+            {
+                _tagFilter = Uri.UnescapeDataString(parts[1]);
+            }
+        }
+
+        return LoadBooksAsync();
+    }
 
     private void SetViewMode(LibraryViewMode mode) => _viewMode = mode;
 
@@ -90,6 +106,7 @@ else
         var query = new List<string> { $"sort={_sort}", $"order={_order}" };
         if (!string.IsNullOrWhiteSpace(_searchTerm)) query.Add($"search={Uri.EscapeDataString(_searchTerm)}");
         if (!string.IsNullOrWhiteSpace(_genreFilter)) query.Add($"genre={Uri.EscapeDataString(_genreFilter)}");
+        if (!string.IsNullOrWhiteSpace(_tagFilter)) query.Add($"tag={Uri.EscapeDataString(_tagFilter)}");
 
         var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}");
         if (response is { Success: true, Data: not null })
