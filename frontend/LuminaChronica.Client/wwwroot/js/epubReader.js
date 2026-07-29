@@ -33,6 +33,13 @@ const instances = new Map();
 // Reads the *current* theme's resolved colors/reader font at open time
 // (rather than hardcoding a palette here) so it stays correct if the theme
 // tokens change.
+//
+// rendition.themes.register()/.select() (the "documented" way) doesn't
+// reliably apply in this epub.js build -- content still rendered
+// black-on-transparent. Using the content-render hook instead: it fires
+// for every section as it's actually attached to its iframe, and
+// Contents.addStylesheetRules() injects a real <style> into that specific
+// document, which does take effect.
 function applyAppTheme(rendition) {
     const styles = getComputedStyle(document.documentElement);
     const background = styles.getPropertyValue("--color-bg-reader").trim() || "#ffffff";
@@ -40,11 +47,12 @@ function applyAppTheme(rendition) {
     const linkColor = styles.getPropertyValue("--color-primary").trim() || color;
     const fontFamily = styles.getPropertyValue("--font-family-reader").trim() || "serif";
 
-    rendition.themes.register("app", {
-        body: { background: `${background} !important`, color: `${color} !important`, "font-family": `${fontFamily} !important` },
-        a: { color: `${linkColor} !important` },
+    rendition.hooks.content.register((contents) => {
+        contents.addStylesheetRules({
+            body: { background: background, color: color, "font-family": fontFamily },
+            a: { color: linkColor },
+        });
     });
-    rendition.themes.select("app");
 }
 
 export async function init(elementId, bytes, initialCfi, fontSize) {
