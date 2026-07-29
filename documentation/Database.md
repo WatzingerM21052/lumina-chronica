@@ -21,6 +21,13 @@ Creates the tables needed for Phase 1 (technical foundation) — enough for a us
 
 Auth (registration/login, password hashing) is Phase 2 scope — these tables exist now only so the schema/DB connectivity can be verified end-to-end in Phase 1.
 
+## Phase 2 (Authentication) — no schema changes needed
+
+Registration, login, logout, profile view/edit, and password change (PR #33/#34) were all built against the `0001_initial.sql` schema as-is — no `0002_*.sql` migration was needed:
+
+- **`users.password_hash`** stores the PBKDF2 hash as a single encoded string: `pbkdf2$<iterations>$<base64url-salt>$<base64url-hash>` (see `Architecture.md`'s "Password hashing" row for the iteration-count reasoning). This avoided adding separate `salt`/`iterations` columns.
+- **`user_settings`** is created for every new user at registration time (see `backend/src/services/authService.ts`) — two sequential `INSERT`s with a compensating delete of the `users` row if the second insert fails, since D1's `batch()` can't express a dependent two-insert sequence atomically (the second insert needs the first's generated id).
+
 ## Planned schema (not yet migrated)
 
 The full schema from Teil 4 (§45–§51) — `books`, `book_files`, `book_metadata`, `tags`, `book_tags`, `shelves`, `shelf_books`, `reading_progress`, `bookmarks`, `projects`, `project_members`, `characters`, `locations`, `timeline_events`, `project_files`, `followers`, `ratings`, `comments`, `user_statistics` — will be migrated incrementally as each phase needs them (Library in Phase 3, Reader progress in Phase 4, Organization in Phase 5, etc.), per the project's phase-gating rule. See `documentation/master-project-bible/extracted-spec-summary.md` for the full extracted column list, and `Technical-Standards.md` for the R2 file-key structure used alongside these tables.

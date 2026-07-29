@@ -6,7 +6,7 @@ Lumina Chronica is a personal digital library and creative knowledge platform �
 
 ## Status
 
-🚧 Early development — **v0.2 (Technical Foundation) is complete**: frontend, backend, and database are scaffolded and deployed. Next up: v1.0 (accounts, personal library, reader, reading progress). See [`documentation/Roadmap.md`](documentation/Roadmap.md) for the full version plan and [GitHub Projects](../../projects) for live progress.
+🚧 Early development — **v0.2 (Technical Foundation)** and **v1.0's Authentication phase** (registration, login, sessions, profile) are complete. Next up: the Library phase (personal book collection, uploads, reader). See [`documentation/Roadmap.md`](documentation/Roadmap.md) for the full version plan and [GitHub Projects](../../projects) for live progress.
 
 - Frontend: https://watzingerm21052.github.io/lumina-chronica/
 - Backend: https://lumina-chronica-api.svhofkirchen-api.workers.dev/api/status
