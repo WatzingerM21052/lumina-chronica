@@ -354,6 +354,7 @@ export async function deleteBook(db: D1Database, storage: R2Bucket, ownerId: num
     const fileRow = await db.prepare("SELECT file_url FROM book_files WHERE book_id = ?").bind(bookId).first<{ file_url: string }>();
 
     await db.batch([
+        db.prepare("DELETE FROM reading_progress WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM book_tags WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM book_metadata WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM book_files WHERE book_id = ?").bind(bookId),

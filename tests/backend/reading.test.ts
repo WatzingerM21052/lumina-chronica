@@ -122,3 +122,24 @@ describe("POST /api/reading/update", () => {
         expect((await readJson(getRes)).data.percentage).toBe(30);
     });
 });
+
+describe("DELETE /api/books/:id with existing reading progress", () => {
+    it("deletes the book even when a reading_progress row references it", async () => {
+        const bookId = await uploadBook(tokenA);
+        await app.request(
+            "/api/reading/update",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenA}` },
+                body: JSON.stringify({ bookId, percentage: 42 }),
+            },
+            env
+        );
+
+        const deleteRes = await app.request(`/api/books/${bookId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(deleteRes.status).toBe(204);
+
+        const rows = await env.DB.prepare("SELECT COUNT(*) AS total FROM reading_progress WHERE book_id = ?").bind(bookId).first<{ total: number }>();
+        expect(rows?.total).toBe(0);
+    });
+});
