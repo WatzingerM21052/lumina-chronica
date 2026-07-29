@@ -8,8 +8,8 @@ The Master Project Bible's own parts disagree on one milestone: the Implementati
 
 | Milestone | Focus | Scope |
 |---|---|---|
-| v0.1 | Projektstart | Repository foundation: license, templates, project board, docs (this phase) |
-| v0.2 | Technisches Fundament | Frontend/backend/DB scaffolding, first deploy pipeline (**current phase**) |
+| v0.1 | Projektstart | Repository foundation: license, templates, project board, docs — **done** |
+| v0.2 | Technisches Fundament | Frontend/backend/DB scaffolding, first deploy pipeline — **done** |
 | v1.0 | Reader Release | Auth, personal library, book upload (EPUB/PDF/TXT/Markdown), reader, reading progress, shelves, tags |
 | v1.5 | Personalisierung | Extended themes, bookmarks, better reader, extended statistics |
 | v2.0 | Worldbuilding | Projects, worlds, characters, locations, maps, timelines |
@@ -21,14 +21,16 @@ The Master Project Bible's own parts disagree on one milestone: the Implementati
 
 Per the Execution Blueprint (§112): each phase must be fully complete, tested, and documented before the next phase begins. No sprint is "just preparation" — every sprint should add visible, working value.
 
-## Current phase: v0.2 — Technical Foundation
+## v0.2 — Technical Foundation (complete)
 
 Definition of Done (Implementation Blueprint §93 / Execution Blueprint §116):
-- [ ] Frontend runs (Blazor WASM scaffold, routing, layout, nav, theme engine skeleton)
-- [ ] Backend runs (`GET /api/status` responding)
-- [ ] Database connected (D1 created, first migration applied)
-- [ ] Deployment works (frontend live on GitHub Pages, backend live on Cloudflare Workers, frontend successfully calls backend across origins)
+- [x] Frontend runs (Blazor WASM scaffold, routing, layout, nav, theme engine skeleton) — live at https://watzingerm21052.github.io/lumina-chronica/
+- [x] Backend runs (`GET /api/status` responding) — live at https://lumina-chronica-api.svhofkirchen-api.workers.dev
+- [x] Database connected (D1 `lumina-chronica-db` created, `0001_initial.sql` applied locally and remotely)
+- [x] Deployment works (frontend live on GitHub Pages, backend live on Cloudflare Workers, frontend successfully calls backend across origins — CORS confirmed restrictive and working)
 
-## Next phase preview: v1.0 (not yet planned in detail)
+Frontend and backend test suites both passing (2/2 bUnit, 3/3 Vitest). Backend CI deploy (`backend-deploy.yml`) exists but needs a `CLOUDFLARE_API_TOKEN` repo secret added by the repo owner before it can run — see Architecture.md.
+
+## Next phase: v1.0 (not yet planned in detail)
 
 Per the Execution Blueprint's Master Development Flow (§114): Authentication → Library → Reader → Organization → Dashboard → Offline → **v1.0 Release**. Each will be planned in its own pass once v0.2 is verified working, per the phase-gating rule above.
