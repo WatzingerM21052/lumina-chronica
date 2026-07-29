@@ -34,3 +34,5 @@ Frontend and backend test suites both passing (2/2 bUnit, 3/3 Vitest). Backend C
 ## Next phase: v1.0 (not yet planned in detail)
 
 Per the Execution Blueprint's Master Development Flow (§114): Authentication → Library → Reader → Organization → Dashboard → Offline → **v1.0 Release**. Each will be planned in its own pass once v0.2 is verified working, per the phase-gating rule above.
+
+**Open decision to make when the Library phase is planned:** where book files (EPUB/PDF/TXT/Markdown) and covers actually get stored. R2 was the Master Project Bible's original assumption, but it requires adding a payment method to the Cloudflare account, which the user wants to avoid for a hobby project. Google Drive and Supabase Storage were evaluated as card-free alternatives (2026-07-29) — see `Architecture.md`'s "File storage" row for the tradeoffs. Decide this before starting the Library phase's implementation.
