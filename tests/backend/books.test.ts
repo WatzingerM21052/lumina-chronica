@@ -1,0 +1,208 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import app from "../../backend/src/index";
+import { createFakeD1 } from "./fakeD1";
+import { createFakeR2 } from "./fakeR2";
+import { readJson } from "./testUtils";
+
+let env: { DB: D1Database; STORAGE: R2Bucket; JWT_SECRET: string };
+let tokenA: string;
+let tokenB: string;
+
+async function registerAndLogin(username: string, email: string): Promise<string> {
+    const res = await app.request(
+        "/api/auth/register",
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, email, password: "correct horse" }),
+        },
+        env
+    );
+    return (await readJson(res)).data.token;
+}
+
+function makeEpubFile(content = "epub-bytes"): File {
+    return new File([content], "book.epub", { type: "application/epub+zip" });
+}
+
+function uploadForm(fields: Record<string, string> = {}, file: File | null = makeEpubFile()): FormData {
+    const form = new FormData();
+    form.set("title", fields.title ?? "Test Book");
+    for (const [key, value] of Object.entries(fields)) {
+        if (key === "title") continue;
+        form.set(key, value);
+    }
+    if (file) form.set("file", file);
+    return form;
+}
+
+async function uploadBook(token: string, fields: Record<string, string> = {}, file: File | null = makeEpubFile()) {
+    return app.request("/api/books/upload", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: uploadForm(fields, file) }, env);
+}
+
+beforeEach(async () => {
+    env = { DB: createFakeD1(), STORAGE: createFakeR2(), JWT_SECRET: "test-secret-do-not-use-in-production" };
+    tokenA = await registerAndLogin("alice", "alice@example.com");
+    tokenB = await registerAndLogin("bob", "bob@example.com");
+});
+
+describe("POST /api/books/upload", () => {
+    it("requires authentication", async () => {
+        const res = await app.request("/api/books/upload", { method: "POST", body: uploadForm() }, env);
+        expect(res.status).toBe(401);
+    });
+
+    it("uploads a book with metadata and tags, returning its detail", async () => {
+        const res = await uploadBook(tokenA, { author: "Jane Doe", genre: "fantasy", tags: "Dragons, Adventure" });
+        const json = await readJson(res);
+
+        expect(res.status).toBe(201);
+        expect(json.data.title).toBe("Test Book");
+        expect(json.data.author).toBe("Jane Doe");
+        expect(json.data.file).toEqual({ format: "EPUB", size: expect.any(Number) });
+        expect(json.data.tags.sort()).toEqual(["Adventure", "Dragons"]);
+        expect(json.data.coverUrl).toBeNull();
+    });
+
+    it("rejects a missing title", async () => {
+        const res = await uploadBook(tokenA, { title: "" });
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("rejects an unsupported file extension", async () => {
+        const file = new File(["x"], "book.exe", { type: "application/octet-stream" });
+        const res = await uploadBook(tokenA, {}, file);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("rejects an oversized file", async () => {
+        const big = new File([new Uint8Array(51 * 1024 * 1024)], "book.epub", { type: "application/epub+zip" });
+        const res = await uploadBook(tokenA, {}, big);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
+    });
+});
+
+describe("GET /api/books", () => {
+    it("only returns the caller's own books", async () => {
+        await uploadBook(tokenA, { title: "Alice's Book" });
+        await uploadBook(tokenB, { title: "Bob's Book" });
+
+        const res = await app.request("/api/books", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.items).toHaveLength(1);
+        expect(json.data.items[0].title).toBe("Alice's Book");
+    });
+
+    it("filters by genre and search, and paginates", async () => {
+        await uploadBook(tokenA, { title: "Dragon Tales", genre: "fantasy" });
+        await uploadBook(tokenA, { title: "Space Odyssey", genre: "scifi" });
+        await uploadBook(tokenA, { title: "Dragon Riders", genre: "fantasy" });
+
+        const genreRes = await app.request("/api/books?genre=fantasy", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect((await readJson(genreRes)).data.items).toHaveLength(2);
+
+        const searchRes = await app.request("/api/books?search=Odyssey", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const searchJson = await readJson(searchRes);
+        expect(searchJson.data.items).toHaveLength(1);
+        expect(searchJson.data.items[0].title).toBe("Space Odyssey");
+
+        const pageRes = await app.request("/api/books?pageSize=2&page=1", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const pageJson = await readJson(pageRes);
+        expect(pageJson.data.items).toHaveLength(2);
+        expect(pageJson.data.total).toBe(3);
+    });
+});
+
+describe("GET/PUT/DELETE /api/books/:id", () => {
+    it("returns 404 for a book owned by another user", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const getRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(getRes.status).toBe(404);
+
+        const putRes = await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenB}` }, body: JSON.stringify({ title: "Hijacked" }) },
+            env
+        );
+        expect(putRes.status).toBe(404);
+
+        const deleteRes = await app.request(`/api/books/${bookId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(deleteRes.status).toBe(404);
+    });
+
+    it("updates metadata and persists it", async () => {
+        const uploadRes = await uploadBook(tokenA, { title: "Original Title" });
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const putRes = await app.request(
+            `/api/books/${bookId}`,
+            {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenA}` },
+                body: JSON.stringify({ title: "Updated Title", isbn: "978-0-00-000000-0", tags: ["Updated"] }),
+            },
+            env
+        );
+        expect(putRes.status).toBe(200);
+
+        const getRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(getRes);
+        expect(json.data.title).toBe("Updated Title");
+        expect(json.data.isbn).toBe("978-0-00-000000-0");
+        expect(json.data.tags).toEqual(["Updated"]);
+    });
+
+    it("deletes a book and its files", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const deleteRes = await app.request(`/api/books/${bookId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(deleteRes.status).toBe(204);
+
+        const getRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(getRes.status).toBe(404);
+
+        const fileRes = await app.request(`/api/books/${bookId}/file`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(fileRes.status).toBe(404);
+    });
+});
+
+describe("GET /api/books/:id/file and /cover (ownership check)", () => {
+    it("streams the book file to its owner", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const res = await app.request(`/api/books/${bookId}/file`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Content-Type")).toBe("application/epub+zip");
+        expect(await res.text()).toBe("epub-bytes");
+    });
+
+    it("returns 404 for another user's book file", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const res = await app.request(`/api/books/${bookId}/file`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(res.status).toBe(404);
+    });
+
+    it("returns 404 for another user's book cover", async () => {
+        const cover = new File(["cover-bytes"], "cover.jpg", { type: "image/jpeg" });
+        const form = uploadForm();
+        form.set("cover", cover);
+        const uploadRes = await app.request("/api/books/upload", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` }, body: form }, env);
+        const bookId = (await readJson(uploadRes)).data.id;
+
+        const ownerRes = await app.request(`/api/books/${bookId}/cover`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(ownerRes.status).toBe(200);
+
+        const otherRes = await app.request(`/api/books/${bookId}/cover`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(otherRes.status).toBe(404);
+    });
+});

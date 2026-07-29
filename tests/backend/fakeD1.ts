@@ -77,5 +77,10 @@ export function createFakeD1(): D1Database {
         prepare(sql: string) {
             return new FakeD1PreparedStatement(db, sql);
         },
+        async batch(statements: FakeD1PreparedStatement[]) {
+            const results = [];
+            for (const statement of statements) results.push(await statement.run());
+            return results;
+        },
     } as unknown as D1Database;
 }
