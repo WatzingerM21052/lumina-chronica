@@ -141,3 +141,23 @@ Verified end-to-end against the real production backend, D1, and the deployed si
 Backend: 61/61 Vitest tests passing. Frontend: 42/42 bUnit tests passing.
 
 **Phase 5 (Organization) is now complete.** Remaining phases per the Master Development Flow: Dashboard → Offline → v1.0 Release.
+
+### Cover replace after creation (2026-07-30, issue #96/PR #97)
+
+The user asked why book/shelf cover images could only be set at upload/creation time — not an architectural gap, just UI/endpoints that were never built for the edit forms. Added `PUT /api/books/:id/cover` and `PUT /api/shelves/:id/cover`, a cover field on both edit forms, and a cover display on Shelf Detail's view mode (which previously showed no cover at all). Verified live: replaced a real book's cover, confirmed the old R2 object was actually deleted (`wrangler r2 object get` returned "key does not exist" for the old key).
+
+Frontend: 43/43 bUnit tests passing.
+
+### Library UX polish (2026-07-30, issues #98-100)
+
+User feedback after the Organization phase: the Genre/Tag filters should be multi-select dropdowns instead of free text, filters should apply immediately instead of needing a "Filtern" click, search should suggest matches as you type, there should be a way to clear all filters, and the release-date field should be a real date picker. Landed as three stories — see `Architecture.md`'s "Library facets + multi-value filtering" / "`MultiSelectDropdown` component" / "Library search-as-you-type" / "Library pagination" / "Release date input" rows for the technical detail.
+
+- [x] Story 1 (#98/PR #101) — `GET /api/books/facets`, multi-value `tag`/`genre` filtering.
+- [x] Story 2 (#99/PR #102) — `MultiSelectDropdown` component, auto-apply-on-change, debounced search suggestions, "Filter zurücksetzen", and a real pagination bug fix (`LoadBooksAsync` had never sent `page`/`pageSize` since Phase 3 — any library over 20 books silently only showed the first page).
+- [x] Story 3 (#100/PR #104) — `InputDate` for release date on both the Upload and Book Detail edit forms.
+
+**Real bug found via live testing, fixed same-day (PR #103)**: right after Story 2 shipped, live-testing found the search box's debounced fetch fired correctly (confirmed via network log and a direct backend check) but the grid/suggestions never updated on screen. A callback reached via `InvokeAsync` from a `System.Threading.Timer` doesn't auto-render the way handlers invoked directly from Blazor's own event pipeline do — fixed with an explicit `StateHasChanged()`. Notably, bUnit's test renderer does not reproduce this gap: a test written specifically to catch it passed even with the bug still present, confirmed by reverting the fix and re-running. This class of bug is live-verification-only.
+
+Live-verified end-to-end on the deployed site after every story: selected multiple tags in the dropdown and confirmed the grid updated with no button click, typed a partial title and confirmed suggestions appeared and navigated to the right book, confirmed "Filter zurücksetzen" cleared state, and confirmed the release-date picker round-trips correctly (`tt.mm.jjjj` placeholder confirmed live, matching the German-locale prediction).
+
+Backend: 68/68 Vitest tests passing. Frontend: 52/52 bUnit tests passing.
