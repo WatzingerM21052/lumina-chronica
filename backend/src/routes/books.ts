@@ -11,6 +11,7 @@ import {
     getBook,
     getBookCoverObject,
     getBookFileObject,
+    getFacets,
     listBooks,
     removeFavorite,
     updateBook,
@@ -94,6 +95,11 @@ booksRoute.get("/", requireAuth, async (c) => {
         order,
     });
     return c.json(success(result));
+});
+
+booksRoute.get("/facets", requireAuth, async (c) => {
+    const facets = await getFacets(c.env.DB, c.get("userId"));
+    return c.json(success(facets));
 });
 
 booksRoute.get("/:id", requireAuth, async (c) => {

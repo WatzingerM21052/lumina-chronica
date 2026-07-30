@@ -143,6 +143,40 @@ describe("GET /api/books", () => {
         expect(json.data.items).toHaveLength(2);
         expect(json.data.items.map((b: { title: string }) => b.title).sort()).toEqual(["Dragon Riders", "Dragon Tales"]);
     });
+
+    it("filters by multiple comma-separated tags/genres (OR semantics)", async () => {
+        await uploadBook(tokenA, { title: "Dragon Tales", genre: "fantasy", tags: "Fantasy" });
+        await uploadBook(tokenA, { title: "Space Odyssey", genre: "scifi", tags: "Science Fiction" });
+        await uploadBook(tokenA, { title: "History Book", genre: "history", tags: "Nonfiction" });
+
+        const genreRes = await app.request("/api/books?genre=fantasy,scifi", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const genreJson = await readJson(genreRes);
+        expect(genreJson.data.items.map((b: { title: string }) => b.title).sort()).toEqual(["Dragon Tales", "Space Odyssey"]);
+
+        const tagRes = await app.request("/api/books?tag=Fantasy,Science%20Fiction", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const tagJson = await readJson(tagRes);
+        expect(tagJson.data.items.map((b: { title: string }) => b.title).sort()).toEqual(["Dragon Tales", "Space Odyssey"]);
+    });
+});
+
+describe("GET /api/books/facets", () => {
+    it("returns only the caller's own distinct tags and genres", async () => {
+        await uploadBook(tokenA, { genre: "fantasy", tags: "Dragons, Adventure" });
+        await uploadBook(tokenA, { genre: "fantasy", tags: "Dragons" });
+        await uploadBook(tokenA, { genre: "scifi", tags: "Space" });
+        await uploadBook(tokenB, { genre: "history", tags: "War" });
+
+        const res = await app.request("/api/books/facets", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.genres.sort()).toEqual(["fantasy", "scifi"]);
+        expect(json.data.tags.sort()).toEqual(["Adventure", "Dragons", "Space"]);
+    });
+
+    it("requires authentication", async () => {
+        const res = await app.request("/api/books/facets", {}, env);
+        expect(res.status).toBe(401);
+    });
 });
 
 describe("POST/DELETE /api/books/:id/favorite", () => {
