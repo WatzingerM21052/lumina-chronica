@@ -1,5 +1,6 @@
 @page "/library/upload"
 @attribute [Authorize]
+@using System.Globalization
 @using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
@@ -75,7 +76,7 @@
 
     <div class="form-group">
         <label for="releaseDate">Erscheinungsdatum</label>
-        <InputText id="releaseDate" @bind-Value="_form.ReleaseDate" placeholder="JJJJ-MM-TT" />
+        <InputDate id="releaseDate" @bind-Value="_form.ReleaseDateValue" />
     </div>
 
     <div class="form-group">
@@ -349,5 +350,14 @@
         public string? Publisher { get; set; }
         public string? ReleaseDate { get; set; }
         public int? Pages { get; set; }
+
+        // InputDate needs a DateOnly?-typed property to bind to; ReleaseDate
+        // itself stays a string since that's what crosses the wire (the
+        // backend's release_date column is opaque TEXT, not a date type).
+        public DateOnly? ReleaseDateValue
+        {
+            get => DateOnly.TryParse(ReleaseDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : null;
+            set => ReleaseDate = value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
     }
 }
