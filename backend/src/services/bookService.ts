@@ -222,17 +222,40 @@ export type ListBooksQuery = {
 
 export type BookListResult = { items: BookSummary[]; total: number; page: number; pageSize: number };
 
+// Splits a comma-separated query value into trimmed, non-empty parts --
+// shared by the genre/tag multi-value filters below. A single value (no
+// comma) still goes through this, so the single- and multi-value cases use
+// the exact same query-building path rather than two separate branches.
+function parseCommaList(value: string): string[] {
+    return value
+        .split(",")
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0);
+}
+
+function placeholders(count: number): string {
+    return Array(count).fill("?").join(", ");
+}
+
 export async function listBooks(db: D1Database, ownerId: number, query: ListBooksQuery): Promise<BookListResult> {
     const conditions = ["owner_id = ?"];
     const params: unknown[] = [ownerId];
 
     if (query.genre) {
-        conditions.push("genre = ?");
-        params.push(query.genre);
+        const genres = parseCommaList(query.genre);
+        if (genres.length > 0) {
+            conditions.push(`genre IN (${placeholders(genres.length)})`);
+            params.push(...genres);
+        }
     }
     if (query.tag) {
-        conditions.push("EXISTS (SELECT 1 FROM book_tags JOIN tags ON tags.id = book_tags.tag_id WHERE book_tags.book_id = books.id AND tags.name = ?)");
-        params.push(query.tag);
+        const tags = parseCommaList(query.tag);
+        if (tags.length > 0) {
+            conditions.push(
+                `EXISTS (SELECT 1 FROM book_tags JOIN tags ON tags.id = book_tags.tag_id WHERE book_tags.book_id = books.id AND tags.name IN (${placeholders(tags.length)}))`
+            );
+            params.push(...tags);
+        }
     }
     if (query.favorite) {
         conditions.push("EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = books.owner_id)");
@@ -263,6 +286,33 @@ export async function listBooks(db: D1Database, ownerId: number, query: ListBook
         total: countRow?.total ?? 0,
         page: query.page,
         pageSize: query.pageSize,
+    };
+}
+
+export type BookFacets = { tags: string[]; genres: string[] };
+
+// Powers the Library page's multi-select filter dropdowns -- only the
+// values the caller has actually used, not every tag/genre in the system.
+export async function getFacets(db: D1Database, ownerId: number): Promise<BookFacets> {
+    const [tagRows, genreRows] = await Promise.all([
+        db
+            .prepare(
+                `SELECT DISTINCT tags.name AS name FROM tags
+                 JOIN book_tags ON book_tags.tag_id = tags.id
+                 JOIN books ON books.id = book_tags.book_id
+                 WHERE books.owner_id = ? ORDER BY tags.name ASC`
+            )
+            .bind(ownerId)
+            .all<{ name: string }>(),
+        db
+            .prepare("SELECT DISTINCT genre AS name FROM books WHERE owner_id = ? AND genre IS NOT NULL AND genre != '' ORDER BY genre ASC")
+            .bind(ownerId)
+            .all<{ name: string }>(),
+    ]);
+
+    return {
+        tags: tagRows.results.map((row) => row.name),
+        genres: genreRows.results.map((row) => row.name),
     };
 }
 
