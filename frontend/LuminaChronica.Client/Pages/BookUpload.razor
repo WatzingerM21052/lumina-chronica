@@ -72,9 +72,64 @@
                 Info abrufen
             </button>
         </div>
+
+        <div class="isbn-enrichment-row enrichment-search-row">
+            <input id="enrichment-search" placeholder="oder nach Titel/Autor suchen" @bind="_searchQuery" />
+            <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_searchQuery) || _isLookingUpEnrichment)" @onclick="SearchEnrichmentAsync">
+                Suchen
+            </button>
+        </div>
+
         @if (_enrichmentStatus is not null)
         {
             <p class="text-muted">@_enrichmentStatus</p>
+        }
+
+        @if (_searchResults is { Count: > 0 })
+        {
+            <ul class="enrichment-search-results">
+                @foreach (var result in _searchResults)
+                {
+                    <li>
+                        <button type="button" class="enrichment-search-result" @onclick="() => SelectSearchResultAsync(result)">
+                            @if (result.CoverId is { } coverId)
+                            {
+                                <img src="@($"https://covers.openlibrary.org/b/id/{coverId}-S.jpg")" alt="" class="enrichment-search-cover" />
+                            }
+                            <span>
+                                <strong>@result.Title</strong>
+                                @if (!string.IsNullOrWhiteSpace(result.Author))
+                                {
+                                    <text> — @result.Author</text>
+                                }
+                                @if (result.Year is { } year)
+                                {
+                                    <text> (@year)</text>
+                                }
+                            </span>
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (_pendingEnrichment is not null)
+        {
+            <div class="enrichment-preview">
+                <p><strong>Gefundene Daten:</strong></p>
+                <ul>
+                    <li>Beschreibung: @DescribeField(_form.Description, _pendingEnrichment.Description)</li>
+                    <li>Genre: @DescribeField(_form.Genre, _pendingEnrichment.Genre)</li>
+                    <li>Verlag: @DescribeField(_form.Publisher, _pendingEnrichment.Publisher)</li>
+                    <li>Seiten: @DescribePages(_form.Pages, _pendingEnrichment.Pages)</li>
+                    <li>Erscheinungsdatum: @DescribeReleaseDate(_form.ReleaseDate, _pendingEnrichment.ReleaseDate)</li>
+                    <li>Cover: @DescribeCover()</li>
+                </ul>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" @onclick="ApplyPendingEnrichmentAsync">Übernehmen</button>
+                    <button type="button" class="btn" @onclick="DiscardPendingEnrichment">Verwerfen</button>
+                </div>
+            </div>
         }
     </div>
 
@@ -143,6 +198,12 @@
     private bool _isLookingUpEnrichment;
     private string? _errorMessage;
     private string? _enrichmentStatus;
+    private string _searchQuery = string.Empty;
+    private List<EnrichmentSearchResult>? _searchResults;
+    private EnrichedMetadata? _pendingEnrichment;
+    private byte[]? _pendingCoverBytes;
+    private string? _pendingCoverContentType;
+    private string? _pendingCoverPreviewUrl;
     private IJSObjectReference? _metadataModule;
     private IJSObjectReference? _enrichmentModule;
 
@@ -213,60 +274,189 @@
         }
     }
 
-    private async Task LookupEnrichmentAsync()
+    private Task LookupEnrichmentAsync()
     {
-        if (string.IsNullOrWhiteSpace(_form.Isbn)) return;
+        if (string.IsNullOrWhiteSpace(_form.Isbn)) return Task.CompletedTask;
+        return RunEnrichmentLookupAsync(() => LookupByIsbnCoreAsync(_form.Isbn));
+    }
+
+    private async Task SearchEnrichmentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery)) return;
 
         _enrichmentStatus = null;
+        _searchResults = null;
+        _pendingEnrichment = null;
+        await ClearPendingCoverAsync();
         _isLookingUpEnrichment = true;
 
         try
         {
             _enrichmentModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/metadataEnrichment.js");
-            var metadata = await _enrichmentModule.InvokeAsync<EnrichedMetadata>("lookupByIsbn", _form.Isbn);
+            var results = await _enrichmentModule.InvokeAsync<List<EnrichmentSearchResult>>("searchByQuery", _searchQuery);
+            _searchResults = results;
+            if (results.Count == 0)
+            {
+                _enrichmentStatus = "Keine Treffer gefunden.";
+            }
+        }
+        catch (Exception)
+        {
+            _enrichmentStatus = "Keine Treffer gefunden.";
+        }
+        finally
+        {
+            _isLookingUpEnrichment = false;
+        }
+    }
 
+    private Task SelectSearchResultAsync(EnrichmentSearchResult result)
+    {
+        _searchResults = null;
+
+        if (!string.IsNullOrWhiteSpace(result.Isbn))
+        {
+            _form.Isbn = result.Isbn;
+            return RunEnrichmentLookupAsync(() => LookupByIsbnCoreAsync(result.Isbn));
+        }
+
+        return RunEnrichmentLookupAsync(() => LookupByWorkCoreAsync(result.Key, result.CoverId));
+    }
+
+    private async Task<EnrichedMetadata> LookupByIsbnCoreAsync(string isbn)
+    {
+        _enrichmentModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/metadataEnrichment.js");
+        return await _enrichmentModule.InvokeAsync<EnrichedMetadata>("lookupByIsbn", isbn);
+    }
+
+    private async Task<EnrichedMetadata> LookupByWorkCoreAsync(string? workKey, int? coverId)
+    {
+        _enrichmentModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/metadataEnrichment.js");
+        return await _enrichmentModule.InvokeAsync<EnrichedMetadata>("lookupByWork", workKey, coverId);
+    }
+
+    // Fetches into `_pendingEnrichment`/`_pendingCoverBytes` only -- nothing
+    // touches the form until the user reviews the preview card and clicks
+    // "Übernehmen" (ApplyPendingEnrichmentAsync). Shared by the ISBN button
+    // and search-result selection since both resolve to the same preview flow.
+    private async Task RunEnrichmentLookupAsync(Func<Task<EnrichedMetadata>> lookup)
+    {
+        _enrichmentStatus = null;
+        _searchResults = null;
+        _isLookingUpEnrichment = true;
+        await ClearPendingCoverAsync();
+
+        try
+        {
+            var metadata = await lookup();
             if (!metadata.Found)
             {
                 _enrichmentStatus = "Keine Daten gefunden.";
+                _pendingEnrichment = null;
                 return;
             }
 
-            // Same "fill gaps only, never overwrite" rule as file extraction.
-            if (string.IsNullOrWhiteSpace(_form.Description) && !string.IsNullOrWhiteSpace(metadata.Description)) _form.Description = metadata.Description;
-            if (string.IsNullOrWhiteSpace(_form.Genre) && !string.IsNullOrWhiteSpace(metadata.Genre)) _form.Genre = metadata.Genre;
-            if (string.IsNullOrWhiteSpace(_form.Publisher) && !string.IsNullOrWhiteSpace(metadata.Publisher)) _form.Publisher = metadata.Publisher;
-            if (_form.Pages is null && metadata.Pages is { } pages) _form.Pages = pages;
-            if (string.IsNullOrWhiteSpace(_form.ReleaseDate) && DateOnly.TryParse(metadata.ReleaseDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-            {
-                _form.ReleaseDate = metadata.ReleaseDate;
-            }
+            _pendingEnrichment = metadata;
 
-            if (metadata.HasCover && _selectedCover is null && _extractedCoverBytes is null)
+            if (metadata.HasCover)
             {
-                var coverBytes = await _enrichmentModule.InvokeAsync<byte[]?>("getCoverBytes");
+                var coverBytes = await _enrichmentModule!.InvokeAsync<byte[]?>("getCoverBytes");
                 if (coverBytes is { Length: > 0 })
                 {
-                    var contentType = await _enrichmentModule.InvokeAsync<string?>("getCoverContentType");
-
-                    if (_coverPreviewUrl is not null)
-                    {
-                        await BlobUrlService.RevokeObjectUrlAsync(_coverPreviewUrl);
-                    }
-
-                    _enrichedCoverBytes = coverBytes;
-                    _enrichedCoverContentType = string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType;
-                    _coverPreviewUrl = await BlobUrlService.CreateObjectUrlAsync(coverBytes, _enrichedCoverContentType);
+                    var contentType = await _enrichmentModule!.InvokeAsync<string?>("getCoverContentType");
+                    _pendingCoverBytes = coverBytes;
+                    _pendingCoverContentType = string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType;
+                    _pendingCoverPreviewUrl = await BlobUrlService.CreateObjectUrlAsync(coverBytes, _pendingCoverContentType);
                 }
             }
         }
         catch (Exception)
         {
             _enrichmentStatus = "Keine Daten gefunden.";
+            _pendingEnrichment = null;
         }
         finally
         {
             _isLookingUpEnrichment = false;
         }
+    }
+
+    private async Task ApplyPendingEnrichmentAsync()
+    {
+        if (_pendingEnrichment is null) return;
+        var metadata = _pendingEnrichment;
+
+        // Same "fill gaps only, never overwrite" rule as file extraction.
+        if (string.IsNullOrWhiteSpace(_form.Description) && !string.IsNullOrWhiteSpace(metadata.Description)) _form.Description = metadata.Description;
+        if (string.IsNullOrWhiteSpace(_form.Genre) && !string.IsNullOrWhiteSpace(metadata.Genre)) _form.Genre = metadata.Genre;
+        if (string.IsNullOrWhiteSpace(_form.Publisher) && !string.IsNullOrWhiteSpace(metadata.Publisher)) _form.Publisher = metadata.Publisher;
+        if (_form.Pages is null && metadata.Pages is { } pages) _form.Pages = pages;
+        if (string.IsNullOrWhiteSpace(_form.ReleaseDate) && IsValidReleaseDate(metadata.ReleaseDate))
+        {
+            _form.ReleaseDate = metadata.ReleaseDate;
+        }
+
+        if (_pendingCoverBytes is not null && _selectedCover is null && _extractedCoverBytes is null)
+        {
+            if (_coverPreviewUrl is not null)
+            {
+                await BlobUrlService.RevokeObjectUrlAsync(_coverPreviewUrl);
+            }
+
+            _enrichedCoverBytes = _pendingCoverBytes;
+            _enrichedCoverContentType = _pendingCoverContentType;
+            _coverPreviewUrl = _pendingCoverPreviewUrl;
+            _pendingCoverPreviewUrl = null; // ownership transferred to _coverPreviewUrl -- don't revoke it below
+        }
+
+        _pendingEnrichment = null;
+        await ClearPendingCoverAsync();
+    }
+
+    private async Task DiscardPendingEnrichment()
+    {
+        _pendingEnrichment = null;
+        await ClearPendingCoverAsync();
+    }
+
+    private async Task ClearPendingCoverAsync()
+    {
+        if (_pendingCoverPreviewUrl is not null)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(_pendingCoverPreviewUrl);
+        }
+        _pendingCoverBytes = null;
+        _pendingCoverContentType = null;
+        _pendingCoverPreviewUrl = null;
+    }
+
+    private static bool IsValidReleaseDate(string? value) => DateOnly.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+
+    private static string Truncate(string value, int maxLength = 80) => value.Length <= maxLength ? value : value[..maxLength] + "…";
+
+    private static string DescribeField(string? currentValue, string? fetchedValue)
+    {
+        if (!string.IsNullOrWhiteSpace(currentValue)) return "bleibt unverändert";
+        if (!string.IsNullOrWhiteSpace(fetchedValue)) return $"wird gesetzt: {Truncate(fetchedValue)}";
+        return "keine Daten gefunden";
+    }
+
+    private static string DescribePages(int? currentValue, int? fetchedValue)
+    {
+        if (currentValue is not null) return "bleibt unverändert";
+        return fetchedValue is { } pages ? $"wird gesetzt: {pages}" : "keine Daten gefunden";
+    }
+
+    private static string DescribeReleaseDate(string? currentValue, string? fetchedValue)
+    {
+        if (!string.IsNullOrWhiteSpace(currentValue)) return "bleibt unverändert";
+        return IsValidReleaseDate(fetchedValue) ? $"wird gesetzt: {fetchedValue}" : "keine Daten gefunden";
+    }
+
+    private string DescribeCover()
+    {
+        if (_selectedCover is not null || _extractedCoverBytes is not null) return "bleibt unverändert";
+        return _pendingCoverBytes is not null ? "wird gesetzt" : "keine Daten gefunden";
     }
 
     private async Task OnCoverSelectedAsync(InputFileChangeEventArgs e)
@@ -300,6 +490,10 @@
         if (_coverPreviewUrl is not null)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(_coverPreviewUrl);
+        }
+        if (_pendingCoverPreviewUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_pendingCoverPreviewUrl);
         }
         if (_metadataModule is not null)
         {

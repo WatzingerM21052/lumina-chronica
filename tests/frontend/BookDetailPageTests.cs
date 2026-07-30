@@ -175,7 +175,7 @@ public class BookDetailPageTests : BunitContext
     }
 
     [Fact]
-    public void BookDetail_EditForm_EnrichmentLookup_FillsOnlyEmptyFields()
+    public void BookDetail_EditForm_EnrichmentLookup_ShowsPreview_AppliesOnlyOnConfirm()
     {
         const string bookJson = """
             {"success":true,"data":{
@@ -206,11 +206,49 @@ public class BookDetailPageTests : BunitContext
         cut.Find("#edit-isbn").Change("9783791500119");
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
 
+        // Nothing is applied yet -- the preview shows what was found.
+        Assert.True(string.IsNullOrEmpty(cut.Find("#edit-publisher").GetAttribute("value")));
+        Assert.Contains("Gefundene Daten", cut.Markup);
+        Assert.Contains("wird gesetzt: Enriched Publisher", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Übernehmen").Click();
+
         // Genre came pre-filled from the book itself -- must stay untouched.
         // Publisher/pages were empty -- must be filled.
         Assert.Equal("My Own Genre", cut.Find("#edit-genre").GetAttribute("value"));
         Assert.Equal("Enriched Publisher", cut.Find("#edit-publisher").GetAttribute("value"));
         Assert.Equal("250", cut.Find("#edit-pages").GetAttribute("value"));
+        Assert.DoesNotContain("Gefundene Daten", cut.Markup);
+    }
+
+    [Fact]
+    public void BookDetail_EditForm_EnrichmentPreview_Discard_LeavesFormUnchanged()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.SetupModule("./js/metadataEnrichment.js")
+            .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
+            .SetResult(new EnrichedMetadata { Found = true, Publisher = "Enriched Publisher", HasCover = false });
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+        cut.Find("#edit-isbn").Change("9783791500119");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+
+        Assert.True(string.IsNullOrEmpty(cut.Find("#edit-publisher").GetAttribute("value")));
+        Assert.DoesNotContain("Gefundene Daten", cut.Markup);
     }
 
     [Fact]
@@ -239,5 +277,43 @@ public class BookDetailPageTests : BunitContext
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
 
         Assert.Contains("Keine Daten gefunden.", cut.Markup);
+    }
+
+    [Fact]
+    public void BookDetail_EditForm_EnrichmentSearch_SelectingResultSetsIsbnAndShowsPreview()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
+        module.Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true).SetResult(
+        [
+            new EnrichmentSearchResult { Key = "/works/OL1W", Title = "Der Herr der Ringe", Author = "J.R.R. Tolkien", Year = 1954, CoverId = 123, Isbn = "9783791500119" },
+        ]);
+        module.Setup<EnrichedMetadata>("lookupByIsbn", _ => true).SetResult(
+            new EnrichedMetadata { Found = true, Publisher = "Tolkien Verlag", HasCover = false });
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+        cut.Find("#edit-enrichment-search").Change("Der Herr der Ringe");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Suchen").Click();
+
+        Assert.Contains("Der Herr der Ringe", cut.Markup);
+
+        cut.Find("button.enrichment-search-result").Click();
+
+        Assert.Equal("9783791500119", cut.Find("#edit-isbn").GetAttribute("value"));
+        Assert.Contains("Gefundene Daten", cut.Markup);
+        Assert.Contains("wird gesetzt: Tolkien Verlag", cut.Markup);
     }
 }
