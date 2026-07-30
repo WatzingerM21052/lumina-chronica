@@ -1,4 +1,5 @@
 using Bunit;
+using LuminaChronica.Client.Models;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components.Forms;
@@ -171,5 +172,72 @@ public class BookDetailPageTests : BunitContext
 
         Assert.Equal(HttpMethod.Put, coverRequest?.Method);
         Assert.Equal("/api/books/1/cover", coverRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void BookDetail_EditForm_EnrichmentLookup_FillsOnlyEmptyFields()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
+                "coverUrl":null,"genre":"My Own Genre","language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.SetupModule("./js/metadataEnrichment.js")
+            .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
+            .SetResult(new EnrichedMetadata
+            {
+                Found = true,
+                Genre = "Fantasy fiction",
+                Publisher = "Enriched Publisher",
+                Pages = 250,
+                HasCover = false,
+            });
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+        cut.Find("#edit-isbn").Change("9783791500119");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
+
+        // Genre came pre-filled from the book itself -- must stay untouched.
+        // Publisher/pages were empty -- must be filled.
+        Assert.Equal("My Own Genre", cut.Find("#edit-genre").GetAttribute("value"));
+        Assert.Equal("Enriched Publisher", cut.Find("#edit-publisher").GetAttribute("value"));
+        Assert.Equal("250", cut.Find("#edit-pages").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void BookDetail_EditForm_EnrichmentLookup_NotFound_ShowsStatusMessage()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.SetupModule("./js/metadataEnrichment.js")
+            .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
+            .SetResult(new EnrichedMetadata { Found = false });
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+        cut.Find("#edit-isbn").Change("0000000000000");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
+
+        Assert.Contains("Keine Daten gefunden.", cut.Markup);
     }
 }

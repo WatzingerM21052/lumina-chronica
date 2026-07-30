@@ -194,6 +194,15 @@ select:focus-visible {
     border-color: var(--color-primary);
 }
 
+.isbn-enrichment-row {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.isbn-enrichment-row input {
+    flex: 1;
+}
+
 .form-error {
     color: var(--color-error);
 }

@@ -66,7 +66,16 @@
 
     <div class="form-group">
         <label for="isbn">ISBN</label>
-        <InputText id="isbn" @bind-Value="_form.Isbn" />
+        <div class="isbn-enrichment-row">
+            <InputText id="isbn" @bind-Value="_form.Isbn" />
+            <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_form.Isbn) || _isLookingUpEnrichment)" @onclick="LookupEnrichmentAsync">
+                Info abrufen
+            </button>
+        </div>
+        @if (_enrichmentStatus is not null)
+        {
+            <p class="text-muted">@_enrichmentStatus</p>
+        }
     </div>
 
     <div class="form-group">
@@ -128,9 +137,14 @@
     private string? _coverPreviewUrl;
     private byte[]? _extractedCoverBytes;
     private string? _extractedCoverContentType;
+    private byte[]? _enrichedCoverBytes;
+    private string? _enrichedCoverContentType;
     private bool _isSubmitting;
+    private bool _isLookingUpEnrichment;
     private string? _errorMessage;
+    private string? _enrichmentStatus;
     private IJSObjectReference? _metadataModule;
+    private IJSObjectReference? _enrichmentModule;
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
@@ -185,6 +199,8 @@
 
                     _extractedCoverBytes = coverBytes;
                     _extractedCoverContentType = string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType;
+                    _enrichedCoverBytes = null;
+                    _enrichedCoverContentType = null;
                     _coverPreviewUrl = await BlobUrlService.CreateObjectUrlAsync(coverBytes, _extractedCoverContentType);
                 }
             }
@@ -197,13 +213,71 @@
         }
     }
 
+    private async Task LookupEnrichmentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_form.Isbn)) return;
+
+        _enrichmentStatus = null;
+        _isLookingUpEnrichment = true;
+
+        try
+        {
+            _enrichmentModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/metadataEnrichment.js");
+            var metadata = await _enrichmentModule.InvokeAsync<EnrichedMetadata>("lookupByIsbn", _form.Isbn);
+
+            if (!metadata.Found)
+            {
+                _enrichmentStatus = "Keine Daten gefunden.";
+                return;
+            }
+
+            // Same "fill gaps only, never overwrite" rule as file extraction.
+            if (string.IsNullOrWhiteSpace(_form.Description) && !string.IsNullOrWhiteSpace(metadata.Description)) _form.Description = metadata.Description;
+            if (string.IsNullOrWhiteSpace(_form.Genre) && !string.IsNullOrWhiteSpace(metadata.Genre)) _form.Genre = metadata.Genre;
+            if (string.IsNullOrWhiteSpace(_form.Publisher) && !string.IsNullOrWhiteSpace(metadata.Publisher)) _form.Publisher = metadata.Publisher;
+            if (_form.Pages is null && metadata.Pages is { } pages) _form.Pages = pages;
+            if (string.IsNullOrWhiteSpace(_form.ReleaseDate) && DateOnly.TryParse(metadata.ReleaseDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            {
+                _form.ReleaseDate = metadata.ReleaseDate;
+            }
+
+            if (metadata.HasCover && _selectedCover is null && _extractedCoverBytes is null)
+            {
+                var coverBytes = await _enrichmentModule.InvokeAsync<byte[]?>("getCoverBytes");
+                if (coverBytes is { Length: > 0 })
+                {
+                    var contentType = await _enrichmentModule.InvokeAsync<string?>("getCoverContentType");
+
+                    if (_coverPreviewUrl is not null)
+                    {
+                        await BlobUrlService.RevokeObjectUrlAsync(_coverPreviewUrl);
+                    }
+
+                    _enrichedCoverBytes = coverBytes;
+                    _enrichedCoverContentType = string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType;
+                    _coverPreviewUrl = await BlobUrlService.CreateObjectUrlAsync(coverBytes, _enrichedCoverContentType);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            _enrichmentStatus = "Keine Daten gefunden.";
+        }
+        finally
+        {
+            _isLookingUpEnrichment = false;
+        }
+    }
+
     private async Task OnCoverSelectedAsync(InputFileChangeEventArgs e)
     {
         _selectedCover = e.File;
         _coverError = ValidateFile(e.File, AllowedCoverExtensions, MaxCoverBytes);
-        // A manually chosen cover always wins over an extracted one.
+        // A manually chosen cover always wins over an extracted or enriched one.
         _extractedCoverBytes = null;
         _extractedCoverContentType = null;
+        _enrichedCoverBytes = null;
+        _enrichedCoverContentType = null;
 
         if (_coverPreviewUrl is not null)
         {
@@ -230,6 +304,10 @@
         if (_metadataModule is not null)
         {
             _ = _metadataModule.DisposeAsync();
+        }
+        if (_enrichmentModule is not null)
+        {
+            _ = _enrichmentModule.DisposeAsync();
         }
     }
 
@@ -285,6 +363,10 @@
         else if (_extractedCoverBytes is not null)
         {
             content.Add(BuildExtractedCoverContent(_extractedCoverBytes, _extractedCoverContentType), QuoteFieldName("cover"), QuoteFieldName(ExtractedCoverFileName(_extractedCoverContentType)));
+        }
+        else if (_enrichedCoverBytes is not null)
+        {
+            content.Add(BuildExtractedCoverContent(_enrichedCoverBytes, _enrichedCoverContentType), QuoteFieldName("cover"), QuoteFieldName(ExtractedCoverFileName(_enrichedCoverContentType)));
         }
 
         var response = await ApiClient.PostMultipartAsync<Book>("/api/books/upload", content);

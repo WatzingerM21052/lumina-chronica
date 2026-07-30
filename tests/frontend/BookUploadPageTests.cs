@@ -93,6 +93,52 @@ public class BookUploadPageTests : BunitContext
     }
 
     [Fact]
+    public void BookUpload_EnrichmentLookup_FillsOnlyEmptyFields()
+    {
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+        JSInterop.SetupModule("./js/metadataEnrichment.js")
+            .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
+            .SetResult(new EnrichedMetadata
+            {
+                Found = true,
+                Description = "Enriched description",
+                Genre = "Fantasy fiction",
+                Publisher = "Enriched Publisher",
+                Pages = 250,
+                HasCover = false,
+            });
+
+        var cut = Render<BookUpload>();
+        cut.Find("#genre").Change("My Own Genre");
+        cut.Find("#isbn").Change("9783791500119");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
+
+        // Genre was already set manually -- must stay untouched (the "fill
+        // gaps only" rule). Publisher/pages were empty -- must be filled.
+        // Description isn't asserted here: InputTextArea's bound value isn't
+        // reliably reflected in bUnit's markup snapshot the way InputText's
+        // value attribute is -- covered by live verification instead.
+        Assert.Equal("My Own Genre", cut.Find("#genre").GetAttribute("value"));
+        Assert.Equal("Enriched Publisher", cut.Find("#publisher").GetAttribute("value"));
+        Assert.Equal("250", cut.Find("#pages").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void BookUpload_EnrichmentLookup_NotFound_ShowsStatusMessage()
+    {
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+        JSInterop.SetupModule("./js/metadataEnrichment.js")
+            .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
+            .SetResult(new EnrichedMetadata { Found = false });
+
+        var cut = Render<BookUpload>();
+        cut.Find("#isbn").Change("0000000000000");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
+
+        Assert.Contains("Keine Daten gefunden.", cut.Markup);
+    }
+
+    [Fact]
     public void BookUpload_EpubSelection_PrefillsEmptyFieldsFromExtractedMetadata()
     {
         UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
