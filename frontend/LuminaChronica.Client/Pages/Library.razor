@@ -182,6 +182,15 @@ else
             {
                 await LoadSuggestionsAsync();
                 await ApplyFiltersAsync();
+                // Unlike handlers invoked directly from Blazor's own event
+                // pipeline (@onclick, @bind:after), a callback reached via
+                // InvokeAsync from a System.Threading.Timer does not
+                // automatically trigger a re-render afterwards in a real
+                // browser -- without this, the fetched data updates but the
+                // UI never reflects it. Confirmed missing via live testing;
+                // bUnit's test renderer does not reproduce this gap, so no
+                // automated test catches it -- see LibraryPageTests.cs.
+                StateHasChanged();
             }),
             null,
             400,

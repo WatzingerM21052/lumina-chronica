@@ -111,6 +111,32 @@ public class LibraryPageTests : BunitContext
     }
 
     [Fact]
+    public void Library_SearchInput_AfterDebounce_ShowsSuggestionsAndFiltersResults()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books" && r.RequestUri.Query.Contains("pageSize=8"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[{"id":1,"title":"Killimooin","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}],"total":1,"page":1,"pageSize":8}}"""))
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books",
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[{"id":1,"title":"Killimooin","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}],"total":1,"page":1,"pageSize":20}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Library>();
+        cut.Find("input[type=search]").Input("Killi");
+
+        // Verifies the debounced fetch/filter data flow (correct URLs,
+        // correct response parsing). Note: this does NOT catch the
+        // "missing StateHasChanged after a Timer-driven InvokeAsync" class
+        // of bug that shipped once in this exact code path -- bUnit's test
+        // renderer doesn't reproduce that gap the way a real browser does;
+        // that one is only caught by live testing.
+        cut.WaitForAssertion(() => Assert.Contains("Killimooin", cut.Markup), TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public void Library_Pager_AppearsWhenMoreBooksThanOnePage_AndWeiterRequestsPage2()
     {
         var capturedRequests = new List<HttpRequestMessage>();
