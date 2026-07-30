@@ -65,6 +65,17 @@ public class Book
     public BookFile? File { get; set; }
 }
 
+// Mirrors backend/src/services/bookService.ts's BookFacets -- powers the
+// Library page's multi-select tag/genre filter dropdowns.
+public class BookFacets
+{
+    [JsonPropertyName("tags")]
+    public List<string> Tags { get; set; } = [];
+
+    [JsonPropertyName("genres")]
+    public List<string> Genres { get; set; } = [];
+}
+
 public class BookListResponse
 {
     [JsonPropertyName("items")]
