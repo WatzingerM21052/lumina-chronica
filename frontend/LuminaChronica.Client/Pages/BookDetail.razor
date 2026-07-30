@@ -1,6 +1,7 @@
 @page "/library/books/{Id:int}"
 @attribute [Authorize]
 @implements IDisposable
+@using System.Globalization
 @using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
@@ -177,7 +178,7 @@ else
                     </div>
                     <div class="form-group">
                         <label for="edit-releaseDate">Erscheinungsdatum</label>
-                        <InputText id="edit-releaseDate" @bind-Value="_editForm.ReleaseDate" placeholder="JJJJ-MM-TT" />
+                        <InputDate id="edit-releaseDate" @bind-Value="_editForm.ReleaseDateValue" />
                     </div>
                     <div class="form-group">
                         <label for="edit-pages">Seiten</label>
@@ -423,5 +424,13 @@ else
         public string? Publisher { get; set; }
         public string? ReleaseDate { get; set; }
         public int? Pages { get; set; }
+
+        // InputDate needs a DateOnly?-typed property to bind to; ReleaseDate
+        // itself stays a string since that's what crosses the wire.
+        public DateOnly? ReleaseDateValue
+        {
+            get => DateOnly.TryParse(ReleaseDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : null;
+            set => ReleaseDate = value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
     }
 }

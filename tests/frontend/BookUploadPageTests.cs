@@ -68,6 +68,31 @@ public class BookUploadPageTests : BunitContext
     }
 
     [Fact]
+    public void BookUpload_ReleaseDatePicker_SendsIsoDateString()
+    {
+        string? capturedBody = null;
+        // The body must be read inside the responder, before SubmitAsync's
+        // `using var content = new MultipartFormDataContent` disposes it.
+        var handler = new RoutedFakeHttpMessageHandler().When(r =>
+        {
+            capturedBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return true;
+        }, _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<BookUpload>();
+        cut.Find("#title").Change("A Title");
+        cut.Find("#releaseDate").Change("2026-03-15");
+        cut.FindComponents<InputFile>()[0].UploadFiles(InputFileContent.CreateFromText("epub-bytes", "book.epub"));
+        cut.Find("form").Submit();
+
+        Assert.Contains("2026-03-15", capturedBody);
+    }
+
+    [Fact]
     public void BookUpload_EpubSelection_PrefillsEmptyFieldsFromExtractedMetadata()
     {
         UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");

@@ -73,6 +73,38 @@ public class BookDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void BookDetail_EditForm_ReleaseDatePicker_SendsIsoDateStringOnSave()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        string? capturedBody = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson))
+            .When(r => r.Method == HttpMethod.Put, r =>
+            {
+                capturedBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                return RoutedFakeHttpMessageHandler.JsonResponse(bookJson);
+            });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+        cut.Find("#edit-releaseDate").Change("2026-03-15");
+        cut.Find("form.auth-form").Submit();
+
+        Assert.Contains("2026-03-15", capturedBody);
+    }
+
+    [Fact]
     public void BookDetail_FavoriteToggle_CallsPostAndFlipsVisualState()
     {
         const string bookJson = """
