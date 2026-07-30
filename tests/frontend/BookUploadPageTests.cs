@@ -93,7 +93,7 @@ public class BookUploadPageTests : BunitContext
     }
 
     [Fact]
-    public void BookUpload_EnrichmentLookup_FillsOnlyEmptyFields()
+    public void BookUpload_EnrichmentLookup_ShowsPreview_AppliesOnlyOnConfirm()
     {
         UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
         JSInterop.SetupModule("./js/metadataEnrichment.js")
@@ -113,6 +113,15 @@ public class BookUploadPageTests : BunitContext
         cut.Find("#isbn").Change("9783791500119");
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
 
+        // Nothing is applied yet -- the preview shows what was found, form
+        // fields are untouched until "Übernehmen" is clicked.
+        Assert.Equal("My Own Genre", cut.Find("#genre").GetAttribute("value"));
+        Assert.True(string.IsNullOrEmpty(cut.Find("#publisher").GetAttribute("value")));
+        Assert.Contains("Gefundene Daten", cut.Markup);
+        Assert.Contains("wird gesetzt: Enriched Publisher", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Übernehmen").Click();
+
         // Genre was already set manually -- must stay untouched (the "fill
         // gaps only" rule). Publisher/pages were empty -- must be filled.
         // Description isn't asserted here: InputTextArea's bound value isn't
@@ -121,6 +130,24 @@ public class BookUploadPageTests : BunitContext
         Assert.Equal("My Own Genre", cut.Find("#genre").GetAttribute("value"));
         Assert.Equal("Enriched Publisher", cut.Find("#publisher").GetAttribute("value"));
         Assert.Equal("250", cut.Find("#pages").GetAttribute("value"));
+        Assert.DoesNotContain("Gefundene Daten", cut.Markup);
+    }
+
+    [Fact]
+    public void BookUpload_EnrichmentPreview_Discard_LeavesFormUnchanged()
+    {
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+        JSInterop.SetupModule("./js/metadataEnrichment.js")
+            .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
+            .SetResult(new EnrichedMetadata { Found = true, Publisher = "Enriched Publisher", HasCover = false });
+
+        var cut = Render<BookUpload>();
+        cut.Find("#isbn").Change("9783791500119");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+
+        Assert.True(string.IsNullOrEmpty(cut.Find("#publisher").GetAttribute("value")));
+        Assert.DoesNotContain("Gefundene Daten", cut.Markup);
     }
 
     [Fact]
@@ -136,6 +163,46 @@ public class BookUploadPageTests : BunitContext
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Info abrufen").Click();
 
         Assert.Contains("Keine Daten gefunden.", cut.Markup);
+    }
+
+    [Fact]
+    public void BookUpload_EnrichmentSearch_SelectingResultSetsIsbnAndShowsPreview()
+    {
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+        var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
+        module.Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true).SetResult(
+        [
+            new EnrichmentSearchResult { Key = "/works/OL1W", Title = "Der Herr der Ringe", Author = "J.R.R. Tolkien", Year = 1954, CoverId = 123, Isbn = "9783791500119" },
+        ]);
+        module.Setup<EnrichedMetadata>("lookupByIsbn", _ => true).SetResult(
+            new EnrichedMetadata { Found = true, Publisher = "Tolkien Verlag", HasCover = false });
+
+        var cut = Render<BookUpload>();
+        cut.Find("#enrichment-search").Change("Der Herr der Ringe");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Suchen").Click();
+
+        Assert.Contains("Der Herr der Ringe", cut.Markup);
+
+        cut.Find("button.enrichment-search-result").Click();
+
+        Assert.Equal("9783791500119", cut.Find("#isbn").GetAttribute("value"));
+        Assert.Contains("Gefundene Daten", cut.Markup);
+        Assert.Contains("wird gesetzt: Tolkien Verlag", cut.Markup);
+    }
+
+    [Fact]
+    public void BookUpload_EnrichmentSearch_NoResults_ShowsStatusMessage()
+    {
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+        JSInterop.SetupModule("./js/metadataEnrichment.js")
+            .Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true)
+            .SetResult([]);
+
+        var cut = Render<BookUpload>();
+        cut.Find("#enrichment-search").Change("Nonexistent Book Title Xyz");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Suchen").Click();
+
+        Assert.Contains("Keine Treffer gefunden.", cut.Markup);
     }
 
     [Fact]
