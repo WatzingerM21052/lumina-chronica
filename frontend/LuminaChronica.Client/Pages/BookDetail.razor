@@ -10,6 +10,7 @@
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
 
 <PageTitle>@(_book?.Title ?? "Buch") — Lumina Chronica</PageTitle>
 
@@ -170,7 +171,16 @@ else
                     </div>
                     <div class="form-group">
                         <label for="edit-isbn">ISBN</label>
-                        <InputText id="edit-isbn" @bind-Value="_editForm.Isbn" />
+                        <div class="isbn-enrichment-row">
+                            <InputText id="edit-isbn" @bind-Value="_editForm.Isbn" />
+                            <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_editForm.Isbn) || _isLookingUpEnrichment)" @onclick="LookupEnrichmentAsync">
+                                Info abrufen
+                            </button>
+                        </div>
+                        @if (_enrichmentStatus is not null)
+                        {
+                            <p class="text-muted">@_enrichmentStatus</p>
+                        }
                     </div>
                     <div class="form-group">
                         <label for="edit-publisher">Verlag</label>
@@ -209,6 +219,10 @@ else
     private string? _coverSaveErrorMessage;
     private IBrowserFile? _selectedEditCover;
     private EditFormModel _editForm = new();
+
+    private bool _isLookingUpEnrichment;
+    private string? _enrichmentStatus;
+    private IJSObjectReference? _enrichmentModule;
 
     private bool _confirmingDelete;
 
@@ -326,6 +340,7 @@ else
         };
         _saveErrorMessage = null;
         _coverSaveErrorMessage = null;
+        _enrichmentStatus = null;
         _selectedEditCover = null;
         _isEditing = true;
     }
@@ -333,6 +348,66 @@ else
     private void CancelEditing() => _isEditing = false;
 
     private void OnEditCoverSelected(InputFileChangeEventArgs e) => _selectedEditCover = e.File;
+
+    private async Task LookupEnrichmentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_editForm.Isbn)) return;
+
+        _enrichmentStatus = null;
+        _isLookingUpEnrichment = true;
+
+        try
+        {
+            _enrichmentModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/metadataEnrichment.js");
+            var metadata = await _enrichmentModule.InvokeAsync<EnrichedMetadata>("lookupByIsbn", _editForm.Isbn);
+
+            if (!metadata.Found)
+            {
+                _enrichmentStatus = "Keine Daten gefunden.";
+                return;
+            }
+
+            // Same "fill gaps only, never overwrite" rule as file extraction.
+            if (string.IsNullOrWhiteSpace(_editForm.Description) && !string.IsNullOrWhiteSpace(metadata.Description)) _editForm.Description = metadata.Description;
+            if (string.IsNullOrWhiteSpace(_editForm.Genre) && !string.IsNullOrWhiteSpace(metadata.Genre)) _editForm.Genre = metadata.Genre;
+            if (string.IsNullOrWhiteSpace(_editForm.Publisher) && !string.IsNullOrWhiteSpace(metadata.Publisher)) _editForm.Publisher = metadata.Publisher;
+            if (_editForm.Pages is null && metadata.Pages is { } pages) _editForm.Pages = pages;
+            if (string.IsNullOrWhiteSpace(_editForm.ReleaseDate) && DateOnly.TryParse(metadata.ReleaseDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            {
+                _editForm.ReleaseDate = metadata.ReleaseDate;
+            }
+
+            // The book already has an id here, unlike the Upload form -- go
+            // straight through the already-existing cover-replace endpoint
+            // rather than staging bytes for a later multipart submit.
+            if (metadata.HasCover && _selectedEditCover is null && string.IsNullOrWhiteSpace(_book?.CoverUrl))
+            {
+                var coverBytes = await _enrichmentModule.InvokeAsync<byte[]?>("getCoverBytes");
+                if (coverBytes is { Length: > 0 })
+                {
+                    var contentType = await _enrichmentModule.InvokeAsync<string?>("getCoverContentType");
+                    var byteContent = new ByteArrayContent(coverBytes);
+                    byteContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType);
+
+                    using var content = new MultipartFormDataContent { { byteContent, "\"cover\"", "\"cover.jpg\"" } };
+                    var coverResponse = await ApiClient.PutMultipartAsync<Book>($"/api/books/{Id}/cover", content);
+                    if (coverResponse is { Success: true, Data: not null })
+                    {
+                        _book = coverResponse.Data;
+                        await LoadCoverAsync();
+                    }
+                }
+            }
+        }
+        catch (Exception)
+        {
+            _enrichmentStatus = "Keine Daten gefunden.";
+        }
+        finally
+        {
+            _isLookingUpEnrichment = false;
+        }
+    }
 
     private async Task SaveAsync()
     {
@@ -409,6 +484,10 @@ else
         if (_coverObjectUrl is not null)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
+        }
+        if (_enrichmentModule is not null)
+        {
+            _ = _enrichmentModule.DisposeAsync();
         }
     }
 
