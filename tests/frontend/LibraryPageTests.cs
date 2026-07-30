@@ -46,34 +46,89 @@ public class LibraryPageTests : BunitContext
     }
 
     [Fact]
-    public void Library_TagFilterInput_IncludedInRequestQueryString()
+    public void Library_TagMultiSelect_SelectingAPill_ReloadsWithTagInQueryString()
     {
-        HttpRequestMessage? capturedRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler().When(r =>
-        {
-            capturedRequest = r;
-            return true;
-        }, _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}"""));
+        var capturedRequests = new List<HttpRequestMessage>();
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":["Fantasy","Klassiker"],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books", r =>
+            {
+                capturedRequests.Add(r);
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+            });
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
 
         var cut = Render<Library>();
-        cut.Find("input[placeholder='Tag']").Input("Fantasy");
-        cut.Find("form").Submit();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Tag").Click();
+        cut.FindAll(".multiselect-pill").Single(p => p.TextContent.Trim() == "Fantasy").Click();
 
-        Assert.Contains("tag=Fantasy", capturedRequest?.RequestUri?.Query);
+        Assert.Contains("tag=Fantasy", capturedRequests[^1].RequestUri?.Query);
     }
 
     [Fact]
     public void Library_ReadsTagFromUrl_OnLoad()
     {
-        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":["Fantasy"],"genres":[]}}""")
+            .WhenPathEndsWith("/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
         Services.GetRequiredService<NavigationManager>().NavigateTo("library?tag=Fantasy");
 
         var cut = Render<Library>();
 
-        Assert.Equal("Fantasy", cut.Find("input[placeholder='Tag']").GetAttribute("value"));
+        Assert.Equal("Tag (1)", cut.FindAll("button").Single(b => b.TextContent.Trim().StartsWith("Tag")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void Library_ClearFiltersButton_ResetsFavoritesOnlyAndReloadsWithoutIt()
+    {
+        var capturedRequests = new List<HttpRequestMessage>();
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books", r =>
+            {
+                capturedRequests.Add(r);
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+            });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Library>();
+        cut.Find("input[type=checkbox]").Change(true);
+        Assert.Contains("favorite=true", capturedRequests[^1].RequestUri?.Query);
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Filter zurücksetzen").Click();
+
+        Assert.DoesNotContain("favorite=true", capturedRequests[^1].RequestUri?.Query);
+    }
+
+    [Fact]
+    public void Library_Pager_AppearsWhenMoreBooksThanOnePage_AndWeiterRequestsPage2()
+    {
+        var capturedRequests = new List<HttpRequestMessage>();
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books", r =>
+            {
+                capturedRequests.Add(r);
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[{"id":1,"title":"Dune","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}],"total":25,"page":1,"pageSize":20}}""");
+            });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter →").Click();
+
+        Assert.Contains("page=2", capturedRequests[^1].RequestUri?.Query);
     }
 }

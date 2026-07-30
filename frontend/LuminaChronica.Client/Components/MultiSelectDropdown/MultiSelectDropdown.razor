@@ -1,0 +1,29 @@
+@namespace LuminaChronica.Client.Components
+
+<div class="multiselect-dropdown">
+    <button type="button" class="btn @(SelectedValues.Count > 0 ? "btn-primary" : "")" @onclick="ToggleOpen">
+        @Label@(SelectedValues.Count > 0 ? $" ({SelectedValues.Count})" : "")
+    </button>
+    @if (_isOpen)
+    {
+        <div class="multiselect-popover">
+            @if (Options.Count == 0)
+            {
+                <p class="text-muted">Keine Optionen vorhanden.</p>
+            }
+            else
+            {
+                <div class="multiselect-pill-grid">
+                    @foreach (var option in Options)
+                    {
+                        <button type="button" class="multiselect-pill @(SelectedValues.Contains(option) ? "is-selected" : "")"
+                                @onclick="() => ToggleOptionAsync(option)">
+                            @option
+                        </button>
+                    }
+                </div>
+            }
+            <button type="button" class="btn multiselect-done" @onclick="ToggleOpen">Fertig</button>
+        </div>
+    }
+</div>

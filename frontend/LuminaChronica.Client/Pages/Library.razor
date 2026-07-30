@@ -1,7 +1,9 @@
 @page "/library"
 @attribute [Authorize]
+@implements IDisposable
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
@@ -16,33 +18,53 @@
     </div>
 </div>
 
-<form class="library-toolbar" @onsubmit="LoadBooksAsync">
-    <input type="search" placeholder="Titel oder Autor suchen..." @bind="_searchTerm" @bind:event="oninput" />
-    <input type="text" placeholder="Genre" @bind="_genreFilter" @bind:event="oninput" />
-    <input type="text" placeholder="Tag" @bind="_tagFilter" @bind:event="oninput" />
+<div class="library-toolbar">
+    <div class="library-search-wrapper">
+        <input type="search" placeholder="Titel oder Autor suchen..." value="@_searchTerm" @oninput="OnSearchInput" />
+        @if (_suggestions is { Count: > 0 })
+        {
+            <ul class="library-search-suggestions">
+                @foreach (var book in _suggestions)
+                {
+                    <li>
+                        <button type="button" @onclick="() => GoToBook(book.Id)">
+                            @book.Title
+                            @if (!string.IsNullOrWhiteSpace(book.Author))
+                            {
+                                <span class="text-muted"> — @book.Author</span>
+                            }
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
 
-    <select @bind="_sort">
+    <MultiSelectDropdown Label="Genre" Options="@(_facets?.Genres ?? [])" SelectedValues="_genreFilters" SelectedValuesChanged="OnGenreFiltersChanged" />
+    <MultiSelectDropdown Label="Tag" Options="@(_facets?.Tags ?? [])" SelectedValues="_tagFilters" SelectedValuesChanged="OnTagFiltersChanged" />
+
+    <select @bind="_sort" @bind:after="ApplyFiltersAsync">
         <option value="createdAt">Hinzugefügt</option>
         <option value="title">Titel</option>
         <option value="author">Autor</option>
     </select>
-    <select @bind="_order">
+    <select @bind="_order" @bind:after="ApplyFiltersAsync">
         <option value="desc">Absteigend</option>
         <option value="asc">Aufsteigend</option>
     </select>
 
     <label class="library-favorite-filter">
-        <input type="checkbox" @bind="_favoritesOnly" />
+        <input type="checkbox" @bind="_favoritesOnly" @bind:after="ApplyFiltersAsync" />
         Nur Favoriten
     </label>
 
-    <button type="submit" class="btn">Filtern</button>
+    <button type="button" class="btn" @onclick="ClearFiltersAsync">Filter zurücksetzen</button>
 
     <div class="library-view-toggle">
         <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Raster</button>
         <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Liste</button>
     </div>
-</form>
+</div>
 
 @if (_errorMessage is not null)
 {
@@ -70,25 +92,43 @@ else
             <BookCard Book="book" Size="@(_viewMode == LibraryViewMode.Grid ? BookCardSize.Normal : BookCardSize.Small)" />
         }
     </div>
+
+    @if (_result.Total > _result.PageSize)
+    {
+        <div class="library-pager">
+            <button type="button" class="btn" disabled="@(_result.Page <= 1)" @onclick="() => GoToPageAsync(_result.Page - 1)">← Zurück</button>
+            <span>Seite @_result.Page von @PageCount</span>
+            <button type="button" class="btn" disabled="@(_result.Page >= PageCount)" @onclick="() => GoToPageAsync(_result.Page + 1)">Weiter →</button>
+        </div>
+    }
 }
 
 @code {
     private enum LibraryViewMode { Grid, List }
 
+    private const int PageSize = 20;
+
     private BookListResponse? _result;
+    private BookFacets? _facets;
+    private List<Book>? _suggestions;
     private string? _errorMessage;
     private LibraryViewMode _viewMode = LibraryViewMode.Grid;
 
     private string _searchTerm = string.Empty;
-    private string _genreFilter = string.Empty;
-    private string _tagFilter = string.Empty;
+    private IReadOnlyList<string> _genreFilters = [];
+    private IReadOnlyList<string> _tagFilters = [];
     private bool _favoritesOnly;
     private string _sort = "createdAt";
     private string _order = "desc";
+    private int _page = 1;
 
-    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || !string.IsNullOrWhiteSpace(_genreFilter) || !string.IsNullOrWhiteSpace(_tagFilter) || _favoritesOnly;
+    private System.Threading.Timer? _searchDebounceTimer;
 
-    protected override Task OnInitializedAsync()
+    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || _genreFilters.Count > 0 || _tagFilters.Count > 0 || _favoritesOnly;
+
+    private int PageCount => _result is null ? 1 : Math.Max(1, (int)Math.Ceiling((double)_result.Total / _result.PageSize));
+
+    protected override async Task OnInitializedAsync()
     {
         // Supports deep-linking from a tag link on Book Detail (library?tag=X).
         var query = new Uri(NavigationManager.Uri).Query.TrimStart('?');
@@ -97,25 +137,99 @@ else
             var parts = pair.Split('=', 2);
             if (parts[0] == "tag" && parts.Length == 2)
             {
-                _tagFilter = Uri.UnescapeDataString(parts[1]);
+                _tagFilters = [Uri.UnescapeDataString(parts[1])];
             }
         }
 
-        return LoadBooksAsync();
+        var facetsResponse = await ApiClient.GetAsync<BookFacets>("/api/books/facets");
+        if (facetsResponse is { Success: true, Data: not null })
+        {
+            _facets = facetsResponse.Data;
+        }
+
+        await LoadBooksAsync();
     }
 
     private void SetViewMode(LibraryViewMode mode) => _viewMode = mode;
 
     private void GoToUpload() => NavigationManager.NavigateTo("library/upload");
 
+    private void GoToBook(int id)
+    {
+        _suggestions = null;
+        NavigationManager.NavigateTo($"library/books/{id}");
+    }
+
+    private async Task OnGenreFiltersChanged(IReadOnlyList<string> values)
+    {
+        _genreFilters = values;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task OnTagFiltersChanged(IReadOnlyList<string> values)
+    {
+        _tagFilters = values;
+        await ApplyFiltersAsync();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+
+        _searchDebounceTimer?.Dispose();
+        _searchDebounceTimer = new System.Threading.Timer(
+            _ => InvokeAsync(async () =>
+            {
+                await LoadSuggestionsAsync();
+                await ApplyFiltersAsync();
+            }),
+            null,
+            400,
+            Timeout.Infinite);
+    }
+
+    private async Task LoadSuggestionsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            _suggestions = null;
+            return;
+        }
+
+        var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?search={Uri.EscapeDataString(_searchTerm)}&pageSize=8");
+        _suggestions = response is { Success: true, Data: not null } ? response.Data.Items : null;
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _searchTerm = string.Empty;
+        _genreFilters = [];
+        _tagFilters = [];
+        _favoritesOnly = false;
+        _suggestions = null;
+        await ApplyFiltersAsync();
+    }
+
+    private Task ApplyFiltersAsync()
+    {
+        _page = 1;
+        return LoadBooksAsync();
+    }
+
+    private Task GoToPageAsync(int page)
+    {
+        _page = page;
+        return LoadBooksAsync();
+    }
+
     private async Task LoadBooksAsync()
     {
         _errorMessage = null;
 
-        var query = new List<string> { $"sort={_sort}", $"order={_order}" };
+        var query = new List<string> { $"sort={_sort}", $"order={_order}", $"page={_page}", $"pageSize={PageSize}" };
         if (!string.IsNullOrWhiteSpace(_searchTerm)) query.Add($"search={Uri.EscapeDataString(_searchTerm)}");
-        if (!string.IsNullOrWhiteSpace(_genreFilter)) query.Add($"genre={Uri.EscapeDataString(_genreFilter)}");
-        if (!string.IsNullOrWhiteSpace(_tagFilter)) query.Add($"tag={Uri.EscapeDataString(_tagFilter)}");
+        if (_genreFilters.Count > 0) query.Add($"genre={Uri.EscapeDataString(string.Join(",", _genreFilters))}");
+        if (_tagFilters.Count > 0) query.Add($"tag={Uri.EscapeDataString(string.Join(",", _tagFilters))}");
         if (_favoritesOnly) query.Add("favorite=true");
 
         var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}");
@@ -127,5 +241,10 @@ else
         {
             _errorMessage = response?.Error?.Message ?? "Bibliothek konnte nicht geladen werden.";
         }
+    }
+
+    public void Dispose()
+    {
+        _searchDebounceTimer?.Dispose();
     }
 }
