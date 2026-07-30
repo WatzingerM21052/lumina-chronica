@@ -161,3 +161,13 @@ User feedback after the Organization phase: the Genre/Tag filters should be mult
 Live-verified end-to-end on the deployed site after every story: selected multiple tags in the dropdown and confirmed the grid updated with no button click, typed a partial title and confirmed suggestions appeared and navigated to the right book, confirmed "Filter zurücksetzen" cleared state, and confirmed the release-date picker round-trips correctly (`tt.mm.jjjj` placeholder confirmed live, matching the German-locale prediction).
 
 Backend: 68/68 Vitest tests passing. Frontend: 52/52 bUnit tests passing.
+
+### Metadata enrichment (2026-07-30, issue #106/PR #107)
+
+User feedback after Library UX polish: books added from real files often have empty description/genre/publisher/page-count fields since local file extraction (Story 4) can only pull what the file itself contains. Added an "Info abrufen" button next to the ISBN field on both the Upload form and Book Detail's edit form, looking up the ISBN against OpenLibrary and filling only the fields that are still empty — see `Architecture.md`'s "Metadata enrichment (OpenLibrary)" row for the two-call API shape and the description/date-format gotchas found via live probing before implementation.
+
+Frontend: 56/56 bUnit tests passing.
+
+Live-verified end-to-end on the deployed site: on an existing book with an empty description/genre/pages but an already-set publisher and release date, looked up a real ISBN (`9783791500119`) and confirmed description and pages filled in while publisher and release date stayed untouched (genre/cover stayed empty too — this edition had neither in OpenLibrary, handled gracefully with no error). On the Upload form, a bogus ISBN correctly showed "Keine Daten gefunden." with no other side effects.
+
+**Follow-up requested same-day, not yet built**: before the fetched OpenLibrary data is applied to the form, the user wants a review step (see the fetched values before they land) and/or the ability to search OpenLibrary themselves (not just by ISBN) and pick the correct match — the current flow applies the single ISBN-matched result immediately on click. Scope not yet decided; not yet filed as an issue.
