@@ -13,7 +13,39 @@
 
 <StatusWidget />
 
+@if (_dashboard is { ContinueReading.Count: > 0 })
+{
+    <h2>Weiterlesen</h2>
+    <div class="library-grid">
+        @foreach (var item in _dashboard.ContinueReading)
+        {
+            <BookCard Book="item.Book" ProgressPercentage="item.Percentage" Href="@($"library/books/{item.Book.Id}/read")" />
+        }
+    </div>
+}
+
 <h2>Deine Bibliothek</h2>
+@if (_dashboard is not null)
+{
+    <div class="dashboard-overview">
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">@_dashboard.Overview.TotalBooks</span>
+            <span class="dashboard-stat-label">Bücher</span>
+        </div>
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">@_dashboard.Overview.TotalShelves</span>
+            <span class="dashboard-stat-label">Regale</span>
+        </div>
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">@_dashboard.Overview.TotalFavorites</span>
+            <span class="dashboard-stat-label">Favoriten</span>
+        </div>
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">@_dashboard.Overview.FinishedBooks</span>
+            <span class="dashboard-stat-label">Gelesen</span>
+        </div>
+    </div>
+}
 @if (_books is null)
 {
     <LoadingIndicator Text="Bibliothek wird geladen..." />
@@ -47,9 +79,11 @@ else
 
     private List<Book>? _books;
     private int _totalBooks;
+    private DashboardResponse? _dashboard;
 
     protected override async Task OnInitializedAsync()
     {
+        var dashboardTask = ApiClient.GetAsync<DashboardResponse>("/api/dashboard");
         var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?sort=createdAt&order=desc&pageSize={RecentBooksLimit}");
         if (response is { Success: true, Data: not null })
         {
@@ -60,6 +94,9 @@ else
         {
             _books = [];
         }
+
+        var dashboardResponse = await dashboardTask;
+        _dashboard = dashboardResponse is { Success: true, Data: not null } ? dashboardResponse.Data : new DashboardResponse();
     }
 
     private void GoToUpload() => NavigationManager.NavigateTo("library/upload");
