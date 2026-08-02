@@ -57,6 +57,26 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
+    public void Reader_ShowsTypographyControls_AndAppliesFontFamilyChoice()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Hello from a plain text book.", "text/plain");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("reader-controls", cut.Markup);
+        Assert.DoesNotContain("reader-content--font-sans", cut.Markup);
+
+        var sansButton = cut.FindAll("button").Single(b => b.TextContent == "Sans");
+        sansButton.Click();
+
+        Assert.Contains("reader-content--font-sans", cut.Markup);
+    }
+
+    [Fact]
     public void Reader_RendersMarkdownAsHtml()
     {
         var handler = new RoutedFakeHttpMessageHandler()
@@ -139,6 +159,10 @@ public class ReaderPageTests : BunitContext
 
         Assert.Contains("pdf-reader-frame", cut.Markup);
         Assert.Contains("pdf-reader-zoom", cut.Markup);
+        // PDF has no text layout -- font size/family/line-height/page-width
+        // settings don't apply, so the whole reader-controls bar (which
+        // does apply to TXT/MD/EPUB) shouldn't render here.
+        Assert.DoesNotContain("reader-controls", cut.Markup);
     }
 
     [Fact]

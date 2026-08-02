@@ -31,15 +31,34 @@ else if (_book.File is null)
 }
 else
 {
-    <div class="reader-controls">
-        <button type="button" class="btn" @onclick="DecreaseFontSize">A-</button>
-        <span>@(_fontSize)px</span>
-        <button type="button" class="btn" @onclick="IncreaseFontSize">A+</button>
-    </div>
+    @if (_book.File.Format is not "PDF")
+    {
+        <div class="@ReaderControlsClass">
+            <span class="reader-setting-group">
+                <button type="button" class="btn" @onclick="DecreaseFontSize">A-</button>
+                <span>@(_fontSize)px</span>
+                <button type="button" class="btn" @onclick="IncreaseFontSize">A+</button>
+            </span>
+            <span class="reader-setting-group">
+                <button type="button" class="btn @(_fontFamily == "serif" ? "is-active" : "")" @onclick='() => SetFontFamily("serif")'>Serif</button>
+                <button type="button" class="btn @(_fontFamily == "sans" ? "is-active" : "")" @onclick='() => SetFontFamily("sans")'>Sans</button>
+            </span>
+            <span class="reader-setting-group">
+                <button type="button" class="btn @(_lineHeight == "tight" ? "is-active" : "")" @onclick='() => SetLineHeight("tight")'>Eng</button>
+                <button type="button" class="btn @(_lineHeight == "normal" ? "is-active" : "")" @onclick='() => SetLineHeight("normal")'>Normal</button>
+                <button type="button" class="btn @(_lineHeight == "loose" ? "is-active" : "")" @onclick='() => SetLineHeight("loose")'>Weit</button>
+            </span>
+            <span class="reader-setting-group">
+                <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>Schmal</button>
+                <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>Normal</button>
+                <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>Breit</button>
+            </span>
+        </div>
+    }
 
     @if (_book.File.Format is "TXT" or "MD")
     {
-        <div id="reader-content" class="reader-content" style="font-size: @(_fontSize)px">
+        <div id="reader-content" class="@ReaderContentClass" style="font-size: @(_fontSize)px">
             @if (_book.File.Format == "TXT")
             {
                 <pre>@_textContent</pre>
@@ -52,7 +71,7 @@ else
     }
     else if (_book.File.Format == "EPUB" && _epubBytes is not null)
     {
-        <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" OnProgress="HandleEpubProgress" />
+        <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" FontFamily="@_fontFamily" LineHeight="@_lineHeight" PageWidth="@_pageWidth" OnProgress="HandleEpubProgress" />
     }
     else if (_book.File.Format == "PDF" && _pdfBytes is not null)
     {
@@ -82,11 +101,32 @@ else
     private int _initialPage = 1;
     private PdfProgress? _latestPdfProgress;
     private int _fontSize = 18;
+    private string _fontFamily = "serif";
+    private string _lineHeight = "normal";
+    private string _pageWidth = "normal";
     private Timer? _saveTimer;
+
+    private string ReaderControlsClass => _pageWidth switch
+    {
+        "narrow" => "reader-controls reader-controls--width-narrow",
+        "wide" => "reader-controls reader-controls--width-wide",
+        _ => "reader-controls",
+    };
+
+    private string ReaderContentClass => string.Join(" ", new[]
+    {
+        "reader-content",
+        _fontFamily == "sans" ? "reader-content--font-sans" : null,
+        _lineHeight switch { "tight" => "reader-content--line-tight", "loose" => "reader-content--line-loose", _ => null },
+        _pageWidth switch { "narrow" => "reader-content--width-narrow", "wide" => "reader-content--width-wide", _ => null },
+    }.Where(c => c is not null));
 
     protected override async Task OnParametersSetAsync()
     {
         _fontSize = await ReaderSettings.GetFontSizeAsync();
+        _fontFamily = await ReaderSettings.GetFontFamilyAsync();
+        _lineHeight = await ReaderSettings.GetLineHeightAsync();
+        _pageWidth = await ReaderSettings.GetPageWidthAsync();
 
         var bookResponse = await ApiClient.GetAsync<Book>($"/api/books/{Id}");
 
@@ -259,6 +299,24 @@ else
     {
         _fontSize = Math.Max(_fontSize - 2, 12);
         await ReaderSettings.SetFontSizeAsync(_fontSize);
+    }
+
+    private async Task SetFontFamily(string fontFamily)
+    {
+        _fontFamily = fontFamily;
+        await ReaderSettings.SetFontFamilyAsync(_fontFamily);
+    }
+
+    private async Task SetLineHeight(string lineHeight)
+    {
+        _lineHeight = lineHeight;
+        await ReaderSettings.SetLineHeightAsync(_lineHeight);
+    }
+
+    private async Task SetPageWidth(string pageWidth)
+    {
+        _pageWidth = pageWidth;
+        await ReaderSettings.SetPageWidthAsync(_pageWidth);
     }
 
     public void Dispose()

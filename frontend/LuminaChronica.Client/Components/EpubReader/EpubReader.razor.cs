@@ -15,12 +15,24 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     public int FontSize { get; set; } = 18;
 
     [Parameter]
+    public string FontFamily { get; set; } = "serif";
+
+    [Parameter]
+    public string LineHeight { get; set; } = "normal";
+
+    [Parameter]
+    public string PageWidth { get; set; } = "normal";
+
+    [Parameter]
     public EventCallback<EpubProgress> OnProgress { get; set; }
 
     private readonly string _elementId = $"epub-reader-{Guid.NewGuid():N}";
     private IJSObjectReference? _module;
     private DotNetObjectReference<EpubReader>? _dotNetRef;
     private int _lastFontSize;
+    private string _lastFontFamily = "";
+    private string _lastLineHeight = "";
+    private string _lastPageWidth = "";
     private double _lastPercentage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -32,17 +44,30 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
 
         _dotNetRef = DotNetObjectReference.Create(this);
         _lastFontSize = FontSize;
+        _lastFontFamily = FontFamily;
+        _lastLineHeight = LineHeight;
+        _lastPageWidth = PageWidth;
 
-        await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize);
+        await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight, PageWidth);
         await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_module is not null && FontSize != _lastFontSize)
+        if (_module is null) return;
+
+        if (FontSize != _lastFontSize)
         {
             await _module.InvokeVoidAsync("setFontSize", _elementId, FontSize);
             _lastFontSize = FontSize;
+        }
+
+        if (FontFamily != _lastFontFamily || LineHeight != _lastLineHeight || PageWidth != _lastPageWidth)
+        {
+            await _module.InvokeVoidAsync("setContentStyle", _elementId, FontFamily, LineHeight, PageWidth);
+            _lastFontFamily = FontFamily;
+            _lastLineHeight = LineHeight;
+            _lastPageWidth = PageWidth;
         }
     }
 

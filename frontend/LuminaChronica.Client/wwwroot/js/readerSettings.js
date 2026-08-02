@@ -27,3 +27,40 @@ export function getPdfZoom() {
 export function setPdfZoom(zoom) {
     localStorage.setItem(PDF_ZOOM_STORAGE_KEY, String(zoom));
 }
+
+// Typography/layout preferences for TXT/MD/EPUB (not PDF -- a rendered
+// raster page has no text layout to adjust). Stored as the same small set
+// of keys ("serif"/"sans", "tight"/"normal"/"loose", "narrow"/"normal"/
+// "wide") that both app.css's reader-content modifier classes and
+// epubReader.js's own rule-building map to real CSS values -- keeps this
+// module a plain key store, not a place that duplicates actual sizes.
+const FONT_FAMILY_STORAGE_KEY = "lumina_reader_font_family";
+const LINE_HEIGHT_STORAGE_KEY = "lumina_reader_line_height";
+const PAGE_WIDTH_STORAGE_KEY = "lumina_reader_page_width";
+const DEFAULT_FONT_FAMILY = "serif";
+const DEFAULT_LINE_HEIGHT = "normal";
+const DEFAULT_PAGE_WIDTH = "normal";
+
+export function getFontFamily() {
+    return localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || DEFAULT_FONT_FAMILY;
+}
+
+export function setFontFamily(fontFamily) {
+    localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
+}
+
+export function getLineHeight() {
+    return localStorage.getItem(LINE_HEIGHT_STORAGE_KEY) || DEFAULT_LINE_HEIGHT;
+}
+
+export function setLineHeight(lineHeight) {
+    localStorage.setItem(LINE_HEIGHT_STORAGE_KEY, lineHeight);
+}
+
+export function getPageWidth() {
+    return localStorage.getItem(PAGE_WIDTH_STORAGE_KEY) || DEFAULT_PAGE_WIDTH;
+}
+
+export function setPageWidth(pageWidth) {
+    localStorage.setItem(PAGE_WIDTH_STORAGE_KEY, pageWidth);
+}
