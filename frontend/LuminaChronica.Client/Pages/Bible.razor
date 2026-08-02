@@ -1,0 +1,268 @@
+@page "/bible"
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject BibleClientService BibleClient
+
+<PageTitle>Die Heilige Schrift — Lumina Chronica</PageTitle>
+
+<div class="bible-page">
+    <div class="bible-hero">
+        <img src="images/bible-hero.jpg" alt="" class="bible-hero-image" />
+        <div class="bible-hero-scrim"></div>
+        <div class="bible-hero-content">
+            <h1>Die Heilige Schrift</h1>
+            <p class="bible-hero-subtitle">"Tut alles ohne Murren und Bedenken." — Philipper 2,14</p>
+        </div>
+        <p class="bible-hero-credit">
+            Foto: Diego Delso,
+            <a href="https://delso.photo" target="_blank" rel="noopener noreferrer">delso.photo</a>,
+            Lizenz <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA</a>
+        </p>
+    </div>
+
+    <div class="bible-controls">
+        <label class="bible-control">
+            <span>Übersetzung</span>
+            <select value="@_selectedTranslationId" @onchange="OnTranslationChangedAsync">
+                @foreach (var translation in _translations)
+                {
+                    <option value="@translation.Id">@translation.Abbreviation — @translation.Name</option>
+                }
+            </select>
+        </label>
+
+        <label class="bible-control">
+            <span>Buch</span>
+            <select value="@_selectedBookId" @onchange="OnBookChangedAsync" disabled="@(_books.Count == 0)">
+                @foreach (var book in _books)
+                {
+                    <option value="@book.Id">@book.NameLong</option>
+                }
+            </select>
+        </label>
+
+        <label class="bible-control">
+            <span>Kapitel</span>
+            <select value="@_chapter?.Id" @onchange="OnChapterChangedAsync" disabled="@(_chapters.Count == 0)">
+                @foreach (var chapterRef in _chapters)
+                {
+                    <option value="@chapterRef.Id">@chapterRef.Number</option>
+                }
+            </select>
+        </label>
+
+        <div class="bible-nav-buttons">
+            <button type="button" class="btn" disabled="@(_chapter?.Previous is null)" @onclick="GoToPreviousChapterAsync">← Vorheriges Kapitel</button>
+            <button type="button" class="btn" disabled="@(_chapter?.Next is null)" @onclick="GoToNextChapterAsync">Nächstes Kapitel →</button>
+        </div>
+    </div>
+
+    <div class="bible-search">
+        <input type="search" placeholder="Bibel durchsuchen..." @bind="_searchQuery" @bind:event="oninput" @onkeydown="OnSearchKeyDownAsync" />
+        <button type="button" class="btn" disabled="@string.IsNullOrWhiteSpace(_searchQuery)" @onclick="SearchAsync">Suchen</button>
+    </div>
+
+    @if (_searchResults is { Count: > 0 })
+    {
+        <ul class="bible-search-results">
+            @foreach (var result in _searchResults)
+            {
+                <li>
+                    <button type="button" class="bible-search-result" @onclick="() => SelectSearchResultAsync(result)">
+                        <strong>@result.Reference</strong>
+                        <span>@Truncate(result.Text)</span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+    else if (_searchResults is not null)
+    {
+        <p class="text-muted">Keine Treffer gefunden.</p>
+    }
+
+    @if (_errorMessage is not null)
+    {
+        <p class="form-error">@_errorMessage</p>
+    }
+    else if (_isLoadingChapter)
+    {
+        <LoadingIndicator Text="Kapitel wird geladen..." />
+    }
+    else if (_chapter is not null)
+    {
+        <article class="bible-chapter">
+            <h2>@_chapter.Reference</h2>
+            <div id="bible-chapter-content" class="bible-chapter-content">@((MarkupString)_chapter.Content)</div>
+        </article>
+
+        <footer class="bible-attribution">
+            <p>
+                <strong>@_selectedTranslation?.Abbreviation</strong> — @_chapter.Copyright
+            </p>
+            <p class="bible-attribution-links">
+                Bereitgestellt über <a href="https://api.bible" target="_blank" rel="noopener noreferrer">api.bible</a>.
+                @if (_selectedTranslation?.IsBiblica == true)
+                {
+                    <text> Übersetzung von <a href="https://www.biblica.com" target="_blank" rel="noopener noreferrer">Biblica</a>.</text>
+                }
+            </p>
+        </footer>
+    }
+</div>
+
+@code {
+    // NIV11 -- see backend/src/services/bibleService.ts's curated allowlist.
+    private const string DefaultTranslationId = "78a9f6124f344018-01";
+    private const string DefaultChapterId = "PHP.2";
+    private const string DefaultVerseSid = "PHP 2:14";
+
+    private List<BibleTranslation> _translations = [];
+    private List<BibleBook> _books = [];
+    private List<BibleChapterRef> _chapters = [];
+    private BibleChapter? _chapter;
+    private string _selectedTranslationId = DefaultTranslationId;
+    private string _selectedBookId = "PHP";
+    private string? _searchQuery;
+    private List<BibleSearchResultItem>? _searchResults;
+    private bool _isLoadingChapter;
+    private string? _errorMessage;
+    private CancellationTokenSource _cts = new();
+
+    private BibleTranslation? _selectedTranslation => _translations.FirstOrDefault(t => t.Id == _selectedTranslationId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var translationsResponse = await ApiClient.GetAsync<List<BibleTranslation>>("/api/bible/translations");
+        _translations = translationsResponse is { Success: true, Data: not null } ? translationsResponse.Data : [];
+
+        var lastTranslationId = await BibleClient.GetLastTranslationIdAsync();
+        _selectedTranslationId = _translations.Any(t => t.Id == lastTranslationId) ? lastTranslationId! : DefaultTranslationId;
+
+        await LoadBooksAsync();
+        // Always lands on Philippians 2:14 -- the point of this page, per
+        // the user's own description ("secret feature", personal favorite
+        // verse) -- not something to resume past on a later visit.
+        await LoadChapterAsync(_selectedTranslationId, DefaultChapterId, DefaultVerseSid);
+    }
+
+    private async Task LoadBooksAsync()
+    {
+        var response = await ApiClient.GetAsync<List<BibleBook>>($"/api/bible/books/{_selectedTranslationId}");
+        _books = response is { Success: true, Data: not null } ? response.Data : [];
+    }
+
+    private async Task LoadChaptersForBookAsync(string bookId)
+    {
+        var response = await ApiClient.GetAsync<List<BibleChapterRef>>($"/api/bible/books/{_selectedTranslationId}/{bookId}/chapters");
+        _chapters = response is { Success: true, Data: not null } ? response.Data : [];
+    }
+
+    private async Task LoadChapterAsync(string bibleId, string chapterId, string? highlightSid = null)
+    {
+        _isLoadingChapter = true;
+        _errorMessage = null;
+        _searchResults = null;
+        StateHasChanged();
+
+        var response = await ApiClient.GetAsync<BibleChapter>($"/api/bible/chapters/{bibleId}/{chapterId}");
+        if (response is { Success: true, Data: not null })
+        {
+            _chapter = response.Data;
+            _selectedBookId = ExtractBookId(_chapter.Id);
+            await LoadChaptersForBookAsync(_selectedBookId);
+            await BibleClient.TrackViewAsync(_chapter.FumsToken);
+        }
+        else
+        {
+            _errorMessage = response?.Error?.Message ?? "Der Bibeltext konnte gerade nicht geladen werden. Bitte versuche es erneut.";
+        }
+
+        _isLoadingChapter = false;
+        StateHasChanged();
+
+        if (highlightSid is not null && _chapter is not null)
+        {
+            await Task.Delay(80, _cts.Token); // let the content render before scrolling
+            await BibleClient.ScrollToVerseAsync("bible-chapter-content", highlightSid);
+        }
+    }
+
+    private static string ExtractBookId(string chapterId) => chapterId.Split('.')[0];
+
+    private async Task OnTranslationChangedAsync(ChangeEventArgs e)
+    {
+        var newTranslationId = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(newTranslationId) || newTranslationId == _selectedTranslationId) return;
+
+        _selectedTranslationId = newTranslationId;
+        await BibleClient.SetLastTranslationIdAsync(_selectedTranslationId);
+        await LoadBooksAsync();
+
+        var chapterId = _chapter?.Id ?? DefaultChapterId;
+        await LoadChapterAsync(_selectedTranslationId, chapterId);
+    }
+
+    private async Task OnBookChangedAsync(ChangeEventArgs e)
+    {
+        var bookId = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(bookId)) return;
+
+        _selectedBookId = bookId;
+        await LoadChaptersForBookAsync(bookId);
+        if (_chapters.Count > 0)
+        {
+            await LoadChapterAsync(_selectedTranslationId, _chapters[0].Id);
+        }
+    }
+
+    private Task OnChapterChangedAsync(ChangeEventArgs e)
+    {
+        var chapterId = e.Value?.ToString();
+        return string.IsNullOrWhiteSpace(chapterId) ? Task.CompletedTask : LoadChapterAsync(_selectedTranslationId, chapterId);
+    }
+
+    private Task GoToPreviousChapterAsync() =>
+        _chapter?.Previous is { } previous ? LoadChapterAsync(_selectedTranslationId, previous.Id) : Task.CompletedTask;
+
+    private Task GoToNextChapterAsync() =>
+        _chapter?.Next is { } next ? LoadChapterAsync(_selectedTranslationId, next.Id) : Task.CompletedTask;
+
+    private async Task OnSearchKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SearchAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery)) return;
+
+        var response = await ApiClient.GetAsync<BibleSearchResponse>($"/api/bible/search/{_selectedTranslationId}?q={Uri.EscapeDataString(_searchQuery)}");
+        _searchResults = response is { Success: true, Data: not null } ? response.Data.Results : [];
+        StateHasChanged();
+    }
+
+    // Search result ids look like "PHP.2.14" (book.chapter.verse) -- turned
+    // into a chapter id ("PHP.2") to load and a data-sid ("PHP 2:14") to
+    // scroll to, matching the format api.bible's own HTML content uses.
+    private Task SelectSearchResultAsync(BibleSearchResultItem result)
+    {
+        var parts = result.Id.Split('.');
+        if (parts.Length != 3) return Task.CompletedTask;
+
+        var chapterId = $"{parts[0]}.{parts[1]}";
+        var sid = $"{parts[0]} {parts[1]}:{parts[2]}";
+        return LoadChapterAsync(_selectedTranslationId, chapterId, sid);
+    }
+
+    private static string Truncate(string text) => text.Length <= 140 ? text : text[..140] + "…";
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

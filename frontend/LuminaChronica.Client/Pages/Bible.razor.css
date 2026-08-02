@@ -1,0 +1,308 @@
+/*
+  Deliberate one-page exception to the app's brass/oxblood classic-library
+  identity -- baroque, dark-academia, "you get shivers" per the user's own
+  brief. Page-scoped only (Blazor CSS isolation), never touches app.css or
+  the shared theme tokens' meaning elsewhere. Supports both light and dark
+  app themes with the same base design (see the [data-theme="dark-library"]
+  / prefers-color-scheme block at the bottom), same convention as the app's
+  own theme CSS files.
+
+  Verse/section markup (span.v, .s1, .q1-.q3, <p>) comes from api.bible's
+  content-type=html response, injected via @((MarkupString)...) -- Blazor's
+  CSS scoping does not reach dynamically-injected markup, hence ::deep.
+*/
+
+.bible-page {
+    --bible-gold: #c9a24a;
+    --bible-gold-bright: #e6c976;
+    --bible-ink: #2a1c14;
+    --bible-parchment: #f3e6c8;
+    --bible-parchment-panel: #faf3e0;
+    --bible-burgundy: #4a1620;
+
+    max-width: 68rem;
+    margin: 0 auto;
+    padding-bottom: var(--space-6);
+    color: var(--bible-ink);
+}
+
+/* Hero */
+
+.bible-hero {
+    position: relative;
+    height: 46vh;
+    min-height: 320px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--space-4);
+    box-shadow: 0 0 0 1px var(--bible-gold), 0 20px 50px rgba(20, 10, 5, 0.45);
+}
+
+.bible-hero-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.bible-hero-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(20, 8, 8, 0.55) 0%, rgba(30, 10, 10, 0.35) 40%, rgba(15, 6, 6, 0.85) 100%);
+}
+
+.bible-hero-content {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-3);
+}
+
+.bible-hero-content h1 {
+    font-family: var(--font-family-display);
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    color: var(--bible-gold-bright);
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+    margin: 0 0 var(--space-2);
+    letter-spacing: 0.02em;
+}
+
+.bible-hero-subtitle {
+    font-family: var(--font-family-reader);
+    font-style: italic;
+    font-size: var(--font-size-body-lg);
+    color: var(--bible-parchment);
+    max-width: 40rem;
+    margin: 0;
+}
+
+.bible-hero-credit {
+    position: absolute;
+    right: var(--space-2);
+    bottom: var(--space-1);
+    margin: 0;
+    font-size: var(--font-size-caption);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.bible-hero-credit a {
+    color: var(--bible-gold-bright);
+}
+
+/* Controls */
+
+.bible-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    margin-bottom: var(--space-2);
+    background: var(--bible-parchment);
+    border: 1px solid var(--bible-gold);
+    border-radius: var(--radius-lg);
+}
+
+.bible-control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-size: var(--font-size-small);
+    color: var(--bible-ink);
+}
+
+.bible-control select {
+    font-family: var(--font-family-ui);
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--bible-gold);
+    border-radius: var(--radius);
+    background: var(--bible-parchment-panel);
+    color: var(--bible-ink);
+    min-width: 12rem;
+}
+
+.bible-nav-buttons {
+    display: flex;
+    gap: var(--space-2);
+    margin-left: auto;
+}
+
+.bible-search {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.bible-search input[type="search"] {
+    flex: 1;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--bible-gold);
+    border-radius: var(--radius);
+    background: var(--bible-parchment-panel);
+    color: var(--bible-ink);
+    font-family: var(--font-family-reader);
+}
+
+.bible-search-results {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.bible-search-result {
+    width: 100%;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-2);
+    border: 1px solid var(--bible-gold);
+    border-radius: var(--radius);
+    background: var(--bible-parchment-panel);
+    color: var(--bible-ink);
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.bible-search-result:hover {
+    background: var(--bible-parchment);
+    transform: translateX(2px);
+}
+
+.bible-search-result strong {
+    font-family: var(--font-family-display);
+    color: var(--bible-burgundy);
+}
+
+/* Chapter panel -- the "illuminated manuscript" frame */
+
+.bible-chapter {
+    position: relative;
+    background: var(--bible-parchment-panel);
+    border: 3px double var(--bible-gold);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5) var(--space-5);
+    box-shadow: var(--shadow-card);
+}
+
+.bible-chapter h2 {
+    font-family: var(--font-family-display);
+    color: var(--bible-burgundy);
+    text-align: center;
+    margin-top: 0;
+    border-bottom: 3px double var(--bible-gold);
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    padding-bottom: var(--space-1);
+}
+
+.bible-chapter-content {
+    font-family: var(--font-family-reader);
+    font-size: 1.15rem;
+    line-height: 1.85;
+    max-width: 62ch;
+    margin: 0 auto;
+    color: var(--bible-ink);
+}
+
+.bible-chapter-content ::deep p {
+    margin: 0 0 var(--space-2);
+}
+
+.bible-chapter-content ::deep p.s1 {
+    font-family: var(--font-family-display);
+    font-style: italic;
+    font-size: var(--font-size-h3);
+    color: var(--bible-burgundy);
+    text-align: center;
+    margin: var(--space-4) 0 var(--space-2);
+}
+
+.bible-chapter-content ::deep p.q1 {
+    margin-left: var(--space-3);
+}
+
+.bible-chapter-content ::deep p.q2 {
+    margin-left: var(--space-4);
+}
+
+.bible-chapter-content ::deep p.q3 {
+    margin-left: var(--space-5);
+}
+
+.bible-chapter-content ::deep span.v {
+    font-family: var(--font-family-ui);
+    font-weight: 700;
+    font-size: 0.7em;
+    color: var(--bible-gold);
+    vertical-align: super;
+    margin-right: 2px;
+}
+
+/* Drop cap on the chapter's first paragraph -- an illuminated-manuscript
+   touch that reads as baroque/ornate without leaning gothic. */
+.bible-chapter-content ::deep p:first-of-type::first-letter {
+    font-family: var(--font-family-display);
+    font-size: 3.4em;
+    font-weight: 700;
+    color: var(--bible-burgundy);
+    float: left;
+    line-height: 0.8;
+    margin: 0.05em 0.08em 0 0;
+}
+
+.bible-chapter-content ::deep .bible-verse-highlight {
+    background: rgba(201, 162, 74, 0.35);
+    border-radius: 3px;
+    transition: background-color 2s ease;
+}
+
+.bible-attribution {
+    max-width: 62ch;
+    margin: var(--space-3) auto 0;
+    font-size: var(--font-size-caption);
+    color: var(--bible-ink);
+    opacity: 0.75;
+    text-align: center;
+}
+
+.bible-attribution a {
+    color: var(--bible-burgundy);
+}
+
+.bible-attribution-links {
+    margin-top: var(--space-1);
+}
+
+/* Dark mode -- Dark Library theme, or System theme resolving to a dark OS
+   preference. Same structure, candlelit instead of daylit, mirroring the
+   app's own Classic Library / Dark Library relationship. */
+
+[data-theme="dark-library"] .bible-page {
+    --bible-ink: #ece0c4;
+    --bible-parchment: #241a12;
+    --bible-parchment-panel: #2c2015;
+    --bible-burgundy: #d98a9a;
+}
+
+[data-theme="dark-library"] .bible-hero {
+    box-shadow: 0 0 0 1px var(--bible-gold), 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] .bible-page {
+        --bible-ink: #ece0c4;
+        --bible-parchment: #241a12;
+        --bible-parchment-panel: #2c2015;
+        --bible-burgundy: #d98a9a;
+    }
+}
