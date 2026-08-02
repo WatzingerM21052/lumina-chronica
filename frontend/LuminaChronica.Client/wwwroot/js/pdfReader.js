@@ -20,13 +20,21 @@ async function renderPage(elementId) {
     const container = document.getElementById(elementId);
     if (!container) return;
 
+    // The frame (`container`) is CSS `width/height: fit-content` so it
+    // visually hugs whatever shape the rendered page turns out to be --
+    // querying *its* clientWidth/Height here would be circular (it has no
+    // natural size until a canvas exists inside it). The available space
+    // to fit into is instead the frame's parent, `.pdf-reader-viewport`,
+    // which has a real CSS-determined size independent of its content.
+    const availableEl = container.parentElement || container;
+
     const page = await entry.doc.getPage(entry.currentPage);
     const unscaledViewport = page.getViewport({ scale: 1 });
-    // Fit within both the container's width AND height so the whole page
-    // is visible without cropping/scrolling, regardless of the PDF's own
-    // page aspect ratio (portrait, landscape, wide illustrated pages, etc).
-    const availableWidth = container.clientWidth || 600;
-    const availableHeight = container.clientHeight || 800;
+    // Fit within both the available width AND height so the whole page is
+    // visible without cropping/scrolling, regardless of the PDF's own page
+    // aspect ratio (portrait, landscape, wide illustrated pages, etc).
+    const availableWidth = availableEl.clientWidth || 600;
+    const availableHeight = availableEl.clientHeight || 800;
     const scale = Math.min(availableWidth / unscaledViewport.width, availableHeight / unscaledViewport.height);
     const viewport = page.getViewport({ scale });
 

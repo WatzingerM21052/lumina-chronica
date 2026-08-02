@@ -101,6 +101,7 @@ public class ReaderPageTests : BunitContext
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
 
         Assert.Contains("epub-reader-frame", cut.Markup);
+        Assert.Contains("epub-reader-progress", cut.Markup);
     }
 
     [Fact]

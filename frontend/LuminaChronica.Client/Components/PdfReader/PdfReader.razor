@@ -2,6 +2,9 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JsRuntime
 
+<div class="pdf-reader-viewport">
+    <div id="@_elementId" class="pdf-reader-frame"></div>
+</div>
 <div class="pdf-reader-nav">
     <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
     <span>
@@ -11,4 +14,3 @@
     </span>
     <button type="button" class="btn" @onclick="NextAsync">Weiter ▶</button>
 </div>
-<div id="@_elementId" class="pdf-reader-frame"></div>
