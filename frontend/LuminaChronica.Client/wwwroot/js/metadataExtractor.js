@@ -32,6 +32,18 @@ function looksLikeFilename(value) {
     return /\.(docx?|pdf|epub|txt)$/i.test(value.trim());
 }
 
+// EPUB OPF `<dc:description>` content can legitimately embed simple
+// XHTML/HTML markup rather than plain text (same class of issue as
+// OpenLibrary's description field in metadataEnrichment.js) -- strip it so
+// BookDetail.razor's plain-text description binding never shows literal
+// tags. DOMParser strips tags and decodes entities in one step; nothing
+// parsed here is ever inserted into the live DOM.
+function stripHtml(value) {
+    if (!value) return value;
+    const text = new DOMParser().parseFromString(value, "text/html").body.textContent ?? "";
+    return text.trim() || null;
+}
+
 export async function extractEpub(bytes) {
     await ensureLibsLoaded();
 
@@ -47,7 +59,7 @@ export async function extractEpub(bytes) {
     return {
         title: metadata.title || null,
         author: metadata.creator || null,
-        description: metadata.description || null,
+        description: stripHtml(metadata.description || null),
         language: metadata.language || null,
         publisher: metadata.publisher || null,
         isbn: isbnShape(metadata.identifier),
