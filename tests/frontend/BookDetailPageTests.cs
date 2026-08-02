@@ -316,4 +316,49 @@ public class BookDetailPageTests : BunitContext
         Assert.Contains("Gefundene Daten", cut.Markup);
         Assert.Contains("wird gesetzt: Tolkien Verlag", cut.Markup);
     }
+
+    [Fact]
+    public void BookDetail_EditForm_EnrichmentSearch_GoogleBooksResult_UsesGoogleBooksLookupNotIsbnLookup()
+    {
+        // Regression coverage: a Google Books result with an ISBN must not
+        // silently re-route through OpenLibrary's lookupByIsbn -- Source
+        // must dispatch to lookupByGoogleBooksId instead.
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
+        module.Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true).SetResult(
+        [
+            new EnrichmentSearchResult
+            {
+                Source = "googlebooks", GoogleBooksId = "zyTCAlFPjgYC", Title = "Dune", Author = "Frank Herbert",
+                Year = 1965, CoverUrl = "https://books.google.com/cover.jpg", Isbn = "9780441013593",
+            },
+        ]);
+        module.Setup<EnrichedMetadata>("lookupByGoogleBooksId", _ => true).SetResult(
+            new EnrichedMetadata { Found = true, Publisher = "Google Books Verlag", HasCover = false });
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+        cut.Find("#edit-enrichment-search").Change("Dune");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Suchen").Click();
+        cut.Find("button.enrichment-search-result").Click();
+
+        // Selecting the ISBN would have taken the OpenLibrary path instead --
+        // confirm the ISBN field was NOT filled from the result (that only
+        // happens on the OpenLibrary branch) and the Google Books result made
+        // it into the preview.
+        Assert.True(string.IsNullOrEmpty(cut.Find("#edit-isbn").GetAttribute("value")));
+        Assert.Contains("wird gesetzt: Google Books Verlag", cut.Markup);
+    }
 }
