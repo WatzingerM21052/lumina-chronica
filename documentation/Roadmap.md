@@ -209,3 +209,13 @@ User feedback after the Dashboard phase: BookDetail was showing raw HTML markup 
 Live-verified end-to-end on the deployed site: re-uploaded a real EPUB (Dragon Rider) whose description previously showed raw `<p class="description">` tags — confirmed clean plain text after the fix, then deleted the test book. Ran a real title/author search ("Struwwelpeter") through the merged search path with Google Books still disabled (empty key) — confirmed the OpenLibrary-only flow (search → select result → apply) still works correctly end-to-end with no regressions from the refactor.
 
 Frontend: 68/68 bUnit tests passing.
+
+### Impressum page (2026-08-02, issue #122/PR #123)
+
+User request: a standard legal Impressum page, footer-linked from every page, doubling as the (not-yet-built) entry point for a secret Bible-reader page reached by clicking the responsible person's name — see `Architecture.md`'s "Impressum page" row.
+
+Shipped with placeholder markers (`[Platzhalter — bitte ausfüllen]`) for the real Name/Anschrift/E-Mail, since that's personal legal content the user has to supply. Live-verified reachable while logged out (cleared `lumina_auth_token` from `localStorage`, reloaded, confirmed no redirect to login) and that the footer link renders on every page.
+
+Frontend: 70/70 bUnit tests passing.
+
+**Not yet done, waiting on the user**: real Impressum content; the secret Bible-page link itself (added once that page exists, deprioritized to last per explicit user request — see the Bible-page planning notes once that story starts); a Google Books API key to actually activate the search-merge feature above.
