@@ -27,5 +27,6 @@ builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<BlobUrlService>();
 builder.Services.AddScoped<ScrollTrackerService>();
 builder.Services.AddScoped<ReaderSettingsService>();
+builder.Services.AddScoped<OfflineStorageService>();
 
 await builder.Build().RunAsync();

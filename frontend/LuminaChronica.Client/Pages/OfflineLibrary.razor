@@ -1,0 +1,98 @@
+@page "/offline"
+@attribute [Authorize]
+@using System.Globalization
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject OfflineStorageService OfflineStorage
+
+<PageTitle>Offline Bücher — Lumina Chronica</PageTitle>
+
+<h1>Offline Bücher</h1>
+<p class="text-muted">
+    Bücher, die du auf diesem Gerät für das Lesen ohne Internetverbindung gespeichert hast. Speichere ein
+    Buch über "Offline speichern" auf seiner Detailseite.
+</p>
+
+@if (_isLoading)
+{
+    <LoadingIndicator Text="Offline-Bücher werden geladen..." />
+}
+else if (_books.Count == 0)
+{
+    <EmptyState Message="Noch keine Bücher offline gespeichert." />
+}
+else
+{
+    <p class="text-muted">Insgesamt @FormatSize(_totalSizeBytes) belegt.</p>
+    <ul class="offline-book-list">
+        @foreach (var book in _books)
+        {
+            <li class="offline-book-item">
+                <div>
+                    <strong>@book.Title</strong>
+                    @if (!string.IsNullOrWhiteSpace(book.Author))
+                    {
+                        <span class="text-muted"> — @book.Author</span>
+                    }
+                    <div class="text-muted">@book.Format · @FormatSize(book.SizeBytes)</div>
+                </div>
+                <div class="form-actions">
+                    <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">Lesen</a>
+                    <button type="button" class="btn" @onclick="() => RemoveAsync(book.Id)">Entfernen</button>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<OfflineBookSummary> _books = [];
+    private long _totalSizeBytes;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _books = await OfflineStorage.ListAsync();
+            _totalSizeBytes = _books.Sum(b => b.SizeBytes);
+        }
+        catch (Exception)
+        {
+            _books = [];
+            _totalSizeBytes = 0;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task RemoveAsync(int id)
+    {
+        try
+        {
+            await OfflineStorage.DeleteBookAsync(id);
+        }
+        catch (Exception)
+        {
+        }
+        await LoadAsync();
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        var mb = bytes / 1024.0 / 1024.0;
+        return mb >= 1
+            ? mb.ToString("F1", CultureInfo.InvariantCulture) + " MB"
+            : (bytes / 1024.0).ToString("F0", CultureInfo.InvariantCulture) + " KB";
+    }
+}
