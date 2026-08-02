@@ -23,7 +23,7 @@
 // Maps JS API key. If the key is ever empty, Google Books is silently
 // skipped and search falls back to OpenLibrary alone.
 
-const GOOGLE_BOOKS_API_KEY = "";
+const GOOGLE_BOOKS_API_KEY = "AIzaSyD14nj-uKTm9xCgwPEMhxAXXcj9IC0ZM4U";
 
 let pendingCover = null; // { type: "openlibrary-id", value: number } | { type: "url", value: string } | null
 let cachedCoverBlob;
