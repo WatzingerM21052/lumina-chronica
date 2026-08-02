@@ -196,3 +196,16 @@ Backend: 77/77 Vitest tests passing (9 new across both stories). Frontend: 66/66
 Live-verified end-to-end on the deployed site after each story: confirmed the real Weiterlesen section showed all 4 in-progress books linking to `/read` with correct progress bars, and the overview stat row matched real counts (4 Bücher/1 Regal/2 Favoriten/0 Gelesen). For recommendations, confirmed the section stayed hidden while every book had reading progress, then uploaded a real test book (`bookDownloads/`, user-authorized for in-app testing) without opening it and confirmed it appeared under "Empfehlungen" — then deleted the test book to restore the account to its prior state.
 
 **Phase 6 (Dashboard) is now complete.** Remaining phases per the Master Development Flow: Offline → v1.0 Release.
+
+### Description HTML-stripping fix + Google Books search merge (2026-08-02, issues #117/#119, PRs #118/#120)
+
+User feedback after the Dashboard phase: BookDetail was showing raw HTML markup in the description field for a book enriched via OpenLibrary, and the title/author search should pull from Google Books too, in addition to OpenLibrary, without duplicate results. See `Architecture.md`'s "Description HTML stripping" / "Metadata search (Google Books)" rows for the full technical detail.
+
+- [x] Issue #117/PR #118 — `stripHtml()` (DOMParser-based, strips tags and decodes entities) applied to description text from both OpenLibrary enrichment and EPUB metadata extraction.
+- [x] Issue #119/PR #120 — `searchByQuery` merges OpenLibrary + Google Books results, deduped by ISBN-set intersection with a title+author fallback. `EnrichmentSearchResult` gained a `Source` discriminator so selecting a result dispatches to the correct lookup function.
+
+**Google Books requires a free API key, confirmed live**: anonymous/keyless access is hard-blocked (`quota_limit_value: "0"`) — confirmed identically from a sandboxed `curl`, `WebFetch`, and a real browser `fetch()` on the user's own machine, ruling out an IP-specific rate limit. `GOOGLE_BOOKS_API_KEY` ships as an empty constant; Google Books is silently skipped until the user provides a key (safe to embed once obtained — Google's security model for this key type is referrer restriction, not secrecy). Two other free/keyless candidates were probed and rejected: `bigbookapi.com` (401, needs a key) and `archive.org`'s `advancedsearch.php` (works, but data is too noisy/inconsistent for a clean merged result list).
+
+Live-verified end-to-end on the deployed site: re-uploaded a real EPUB (Dragon Rider) whose description previously showed raw `<p class="description">` tags — confirmed clean plain text after the fix, then deleted the test book. Ran a real title/author search ("Struwwelpeter") through the merged search path with Google Books still disabled (empty key) — confirmed the OpenLibrary-only flow (search → select result → apply) still works correctly end-to-end with no regressions from the refactor.
+
+Frontend: 68/68 bUnit tests passing.
