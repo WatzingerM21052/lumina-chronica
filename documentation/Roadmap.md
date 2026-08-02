@@ -282,3 +282,18 @@ Frontend: 86/86 bUnit tests passing (1 new assertion; PDF zoom's actual concurre
 Live-verified on the deployed site: cover on book #7's Edit page (long form) renders at correct 2:3 proportions instead of a stretched strip. PDF zoom stress-tested with 24 zero-delay programmatic clicks (10 up/6 down/8 up) after the hotfix, settling correctly at the 250% cap with no crash, then 15 more settling at the 50% floor — confirming the race fix holds even far beyond realistic human click speed. (First test round, before the hotfix, did crash exactly as expected — that's what caught the bug.)
 
 **Deferred, not filed as an issue yet**: Reader Settings (font family/line-spacing/page-width, §14.2 — spec-defined and bounded, next logical piece); reading-modes (Book View/Scroll View) + per-format pagination granularity (EPUB chapter/paragraph settings, MD page-break markers, TXT paragraph pagination) — flagged as the expensive one, since MD/TXT pagination is a new text-chunking layer and interacts with `reading_progress.position`'s per-format meaning (CFI/page-number/scroll-fraction) in a way that needs a decision before implementation, not after.
+
+### EPUB piracy-watermark stripping (2026-08-02, issue #141/PR #142)
+
+Same-day follow-up: several real test EPUBs carry an "OceanofPDF.com" link/text stamped into every chapter (a ripping tool's signature, not a one-off page), which the user asked to remove if it could be done cleanly. See `Architecture.md`'s "EPUB piracy-watermark stripping" row for the full technical detail.
+
+- [x] Issue #141/PR #142 — `epubReader.js` gained a content hook that removes the injected watermark link/wrapper from each chapter before it's paginated, without touching the stored uploaded file.
+
+Frontend: 86/86 bUnit tests passing (unaffected — real epub.js rendering isn't bUnit-testable, same stance as the rest of the EPUB reader). Live-verified: uploaded a real affected EPUB, scripted 40 forward page-turns spanning multiple chapter boundaries, zero watermark occurrences in any rendered page; test book removed afterward.
+
+### Backlog additions (2026-08-02, not yet started)
+
+Three items filed for later, explicitly not to be picked up without being asked:
+- **Issue #140** — a real professional favicon/logo/Home hero banner, replacing the current Blazor-template placeholder favicon and the text-only header wordmark.
+- **Issue #143** — a much larger "Dark Academia/Baroque Experience" theme system for the Bible page specifically (selectable in settings, full-viewport animated parallax background, scroll-triggered animations, page-turn transitions, dedicated typography/color system) — a detailed multi-section spec from the user, preserved verbatim in the issue.
+- **Issue #144** — a small QoL bundle: a real confirm-dialog/modal component (delete confirmation is currently an inline button-swap duplicated in `BookDetail.razor`/`ShelfDetail.razor`, no modal component exists in the codebase), reader keyboard navigation (arrow keys/spacebar page-turning), drag-and-drop file upload.
