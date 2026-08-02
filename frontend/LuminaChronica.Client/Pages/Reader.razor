@@ -11,6 +11,7 @@
 @inject ApiClient ApiClient
 @inject ScrollTrackerService ScrollTracker
 @inject ReaderSettingsService ReaderSettings
+@inject OfflineStorageService OfflineStorage
 
 <PageTitle>@(_book?.Title ?? "Lesen") — Lumina Chronica</PageTitle>
 
@@ -88,20 +89,46 @@ else
         _fontSize = await ReaderSettings.GetFontSizeAsync();
 
         var bookResponse = await ApiClient.GetAsync<Book>($"/api/books/{Id}");
-        if (bookResponse is not { Success: true, Data: not null })
+
+        Book? book = null;
+        OfflineBookFile? offlineFile = null;
+        if (bookResponse is { Success: true, Data: { } data })
+        {
+            book = data;
+        }
+        else
+        {
+            // No network/backend reachable -- fall back to a copy the user
+            // explicitly saved earlier via BookDetail.razor's "Offline
+            // speichern". Without this, losing connectivity would break the
+            // exact feature it exists to support.
+            offlineFile = await TryGetOfflineFileAsync();
+            if (offlineFile is not null)
+            {
+                book = new Book { Id = Id, Title = offlineFile.Title, Author = offlineFile.Author, File = new BookFile { Format = offlineFile.Format, Size = offlineFile.FileBytes.LongLength } };
+            }
+        }
+
+        if (book is null)
         {
             _loadErrorMessage = bookResponse?.Error?.Message ?? "Buch konnte nicht geladen werden.";
             return;
         }
-        _book = bookResponse.Data;
+        _book = book;
 
         if (_book.File is null || _book.File.Format is not ("TXT" or "MD" or "EPUB" or "PDF"))
         {
             return;
         }
 
-        var fileResult = await ApiClient.GetBytesAsync($"/api/books/{Id}/file");
-        if (fileResult is null)
+        var fileBytes = offlineFile?.FileBytes;
+        if (fileBytes is null)
+        {
+            var fileResult = await ApiClient.GetBytesAsync($"/api/books/{Id}/file");
+            fileBytes = fileResult?.Bytes ?? (await TryGetOfflineFileAsync())?.FileBytes;
+        }
+
+        if (fileBytes is null)
         {
             _loadErrorMessage = "Buchdatei konnte nicht geladen werden.";
             return;
@@ -112,7 +139,7 @@ else
 
         if (_book.File.Format == "EPUB")
         {
-            _epubBytes = fileResult.Value.Bytes;
+            _epubBytes = fileBytes;
             _initialCfi = savedPosition;
             _saveTimer?.Dispose();
             _saveTimer = new Timer(_ => _ = SaveProgressAsync(), null, SaveInterval, SaveInterval);
@@ -121,7 +148,7 @@ else
 
         if (_book.File.Format == "PDF")
         {
-            _pdfBytes = fileResult.Value.Bytes;
+            _pdfBytes = fileBytes;
             _initialPage = savedPosition is { } pageText && int.TryParse(pageText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var page)
                 ? page
                 : 1;
@@ -130,7 +157,7 @@ else
             return;
         }
 
-        var text = Encoding.UTF8.GetString(fileResult.Value.Bytes);
+        var text = Encoding.UTF8.GetString(fileBytes);
         if (_book.File.Format == "MD")
         {
             _renderedMarkdown = Markdown.ToHtml(text, MarkdownPipeline);
@@ -155,6 +182,18 @@ else
 
         _saveTimer?.Dispose();
         _saveTimer = new Timer(_ => _ = SaveProgressAsync(), null, SaveInterval, SaveInterval);
+    }
+
+    private async Task<OfflineBookFile?> TryGetOfflineFileAsync()
+    {
+        try
+        {
+            return await OfflineStorage.GetBookFileAsync(Id);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     private Task HandleEpubProgress(EpubProgress progress)

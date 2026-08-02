@@ -1,5 +1,6 @@
 using Bunit;
 using LuminaChronica.Client.Components;
+using LuminaChronica.Client.Models;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ public class ReaderPageTests : BunitContext
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ScrollTrackerService>();
         Services.AddSingleton<ReaderSettingsService>();
+        Services.AddSingleton<OfflineStorageService>();
     }
 
     private void UseHandler(RoutedFakeHttpMessageHandler handler)
@@ -170,5 +172,40 @@ public class ReaderPageTests : BunitContext
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
 
         Assert.Contains("keine Datei hinterlegt", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_FallsBackToOfflineCopy_WhenApiUnavailable()
+    {
+        const string failureJson = """{"success":false,"error":{"code":"NETWORK_ERROR","message":"nope"}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", failureJson)
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson);
+        UseHandler(handler);
+
+        var fileBytes = System.Text.Encoding.UTF8.GetBytes("Hello from an offline copy.");
+        JSInterop.SetupModule("./js/offlineStorage.js")
+            .Setup<OfflineBookFile?>("getBookFile", _ => true)
+            .SetResult(new OfflineBookFile { Title = "Test Book", Author = "Author", Format = "TXT", FileBytes = fileBytes, FileContentType = "text/plain" });
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("Hello from an offline copy.", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_ShowsErrorWhenApiFailsAndNoOfflineCopyExists()
+    {
+        const string failureJson = """{"success":false,"error":{"code":"NOT_FOUND","message":"Buch nicht gefunden."}}""";
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/api/books/1", failureJson);
+        UseHandler(handler);
+
+        JSInterop.SetupModule("./js/offlineStorage.js")
+            .Setup<OfflineBookFile?>("getBookFile", _ => true)
+            .SetResult(null);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("Buch nicht gefunden.", cut.Markup);
     }
 }

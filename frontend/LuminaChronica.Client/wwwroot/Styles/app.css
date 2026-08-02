@@ -528,6 +528,25 @@ select:focus-visible {
     margin: var(--space-2) 0;
 }
 
+.offline-book-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    list-style: none;
+    padding: 0;
+    margin: var(--space-2) 0;
+}
+
+.offline-book-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-lg, var(--radius));
+    background-color: var(--color-bg-card);
+}
+
 .book-detail-meta dt {
     color: var(--color-text-secondary);
 }

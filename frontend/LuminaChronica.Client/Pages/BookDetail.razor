@@ -9,6 +9,7 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject OfflineStorageService OfflineStorage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
 
@@ -100,6 +101,18 @@ else
                     @if (_book.File is not null)
                     {
                         <a class="btn btn-primary" href="@($"library/books/{Id}/read")">Lesen</a>
+                        @if (_isOfflineSaved)
+                        {
+                            <button type="button" class="btn" disabled="@_isSavingOffline" @onclick="RemoveOfflineAsync">
+                                Offline entfernen (@FormatSize(_offlineSizeBytes))
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn" disabled="@_isSavingOffline" @onclick="SaveOfflineAsync">
+                                @(_isSavingOffline ? "Wird gespeichert..." : "Offline speichern")
+                            </button>
+                        }
                     }
                     <button type="button" id="edit-button" class="btn" @onclick="StartEditing">Bearbeiten</button>
                     @if (!_confirmingDelete)
@@ -113,6 +126,10 @@ else
                         <button type="button" class="btn" @onclick="() => _confirmingDelete = false">Abbrechen</button>
                     }
                 </div>
+                @if (_offlineErrorMessage is not null)
+                {
+                    <p class="form-error">@_offlineErrorMessage</p>
+                }
 
                 @if (_shelves is { Count: > 0 })
                 {
@@ -289,10 +306,85 @@ else
     private List<Shelf>? _shelves;
     private HashSet<int> _shelfIds = [];
 
+    private bool _isOfflineSaved;
+    private long _offlineSizeBytes;
+    private bool _isSavingOffline;
+    private string? _offlineErrorMessage;
+
     protected override async Task OnParametersSetAsync()
     {
         await LoadBookAsync();
         await LoadShelvesAsync();
+        await LoadOfflineStatusAsync();
+    }
+
+    // Best-effort like LoadShelvesAsync -- a device with no IndexedDB support
+    // (or a test harness with no JS interop configured) should still render
+    // the rest of the page, just without the offline button reflecting a
+    // saved state.
+    private async Task LoadOfflineStatusAsync()
+    {
+        try
+        {
+            var status = await OfflineStorage.GetStatusAsync(Id);
+            _isOfflineSaved = status.Saved;
+            _offlineSizeBytes = status.SizeBytes;
+        }
+        catch (Exception)
+        {
+            _isOfflineSaved = false;
+        }
+    }
+
+    private async Task SaveOfflineAsync()
+    {
+        if (_book?.File is null) return;
+
+        _isSavingOffline = true;
+        _offlineErrorMessage = null;
+
+        var fileResult = await ApiClient.GetBytesAsync($"/api/books/{Id}/file");
+        if (fileResult is null)
+        {
+            _offlineErrorMessage = "Buchdatei konnte nicht heruntergeladen werden.";
+            _isSavingOffline = false;
+            return;
+        }
+
+        try
+        {
+            await OfflineStorage.SaveBookAsync(Id, _book.Title, _book.Author, _book.File.Format, fileResult.Value.Bytes, fileResult.Value.ContentType);
+            await LoadOfflineStatusAsync();
+        }
+        catch (Exception)
+        {
+            _offlineErrorMessage = "Offline-Speicherung fehlgeschlagen (evtl. ist der Speicherplatz voll).";
+        }
+        finally
+        {
+            _isSavingOffline = false;
+        }
+    }
+
+    private async Task RemoveOfflineAsync()
+    {
+        try
+        {
+            await OfflineStorage.DeleteBookAsync(Id);
+        }
+        catch (Exception)
+        {
+        }
+        _isOfflineSaved = false;
+        _offlineSizeBytes = 0;
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        var mb = bytes / 1024.0 / 1024.0;
+        return mb >= 1
+            ? mb.ToString("F1", CultureInfo.InvariantCulture) + " MB"
+            : (bytes / 1024.0).ToString("F0", CultureInfo.InvariantCulture) + " KB";
     }
 
     private async Task LoadBookAsync()

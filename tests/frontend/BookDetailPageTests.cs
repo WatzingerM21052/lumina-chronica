@@ -17,6 +17,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
     }
 
     [Fact]
@@ -96,6 +97,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.Find("#edit-button").Click();
@@ -128,6 +130,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
 
@@ -164,6 +167,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.Find("#edit-button").Click();
@@ -190,6 +194,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
             .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
             .SetResult(new EnrichedMetadata
@@ -237,6 +242,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
             .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
             .SetResult(new EnrichedMetadata { Found = true, Publisher = "Enriched Publisher", HasCover = false });
@@ -267,6 +273,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
             .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
             .SetResult(new EnrichedMetadata { Found = false });
@@ -295,6 +302,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
         var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
         module.Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true).SetResult(
         [
@@ -336,6 +344,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
         var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
         module.Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true).SetResult(
         [
@@ -360,5 +369,86 @@ public class BookDetailPageTests : BunitContext
         // it into the preview.
         Assert.True(string.IsNullOrEmpty(cut.Find("#edit-isbn").GetAttribute("value")));
         Assert.Contains("wird gesetzt: Google Books Verlag", cut.Markup);
+    }
+
+    private const string OfflineTestBookJson = """
+        {"success":true,"data":{
+            "id":1,"title":"Dune","author":"Frank Herbert","description":null,
+            "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+            "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+        }}
+        """;
+
+    [Fact]
+    public void BookDetail_OfflineButton_ShowsSaveWhenNotYetSaved()
+    {
+        UseApiResponse(OfflineTestBookJson);
+        JSInterop.SetupModule("./js/offlineStorage.js")
+            .Setup<OfflineStatus>("getStatus", _ => true)
+            .SetResult(new OfflineStatus { Saved = false, SizeBytes = 0 });
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("Offline speichern", cut.Markup);
+        Assert.DoesNotContain("Offline entfernen", cut.Markup);
+    }
+
+    [Fact]
+    public void BookDetail_OfflineButton_ShowsRemoveWithSizeWhenAlreadySaved()
+    {
+        UseApiResponse(OfflineTestBookJson);
+        JSInterop.SetupModule("./js/offlineStorage.js")
+            .Setup<OfflineStatus>("getStatus", _ => true)
+            .SetResult(new OfflineStatus { Saved = true, SizeBytes = 2 * 1024 * 1024 });
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("Offline entfernen (2.0 MB)", cut.Markup);
+    }
+
+    [Fact]
+    public void BookDetail_OfflineButton_SaveOffline_DownloadsFileAndCallsSaveBook()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1/shelves", """{"success":true,"data":[]}""")
+            .WhenPathEndsWith("/api/shelves", """{"success":true,"data":[]}""")
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip")
+            .WhenPathEndsWith("/api/books/1", OfflineTestBookJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+
+        var offlineModule = JSInterop.SetupModule("./js/offlineStorage.js");
+        offlineModule.Setup<OfflineStatus>("getStatus", _ => true).SetResult(new OfflineStatus { Saved = false, SizeBytes = 0 });
+        var saveHandler = offlineModule.SetupVoid("saveBook", _ => true);
+        saveHandler.SetVoidResult();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Offline speichern").Click();
+
+        var invocation = Assert.Single(saveHandler.Invocations);
+        Assert.Equal(1, Convert.ToInt32(invocation.Arguments[0]));
+        Assert.Equal("Dune", invocation.Arguments[1]);
+        Assert.Equal("Frank Herbert", invocation.Arguments[2]);
+        Assert.Equal("EPUB", invocation.Arguments[3]);
+    }
+
+    [Fact]
+    public void BookDetail_OfflineButton_RemoveOffline_CallsDeleteBook()
+    {
+        UseApiResponse(OfflineTestBookJson);
+        var offlineModule = JSInterop.SetupModule("./js/offlineStorage.js");
+        offlineModule.Setup<OfflineStatus>("getStatus", _ => true).SetResult(new OfflineStatus { Saved = true, SizeBytes = 1024 });
+        var deleteHandler = offlineModule.SetupVoid("deleteBook", _ => true);
+        deleteHandler.SetVoidResult();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim().StartsWith("Offline entfernen")).Click();
+
+        var invocation = Assert.Single(deleteHandler.Invocations);
+        Assert.Equal(1, Convert.ToInt32(invocation.Arguments[0]));
+        Assert.DoesNotContain("Offline entfernen", cut.Markup);
     }
 }
