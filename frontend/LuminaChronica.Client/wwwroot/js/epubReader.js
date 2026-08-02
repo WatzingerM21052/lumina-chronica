@@ -57,6 +57,38 @@ function applyAppTheme(rendition) {
     });
 }
 
+// Some downloaded EPUBs (piracy-site rips) carry a watermark stamped into
+// every single chapter file -- a `<div style="float: none; margin: 10px
+// 0px 10px 0px; text-align: center;"><p><a href="https://oceanofpdf.com">
+// <i>OceanofPDF.com</i></a></p></div>` appended right before `</body>`,
+// confirmed identical across every affected chapter in several real test
+// files (bookDownloads/_OceanofPDF.com_*.epub). Removed here, in the same
+// content hook that fires per rendered section (see applyAppTheme above),
+// so it's gone *before* epub.js paginates that section -- stripping it
+// after layout would leave a stale page break where the watermark used to
+// be. A content hook rather than rewriting the stored EPUB file: the
+// original upload is never mutated, and this only needs to run once per
+// section render regardless of how many times the book is reopened.
+function stripPiracyWatermarks(rendition) {
+    rendition.hooks.content.register((contents) => {
+        contents.document.querySelectorAll('a[href*="oceanofpdf.com" i]').forEach((link) => {
+            // Climb from the link to its smallest ancestor that contains
+            // *only* the watermark (its own injected wrapper <div>/<p>),
+            // not the whole chapter -- stops as soon as a parent's text
+            // includes anything beyond the link itself, or at <body>.
+            let node = link;
+            while (
+                node.parentElement &&
+                node.parentElement.tagName !== "BODY" &&
+                node.parentElement.textContent.trim() === node.textContent.trim()
+            ) {
+                node = node.parentElement;
+            }
+            node.remove();
+        });
+    });
+}
+
 export async function init(elementId, bytes, initialCfi, fontSize) {
     await ensureLibsLoaded();
 
@@ -68,6 +100,7 @@ export async function init(elementId, bytes, initialCfi, fontSize) {
     const rendition = book.renderTo(elementId, { width: "100%", height: "100%", flow: "paginated", spread: "none" });
     rendition.themes.fontSize(`${fontSize}px`);
     applyAppTheme(rendition);
+    stripPiracyWatermarks(rendition);
 
     instances.set(elementId, { book, rendition });
 
