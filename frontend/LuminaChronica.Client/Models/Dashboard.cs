@@ -37,4 +37,7 @@ public class DashboardResponse
 
     [JsonPropertyName("overview")]
     public DashboardOverview Overview { get; set; } = new();
+
+    [JsonPropertyName("recommendations")]
+    public List<Book> Recommendations { get; set; } = [];
 }

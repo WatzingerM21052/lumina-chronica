@@ -9,7 +9,7 @@ namespace LuminaChronica.Client.Tests;
 public class HomePageTests : BunitContext
 {
     private const string EmptyDashboardJson =
-        """{"success":true,"data":{"continueReading":[],"overview":{"totalBooks":0,"totalShelves":0,"totalFavorites":0,"finishedBooks":0}}}""";
+        """{"success":true,"data":{"continueReading":[],"recommendations":[],"overview":{"totalBooks":0,"totalShelves":0,"totalFavorites":0,"finishedBooks":0}}}""";
 
     [Fact]
     public void Home_RendersWithoutThrowing_AndShowsWelcomeHeading()
@@ -114,6 +114,42 @@ public class HomePageTests : BunitContext
         var cut = Render<Home>();
 
         Assert.DoesNotContain("Weiterlesen", cut.Markup);
+    }
+
+    [Fact]
+    public void Home_ShowsRecommendationsSection_WhenUnstartedBooksExist()
+    {
+        const string dashboardJson = """
+            {"success":true,"data":{"continueReading":[],"overview":{"totalBooks":1,"totalShelves":0,"totalFavorites":0,"finishedBooks":0},
+             "recommendations":[
+                {"id":9,"title":"Struwwelpeter","author":"Heinrich Hoffmann","description":null,
+                 "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null}
+             ]}}
+            """;
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/dashboard", dashboardJson));
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Home>();
+
+        Assert.Contains("Empfehlungen", cut.Markup);
+        Assert.Contains("Struwwelpeter", cut.Markup);
+    }
+
+    [Fact]
+    public void Home_HidesRecommendationsSection_WhenNoneAvailable()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
+
+        var cut = Render<Home>();
+
+        Assert.DoesNotContain("Empfehlungen", cut.Markup);
     }
 
     private void UseHandler(RoutedFakeHttpMessageHandler handler)

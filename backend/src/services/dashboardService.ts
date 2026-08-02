@@ -5,6 +5,7 @@
 import { BOOK_ROW_COLUMNS, toSummary, type BookRow, type BookSummary } from "./bookService";
 
 const CONTINUE_READING_LIMIT = 5;
+const RECOMMENDATIONS_LIMIT = 5;
 
 export type ContinueReadingItem = {
     book: BookSummary;
@@ -22,6 +23,7 @@ export type DashboardOverview = {
 export type Dashboard = {
     continueReading: ContinueReadingItem[];
     overview: DashboardOverview;
+    recommendations: BookSummary[];
 };
 
 type ProgressRow = { book_id: number; percentage: number; last_opened: string };
@@ -56,9 +58,29 @@ async function getContinueReading(db: D1Database, userId: number): Promise<Conti
         .filter((item): item is ContinueReadingItem => item !== null);
 }
 
+// Books the user hasn't started yet -- no reading_progress row for them at
+// all, newest first. NOT EXISTS's inner `reading_progress` is a subquery
+// scope of its own, so `book_id`/`user_id` there don't collide with the
+// outer `books` query the way a JOIN would (see getContinueReading above).
+async function getRecommendations(db: D1Database, userId: number): Promise<BookSummary[]> {
+    const rows = await db
+        .prepare(
+            `SELECT ${BOOK_ROW_COLUMNS} FROM books
+             WHERE owner_id = ?
+               AND NOT EXISTS (SELECT 1 FROM reading_progress WHERE reading_progress.book_id = books.id AND reading_progress.user_id = ?)
+             ORDER BY created_at DESC, id DESC
+             LIMIT ?`
+        )
+        .bind(userId, userId, RECOMMENDATIONS_LIMIT)
+        .all<BookRow>();
+
+    return rows.results.map(toSummary);
+}
+
 export async function getDashboard(db: D1Database, userId: number): Promise<Dashboard> {
-    const [continueReading, totalBooksRow, totalShelvesRow, totalFavoritesRow, finishedBooksRow] = await Promise.all([
+    const [continueReading, recommendations, totalBooksRow, totalShelvesRow, totalFavoritesRow, finishedBooksRow] = await Promise.all([
         getContinueReading(db, userId),
+        getRecommendations(db, userId),
         db.prepare("SELECT COUNT(*) AS total FROM books WHERE owner_id = ?").bind(userId).first<{ total: number }>(),
         db.prepare("SELECT COUNT(*) AS total FROM shelves WHERE owner_id = ?").bind(userId).first<{ total: number }>(),
         db.prepare("SELECT COUNT(*) AS total FROM favorites WHERE user_id = ?").bind(userId).first<{ total: number }>(),
@@ -70,6 +92,7 @@ export async function getDashboard(db: D1Database, userId: number): Promise<Dash
 
     return {
         continueReading,
+        recommendations,
         overview: {
             totalBooks: totalBooksRow?.total ?? 0,
             totalShelves: totalShelvesRow?.total ?? 0,

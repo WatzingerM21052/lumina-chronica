@@ -70,6 +70,17 @@ else
     }
 }
 
+@if (_dashboard is { Recommendations.Count: > 0 })
+{
+    <h2>Empfehlungen</h2>
+    <div class="library-grid">
+        @foreach (var book in _dashboard.Recommendations)
+        {
+            <BookCard Book="book" />
+        }
+    </div>
+}
+
 <h2>Aktuelle Projekte</h2>
 <EmptyState Message="Du hast noch keine Projekte erstellt. Beginne mit deiner ersten Welt, Geschichte oder Kampagne."
             ActionText="Projekt erstellen" />
