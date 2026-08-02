@@ -179,3 +179,20 @@ Same-day follow-up: the user tried the shipped "Info abrufen" flow live and aske
 Frontend: 61/61 bUnit tests passing.
 
 Live-verified end-to-end on the deployed site: searched "Der Herr der Ringe" on an existing book's edit form, got 8 real OpenLibrary results with cover thumbnails, selected one, confirmed the preview correctly showed "wird gesetzt" for empty fields (description, genre, pages) and "bleibt unverändert" for fields the book already had (publisher, release date, cover), clicked "Übernehmen" and confirmed the fields actually filled in (including the fixed genre field), then ran a second lookup and clicked "Verwerfen" and confirmed nothing changed, then searched a nonsense query and confirmed "Keine Treffer gefunden." with no errors.
+
+### Phase 6 — Dashboard (complete)
+
+Epic #8, scoped to its own description ("Home dashboard: continue reading, library overview, recommendations") rather than the source spec's fuller §121 list (Weiterlesen, Statistiken, Empfehlungen, Trends, Schnellzugriffe, Bibliotheksübersicht) — same scoping-to-the-epic pattern as Phase 5. Landed as two stories — see `Architecture.md`'s "Dashboard (`GET /api/dashboard`)" row for the full technical detail.
+
+- [x] Story 1 (#112/PR #114) — `GET /api/dashboard`: continue-reading list (recent `reading_progress`, capped at 5) and overview counts (books/shelves/favorites/finished). `Home.razor` gained a "Weiterlesen" section (reusing `BookCard`, which gained an optional `Href` override so these cards link straight into the Reader) and a "Bibliotheksübersicht" stat row.
+- [x] Story 2 (#113/PR #115) — recommendations: books with no `reading_progress` row at all, newest first, capped at 5. `Home.razor` gained an "Empfehlungen" section, shown only when unstarted books exist.
+
+**Explicitly out of scope this phase** (same exclusion reasoning as `Architecture.md`'s decision row): `user_statistics`/a full Statistics page (epic #12, v1.5 — `Statistics.razor` keeps its existing `EmptyState` stub), "Trends" (needs cross-user data, out of scope until Discovery/Community), and Home's "Aktuelle Projekte" section (epic #9, v2.0 — left untouched).
+
+Backend deployed manually via `wrangler deploy` after each story (no CI deploy configured for this repo — see the "CI/CD" row in `Architecture.md`).
+
+Backend: 77/77 Vitest tests passing (9 new across both stories). Frontend: 66/66 bUnit tests passing (5 new).
+
+Live-verified end-to-end on the deployed site after each story: confirmed the real Weiterlesen section showed all 4 in-progress books linking to `/read` with correct progress bars, and the overview stat row matched real counts (4 Bücher/1 Regal/2 Favoriten/0 Gelesen). For recommendations, confirmed the section stayed hidden while every book had reading progress, then uploaded a real test book (`bookDownloads/`, user-authorized for in-app testing) without opening it and confirmed it appeared under "Empfehlungen" — then deleted the test book to restore the account to its prior state.
+
+**Phase 6 (Dashboard) is now complete.** Remaining phases per the Master Development Flow: Offline → v1.0 Release.
