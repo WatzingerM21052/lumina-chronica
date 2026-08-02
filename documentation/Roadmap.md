@@ -241,3 +241,15 @@ Live-verified end-to-end on the deployed site: saved a real book offline from it
 **Found and fixed while writing tests for this phase (not a production bug — bUnit-only)**: bUnit's mocked `IJSObjectReference` needs an explicit `.SetVoidResult()` on a `SetupVoid(...)` handler before an `await module.InvokeVoidAsync(...)` in the component under test will actually resume — the mock records the invocation immediately regardless, so a test asserting only "was the JS function called" can pass even though the code path after that `await` (here: updating `_isOfflineSaved` after a delete) never actually ran in the test. Worth remembering for any future bUnit test around a void JS interop call.
 
 **Phase 7 (Offline) is now complete.** Remaining per the Master Development Flow: V1.0 Release.
+
+### Secret Bible reader page (2026-08-02, issue #130/PR #131)
+
+Standalone easter egg, not part of the original roadmap — the user asked for it same-session as the Impressum (2026-08-02), explicitly deprioritized to build last. Full requirements were gathered in advance (Phil 2:14 on open, curated translation choice, baroque-leaning dark-academia design in both themes, position memory) — see `Architecture.md`'s "Secret Bible reader page" row for the full technical detail.
+
+- [x] Issue #130/PR #131 — `backend/src/routes/bible.ts` + `services/bibleService.ts` proxy `rest.api.bible` behind a curated 5-translation allowlist (NIV 2011, WEB, ASV, Luther 1912, unrevised Elberfelder), deliberately public (no auth) since the page itself is only reachable from the public Impressum. `Pages/Bible.razor` (`/bible`) always opens on Philippians 2:14, with translation switching, book/chapter navigation, and full-text search. FUMS view-tracking wired per api.bible's license. Impressum's responsible-person name is now the entry point; its Urheberrecht section gained the API.Bible copyright paragraph.
+
+**Resolved before building**: verified live against `docs.api.bible` that the auth header is `api-key` (not OAuth2, as suspected) and how FUMS actually works (a `fums-version=3` request param returns a `meta.fumsToken`; the page loads api.bible's own tracker script and reports it). Verified the 5 curated translation IDs live against api.bible's own `/v1/bibles` catalog rather than guessing them from the abbreviation.
+
+Backend: 86/86 Vitest tests passing (9 new — allowlist validation, proxy correctness, error mapping, intro-chapter filtering, search). Frontend: 86/86 bUnit tests passing (7 new).
+
+Live-verified end-to-end on the deployed site: clicking the Impressum name lands on Philippians 2:14 with the verse scrolled-to and highlighted; switching NIV → Luther 1912 reloads the same chapter and refreshes the book/chapter pickers into the German translation's own book list ("Philipper 2" / "Der Brief des Apostels Paulus an die Philipper"); a German full-text search ("Liebe") returned 20 real results, and selecting one navigated to and highlighted that verse; FUMS confirmed firing via real network requests to both `pkg.api.bible` and `fums.api.bible` (200 on each); design confirmed correct in both Classic Library (light) and Dark Library (dark) themes.
