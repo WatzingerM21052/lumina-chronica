@@ -120,4 +120,38 @@ describe("GET /api/dashboard", () => {
 
         expect(json.data.continueReading).toEqual([]);
     });
+
+    it("recommends unstarted books, newest first, excluding books with progress", async () => {
+        const startedId = await uploadBook(tokenA, "Started Book");
+        await saveProgress(tokenA, startedId, 5);
+        await uploadBook(tokenA, "Unstarted Book 1");
+        await uploadBook(tokenA, "Unstarted Book 2");
+
+        const res = await app.request("/api/dashboard", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.recommendations).toHaveLength(2);
+        expect(json.data.recommendations[0].title).toBe("Unstarted Book 2");
+        expect(json.data.recommendations.map((b: { title: string }) => b.title)).not.toContain("Started Book");
+    });
+
+    it("does not recommend another user's books", async () => {
+        await uploadBook(tokenB, "Bob's Book");
+
+        const res = await app.request("/api/dashboard", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.recommendations).toEqual([]);
+    });
+
+    it("caps recommendations at 5", async () => {
+        for (let i = 0; i < 6; i++) {
+            await uploadBook(tokenA, `Book ${i}`);
+        }
+
+        const res = await app.request("/api/dashboard", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.recommendations).toHaveLength(5);
+    });
 });
