@@ -21,6 +21,21 @@ function textValue(value) {
     return typeof value === "string" ? value : (value.value ?? null);
 }
 
+// Some OpenLibrary description text embeds raw HTML markup (e.g.
+// `<p class="description">...</p>`) rather than plain text -- confirmed live
+// on a real book. BookDetail.razor's `<p>@_book.Description</p>` binding is
+// a plain (safe) text interpolation, so without this the literal tags show
+// up as visible text instead of being stripped. DOMParser strips tags *and*
+// decodes entities (`&amp;`, `&#39;`, ...) in one step -- a regex tag-strip
+// alone would leave entities behind as a second, quieter version of the same
+// bug. No script execution risk: the parsed document is never inserted into
+// the page, only its .textContent is read.
+function stripHtml(value) {
+    if (!value) return value;
+    const text = new DOMParser().parseFromString(value, "text/html").body.textContent ?? "";
+    return text.trim() || null;
+}
+
 export async function lookupByIsbn(isbn) {
     pendingCoverId = null;
     cachedCoverBlob = undefined;
@@ -58,7 +73,7 @@ export async function lookupByIsbn(isbn) {
 
     return {
         found: true,
-        description: textValue(edition.description) ?? workDescription,
+        description: stripHtml(textValue(edition.description) ?? workDescription),
         genre: subjects[0] ?? null,
         publisher: edition.publishers?.[0] ?? null,
         pages: edition.number_of_pages ?? null,
@@ -110,7 +125,7 @@ export async function lookupByWork(workKey, coverId) {
 
     return {
         found: true,
-        description: textValue(work.description),
+        description: stripHtml(textValue(work.description)),
         genre: work.subjects?.[0] ?? null,
         publisher: null,
         pages: null,
