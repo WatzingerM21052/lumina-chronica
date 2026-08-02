@@ -29,12 +29,18 @@ export function ensureLibsLoaded() {
 
 const instances = new Map();
 
+const SANS_FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+const LINE_HEIGHTS = { tight: "1.4", normal: "1.75", loose: "2.2" };
+const PAGE_WIDTHS = { narrow: "34rem", normal: "42rem", wide: "54rem" };
+
 // epub.js renders into an isolated iframe, so it never sees the app's own
 // CSS -- without this, EPUB content is always black-on-white regardless of
 // the active theme, which reads as broken next to a dark theme's chrome.
-// Reads the *current* theme's resolved colors/reader font at open time
-// (rather than hardcoding a palette here) so it stays correct if the theme
-// tokens change.
+// Reads the *current* theme's resolved colors/reader font (rather than
+// hardcoding a palette here) so it stays correct if the theme tokens
+// change, and reads entry.contentStyle *live* (not captured once at init)
+// so font family/line-height/page-width changes can be re-applied later
+// without re-registering the hook -- see setContentStyle below.
 //
 // rendition.themes.register()/.select() (the "documented" way) doesn't
 // reliably apply in this epub.js build -- content still rendered
@@ -42,19 +48,42 @@ const instances = new Map();
 // for every section as it's actually attached to its iframe, and
 // Contents.addStylesheetRules() injects a real <style> into that specific
 // document, which does take effect.
-function applyAppTheme(rendition) {
+function buildContentRules(entry) {
     const styles = getComputedStyle(document.documentElement);
     const background = styles.getPropertyValue("--color-bg-reader").trim() || "#ffffff";
     const color = styles.getPropertyValue("--color-text-primary").trim() || "#000000";
     const linkColor = styles.getPropertyValue("--color-primary").trim() || color;
-    const fontFamily = styles.getPropertyValue("--font-family-reader").trim() || "serif";
+    const serifFont = styles.getPropertyValue("--font-family-reader").trim() || "serif";
 
-    rendition.hooks.content.register((contents) => {
-        contents.addStylesheetRules({
-            body: { background: background, color: color, "font-family": fontFamily },
-            a: { color: linkColor },
-        });
-    });
+    const fontFamily = entry.contentStyle.fontFamily === "sans" ? SANS_FONT_STACK : serifFont;
+    const lineHeight = LINE_HEIGHTS[entry.contentStyle.lineHeight] || LINE_HEIGHTS.normal;
+    const maxWidth = PAGE_WIDTHS[entry.contentStyle.pageWidth] || PAGE_WIDTHS.normal;
+
+    return {
+        body: {
+            background, color, "font-family": fontFamily, "line-height": lineHeight,
+            "max-width": maxWidth, margin: "0 auto", padding: "0 1rem",
+        },
+        a: { color: linkColor },
+        // Some EPUBs size images with a fixed px width in their own CSS,
+        // which then doesn't scale with the page width above or overflow
+        // the (now narrower/wider) reading column -- constrained to the
+        // rendered content's own width instead.
+        img: { "max-width": "100%", height: "auto" },
+    };
+}
+
+// Re-applies buildContentRules() to every currently-rendered section
+// (rendition.getContents() returns live Contents handles, one per section
+// attached to an iframe right now) -- used both by the content hook below
+// (fires once per section as it's first rendered) and by setContentStyle
+// (fires for whatever's on screen *right now* when a setting changes, so
+// the user doesn't have to flip a page to see the new value take effect).
+function applyContentRules(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    const rules = buildContentRules(entry);
+    entry.rendition.getContents().forEach((contents) => contents.addStylesheetRules(rules));
 }
 
 // Some downloaded EPUBs (piracy-site rips) carry a watermark stamped into
@@ -62,9 +91,9 @@ function applyAppTheme(rendition) {
 // 0px 10px 0px; text-align: center;"><p><a href="https://oceanofpdf.com">
 // <i>OceanofPDF.com</i></a></p></div>` appended right before `</body>`,
 // confirmed identical across every affected chapter in several real test
-// files (bookDownloads/_OceanofPDF.com_*.epub). Removed here, in the same
-// content hook that fires per rendered section (see applyAppTheme above),
-// so it's gone *before* epub.js paginates that section -- stripping it
+// files (bookDownloads/_OceanofPDF.com_*.epub). Removed here, via the same
+// per-section content hook mechanism as buildContentRules above, so it's
+// gone *before* epub.js paginates that section -- stripping it
 // after layout would leave a stale page break where the watermark used to
 // be. A content hook rather than rewriting the stored EPUB file: the
 // original upload is never mutated, and this only needs to run once per
@@ -89,7 +118,7 @@ function stripPiracyWatermarks(rendition) {
     });
 }
 
-export async function init(elementId, bytes, initialCfi, fontSize) {
+export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, lineHeight, pageWidth) {
     await ensureLibsLoaded();
 
     // Defensive: a byte[] interop parameter is *usually* a Uint8Array over
@@ -99,16 +128,28 @@ export async function init(elementId, bytes, initialCfi, fontSize) {
     const book = ePub(arrayBuffer);
     const rendition = book.renderTo(elementId, { width: "100%", height: "100%", flow: "paginated", spread: "none" });
     rendition.themes.fontSize(`${fontSize}px`);
-    applyAppTheme(rendition);
-    stripPiracyWatermarks(rendition);
 
-    instances.set(elementId, { book, rendition });
+    const entry = {
+        book, rendition,
+        contentStyle: { fontFamily: fontFamily || "serif", lineHeight: lineHeight || "normal", pageWidth: pageWidth || "normal" },
+    };
+    instances.set(elementId, entry);
+
+    rendition.hooks.content.register((contents) => contents.addStylesheetRules(buildContentRules(entry)));
+    stripPiracyWatermarks(rendition);
 
     await rendition.display(initialCfi || undefined);
 }
 
 export function setFontSize(elementId, fontSize) {
     instances.get(elementId)?.rendition.themes.fontSize(`${fontSize}px`);
+}
+
+export function setContentStyle(elementId, fontFamily, lineHeight, pageWidth) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    entry.contentStyle = { fontFamily, lineHeight, pageWidth };
+    applyContentRules(elementId);
 }
 
 export function next(elementId) {

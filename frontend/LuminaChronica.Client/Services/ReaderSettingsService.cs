@@ -33,4 +33,40 @@ public class ReaderSettingsService(IJSRuntime jsRuntime)
         var module = await _moduleTask.Value;
         await module.InvokeVoidAsync("setPdfZoom", zoom);
     }
+
+    public async Task<string> GetFontFamilyAsync()
+    {
+        var module = await _moduleTask.Value;
+        return await module.InvokeAsync<string>("getFontFamily");
+    }
+
+    public async Task SetFontFamilyAsync(string fontFamily)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("setFontFamily", fontFamily);
+    }
+
+    public async Task<string> GetLineHeightAsync()
+    {
+        var module = await _moduleTask.Value;
+        return await module.InvokeAsync<string>("getLineHeight");
+    }
+
+    public async Task SetLineHeightAsync(string lineHeight)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("setLineHeight", lineHeight);
+    }
+
+    public async Task<string> GetPageWidthAsync()
+    {
+        var module = await _moduleTask.Value;
+        return await module.InvokeAsync<string>("getPageWidth");
+    }
+
+    public async Task SetPageWidthAsync(string pageWidth)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("setPageWidth", pageWidth);
+    }
 }
