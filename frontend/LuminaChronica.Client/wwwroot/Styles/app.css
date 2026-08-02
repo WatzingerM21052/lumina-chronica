@@ -646,3 +646,15 @@ select:focus-visible {
     max-height: 100%;
     box-shadow: var(--shadow-card);
 }
+
+/* Impressum's responsible-person name doubles as a secret entry point --
+   deliberately styled as plain text (no underline/link color) so it isn't
+   visually flagged as clickable; a subtle hover shift is the only cue. */
+.impressum-name {
+    color: inherit;
+    text-decoration: none;
+}
+
+.impressum-name:hover {
+    color: var(--color-primary);
+}

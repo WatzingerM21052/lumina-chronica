@@ -28,5 +28,6 @@ builder.Services.AddScoped<BlobUrlService>();
 builder.Services.AddScoped<ScrollTrackerService>();
 builder.Services.AddScoped<ReaderSettingsService>();
 builder.Services.AddScoped<OfflineStorageService>();
+builder.Services.AddScoped<BibleClientService>();
 
 await builder.Build().RunAsync();

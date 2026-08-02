@@ -17,6 +17,23 @@ public class ImpressumPageTests : BunitContext
     }
 
     [Fact]
+    public void Impressum_NameLinksToSecretBiblePage()
+    {
+        var cut = Render<Impressum>();
+
+        var nameLink = cut.Find("a.impressum-name");
+        Assert.Equal("bible", nameLink.GetAttribute("href"));
+    }
+
+    [Fact]
+    public void Impressum_IncludesApiBibleCopyrightParagraph()
+    {
+        var cut = Render<Impressum>();
+
+        Assert.Contains("API.Bible", cut.Markup);
+    }
+
+    [Fact]
     public void Impressum_HasNoAuthorizeAttribute()
     {
         // Regression coverage: this page must be reachable while logged out
