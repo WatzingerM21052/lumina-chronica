@@ -17,6 +17,34 @@ const instances = new Map();
 async function renderPage(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
+
+    // pdf.js throws if render() is called again on the same canvas while a
+    // previous render is still in flight -- easy to trigger by clicking the
+    // zoom +/- buttons (or page nav) faster than a page takes to render.
+    // Rather than cancelling in-flight work (racy: pdf.js's own conflict
+    // check runs synchronously before the cancellation could take effect),
+    // callers that arrive while a render is running just mark "render again
+    // once this one finishes" and return; the in-flight render loops to
+    // pick up the latest zoom/page once done, so rapid clicks coalesce into
+    // a single final render instead of queuing up a visible backlog.
+    if (entry.rendering) {
+        entry.renderPending = true;
+        return;
+    }
+    entry.rendering = true;
+    try {
+        do {
+            entry.renderPending = false;
+            await renderCurrentPage(elementId);
+        } while (entry.renderPending && instances.has(elementId));
+    } finally {
+        if (instances.has(elementId)) entry.rendering = false;
+    }
+}
+
+async function renderCurrentPage(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
     const container = document.getElementById(elementId);
     if (!container) return;
 
@@ -109,6 +137,11 @@ export async function goToPage(elementId, page) {
 export function destroy(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
-    entry.doc.destroy();
+    // Delete first so a render loop still in flight for this instance (see
+    // renderPage's coalescing loop) observes instances.has(elementId) as
+    // false and stops after its current pass instead of racing doc.destroy()
+    // below. Optional chaining guards the same in-flight-teardown window on
+    // entry.doc itself.
     instances.delete(elementId);
+    entry.doc?.destroy?.();
 }
