@@ -76,6 +76,11 @@ button,
     transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 button:hover,
 .btn:hover {
     border-color: var(--color-primary);
@@ -244,7 +249,8 @@ select:focus-visible {
 
 .enrichment-search-cover {
     width: 2.5rem;
-    height: auto;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
     flex-shrink: 0;
 }
 
@@ -465,6 +471,7 @@ select:focus-visible {
 
 .book-detail {
     display: flex;
+    align-items: flex-start;
     gap: var(--space-3);
     margin-top: var(--space-2);
 }
@@ -625,13 +632,23 @@ select:focus-visible {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: auto;
+}
+
+/* Above 100% zoom the frame legitimately grows past the viewport's own
+   size (see pdfReader.js's renderPage) so the viewport must scroll to
+   reveal it. Centered flex content can't be scrolled to its leading edge
+   (no negative scrollLeft/Top), so zoomed mode switches to flex-start
+   alignment instead of center -- the frame anchors top-left and the whole
+   page becomes reachable by scrolling right/down. */
+.pdf-reader-viewport--zoomed {
+    align-items: flex-start;
+    justify-content: flex-start;
 }
 
 .pdf-reader-frame {
     width: fit-content;
     height: fit-content;
-    max-width: 100%;
-    max-height: 100%;
     overflow: hidden;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -652,6 +669,18 @@ select:focus-visible {
     align-items: center;
     max-width: min(94vw, 80rem);
     margin: var(--space-2) auto 0;
+}
+
+.pdf-reader-zoom {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.pdf-reader-zoom-reset {
+    min-width: 3.5rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
 }
 
 .pdf-reader-nav input[type="number"] {

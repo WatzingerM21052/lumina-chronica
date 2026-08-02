@@ -5,6 +5,10 @@ namespace LuminaChronica.Client.Components;
 
 public partial class PdfReader : ComponentBase, IAsyncDisposable
 {
+    private const double MinZoom = 0.5;
+    private const double MaxZoom = 2.5;
+    private const double ZoomStep = 0.25;
+
     [Parameter, EditorRequired]
     public byte[] Bytes { get; set; } = [];
 
@@ -18,15 +22,18 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     private IJSObjectReference? _module;
     private int _currentPage = 1;
     private int _pageCount;
+    private double _zoom = 1;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
 
+        _zoom = await ReaderSettings.GetPdfZoomAsync();
+
         _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/pdfReader.js");
         if (_module is null) return; // no JS runtime backing this call (e.g. bUnit's default Loose mode)
 
-        _pageCount = await _module.InvokeAsync<int>("init", _elementId, Bytes, InitialPage);
+        _pageCount = await _module.InvokeAsync<int>("init", _elementId, Bytes, InitialPage, _zoom);
         _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
         StateHasChanged();
         await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
@@ -55,6 +62,20 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
 
         _currentPage = await _module.InvokeAsync<int>("goToPage", _elementId, requestedPage);
         await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
+    }
+
+    private Task IncreaseZoomAsync() => SetZoomAsync(Math.Min(_zoom + ZoomStep, MaxZoom));
+
+    private Task DecreaseZoomAsync() => SetZoomAsync(Math.Max(_zoom - ZoomStep, MinZoom));
+
+    private Task ResetZoomAsync() => SetZoomAsync(1);
+
+    private async Task SetZoomAsync(double zoom)
+    {
+        if (_module is null) return;
+        _zoom = zoom;
+        await _module.InvokeVoidAsync("setZoom", _elementId, _zoom);
+        await ReaderSettings.SetPdfZoomAsync(_zoom);
     }
 
     public async ValueTask DisposeAsync()

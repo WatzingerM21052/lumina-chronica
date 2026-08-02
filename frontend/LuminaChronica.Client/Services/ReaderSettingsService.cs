@@ -21,4 +21,16 @@ public class ReaderSettingsService(IJSRuntime jsRuntime)
         var module = await _moduleTask.Value;
         await module.InvokeVoidAsync("setFontSize", fontSize);
     }
+
+    public async Task<double> GetPdfZoomAsync()
+    {
+        var module = await _moduleTask.Value;
+        return await module.InvokeAsync<double>("getPdfZoom");
+    }
+
+    public async Task SetPdfZoomAsync(double zoom)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("setPdfZoom", zoom);
+    }
 }

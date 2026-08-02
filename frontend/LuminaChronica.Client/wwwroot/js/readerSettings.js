@@ -12,3 +12,18 @@ export function getFontSize() {
 export function setFontSize(fontSize) {
     localStorage.setItem(STORAGE_KEY, String(fontSize));
 }
+
+// PDF zoom factor, multiplied onto the fit-to-viewport scale pdfReader.js
+// already computes -- 1 means "fit the page to the screen" (the pre-zoom
+// default), not "100% of the PDF's native size".
+const PDF_ZOOM_STORAGE_KEY = "lumina_reader_pdf_zoom";
+const DEFAULT_PDF_ZOOM = 1;
+
+export function getPdfZoom() {
+    const stored = localStorage.getItem(PDF_ZOOM_STORAGE_KEY);
+    return stored ? parseFloat(stored) : DEFAULT_PDF_ZOOM;
+}
+
+export function setPdfZoom(zoom) {
+    localStorage.setItem(PDF_ZOOM_STORAGE_KEY, String(zoom));
+}

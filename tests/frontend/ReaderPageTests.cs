@@ -138,6 +138,7 @@ public class ReaderPageTests : BunitContext
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
 
         Assert.Contains("pdf-reader-frame", cut.Markup);
+        Assert.Contains("pdf-reader-zoom", cut.Markup);
     }
 
     [Fact]
