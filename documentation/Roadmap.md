@@ -253,3 +253,17 @@ Standalone easter egg, not part of the original roadmap — the user asked for i
 Backend: 86/86 Vitest tests passing (9 new — allowlist validation, proxy correctness, error mapping, intro-chapter filtering, search). Frontend: 86/86 bUnit tests passing (7 new).
 
 Live-verified end-to-end on the deployed site: clicking the Impressum name lands on Philippians 2:14 with the verse scrolled-to and highlighted; switching NIV → Luther 1912 reloads the same chapter and refreshes the book/chapter pickers into the German translation's own book list ("Philipper 2" / "Der Brief des Apostels Paulus an die Philipper"); a German full-text search ("Liebe") returned 20 real results, and selecting one navigated to and highlighted that verse; FUMS confirmed firing via real network requests to both `pkg.api.bible` and `fums.api.bible` (200 on each); design confirmed correct in both Classic Library (light) and Dark Library (dark) themes.
+
+### Design Rework (2026-08-02, issue #133/PR #134)
+
+User request directly after the Bible page: a dedicated design pass, Reader first ("drastisch optimiert... dynamische Größe zwecks PDFs"), then app-wide spacing/hover polish, with explicit instruction to take as much time as needed. See `Architecture.md`'s "Design Rework" rows for the full technical detail.
+
+- [x] Issue #133/PR #134 — PDF's reader frame now hugs the actual rendered page shape instead of floating it inside a fixed-shape box (root cause: the frame's own CSS size never adapted to the page's aspect ratio, even though `pdfReader.js`'s scale math already correctly fit both width and height). EPUB's frame swapped a flat `72rem` cap for a responsive `min(94vw, 80rem)`. Both readers' navigation moved below the frame (matching the source spec's three-zone `Zurück/Kapitel/Einstellungen` — content — `Seite/Fortschritt/Navigation` layout), and EPUB's nav gained a live percentage readout. Button-group spacing widened 8px→16px in 4 places, `.form-actions` gained `flex-wrap`, and 4 hover states that changed instantly now transition smoothly.
+
+**Explicitly out of scope this pass** (per the issue): fullscreen, bookmarks, page-turn animation, EPUB two-page spread, a new Home hero/logo, and a full line-by-line audit against every qualitative point in the source spec's Teil 5 (§59-72) — scoped instead to the concrete, actionable items (layout/sizing, spacing, hover/focus, error/empty tone), the last of which was already solid from prior work (no raw technical error text found anywhere in the app).
+
+Frontend: 86/86 bUnit tests passing (1 new assertion).
+
+Live-verified on the deployed site: a real portrait PDF (existing library book) now renders with no dead gutters on either side and the page-nav below the frame; uploaded a real EPUB (Enid Blyton, *The Secret Island*, from the user's authorized local test files) to confirm the wider responsive frame and the new percentage readout (showed "4%" after paging forward), then deleted the test book; BookDetail's 4-button action row now wraps with comfortable spacing instead of a cramped 8px gap.
+
+**Design Rework (Reader half) is complete.** A further app-wide polish pass beyond this issue's scope (e.g. a fuller Teil 5 audit) is not currently planned — only pick it up if the user asks.
