@@ -92,9 +92,9 @@
                 {
                     <li>
                         <button type="button" class="enrichment-search-result" @onclick="() => SelectSearchResultAsync(result)">
-                            @if (result.CoverId is { } coverId)
+                            @if (result.CoverUrl is { } coverUrl)
                             {
-                                <img src="@($"https://covers.openlibrary.org/b/id/{coverId}-S.jpg")" alt="" class="enrichment-search-cover" />
+                                <img src="@coverUrl" alt="" class="enrichment-search-cover" />
                             }
                             <span>
                                 <strong>@result.Title</strong>
@@ -310,9 +310,18 @@
         }
     }
 
+    // A Google Books result is resolved by its own volume ID regardless of
+    // whether it happens to have an ISBN -- re-routing it through the ISBN
+    // path would call OpenLibrary's lookupByIsbn instead, silently mixing
+    // sources for a result the user picked specifically from Google Books.
     private Task SelectSearchResultAsync(EnrichmentSearchResult result)
     {
         _searchResults = null;
+
+        if (result.Source == "googlebooks")
+        {
+            return RunEnrichmentLookupAsync(() => LookupByGoogleBooksIdCoreAsync(result.GoogleBooksId));
+        }
 
         if (!string.IsNullOrWhiteSpace(result.Isbn))
         {
@@ -333,6 +342,12 @@
     {
         _enrichmentModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/metadataEnrichment.js");
         return await _enrichmentModule.InvokeAsync<EnrichedMetadata>("lookupByWork", workKey, coverId);
+    }
+
+    private async Task<EnrichedMetadata> LookupByGoogleBooksIdCoreAsync(string? volumeId)
+    {
+        _enrichmentModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/metadataEnrichment.js");
+        return await _enrichmentModule.InvokeAsync<EnrichedMetadata>("lookupByGoogleBooksId", volumeId);
     }
 
     // Fetches into `_pendingEnrichment`/`_pendingCoverBytes` only -- nothing

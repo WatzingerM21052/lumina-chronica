@@ -191,6 +191,34 @@ public class BookUploadPageTests : BunitContext
     }
 
     [Fact]
+    public void BookUpload_EnrichmentSearch_GoogleBooksResult_UsesGoogleBooksLookupNotIsbnLookup()
+    {
+        // Regression coverage: a Google Books result with an ISBN must not
+        // silently re-route through OpenLibrary's lookupByIsbn -- Source
+        // must dispatch to lookupByGoogleBooksId instead.
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+        var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
+        module.Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true).SetResult(
+        [
+            new EnrichmentSearchResult
+            {
+                Source = "googlebooks", GoogleBooksId = "zyTCAlFPjgYC", Title = "Dune", Author = "Frank Herbert",
+                Year = 1965, CoverUrl = "https://books.google.com/cover.jpg", Isbn = "9780441013593",
+            },
+        ]);
+        module.Setup<EnrichedMetadata>("lookupByGoogleBooksId", _ => true).SetResult(
+            new EnrichedMetadata { Found = true, Publisher = "Google Books Verlag", HasCover = false });
+
+        var cut = Render<BookUpload>();
+        cut.Find("#enrichment-search").Change("Dune");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Suchen").Click();
+        cut.Find("button.enrichment-search-result").Click();
+
+        Assert.True(string.IsNullOrEmpty(cut.Find("#isbn").GetAttribute("value")));
+        Assert.Contains("wird gesetzt: Google Books Verlag", cut.Markup);
+    }
+
+    [Fact]
     public void BookUpload_EnrichmentSearch_NoResults_ShowsStatusMessage()
     {
         UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
