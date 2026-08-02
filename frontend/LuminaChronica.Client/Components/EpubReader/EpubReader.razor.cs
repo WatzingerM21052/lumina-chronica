@@ -21,6 +21,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     private IJSObjectReference? _module;
     private DotNetObjectReference<EpubReader>? _dotNetRef;
     private int _lastFontSize;
+    private double _lastPercentage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -58,6 +59,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     [JSInvokable]
     public async Task OnRelocated(string cfi, int chapterIndex, double percentage)
     {
+        _lastPercentage = percentage;
         await OnProgress.InvokeAsync(new EpubProgress(cfi, chapterIndex, percentage));
     }
 

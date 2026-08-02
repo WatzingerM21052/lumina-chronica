@@ -15,6 +15,7 @@ body {
 
 a {
     color: var(--color-primary);
+    transition: color 0.15s ease;
 }
 
 a:hover {
@@ -230,6 +231,7 @@ select:focus-visible {
     cursor: pointer;
     font: inherit;
     color: inherit;
+    transition: background-color 0.15s ease;
 }
 
 .enrichment-search-results li:last-child .enrichment-search-result {
@@ -269,7 +271,9 @@ select:focus-visible {
 
 .form-actions {
     display: flex;
-    gap: var(--space-1);
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
 }
 
 /* Upload form presented as a centered card rather than a full-width page,
@@ -323,7 +327,7 @@ select:focus-visible {
 .library-toolbar {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-1);
+    gap: var(--space-2);
     align-items: center;
     margin: var(--space-2) 0;
 }
@@ -366,6 +370,7 @@ select:focus-visible {
     width: 100%;
     text-align: left;
     border: none;
+    transition: background-color 0.15s ease;
     background: none;
     padding: var(--space-1);
     cursor: pointer;
@@ -394,7 +399,7 @@ select:focus-visible {
 
 .library-view-toggle {
     display: flex;
-    gap: var(--space-1);
+    gap: var(--space-2);
     margin-left: auto;
 }
 
@@ -554,7 +559,7 @@ select:focus-visible {
 .reader-controls {
     display: flex;
     align-items: center;
-    gap: var(--space-1);
+    gap: var(--space-2);
     max-width: 42rem;
     margin: var(--space-2) auto;
 }
@@ -564,13 +569,13 @@ select:focus-visible {
     max-height: calc(100vh - 14rem);
     margin: 0 auto;
     overflow-y: auto;
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-4) var(--space-5);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background-color: var(--color-bg-reader);
     box-shadow: var(--shadow-card);
     font-family: var(--font-family-reader);
-    line-height: var(--line-height-body);
+    line-height: 1.75;
 }
 
 .reader-content pre {
@@ -578,16 +583,19 @@ select:focus-visible {
     font-family: inherit;
 }
 
-.epub-reader-nav {
-    display: flex;
-    justify-content: space-between;
-    max-width: 72rem;
-    margin: 0 auto var(--space-1);
-}
+/* EPUB/PDF frames: a "viewport" gives pdf.js/epub.js the available space to
+   fit into (a real CSS-determined size, independent of content), scaling
+   with the window (`min(vw, rem)`) instead of a flat rem cap regardless of
+   screen size. The frame itself hugs whatever shape the content turns out
+   to be -- for PDF specifically, `width/height: fit-content` is what stops
+   a portrait page from floating in a wide box with dead space on both
+   sides (see wwwroot/js/pdfReader.js's renderPage). Nav moved below the
+   frame, matching the source spec's layout (§64.4: Zurück/Kapitel/
+   Einstellungen above the content, Seite/Fortschritt/Navigation below). */
 
 .epub-reader-frame {
-    max-width: 72rem;
     width: 100%;
+    max-width: min(94vw, 80rem);
     height: calc(100vh - 11rem);
     margin: 0 auto;
     border: 1px solid var(--color-border);
@@ -597,12 +605,53 @@ select:focus-visible {
     box-shadow: var(--shadow-card);
 }
 
+.epub-reader-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: min(94vw, 80rem);
+    margin: var(--space-2) auto 0;
+}
+
+.epub-reader-progress {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+}
+
+.pdf-reader-viewport {
+    max-width: min(94vw, 80rem);
+    height: calc(100vh - 11rem);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pdf-reader-frame {
+    width: fit-content;
+    height: fit-content;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-reader);
+    box-shadow: var(--shadow-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pdf-reader-frame canvas {
+    display: block;
+}
+
 .pdf-reader-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 72rem;
-    margin: 0 auto var(--space-1);
+    max-width: min(94vw, 80rem);
+    margin: var(--space-2) auto 0;
 }
 
 .pdf-reader-nav input[type="number"] {
@@ -626,33 +675,13 @@ select:focus-visible {
     margin: 0;
 }
 
-.pdf-reader-frame {
-    max-width: 72rem;
-    width: 100%;
-    height: calc(100vh - 11rem);
-    margin: 0 auto;
-    overflow: hidden;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background-color: var(--color-bg-reader);
-    box-shadow: var(--shadow-card);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.pdf-reader-frame canvas {
-    max-width: 100%;
-    max-height: 100%;
-    box-shadow: var(--shadow-card);
-}
-
 /* Impressum's responsible-person name doubles as a secret entry point --
    deliberately styled as plain text (no underline/link color) so it isn't
    visually flagged as clickable; a subtle hover shift is the only cue. */
 .impressum-name {
     color: inherit;
     text-decoration: none;
+    transition: color 0.15s ease;
 }
 
 .impressum-name:hover {
