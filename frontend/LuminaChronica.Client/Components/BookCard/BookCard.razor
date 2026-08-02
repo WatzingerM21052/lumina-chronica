@@ -3,7 +3,7 @@
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 
-<a class="book-card book-card-@Size.ToString().ToLowerInvariant()" href="@($"library/books/{Book.Id}")">
+<a class="book-card book-card-@Size.ToString().ToLowerInvariant()" href="@(Href ?? $"library/books/{Book.Id}")">
     <div class="book-card-cover">
         @if (_coverObjectUrl is not null)
         {

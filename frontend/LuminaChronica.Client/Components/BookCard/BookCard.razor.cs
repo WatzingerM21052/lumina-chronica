@@ -25,6 +25,12 @@ public partial class BookCard : ComponentBase, IDisposable
     [Parameter]
     public double? ProgressPercentage { get; set; }
 
+    // Defaults to the book detail page; the Home dashboard's continue-reading
+    // cards override this to link straight into the Reader, which resolves
+    // the saved position itself (see reading_progress.position in Database.md).
+    [Parameter]
+    public string? Href { get; set; }
+
     private string? _coverObjectUrl;
     private string? _loadedCoverUrl;
     private bool _isFavorite;
