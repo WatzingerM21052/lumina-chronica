@@ -218,4 +218,10 @@ Shipped with placeholder markers (`[Platzhalter — bitte ausfüllen]`) for the 
 
 Frontend: 70/70 bUnit tests passing.
 
-**Not yet done, waiting on the user**: real Impressum content; the secret Bible-page link itself (added once that page exists, deprioritized to last per explicit user request — see the Bible-page planning notes once that story starts); a Google Books API key to actually activate the search-merge feature above.
+**Not yet done, waiting on the user**: the secret Bible-page link itself (added once that page exists, deprioritized to last per explicit user request).
+
+### Google Books key activated + real Impressum content (2026-08-02)
+
+The user provided a referrer-restricted Google Books API key and their real Impressum details (Name, Anschrift, E-Mail) same-day. `GOOGLE_BOOKS_API_KEY` set in `metadataEnrichment.js`; `Impressum.razor`'s placeholder markers replaced with real content.
+
+Live-verified in two steps: first request from the deployed site returned `403 API_KEY_HTTP_REFERRER_BLOCKED` for `https://watzingerm21052.github.io/` — the key was valid and correctly referrer-restricted, just missing that exact origin in Cloud Console's allowlist. After the user added it, repeated live requests intermittently returned `503 Service temporarily unavailable` (`backendFailed`) before succeeding — a transient Google-side issue, not a config problem, confirmed by retrying until a real result (`"Dragon Rider"`) came back. Ran a real merged search ("Dune Frank Herbert") through the actual Upload page afterward: 8 deduped results spanning both OpenLibrary and Google Books data, no visible duplicates — the original "more results, no double results" request is fully working end-to-end.
