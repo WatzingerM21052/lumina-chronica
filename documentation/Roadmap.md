@@ -281,7 +281,7 @@ Frontend: 86/86 bUnit tests passing (1 new assertion; PDF zoom's actual concurre
 
 Live-verified on the deployed site: cover on book #7's Edit page (long form) renders at correct 2:3 proportions instead of a stretched strip. PDF zoom stress-tested with 24 zero-delay programmatic clicks (10 up/6 down/8 up) after the hotfix, settling correctly at the 250% cap with no crash, then 15 more settling at the 50% floor — confirming the race fix holds even far beyond realistic human click speed. (First test round, before the hotfix, did crash exactly as expected — that's what caught the bug.)
 
-**Deferred, not filed as an issue yet**: Reader Settings (font family/line-spacing/page-width, §14.2 — spec-defined and bounded, next logical piece); reading-modes (Book View/Scroll View) + per-format pagination granularity (EPUB chapter/paragraph settings, MD page-break markers, TXT paragraph pagination) — flagged as the expensive one, since MD/TXT pagination is a new text-chunking layer and interacts with `reading_progress.position`'s per-format meaning (CFI/page-number/scroll-fraction) in a way that needs a decision before implementation, not after.
+**Deferred, not filed as an issue yet**: reading-modes (Book View/Scroll View) + per-format pagination granularity (EPUB chapter/paragraph settings, MD page-break markers, TXT paragraph pagination) — flagged as the expensive one, since MD/TXT pagination is a new text-chunking layer and interacts with `reading_progress.position`'s per-format meaning (CFI/page-number/scroll-fraction) in a way that needs a decision before implementation, not after. (Reader Settings, previously listed here, shipped 2026-08-03 — see below.)
 
 ### EPUB piracy-watermark stripping (2026-08-02, issue #141/PR #142)
 
@@ -290,6 +290,16 @@ Same-day follow-up: several real test EPUBs carry an "OceanofPDF.com" link/text 
 - [x] Issue #141/PR #142 — `epubReader.js` gained a content hook that removes the injected watermark link/wrapper from each chapter before it's paginated, without touching the stored uploaded file.
 
 Frontend: 86/86 bUnit tests passing (unaffected — real epub.js rendering isn't bUnit-testable, same stance as the rest of the EPUB reader). Live-verified: uploaded a real affected EPUB, scripted 40 forward page-turns spanning multiple chapter boundaries, zero watermark occurrences in any rendered page; test book removed afterward.
+
+### Reader Settings: typography (2026-08-03, issue #147/PR #148)
+
+Next planned step per the deferred list above (§14.2 — font family, line-spacing, page width; size and color themes already existed). See `Architecture.md`'s "Reader Settings (typography)" row for the full technical detail, including the EPUB live-update mechanism.
+
+- [x] Issue #147/PR #148 — font family (serif/sans), line-height (tight/normal/loose), page width (narrow/normal/wide) added for TXT/MD/EPUB, persisted client-locally. EPUB updates the currently-displayed page live, without a page turn. PDF's reader-controls bar (previously showed dead font-size buttons) is now hidden entirely. Folds in and closes #146 (EPUB/MD images now scale responsively) along the same code path.
+
+Frontend: 87/87 bUnit tests passing (1 new test covering the typography controls' presence and live class application; EPUB's actual live-restyle behavior isn't bUnit-testable — real epub.js/iframe rendering — same stance as the rest of the EPUB reader, covered by live verification only).
+
+Live-verified on the deployed site: uploaded a real Markdown test file with an embedded image, confirmed font/line-height/width switch correctly and the image stays responsively constrained at every width; opened a real EPUB (Cornelia Funke, *Die Feder eines Greifs*) and confirmed all three settings apply immediately to the currently-visible page with no page turn; confirmed PDF shows no reader-controls bar at all. Test book removed afterward.
 
 ### Backlog additions (2026-08-02, not yet started)
 
