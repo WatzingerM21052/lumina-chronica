@@ -786,6 +786,13 @@ select:focus-visible {
     overflow: hidden;
     background-color: var(--color-bg-reader);
     box-shadow: var(--shadow-card);
+    transition: opacity 0.18s ease;
+}
+
+/* Subtle page-turn fade (§66: calm, not showy) -- toggled by
+   epubReader.js's withPageTransition() around next()/prev(). */
+.epub-reader-frame--turning {
+    opacity: 0;
 }
 
 /* epub.js's own pagination/layout engine sets width, column-width,
