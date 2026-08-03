@@ -187,7 +187,7 @@ Epic #8, scoped to its own description ("Home dashboard: continue reading, libra
 - [x] Story 1 (#112/PR #114) — `GET /api/dashboard`: continue-reading list (recent `reading_progress`, capped at 5) and overview counts (books/shelves/favorites/finished). `Home.razor` gained a "Weiterlesen" section (reusing `BookCard`, which gained an optional `Href` override so these cards link straight into the Reader) and a "Bibliotheksübersicht" stat row.
 - [x] Story 2 (#113/PR #115) — recommendations: books with no `reading_progress` row at all, newest first, capped at 5. `Home.razor` gained an "Empfehlungen" section, shown only when unstarted books exist.
 
-**Explicitly out of scope this phase** (same exclusion reasoning as `Architecture.md`'s decision row): `user_statistics`/a full Statistics page (epic #12, v1.5 — `Statistics.razor` keeps its existing `EmptyState` stub), "Trends" (needs cross-user data, out of scope until Discovery/Community), and Home's "Aktuelle Projekte" section (epic #9, v2.0 — left untouched).
+**Explicitly out of scope this phase**: `user_statistics`/a full Statistics page (epic #12 — at the time, mislabeled v1.5 from a lossy pre-reading of the spec rather than the raw Teil 8/Teil 4 PDFs; corrected to v1.0 and shipped separately, see the "Statistics" entry below), "Trends" (needs cross-user data, out of scope until Discovery/Community), and Home's "Aktuelle Projekte" section (epic #9, v2.0 — left untouched).
 
 Backend deployed manually via `wrangler deploy` after each story (no CI deploy configured for this repo — see the "CI/CD" row in `Architecture.md`).
 
@@ -319,3 +319,15 @@ Three items filed for later, explicitly not to be picked up without being asked:
 - **Issue #140** — a real professional favicon/logo/Home hero banner, replacing the current Blazor-template placeholder favicon and the text-only header wordmark.
 - **Issue #143** — a much larger "Dark Academia/Baroque Experience" theme system for the Bible page specifically (selectable in settings, full-viewport animated parallax background, scroll-triggered animations, page-turn transitions, dedicated typography/color system) — a detailed multi-section spec from the user, preserved verbatim in the issue.
 - **Issue #144** — a small QoL bundle: a real confirm-dialog/modal component (delete confirmation is currently an inline button-swap duplicated in `BookDetail.razor`/`ShelfDetail.razor`, no modal component exists in the codebase), reader keyboard navigation (arrow keys/spacebar page-turning), drag-and-drop file upload.
+
+### Full Master Project Bible re-read + Statistics re-scope (2026-08-03, issue #156)
+
+The user asked directly whether every file under `documentation/master-project-bible/` had actually been read in full — the honest answer was no: only Teil 2 (Feature Specification) and Teil 5 (UI/UX Design System) had been read as raw PDFs; everything else (Teil 1, 3, 4, 6/AI Guidelines, 7/Implementation Blueprint, 8, 9) had only been sourced from `extracted-spec-summary.md`, a lossy prior research-agent summary. Instructed to "read ALL docs and then continue with the missing stuff" — all 9 parts are now read in full.
+
+Repo-hygiene/process cross-check against Teil 8 §115 (LICENSE/CONTRIBUTING.md/CODE_OF_CONDUCT.md/CHANGELOG.md/issue+PR templates) and Teil 9's GitHub PM taxonomy (Epics/Milestones/Labels) found both already fully satisfied — no action needed there.
+
+**One real gap found**: Teil 8 §114's Master Development Flow places Dashboard (which includes "Statistiken" per §121) before the V1.0 Release milestone, and Teil 4 §51's `user_statistics` table carries no "Spätere Version" deferral marker — unlike Bookmarks (§48.2), Highlights (§48.3), and Comments (§50.3) in the same document. Epic #12 had been scoped to v1.5 (and Phase 6/Dashboard's write-up above explicitly deferred it there) — a decision made before the raw Teil 8 PDF had been read. Corrected to v1.0 and shipped as issue #156: `GET /api/statistics` (books read/in-progress, estimated pages read from `book_metadata.pages` weighted by progress percentage, genre breakdown among started books, recent activity) and a real `Statistics.razor` replacing its `EmptyState` stub. See `Architecture.md`'s "Statistics" row for the full technical detail, including why `readingTime`/"Lesedauer" stays out of scope (no session-time instrumentation exists to derive it from).
+
+Backend: 94/94 Vitest tests passing (8 new). Frontend: 92/92 bUnit tests passing (5 new). Backend deployed via `wrangler deploy`.
+
+Live-verified end-to-end on the deployed site against the real account: 1 gelesenes Buch / 1 in Arbeit / 24 gelesene Seiten matched the real reading history, genre breakdown showed "Unbekannt" and "Children's fiction" (1 each), and "Zuletzt gelesen" listed both real in-progress books with correct progress bars linking into the Reader.
