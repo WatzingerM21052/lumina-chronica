@@ -1,8 +1,78 @@
 @page "/statistics"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
 
 <PageTitle>Statistik — Lumina Chronica</PageTitle>
 
 <h1>Statistik</h1>
 
-<EmptyState Message="Sobald du anfängst zu lesen, erscheinen hier deine Statistiken." />
+@if (_stats is null)
+{
+    <LoadingIndicator Text="Statistik wird geladen..." />
+}
+else if (_stats is { BooksRead: 0, BooksInProgress: 0 })
+{
+    <EmptyState Message="Sobald du anfängst zu lesen, erscheinen hier deine Statistiken." />
+}
+else
+{
+    <div class="dashboard-overview">
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">@_stats.BooksRead</span>
+            <span class="dashboard-stat-label">Gelesene Bücher</span>
+        </div>
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">@_stats.BooksInProgress</span>
+            <span class="dashboard-stat-label">In Arbeit</span>
+        </div>
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">@_stats.PagesRead</span>
+            <span class="dashboard-stat-label">Gelesene Seiten</span>
+        </div>
+    </div>
+
+    @if (_stats.GenreBreakdown.Count > 0)
+    {
+        <h2>Genres</h2>
+        <div class="statistics-genre-list">
+            @{
+                var maxCount = _stats.GenreBreakdown.Max(g => g.Count);
+            }
+            @foreach (var genre in _stats.GenreBreakdown)
+            {
+                <div class="statistics-genre-row">
+                    <span class="statistics-genre-label">@genre.Genre</span>
+                    <div class="statistics-genre-bar-track">
+                        <div class="statistics-genre-bar-fill" style="width: @(genre.Count * 100.0 / maxCount)%"></div>
+                    </div>
+                    <span class="statistics-genre-count">@genre.Count</span>
+                </div>
+            }
+        </div>
+    }
+
+    @if (_stats.RecentActivity.Count > 0)
+    {
+        <h2>Zuletzt gelesen</h2>
+        <div class="library-grid">
+            @foreach (var item in _stats.RecentActivity)
+            {
+                <BookCard Book="item.Book" ProgressPercentage="item.Percentage" Href="@($"library/books/{item.Book.Id}/read")" />
+            }
+        </div>
+    }
+}
+
+@code {
+    private StatisticsResponse? _stats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await ApiClient.GetAsync<StatisticsResponse>("/api/statistics");
+        _stats = response is { Success: true, Data: not null } ? response.Data : new StatisticsResponse();
+    }
+}
