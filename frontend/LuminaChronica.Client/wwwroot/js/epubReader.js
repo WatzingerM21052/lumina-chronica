@@ -445,7 +445,9 @@ async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
     croppedCtx.fillRect(0, 0, cropWidth, cropHeight);
     croppedCtx.drawImage(fullCanvas, scrollLeft, 0, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
-    if (looksBlank(cropped, readerBackground) && attempt < CAPTURE_MAX_ATTEMPTS) {
+    const blank = looksBlank(cropped, readerBackground);
+    console.error(`[DIAG capture] attempt=${attempt} scrollLeft=${scrollLeft} iframeW=${iframe.clientWidth} blank=${blank} bodyTextLen=${iframe.contentDocument.body.textContent.trim().length}`);
+    if (blank && attempt < CAPTURE_MAX_ATTEMPTS) {
         await settlePaint();
         await wait(50 * attempt);
         return captureVisibleEpubPage(elementId, entry, attempt + 1);
@@ -472,6 +474,7 @@ function reportRealisticProgress(entry) {
 // same documented trade-off as pdfReader.js's realistic mode.
 function schedulePrefetchNext(elementId, entry) {
     const r = entry.realistic;
+    console.error(`[DIAG prefetch] called cursor=${r?.cursor} images.length=${r?.images.length} prefetching=${r?.prefetching}`);
     if (!r || r.prefetching || r.cursor + 1 < r.images.length) return;
     r.prefetching = true;
     runSerialized(entry, async () => {
@@ -479,12 +482,14 @@ function schedulePrefetchNext(elementId, entry) {
             const before = entry.rendition.currentLocation()?.start?.cfi;
             await entry.rendition.next();
             const after = entry.rendition.currentLocation()?.start?.cfi;
+            console.error(`[DIAG prefetch] before=${before} after=${after}`);
             if (after && after !== before) {
                 await settlePaint();
                 const captured = await captureVisibleEpubPage(elementId, entry);
                 r.images.push(captured.dataUrl);
                 r.cfis.push(after);
                 r.pageFlip.updateFromImages(r.images);
+                console.error(`[DIAG prefetch] pushed, images.length now=${r.images.length}`);
             }
         } catch (err) {
             console.error("EPUB Realistic View prefetch failed:", err);
@@ -586,12 +591,14 @@ function teardownRealisticView(elementId, entry) {
 async function realisticNext(elementId, entry) {
     const r = entry.realistic;
     if (!r) return;
+    console.error(`[DIAG next] cursor=${r.cursor} images.length=${r.images.length}`);
     if (r.cursor + 1 < r.images.length) {
         // Already captured (prefetch, or the user paged back earlier in
         // this session) -- flip locally, no rendition/capture work at all.
         r.cursor += 1;
         r.pageFlip.flip(r.cursor);
         reportRealisticProgress(entry);
+        console.error(`[DIAG next] used cached image at cursor=${r.cursor}`);
         return;
     }
     // At the frontier of what's been visited -- advance the real rendition
@@ -599,6 +606,7 @@ async function realisticNext(elementId, entry) {
     const before = entry.rendition.currentLocation()?.start?.cfi;
     await entry.rendition.next();
     const after = entry.rendition.currentLocation()?.start?.cfi;
+    console.error(`[DIAG next] frontier before=${before} after=${after}`);
     if (!after || after === before) return; // end of book -- nothing more to turn to
     await settlePaint();
     const captured = await captureVisibleEpubPage(elementId, entry);
