@@ -952,6 +952,20 @@ select:focus-visible,
     display: block;
 }
 
+/* Realistic View (issue #182) -- StPageFlip draws the whole "open book"
+   look itself (facing pages, spine shadow, page-edge stack) directly onto
+   its own internal canvas and sizes the container to match, so the base
+   rule's fit-content sizing/flex-centering/card chrome (border, background,
+   shadow) would just fight it -- this variant gets out of the way instead. */
+.pdf-reader-frame--realistic {
+    width: auto;
+    height: auto;
+    display: block;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+
 .pdf-reader-nav {
     display: flex;
     justify-content: space-between;

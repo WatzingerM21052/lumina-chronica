@@ -12,7 +12,35 @@ import * as pdfjsLib from "../lib/pdfjs/pdf.min.mjs";
 // deployed "/lumina-chronica/" subpath) if done wrong.
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("../lib/pdfjs/pdf.worker.min.mjs", import.meta.url).href;
 
+// StPageFlip (issue #182, realistic page-flip mode) is a classic UMD script
+// (global `St.PageFlip`), same lazy <script>-injection pattern epubReader.js
+// uses for epub.js -- most reader sessions never touch realistic mode, so
+// it isn't referenced from index.html.
+let pageFlipLibLoadedPromise = null;
+function ensurePageFlipLibLoaded() {
+    if (!pageFlipLibLoadedPromise) {
+        pageFlipLibLoadedPromise = new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = "lib/pageflip/page-flip.browser.js";
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error("Failed to load page-flip.browser.js"));
+            document.head.appendChild(script);
+        });
+    }
+    return pageFlipLibLoadedPromise;
+}
+
 const instances = new Map();
+
+// Single source of truth for which of the three rendering paths (Book View,
+// Scroll View, Realistic View) owns the container -- issue #182 replaced the
+// previous entry.pageWrappers-truthy check (a de-facto two-mode discriminator)
+// with this explicit field once a third mode needed to fit in, so next/prev/
+// goToPage/setZoom/destroy don't have to guess from which optional fields
+// happen to be populated.
+function modeOf(flow) {
+    return flow === "scroll" ? "scroll" : flow === "realistic" ? "realistic" : "book";
+}
 
 function getAvailableSize(elementId) {
     const container = document.getElementById(elementId);
@@ -212,6 +240,101 @@ async function teardownToBookView(elementId) {
     await renderPage(elementId);
 }
 
+// ---- Realistic View: real page-flip animation via StPageFlip (issue #182) -
+// Every page is rendered to a canvas/dataURL image up front, unlike Scroll
+// View's lazy IntersectionObserver-driven rendering -- StPageFlip's
+// loadFromImages wants the whole book's page count and images available
+// immediately to compute layout, not a placeholder it can fill in later.
+// An honest scope cut for a personal-library reader (same spirit as Scroll
+// View's own "acceptable scope cut" comment above): a very long scanned
+// book will show a brief "wird vorbereitet" pause on entering this mode,
+// not attempt incremental/virtualized loading.
+async function renderAllPagesAsImages(elementId) {
+    const entry = instances.get(elementId);
+    const { width: availableWidth, height: availableHeight } = getAvailableSize(elementId);
+
+    // Every page uses the *first* page's fitted size -- a real bound book
+    // has one uniform page size regardless of what's printed on each page,
+    // and StPageFlip's width/height are fixed for the whole book, not
+    // configurable per page.
+    const firstPage = await entry.doc.getPage(1);
+    const firstUnscaled = firstPage.getViewport({ scale: 1 });
+    const fitScale = Math.min(availableWidth / firstUnscaled.width, availableHeight / firstUnscaled.height);
+    const pageWidth = Math.round(firstUnscaled.width * fitScale);
+    const pageHeight = Math.round(firstUnscaled.height * fitScale);
+
+    const images = [];
+    for (let i = 1; i <= entry.doc.numPages; i++) {
+        const page = i === 1 ? firstPage : await entry.doc.getPage(i);
+        const unscaledViewport = page.getViewport({ scale: 1 });
+        // Pages with a different aspect ratio than the first (mixed
+        // portrait/landscape scans) are centered on a white page rather
+        // than stretched to fit, so content is never distorted.
+        const contentScale = Math.min(pageWidth / unscaledViewport.width, pageHeight / unscaledViewport.height);
+        const contentViewport = page.getViewport({ scale: contentScale });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = pageWidth;
+        canvas.height = pageHeight;
+        const context = canvas.getContext("2d");
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, pageWidth, pageHeight);
+        context.translate((pageWidth - contentViewport.width) / 2, (pageHeight - contentViewport.height) / 2);
+        await page.render({ canvasContext: context, viewport: contentViewport }).promise;
+
+        // JPEG, not PNG: these images never leave the tab (no re-compression
+        // artifacts compound across saves) and a full illustrated book's
+        // worth of PNG dataURLs would be a multiple of the JPEG memory cost
+        // for a difference invisible at page-flip scale.
+        images.push(canvas.toDataURL("image/jpeg", 0.85));
+    }
+    return { images, pageWidth, pageHeight };
+}
+
+async function initRealisticView(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    const container = document.getElementById(elementId);
+    if (!container) return;
+
+    await ensurePageFlipLibLoaded();
+    teardownScrollObservers(entry);
+    container.classList.remove("pdf-reader-frame--scroll");
+    container.classList.add("pdf-reader-frame--realistic");
+    container.innerHTML = "";
+    entry.pageWrappers = null;
+    entry.renderedPages = null;
+
+    const { images, pageWidth, pageHeight } = await renderAllPagesAsImages(elementId);
+    if (!instances.has(elementId)) return; // torn down while awaiting renders
+
+    const pageFlip = new window.St.PageFlip(container, {
+        width: pageWidth,
+        height: pageHeight,
+        size: "fixed",
+        showCover: true,
+        maxShadowOpacity: 0.5,
+        mobileScrollSupport: false,
+    });
+    pageFlip.loadFromImages(images);
+    pageFlip.turnToPage(entry.currentPage - 1);
+    // Drag-follow-finger-until-release and tap-a-corner-to-turn (source
+    // request, issue #182) are both StPageFlip's native default interaction
+    // -- no custom gesture wiring needed here.
+    pageFlip.on("flip", (e) => {
+        entry.currentPage = e.data + 1;
+        entry.dotNetRef?.invokeMethodAsync("OnScrolled", entry.currentPage, entry.doc.numPages);
+    });
+
+    entry.pageFlip = pageFlip;
+}
+
+function teardownRealisticView(elementId, entry) {
+    entry.pageFlip?.destroy();
+    entry.pageFlip = null;
+    document.getElementById(elementId)?.classList.remove("pdf-reader-frame--realistic");
+}
+
 export async function init(elementId, bytes, initialPage, initialZoom, flow) {
     // Same interop-buffer gotcha as epubReader.js: bytes.buffer is a
     // reused/pooled buffer, not the exact call data -- must slice first.
@@ -219,10 +342,12 @@ export async function init(elementId, bytes, initialPage, initialZoom, flow) {
     const doc = await pdfjsLib.getDocument({ data }).promise;
     const page = Math.min(Math.max(initialPage || 1, 1), doc.numPages);
 
-    instances.set(elementId, { doc, currentPage: page, zoom: initialZoom > 0 ? initialZoom : 1 });
+    instances.set(elementId, { doc, currentPage: page, zoom: initialZoom > 0 ? initialZoom : 1, mode: modeOf(flow) });
 
     if (flow === "scroll") {
         await initScrollView(elementId);
+    } else if (flow === "realistic") {
+        await initRealisticView(elementId);
     } else {
         await renderPage(elementId);
     }
@@ -230,14 +355,19 @@ export async function init(elementId, bytes, initialPage, initialZoom, flow) {
     return doc.numPages;
 }
 
-// Book View <-> Scroll View (issue #174). pdf.js has no "flow" concept of
-// its own -- unlike epub.js, this just switches which of the two rendering
-// paths above owns the container, preserving the current page.
+// Book View <-> Scroll View <-> Realistic View (issue #174, extended by
+// #182). pdf.js has no "flow" concept of its own -- this just switches which
+// of the three rendering paths above owns the container, preserving the
+// current page.
 export async function setFlow(elementId, flow) {
     const entry = instances.get(elementId);
     if (!entry) return;
+    if (entry.mode === "realistic") teardownRealisticView(elementId, entry);
+    entry.mode = modeOf(flow);
     if (flow === "scroll") {
         await initScrollView(elementId);
+    } else if (flow === "realistic") {
+        await initRealisticView(elementId);
     } else {
         await teardownToBookView(elementId);
     }
@@ -253,12 +383,16 @@ export async function setZoom(elementId, zoom) {
     const entry = instances.get(elementId);
     if (!entry) return;
     entry.zoom = zoom;
+    // Realistic View has fixed book geometry (StPageFlip's width/height
+    // are set once at init) -- no zoom concept, and the UI hides the zoom
+    // controls in this mode, but this stays a defensive no-op regardless.
+    if (entry.mode === "realistic") return;
     // Simplest correct approach for scroll mode: every wrapper's size and
     // every already-rendered canvas depend on zoom, so rebuilding the whole
     // scroll view is far less code than incrementally resizing/re-rendering
     // in place -- and zoom clicks are an infrequent, deliberate action, not
     // a hot path worth optimizing.
-    if (entry.pageWrappers) {
+    if (entry.mode === "scroll") {
         await initScrollView(elementId);
     } else {
         await renderPage(elementId);
@@ -271,9 +405,14 @@ export function getCurrentPage(elementId) {
 
 export async function next(elementId) {
     const entry = instances.get(elementId);
-    if (!entry || entry.currentPage >= entry.doc.numPages) return;
+    if (!entry) return;
+    if (entry.mode === "realistic") {
+        entry.pageFlip?.flipNext();
+        return;
+    }
+    if (entry.currentPage >= entry.doc.numPages) return;
     entry.currentPage += 1;
-    if (entry.pageWrappers) {
+    if (entry.mode === "scroll") {
         entry.pageWrappers[entry.currentPage - 1]?.scrollIntoView({ behavior: "smooth", block: "start" });
     } else {
         await renderPage(elementId);
@@ -282,9 +421,14 @@ export async function next(elementId) {
 
 export async function prev(elementId) {
     const entry = instances.get(elementId);
-    if (!entry || entry.currentPage <= 1) return;
+    if (!entry) return;
+    if (entry.mode === "realistic") {
+        entry.pageFlip?.flipPrev();
+        return;
+    }
+    if (entry.currentPage <= 1) return;
     entry.currentPage -= 1;
-    if (entry.pageWrappers) {
+    if (entry.mode === "scroll") {
         entry.pageWrappers[entry.currentPage - 1]?.scrollIntoView({ behavior: "smooth", block: "start" });
     } else {
         await renderPage(elementId);
@@ -297,7 +441,9 @@ export async function goToPage(elementId, page) {
     const target = Math.min(Math.max(page, 1), entry.doc.numPages);
     if (target !== entry.currentPage) {
         entry.currentPage = target;
-        if (entry.pageWrappers) {
+        if (entry.mode === "realistic") {
+            entry.pageFlip?.flip(target - 1);
+        } else if (entry.mode === "scroll") {
             entry.pageWrappers[target - 1]?.scrollIntoView({ block: "start" });
         } else {
             await renderPage(elementId);
@@ -316,5 +462,6 @@ export function destroy(elementId) {
     // entry.doc itself.
     instances.delete(elementId);
     teardownScrollObservers(entry);
+    teardownRealisticView(elementId, entry);
     entry.doc?.destroy?.();
 }
