@@ -32,6 +32,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Reader mode toggle: a real Book View/Scroll View switch for EPUB and PDF, persisted per the existing client-local settings pattern.
 - Real favicon and header logo mark (flame + open book), replacing the Blazor template placeholder.
 - Home page hero banner (open book, subtle world map, light rays, old-library atmosphere).
+- Reader: a third "Realistische Ansicht" mode for PDF — a real StPageFlip page-turn animation (facing pages, page-edge stack, drag-to-turn or tap-a-corner) instead of a flat canvas swap. EPUB's realistic mode is deferred (issue #189) — the toggle only shows for PDF for now.
 
 ### Fixed
 
