@@ -318,6 +318,23 @@ async function initRealisticView(elementId) {
     });
     pageFlip.loadFromImages(images);
     pageFlip.turnToPage(entry.currentPage - 1);
+
+    // StPageFlip's own autoSize/size:"fixed" container sizing sets
+    // width:100%/max-width on the container and expects a plain block-flow
+    // parent to resolve that percentage against -- .pdf-reader-frame is a
+    // flex item here (its base rule is display:flex), so width:auto on a
+    // flex item is shrink-to-fit, not fill-container, and with nothing else
+    // to size against, the library's own inline style resolves to 0x0
+    // (confirmed live: .stf__wrapper's padding-bottom aspect-ratio trick had
+    // nothing to size relative to). Explicitly sizing the container from
+    // the book's own reported bounds sidesteps that percentage-vs-flex
+    // interaction entirely, matching this file's existing pattern elsewhere
+    // of computing sizes itself rather than trusting a vendored library's
+    // "auto" behavior against an unknown surrounding layout.
+    const bounds = pageFlip.getBoundsRect();
+    container.style.width = `${bounds.width}px`;
+    container.style.height = `${bounds.height}px`;
+
     // Drag-follow-finger-until-release and tap-a-corner-to-turn (source
     // request, issue #182) are both StPageFlip's native default interaction
     // -- no custom gesture wiring needed here.
@@ -332,7 +349,16 @@ async function initRealisticView(elementId) {
 function teardownRealisticView(elementId, entry) {
     entry.pageFlip?.destroy();
     entry.pageFlip = null;
-    document.getElementById(elementId)?.classList.remove("pdf-reader-frame--realistic");
+    const container = document.getElementById(elementId);
+    if (container) {
+        container.classList.remove("pdf-reader-frame--realistic");
+        // Undo the explicit pixel size set in initRealisticView -- Book/
+        // Scroll View both size themselves via CSS (fit-content / auto),
+        // and a leftover inline width/height would pin them to whatever
+        // page size the book happened to be showing in Realistic View.
+        container.style.width = "";
+        container.style.height = "";
+    }
 }
 
 export async function init(elementId, bytes, initialPage, initialZoom, flow) {

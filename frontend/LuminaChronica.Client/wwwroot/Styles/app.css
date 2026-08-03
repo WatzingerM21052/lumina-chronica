@@ -954,12 +954,13 @@ select:focus-visible,
 
 /* Realistic View (issue #182) -- StPageFlip draws the whole "open book"
    look itself (facing pages, spine shadow, page-edge stack) directly onto
-   its own internal canvas and sizes the container to match, so the base
-   rule's fit-content sizing/flex-centering/card chrome (border, background,
-   shadow) would just fight it -- this variant gets out of the way instead. */
+   its own internal canvas; pdfReader.js's initRealisticView sets this
+   element's width/height inline in px from the book's own reported bounds
+   (see the comment there for why -- the library's own percentage-based
+   auto-sizing collapses to 0 as a flex item), so this variant only needs to
+   stop the base rule's fit-content sizing/flex-centering/card chrome
+   (border, background, shadow) from fighting it. */
 .pdf-reader-frame--realistic {
-    width: auto;
-    height: auto;
     display: block;
     background-color: transparent;
     border: none;
