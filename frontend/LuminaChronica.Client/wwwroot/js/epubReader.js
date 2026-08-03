@@ -398,7 +398,15 @@ function looksBlank(canvas, backgroundColor) {
     return true;
 }
 
-const CAPTURE_MAX_ATTEMPTS = 4;
+// Live-observed settle times ran close to the previous, smaller retry
+// budget's cumulative wait on a fresh, image-heavy section -- widened so a
+// genuinely slow section (more images, a slower device) doesn't exhaust
+// retries while epub.js is still legitimately settling, at the cost of a
+// longer worst-case wait before this function gives up and accepts
+// whatever it has (~4s cumulative backoff across 7 retries, only ever hit
+// on the rare slow case -- the common case still resolves on attempt 1-2).
+const CAPTURE_MAX_ATTEMPTS = 8;
+const CAPTURE_RETRY_BACKOFF_MS = 150;
 
 async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
     const container = document.getElementById(elementId);
@@ -453,7 +461,7 @@ async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
     console.error(`[DIAG capture] attempt=${attempt} stale=${stale} iframeW ${iframeWidthBefore}->${iframe.clientWidth} scrollLeft ${scrollLeft}->${epubContainer.scrollLeft}`);
     if (stale && attempt < CAPTURE_MAX_ATTEMPTS) {
         await settlePaint();
-        await wait(50 * attempt);
+        await wait(CAPTURE_RETRY_BACKOFF_MS * attempt);
         return captureVisibleEpubPage(elementId, entry, attempt + 1);
     }
 
@@ -471,7 +479,7 @@ async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
 
     if (looksBlank(cropped, readerBackground) && attempt < CAPTURE_MAX_ATTEMPTS) {
         await settlePaint();
-        await wait(50 * attempt);
+        await wait(CAPTURE_RETRY_BACKOFF_MS * attempt);
         return captureVisibleEpubPage(elementId, entry, attempt + 1);
     }
 
