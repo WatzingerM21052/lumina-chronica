@@ -240,6 +240,19 @@ async function teardownToBookView(elementId) {
     await renderPage(elementId);
 }
 
+// A pdf.js worker round-trip (getPage(), page.render().promise) was found
+// live to sometimes never settle -- main thread stayed responsive, nothing
+// thrown, just a promise that neither resolved nor rejected. Every such
+// call in Realistic View's render pass is wrapped in this so a stuck call
+// fails loudly (and gets caught by initRealisticView's fallback to Book
+// View) instead of hanging the reader forever with no escape.
+function withTimeout(promise, ms, label) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Realistic View: ${label} timed out after ${ms}ms`)), ms)),
+    ]);
+}
+
 // ---- Realistic View: real page-flip animation via StPageFlip (issue #182) -
 // Every page is rendered to a canvas/dataURL image up front, unlike Scroll
 // View's lazy IntersectionObserver-driven rendering -- StPageFlip's
@@ -257,7 +270,8 @@ async function renderAllPagesAsImages(elementId) {
     // has one uniform page size regardless of what's printed on each page,
     // and StPageFlip's width/height are fixed for the whole book, not
     // configurable per page.
-    const firstPage = await entry.doc.getPage(1);
+    console.log("[realistic] fetching page 1");
+    const firstPage = await withTimeout(entry.doc.getPage(1), 15000, "getPage(1)");
     const firstUnscaled = firstPage.getViewport({ scale: 1 });
     const fitScale = Math.min(availableWidth / firstUnscaled.width, availableHeight / firstUnscaled.height);
     const pageWidth = Math.round(firstUnscaled.width * fitScale);
@@ -266,7 +280,7 @@ async function renderAllPagesAsImages(elementId) {
     const images = [];
     for (let i = 1; i <= entry.doc.numPages; i++) {
         console.log(`[realistic] rendering page ${i}/${entry.doc.numPages}`);
-        const page = i === 1 ? firstPage : await entry.doc.getPage(i);
+        const page = i === 1 ? firstPage : await withTimeout(entry.doc.getPage(i), 15000, `getPage(${i})`);
         const unscaledViewport = page.getViewport({ scale: 1 });
         // Pages with a different aspect ratio than the first (mixed
         // portrait/landscape scans) are centered on a white page rather
@@ -281,18 +295,11 @@ async function renderAllPagesAsImages(elementId) {
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, pageWidth, pageHeight);
         context.translate((pageWidth - contentViewport.width) / 2, (pageHeight - contentViewport.height) / 2);
-        // A bare `await page.render(...).promise` here left Realistic View
-        // stuck on "Buch wird vorbereitet" forever on some loads with no
-        // console error (main thread stayed responsive -- a pdf.js worker
-        // round-trip promise that simply never settled, not an infinite
-        // loop) -- confirmed not reproducible every time, so a hard timeout
-        // is the honest fix rather than chasing an intermittent pdf.js
-        // worker issue: better a clear, recoverable failure than a
-        // spinner with no escape.
-        await Promise.race([
+        await withTimeout(
             page.render({ canvasContext: context, viewport: contentViewport }).promise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error(`Realistic View: page ${i}/${entry.doc.numPages} render timed out`)), 15000)),
-        ]);
+            15000,
+            `page ${i} render()`,
+        );
 
         // JPEG, not PNG: these images never leave the tab (no re-compression
         // artifacts compound across saves) and a full illustrated book's
@@ -338,7 +345,9 @@ async function initRealisticView(elementId) {
 }
 
 async function initRealisticViewUnsafe(elementId, entry, container) {
-    await ensurePageFlipLibLoaded();
+    console.log("[realistic] loading page-flip.browser.js");
+    await withTimeout(ensurePageFlipLibLoaded(), 15000, "page-flip.browser.js load");
+    console.log("[realistic] page-flip.browser.js loaded, rendering pages");
     teardownScrollObservers(entry);
     container.classList.remove("pdf-reader-frame--scroll");
     container.classList.add("pdf-reader-frame--realistic");
