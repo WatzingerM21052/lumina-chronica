@@ -33,26 +33,47 @@ else
 {
     @if (_book.File.Format is not "PDF")
     {
-        <div class="@ReaderControlsClass">
-            <span class="reader-setting-group">
-                <button type="button" class="btn" @onclick="DecreaseFontSize">A-</button>
-                <span>@(_fontSize)px</span>
-                <button type="button" class="btn" @onclick="IncreaseFontSize">A+</button>
-            </span>
-            <span class="reader-setting-group">
-                <button type="button" class="btn @(_fontFamily == "serif" ? "is-active" : "")" @onclick='() => SetFontFamily("serif")'>Serif</button>
-                <button type="button" class="btn @(_fontFamily == "sans" ? "is-active" : "")" @onclick='() => SetFontFamily("sans")'>Sans</button>
-            </span>
-            <span class="reader-setting-group">
-                <button type="button" class="btn @(_lineHeight == "tight" ? "is-active" : "")" @onclick='() => SetLineHeight("tight")'>Eng</button>
-                <button type="button" class="btn @(_lineHeight == "normal" ? "is-active" : "")" @onclick='() => SetLineHeight("normal")'>Normal</button>
-                <button type="button" class="btn @(_lineHeight == "loose" ? "is-active" : "")" @onclick='() => SetLineHeight("loose")'>Weit</button>
-            </span>
-            <span class="reader-setting-group">
-                <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>Schmal</button>
-                <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>Normal</button>
-                <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>Breit</button>
-            </span>
+        <div class="reader-controls">
+            <div class="reader-settings-menu">
+                <button type="button" class="btn" @onclick="ToggleSettingsMenu">⚙ Einstellungen</button>
+                @if (_settingsMenuOpen)
+                {
+                    <div class="reader-settings-popover">
+                        <div class="reader-setting-row">
+                            <span class="reader-setting-label">Schriftgröße</span>
+                            <span class="reader-setting-group">
+                                <button type="button" class="btn" @onclick="DecreaseFontSize">A-</button>
+                                <span>@(_fontSize)px</span>
+                                <button type="button" class="btn" @onclick="IncreaseFontSize">A+</button>
+                            </span>
+                        </div>
+                        <div class="reader-setting-row">
+                            <span class="reader-setting-label">Schriftart</span>
+                            <span class="reader-setting-group">
+                                <button type="button" class="btn @(_fontFamily == "serif" ? "is-active" : "")" @onclick='() => SetFontFamily("serif")'>Serif</button>
+                                <button type="button" class="btn @(_fontFamily == "sans" ? "is-active" : "")" @onclick='() => SetFontFamily("sans")'>Sans</button>
+                            </span>
+                        </div>
+                        <div class="reader-setting-row">
+                            <span class="reader-setting-label">Zeilenabstand</span>
+                            <span class="reader-setting-group">
+                                <button type="button" class="btn @(_lineHeight == "tight" ? "is-active" : "")" @onclick='() => SetLineHeight("tight")'>Eng</button>
+                                <button type="button" class="btn @(_lineHeight == "normal" ? "is-active" : "")" @onclick='() => SetLineHeight("normal")'>Normal</button>
+                                <button type="button" class="btn @(_lineHeight == "loose" ? "is-active" : "")" @onclick='() => SetLineHeight("loose")'>Weit</button>
+                            </span>
+                        </div>
+                        <div class="reader-setting-row">
+                            <span class="reader-setting-label">Seitenbreite</span>
+                            <span class="reader-setting-group">
+                                <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>Schmal</button>
+                                <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>Normal</button>
+                                <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>Breit</button>
+                            </span>
+                        </div>
+                        <button type="button" class="btn reader-settings-done" @onclick="ToggleSettingsMenu">Fertig</button>
+                    </div>
+                }
+            </div>
         </div>
     }
 
@@ -104,14 +125,8 @@ else
     private string _fontFamily = "serif";
     private string _lineHeight = "normal";
     private string _pageWidth = "normal";
+    private bool _settingsMenuOpen;
     private Timer? _saveTimer;
-
-    private string ReaderControlsClass => _pageWidth switch
-    {
-        "narrow" => "reader-controls reader-controls--width-narrow",
-        "wide" => "reader-controls reader-controls--width-wide",
-        _ => "reader-controls",
-    };
 
     private string ReaderContentClass => string.Join(" ", new[]
     {
@@ -318,6 +333,8 @@ else
         _pageWidth = pageWidth;
         await ReaderSettings.SetPageWidthAsync(_pageWidth);
     }
+
+    private void ToggleSettingsMenu() => _settingsMenuOpen = !_settingsMenuOpen;
 
     public void Dispose()
     {

@@ -31,7 +31,6 @@ const instances = new Map();
 
 const SANS_FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 const LINE_HEIGHTS = { tight: "1.4", normal: "1.75", loose: "2.2" };
-const PAGE_WIDTHS = { narrow: "34rem", normal: "42rem", wide: "54rem" };
 
 // epub.js renders into an isolated iframe, so it never sees the app's own
 // CSS -- without this, EPUB content is always black-on-white regardless of
@@ -39,8 +38,8 @@ const PAGE_WIDTHS = { narrow: "34rem", normal: "42rem", wide: "54rem" };
 // Reads the *current* theme's resolved colors/reader font (rather than
 // hardcoding a palette here) so it stays correct if the theme tokens
 // change, and reads entry.contentStyle *live* (not captured once at init)
-// so font family/line-height/page-width changes can be re-applied later
-// without re-registering the hook -- see setContentStyle below.
+// so font family/line-height changes can be re-applied later without
+// re-registering the hook -- see setContentStyle below.
 //
 // rendition.themes.register()/.select() (the "documented" way) doesn't
 // reliably apply in this epub.js build -- content still rendered
@@ -48,6 +47,17 @@ const PAGE_WIDTHS = { narrow: "34rem", normal: "42rem", wide: "54rem" };
 // for every section as it's actually attached to its iframe, and
 // Contents.addStylesheetRules() injects a real <style> into that specific
 // document, which does take effect.
+//
+// No body max-width/margin/padding rule here (unlike TXT/MD's
+// .reader-content) -- epub.js's own pagination engine sets width,
+// column-width, max-width and padding as *inline* styles on body itself
+// for its CSS-multi-column page-turn math, and an inline style always
+// wins over anything addStylesheetRules injects into a stylesheet, no
+// matter the selector or rule order. Confirmed live: a body { max-width }
+// rule here was present in the injected stylesheet but had zero effect --
+// getComputedStyle still reported the inline value. "Page width" for EPUB
+// is instead handled by resizing .epub-reader-frame itself (the container
+// epub.js measures before laying out columns) -- see setPageWidth below.
 function buildContentRules(entry) {
     const styles = getComputedStyle(document.documentElement);
     const background = styles.getPropertyValue("--color-bg-reader").trim() || "#ffffff";
@@ -57,19 +67,18 @@ function buildContentRules(entry) {
 
     const fontFamily = entry.contentStyle.fontFamily === "sans" ? SANS_FONT_STACK : serifFont;
     const lineHeight = LINE_HEIGHTS[entry.contentStyle.lineHeight] || LINE_HEIGHTS.normal;
-    const maxWidth = PAGE_WIDTHS[entry.contentStyle.pageWidth] || PAGE_WIDTHS.normal;
 
     return {
-        body: {
-            background, color, "font-family": fontFamily, "line-height": lineHeight,
-            "max-width": maxWidth, margin: "0 auto", padding: "0 1rem",
-        },
+        body: { background, color, "font-family": fontFamily, "line-height": lineHeight },
         a: { color: linkColor },
-        // Some EPUBs size images with a fixed px width in their own CSS,
-        // which then doesn't scale with the page width above or overflow
-        // the (now narrower/wider) reading column -- constrained to the
-        // rendered content's own width instead.
-        img: { "max-width": "100%", height: "auto" },
+        // min(100%, 28em) rather than a flat 100%: 100% alone only stops
+        // an image overflowing its container, it doesn't scale with font
+        // size at all -- em is relative to the element's own (inherited)
+        // font-size, which does track rendition.themes.fontSize() since
+        // that's inherited like any other font-size regardless of it
+        // being set inline. Same reasoning as .reader-content img in
+        // app.css, mirrored here since EPUB's iframe can't see that rule.
+        img: { "max-width": "min(100%, 28em)", height: "auto" },
     };
 }
 
@@ -118,7 +127,7 @@ function stripPiracyWatermarks(rendition) {
     });
 }
 
-export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, lineHeight, pageWidth) {
+export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, lineHeight) {
     await ensureLibsLoaded();
 
     // Defensive: a byte[] interop parameter is *usually* a Uint8Array over
@@ -131,7 +140,7 @@ export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, l
 
     const entry = {
         book, rendition,
-        contentStyle: { fontFamily: fontFamily || "serif", lineHeight: lineHeight || "normal", pageWidth: pageWidth || "normal" },
+        contentStyle: { fontFamily: fontFamily || "serif", lineHeight: lineHeight || "normal" },
     };
     instances.set(elementId, entry);
 
@@ -145,11 +154,21 @@ export function setFontSize(elementId, fontSize) {
     instances.get(elementId)?.rendition.themes.fontSize(`${fontSize}px`);
 }
 
-export function setContentStyle(elementId, fontFamily, lineHeight, pageWidth) {
+export function setContentStyle(elementId, fontFamily, lineHeight) {
     const entry = instances.get(elementId);
     if (!entry) return;
-    entry.contentStyle = { fontFamily, lineHeight, pageWidth };
+    entry.contentStyle = { fontFamily, lineHeight };
     applyContentRules(elementId);
+}
+
+// "Page width" (see the long comment on buildContentRules above for why
+// this can't just be a stylesheet rule on body like TXT/MD's page width
+// is). The Blazor side changes .epub-reader-frame's own CSS width via a
+// modifier class *before* calling this; epub.js's Stage does carry its
+// own ResizeObserver, but it's not relied on to catch a class-driven
+// resize on its own -- explicitly re-measuring is the reliable trigger.
+export function resizeContent(elementId) {
+    instances.get(elementId)?.rendition.resize();
 }
 
 export function next(elementId) {

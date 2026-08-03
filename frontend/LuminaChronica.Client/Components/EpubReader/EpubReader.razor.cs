@@ -33,23 +33,46 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     private string _lastFontFamily = "";
     private string _lastLineHeight = "";
     private string _lastPageWidth = "";
+    private bool _pageWidthChangedSinceRender;
     private double _lastPercentage;
+
+    private string FrameClass => PageWidth switch
+    {
+        "narrow" => "epub-reader-frame epub-reader-frame--width-narrow",
+        "wide" => "epub-reader-frame epub-reader-frame--width-wide",
+        _ => "epub-reader-frame",
+    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (firstRender)
+        {
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/epubReader.js");
+            if (_module is null) return; // no JS runtime backing this call (e.g. bUnit's default Loose mode)
 
-        _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/epubReader.js");
-        if (_module is null) return; // no JS runtime backing this call (e.g. bUnit's default Loose mode)
+            _dotNetRef = DotNetObjectReference.Create(this);
+            _lastFontSize = FontSize;
+            _lastFontFamily = FontFamily;
+            _lastLineHeight = LineHeight;
+            _lastPageWidth = PageWidth;
 
-        _dotNetRef = DotNetObjectReference.Create(this);
-        _lastFontSize = FontSize;
-        _lastFontFamily = FontFamily;
-        _lastLineHeight = LineHeight;
-        _lastPageWidth = PageWidth;
+            await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight);
+            await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
+            return;
+        }
 
-        await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight, PageWidth);
-        await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
+        // Deferred from OnParametersSetAsync to here deliberately: the frame's
+        // width class (FrameClass) only takes effect once Blazor has actually
+        // patched the DOM, which happens *after* OnParametersSetAsync returns,
+        // not during it. Calling resizeContent() too early would have
+        // epub.js measure the frame's *old* size. epub.js does have its own
+        // ResizeObserver on the container, but that's not relied on alone --
+        // an explicit resize() call is the reliable trigger.
+        if (_pageWidthChangedSinceRender && _module is not null)
+        {
+            _pageWidthChangedSinceRender = false;
+            await _module.InvokeVoidAsync("resizeContent", _elementId);
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -62,12 +85,17 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
             _lastFontSize = FontSize;
         }
 
-        if (FontFamily != _lastFontFamily || LineHeight != _lastLineHeight || PageWidth != _lastPageWidth)
+        if (FontFamily != _lastFontFamily || LineHeight != _lastLineHeight)
         {
-            await _module.InvokeVoidAsync("setContentStyle", _elementId, FontFamily, LineHeight, PageWidth);
+            await _module.InvokeVoidAsync("setContentStyle", _elementId, FontFamily, LineHeight);
             _lastFontFamily = FontFamily;
             _lastLineHeight = LineHeight;
+        }
+
+        if (PageWidth != _lastPageWidth)
+        {
             _lastPageWidth = PageWidth;
+            _pageWidthChangedSinceRender = true;
         }
     }
 
