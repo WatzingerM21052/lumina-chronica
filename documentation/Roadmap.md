@@ -301,6 +301,18 @@ Frontend: 87/87 bUnit tests passing (1 new test covering the typography controls
 
 Live-verified on the deployed site: uploaded a real Markdown test file with an embedded image, confirmed font/line-height/width switch correctly and the image stays responsively constrained at every width; opened a real EPUB (Cornelia Funke, *Die Feder eines Greifs*) and confirmed all three settings apply immediately to the currently-visible page with no page turn; confirmed PDF shows no reader-controls bar at all. Test book removed afterward.
 
+### Reader Settings: dropdown menu, real page-width/image fixes, EPUB crash fix (2026-08-03, issue #150/PR #151/#152/#153)
+
+Same-day follow-up: the user tried #148 live and reported the settings should be a dropdown menu, page width did nothing on EPUB, and images still didn't scale with font size. All three were real bugs, not misunderstandings — see `Architecture.md`'s "Reader Settings: dropdown menu + real fixes" and "EPUB: serialize rendition operations" rows for the full root-cause detail (in short: epub.js owns `body`'s inline width/padding for its own pagination math, so a stylesheet rule can never win against it; and epub.js registers its own `!important` image-sizing rule that silently beat ours).
+
+- [x] Issue #150/PR #151 — settings consolidated into a single dropdown menu (same pattern as `MultiSelectDropdown`); EPUB page width now resizes `.epub-reader-frame` itself and calls `rendition.resize()`; images switched to `max-width: min(100%, 28em)`.
+- [x] PR #152 — found during live-verification of #151: images still weren't scaling on EPUB specifically, because epub.js's own Layout code sets `max-width` on every image with `!important`. Fixed by matching `!important`.
+- [x] PR #153 — found during live-verification of #152 (a deliberate rapid-click stress test, same kind that caught the PDF reader's canvas race in #138): clicking through EPUB pages faster than epub.js's own async page-turn completes crashed the reader. Every rendition-touching call now runs through a per-instance serial queue.
+
+Frontend: 87/87 bUnit tests passing.
+
+Live-verified end-to-end on the deployed site, each fix confirmed via direct DOM/CSSOM inspection rather than just visual screenshots: page-width toggle visibly resizes the EPUB frame and reflows pagination; a real embedded illustration's rendered width was measured before/after a font-size change and tracked it correctly (`getComputedStyle` showed `max-width: min(100%, 560px)` at 20px, i.e. 28× the current font-size); 30 zero-delay `next()` clicks plus a mixed next/prev/resize/setting-change stress sequence both completed with no crash and no error boundary.
+
 ### Backlog additions (2026-08-02, not yet started)
 
 Three items filed for later, explicitly not to be picked up without being asked:
