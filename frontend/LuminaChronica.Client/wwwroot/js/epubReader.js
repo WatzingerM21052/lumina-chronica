@@ -352,6 +352,19 @@ async function withPageTransition(elementId, turn) {
 // Chromium regardless of content -- confirmed via a live probe against a
 // real rendition's iframe before writing any of this. html2canvas does
 // work, at the ~735ms/page cost noted above.
+// epub.js's rendition.next()/prev() promises were found live to resolve
+// before the browser has actually painted the newly-navigated-to content
+// -- a capture taken immediately after showed solid black (real content
+// confirmed present a moment later by temporarily hiding the overlay),
+// while the very first capture on entering the mode (no navigation, just
+// capturing whatever was already settled on screen) worked correctly.
+// Two rAFs is the standard "wait for a real paint" pattern (one alone can
+// still land before the browser's actual paint), same idea already used
+// by withPageTransition's fade-in below.
+function settlePaint() {
+    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 async function captureVisibleEpubPage(elementId, entry) {
     const container = document.getElementById(elementId);
     const epubContainer = container?.querySelector(".epub-container");
@@ -426,6 +439,7 @@ function schedulePrefetchNext(elementId, entry) {
             await entry.rendition.next();
             const after = entry.rendition.currentLocation()?.start?.cfi;
             if (after && after !== before) {
+                await settlePaint();
                 const captured = await captureVisibleEpubPage(elementId, entry);
                 r.images.push(captured.dataUrl);
                 r.cfis.push(after);
@@ -461,6 +475,10 @@ async function initRealisticViewUnsafe(elementId, entry) {
     const overlayContainer = document.getElementById(entry.realisticElementId);
     if (!overlayContainer) throw new Error("EPUB Realistic View: overlay container not found");
 
+    // A rendition.display() call always precedes this (init()'s own
+    // display(), or setFlow()'s resync/rebuild display()) -- same paint-
+    // timing race as rendition.next() below, so the same settle applies.
+    await settlePaint();
     const captured = await captureVisibleEpubPage(elementId, entry);
     if (!instances.has(elementId)) return; // torn down while awaiting the capture
 
@@ -541,6 +559,7 @@ async function realisticNext(elementId, entry) {
     await entry.rendition.next();
     const after = entry.rendition.currentLocation()?.start?.cfi;
     if (!after || after === before) return; // end of book -- nothing more to turn to
+    await settlePaint();
     const captured = await captureVisibleEpubPage(elementId, entry);
     r.images.push(captured.dataUrl);
     r.cfis.push(after);
