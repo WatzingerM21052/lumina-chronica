@@ -64,3 +64,20 @@ export function getPageWidth() {
 export function setPageWidth(pageWidth) {
     localStorage.setItem(PAGE_WIDTH_STORAGE_KEY, pageWidth);
 }
+
+// Book View ("book") vs Scroll View ("scroll") -- source spec §14.1. Applies
+// to EPUB (epub.js flow: paginated vs scrolled) and PDF (single-canvas page
+// swap vs a lazily-rendered continuous-scroll frame); TXT/MD stays
+// continuous-scroll-only regardless (real pagination is a separate, later
+// story -- page breaks would depend on font size/window width, unlike
+// EPUB's fixed spine or PDF's fixed page geometry).
+const READER_MODE_STORAGE_KEY = "lumina_reader_mode";
+const DEFAULT_READER_MODE = "book";
+
+export function getReaderMode() {
+    return localStorage.getItem(READER_MODE_STORAGE_KEY) || DEFAULT_READER_MODE;
+}
+
+export function setReaderMode(mode) {
+    localStorage.setItem(READER_MODE_STORAGE_KEY, mode);
+}

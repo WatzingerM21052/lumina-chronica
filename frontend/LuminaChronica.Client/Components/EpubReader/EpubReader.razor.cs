@@ -26,6 +26,9 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     public string PageWidth { get; set; } = "normal";
 
     [Parameter]
+    public string ReaderMode { get; set; } = "book";
+
+    [Parameter]
     public EventCallback<EpubProgress> OnProgress { get; set; }
 
     private readonly string _elementId = $"epub-reader-{Guid.NewGuid():N}";
@@ -35,18 +38,24 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     private string _lastFontFamily = "";
     private string _lastLineHeight = "";
     private string _lastPageWidth = "";
+    private string _lastReaderMode = "";
     private bool _pageWidthChangedSinceRender;
+    private bool _readerModeChangedSinceRender;
     private double _lastPercentage;
     private List<TocItem> _toc = [];
     private bool _tocMenuOpen;
     private ElementReference _frameElement;
 
-    private string FrameClass => PageWidth switch
+    private string FrameClass
     {
-        "narrow" => "epub-reader-frame epub-reader-frame--width-narrow",
-        "wide" => "epub-reader-frame epub-reader-frame--width-wide",
-        _ => "epub-reader-frame",
-    };
+        get
+        {
+            var classes = "epub-reader-frame";
+            classes += PageWidth switch { "narrow" => " epub-reader-frame--width-narrow", "wide" => " epub-reader-frame--width-wide", _ => "" };
+            if (ReaderMode == "scroll") classes += " epub-reader-frame--scroll";
+            return classes;
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -60,8 +69,9 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
             _lastFontFamily = FontFamily;
             _lastLineHeight = LineHeight;
             _lastPageWidth = PageWidth;
+            _lastReaderMode = ReaderMode;
 
-            await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight);
+            await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight, ReaderMode);
             await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
             _toc = await _module.InvokeAsync<List<TocItem>>("getToc", _elementId) ?? [];
             StateHasChanged();
@@ -79,13 +89,19 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
         }
 
         // Deferred from OnParametersSetAsync to here deliberately: the frame's
-        // width class (FrameClass) only takes effect once Blazor has actually
-        // patched the DOM, which happens *after* OnParametersSetAsync returns,
-        // not during it. Calling resizeContent() too early would have
-        // epub.js measure the frame's *old* size. epub.js does have its own
+        // width/scroll-mode classes (FrameClass) only take effect once Blazor
+        // has actually patched the DOM, which happens *after*
+        // OnParametersSetAsync returns, not during it. Calling
+        // resizeContent()/setFlow() too early would have epub.js measure the
+        // frame's *old* size/overflow. epub.js does have its own
         // ResizeObserver on the container, but that's not relied on alone --
-        // an explicit resize() call is the reliable trigger.
-        if (_pageWidthChangedSinceRender && _module is not null)
+        // an explicit call is the reliable trigger.
+        if (_readerModeChangedSinceRender && _module is not null)
+        {
+            _readerModeChangedSinceRender = false;
+            await _module.InvokeVoidAsync("setFlow", _elementId, ReaderMode);
+        }
+        else if (_pageWidthChangedSinceRender && _module is not null)
         {
             _pageWidthChangedSinceRender = false;
             await _module.InvokeVoidAsync("resizeContent", _elementId);
@@ -113,6 +129,12 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
         {
             _lastPageWidth = PageWidth;
             _pageWidthChangedSinceRender = true;
+        }
+
+        if (ReaderMode != _lastReaderMode)
+        {
+            _lastReaderMode = ReaderMode;
+            _readerModeChangedSinceRender = true;
         }
     }
 

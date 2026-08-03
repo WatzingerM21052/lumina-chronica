@@ -69,4 +69,16 @@ public class ReaderSettingsService(IJSRuntime jsRuntime)
         var module = await _moduleTask.Value;
         await module.InvokeVoidAsync("setPageWidth", pageWidth);
     }
+
+    public async Task<string> GetReaderModeAsync()
+    {
+        var module = await _moduleTask.Value;
+        return await module.InvokeAsync<string>("getReaderMode");
+    }
+
+    public async Task SetReaderModeAsync(string mode)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("setReaderMode", mode);
+    }
 }

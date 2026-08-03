@@ -17,35 +17,83 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     public int InitialPage { get; set; } = 1;
 
     [Parameter]
+    public string ReaderMode { get; set; } = "book";
+
+    [Parameter]
     public EventCallback<PdfProgress> OnProgress { get; set; }
 
     private readonly string _elementId = $"pdf-reader-{Guid.NewGuid():N}";
     private IJSObjectReference? _module;
+    private DotNetObjectReference<PdfReader>? _dotNetRef;
     private int _currentPage = 1;
     private int _pageCount;
     private double _zoom = 1;
+    private string _lastReaderMode = "";
+    private bool _readerModeChangedSinceRender;
     private ElementReference _viewportElement;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (firstRender)
+        {
+            _zoom = await ReaderSettings.GetPdfZoomAsync();
 
-        _zoom = await ReaderSettings.GetPdfZoomAsync();
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/pdfReader.js");
+            if (_module is null) return; // no JS runtime backing this call (e.g. bUnit's default Loose mode)
 
-        _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/pdfReader.js");
-        if (_module is null) return; // no JS runtime backing this call (e.g. bUnit's default Loose mode)
+            _lastReaderMode = ReaderMode;
+            _dotNetRef = DotNetObjectReference.Create(this);
 
-        _pageCount = await _module.InvokeAsync<int>("init", _elementId, Bytes, InitialPage, _zoom);
-        _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
+            _pageCount = await _module.InvokeAsync<int>("init", _elementId, Bytes, InitialPage, _zoom, ReaderMode);
+            _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
+            // Scroll View's "current page" changes on scroll, not on a
+            // discrete next()/prev()/goToPage() call -- registered
+            // regardless of the initial mode so a later mode switch doesn't
+            // also need to remember to register it.
+            await _module.InvokeVoidAsync("onScrolled", _elementId, _dotNetRef);
+            StateHasChanged();
+            await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
+
+            // Arrow-key/spacebar page navigation (issue #144, point 2) needs
+            // the viewport to actually hold keyboard focus -- it isn't
+            // focusable by default (a plain div), hence tabindex="0" in the
+            // markup, and needs an explicit focus call since nothing else on
+            // the page would give it focus on its own.
+            await _viewportElement.FocusAsync();
+            return;
+        }
+
+        // Deferred from OnParametersSetAsync to here deliberately, same
+        // reasoning as EpubReader's page-width/reader-mode handling: the
+        // viewport's --scroll modifier class only takes effect once Blazor
+        // has actually patched the DOM, and setFlow() needs the *new* CSS
+        // in place before it measures the container.
+        if (_readerModeChangedSinceRender && _module is not null)
+        {
+            _readerModeChangedSinceRender = false;
+            await _module.InvokeVoidAsync("setFlow", _elementId, ReaderMode);
+            _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
+            StateHasChanged();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_module is null) return;
+        if (ReaderMode != _lastReaderMode)
+        {
+            _lastReaderMode = ReaderMode;
+            _readerModeChangedSinceRender = true;
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnScrolled(int page, int pageCount)
+    {
+        _currentPage = page;
+        _pageCount = pageCount;
         StateHasChanged();
         await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
-
-        // Arrow-key/spacebar page navigation (issue #144, point 2) needs the
-        // viewport to actually hold keyboard focus -- it isn't focusable by
-        // default (a plain div), hence tabindex="0" in the markup, and needs
-        // an explicit focus call since nothing else on the page would give
-        // it focus on its own.
-        await _viewportElement.FocusAsync();
     }
 
     // Not scoped to the whole component -- @onkeydown lives on
@@ -106,6 +154,7 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
             await _module.InvokeVoidAsync("destroy", _elementId);
             await _module.DisposeAsync();
         }
+        _dotNetRef?.Dispose();
     }
 }
 
