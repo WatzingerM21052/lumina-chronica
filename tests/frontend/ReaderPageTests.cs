@@ -70,6 +70,10 @@ public class ReaderPageTests : BunitContext
         Assert.Contains("reader-controls", cut.Markup);
         Assert.DoesNotContain("reader-content--font-sans", cut.Markup);
 
+        // Settings live behind a menu button now, not always-visible controls.
+        var toggle = cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen");
+        toggle.Click();
+
         var sansButton = cut.FindAll("button").Single(b => b.TextContent == "Sans");
         sansButton.Click();
 

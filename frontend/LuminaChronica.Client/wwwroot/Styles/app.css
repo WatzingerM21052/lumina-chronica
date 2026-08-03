@@ -565,11 +565,46 @@ select:focus-visible {
 
 .reader-controls {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    max-width: 42rem;
+    justify-content: center;
     margin: var(--space-2) auto;
+}
+
+/* Same toggle-button + absolute-positioned-popover pattern as
+   MultiSelectDropdown (Library's Genre/Tag filters) -- reused here rather
+   than inventing a second dropdown convention. */
+.reader-settings-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.reader-settings-popover {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 20rem;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, var(--radius));
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card-hover, var(--shadow-card));
+}
+
+.reader-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.reader-setting-label {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+    white-space: nowrap;
 }
 
 .reader-setting-group {
@@ -582,6 +617,10 @@ select:focus-visible {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
     color: var(--color-bg-card);
+}
+
+.reader-settings-done {
+    width: 100%;
 }
 
 .reader-content {
@@ -616,18 +655,23 @@ select:focus-visible {
     line-height: 2.2;
 }
 
-.reader-content--width-narrow,
-.reader-controls--width-narrow {
+.reader-content--width-narrow {
     max-width: 34rem;
 }
 
-.reader-content--width-wide,
-.reader-controls--width-wide {
+.reader-content--width-wide {
     max-width: 54rem;
 }
 
+/* min(100%, 28em) rather than a flat 100% -- 100% alone only stops an
+   image overflowing its container, it doesn't scale with the font-size
+   change .reader-content's inline font-size drives; em is relative to the
+   inherited (computed) font-size on this element, so the image's cap
+   shrinks/grows right along with A-/A+ instead of looking static. The
+   100% side of min() still guards against a wide image overflowing a
+   narrow reading column at a large font size. */
 .reader-content img {
-    max-width: 100%;
+    max-width: min(100%, 28em);
     height: auto;
 }
 
@@ -656,6 +700,28 @@ select:focus-visible {
     overflow: hidden;
     background-color: var(--color-bg-reader);
     box-shadow: var(--shadow-card);
+}
+
+/* epub.js's own pagination/layout engine sets width, column-width,
+   max-width and padding as *inline* styles directly on the rendered
+   <body> (needed for its CSS-multi-column page-turn math) -- an inline
+   style always wins over any stylesheet rule injected via
+   addStylesheetRules, including our own, so a body { max-width: ... }
+   content rule silently has zero effect on EPUB (confirmed live: the
+   rule was present in the injected stylesheet, but getComputedStyle
+   still reported "none", overridden by body's own inline max-width).
+   The only place page width can actually take effect for EPUB is the
+   frame epub.js measures *before* laying out its columns -- so "page
+   width" resizes this container instead; epubReader.js calls
+   rendition.resize() after the class changes so epub.js recalculates
+   its column width against the new size rather than relying solely on
+   its own ResizeObserver picking up a Blazor-driven class change. */
+.epub-reader-frame--width-narrow {
+    max-width: min(94vw, 54rem);
+}
+
+.epub-reader-frame--width-wide {
+    max-width: min(94vw, 100rem);
 }
 
 .epub-reader-nav {

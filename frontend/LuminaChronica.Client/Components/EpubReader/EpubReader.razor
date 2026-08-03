@@ -2,7 +2,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JsRuntime
 
-<div id="@_elementId" class="epub-reader-frame"></div>
+<div id="@_elementId" class="@FrameClass"></div>
 <div class="epub-reader-nav">
     <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
     <span class="epub-reader-progress">@_lastPercentage.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%</span>
