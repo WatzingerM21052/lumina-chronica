@@ -28,6 +28,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Reader Settings: font family, line-height, page width, and PDF zoom, consolidated into a single settings dropdown; images scale with font size on both EPUB and TXT/MD.
 - EPUB reader: table of contents / chapter navigation menu.
 - EPUB reader: subtle page-turn fade transition and swipe-to-turn-page on mobile.
+- QoL: a real confirmation dialog for deleting books/shelves, and drag-and-drop file upload for the book/cover forms.
 
 ### Fixed
 
