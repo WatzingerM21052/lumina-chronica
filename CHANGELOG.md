@@ -27,6 +27,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - EPUB reader: strips a known piracy-site watermark stamped into downloaded files' chapters.
 - Reader Settings: font family, line-height, page width, and PDF zoom, consolidated into a single settings dropdown; images scale with font size on both EPUB and TXT/MD.
 - EPUB reader: table of contents / chapter navigation menu.
+- EPUB reader: subtle page-turn fade transition and swipe-to-turn-page on mobile.
 
 ### Fixed
 
