@@ -265,6 +265,7 @@ async function renderAllPagesAsImages(elementId) {
 
     const images = [];
     for (let i = 1; i <= entry.doc.numPages; i++) {
+        console.log(`[realistic] rendering page ${i}/${entry.doc.numPages}`);
         const page = i === 1 ? firstPage : await entry.doc.getPage(i);
         const unscaledViewport = page.getViewport({ scale: 1 });
         // Pages with a different aspect ratio than the first (mixed
@@ -280,7 +281,18 @@ async function renderAllPagesAsImages(elementId) {
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, pageWidth, pageHeight);
         context.translate((pageWidth - contentViewport.width) / 2, (pageHeight - contentViewport.height) / 2);
-        await page.render({ canvasContext: context, viewport: contentViewport }).promise;
+        // A bare `await page.render(...).promise` here left Realistic View
+        // stuck on "Buch wird vorbereitet" forever on some loads with no
+        // console error (main thread stayed responsive -- a pdf.js worker
+        // round-trip promise that simply never settled, not an infinite
+        // loop) -- confirmed not reproducible every time, so a hard timeout
+        // is the honest fix rather than chasing an intermittent pdf.js
+        // worker issue: better a clear, recoverable failure than a
+        // spinner with no escape.
+        await Promise.race([
+            page.render({ canvasContext: context, viewport: contentViewport }).promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error(`Realistic View: page ${i}/${entry.doc.numPages} render timed out`)), 15000)),
+        ]);
 
         // JPEG, not PNG: these images never leave the tab (no re-compression
         // artifacts compound across saves) and a full illustrated book's
@@ -297,6 +309,35 @@ async function initRealisticView(elementId) {
     const container = document.getElementById(elementId);
     if (!container) return;
 
+    try {
+        await initRealisticViewUnsafe(elementId, entry, container);
+    } catch (err) {
+        // A stuck/failed render must not leave the reader on an infinite
+        // "wird vorbereitet" spinner with no way out -- log loudly (this is
+        // what actually diagnosed the issue during development, a hang
+        // with a responsive main thread and no thrown error otherwise
+        // leaves nothing to look at) and fall back to Book View, which
+        // renderPage() inside teardownToBookView can always draw from the
+        // same entry.doc regardless of what failed above.
+        console.error("Realistic View failed to initialize, falling back to Book View:", err);
+        // teardownRealisticView handles a pageFlip instance that may or may
+        // not have been created yet (optional chaining) and always clears
+        // the --realistic class/inline size it or the CSS-collapse fix
+        // above may have already applied, regardless of which step failed.
+        teardownRealisticView(elementId, entry);
+        entry.mode = "book";
+        await teardownToBookView(elementId);
+        // Known gap: PdfReader.razor's ReaderMode/_readerMode still say
+        // "realistic" after this silent fallback (no JSInvokable channel
+        // back to Blazor for it) -- the Ansicht toggle would show
+        // Realistisch as active while Book View is what's actually on
+        // screen, until the user picks a mode again. Acceptable for a rare
+        // failure path; a real fix would add a callback symmetrical to
+        // onScrolled/onRelocated.
+    }
+}
+
+async function initRealisticViewUnsafe(elementId, entry, container) {
     await ensurePageFlipLibLoaded();
     teardownScrollObservers(entry);
     container.classList.remove("pdf-reader-frame--scroll");
