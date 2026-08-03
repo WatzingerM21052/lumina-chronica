@@ -78,7 +78,17 @@ function buildContentRules(entry) {
         // that's inherited like any other font-size regardless of it
         // being set inline. Same reasoning as .reader-content img in
         // app.css, mirrored here since EPUB's iframe can't see that rule.
-        img: { "max-width": "min(100%, 28em)", height: "auto" },
+        //
+        // !important on both properties: epub.js's own Layout code
+        // registers its own content hook (before ours) that constrains
+        // every image to `max-width: <columnWidth>px !important` for its
+        // own fit-to-page purposes -- confirmed live via the injected
+        // stylesheet's actual cssRules, an earlier `img` rule with
+        // !important and a plain pixel value that silently beat our rule
+        // regardless of insertion order, since !important always wins over
+        // a non-important rule no matter which came later. Matching its
+        // own !important is the only way to override it.
+        img: { "max-width": "min(100%, 28em) !important", height: "auto !important" },
     };
 }
 
