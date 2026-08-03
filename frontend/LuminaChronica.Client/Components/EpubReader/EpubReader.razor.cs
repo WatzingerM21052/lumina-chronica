@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 namespace LuminaChronica.Client.Components;
@@ -38,6 +39,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     private double _lastPercentage;
     private List<TocItem> _toc = [];
     private bool _tocMenuOpen;
+    private ElementReference _frameElement;
 
     private string FrameClass => PageWidth switch
     {
@@ -63,6 +65,16 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
             await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
             _toc = await _module.InvokeAsync<List<TocItem>>("getToc", _elementId) ?? [];
             StateHasChanged();
+
+            // Arrow-key/spacebar page navigation (issue #144, point 2) needs
+            // the frame to hold focus for the plain-Blazor @onkeydown below
+            // to fire at all -- covers "focus outside the iframe" (right
+            // after load, or after Tab-ing away from the content); the
+            // complementary "focus inside the iframe" case (e.g. after
+            // clicking into the text) is handled by epubReader.js's own
+            // per-section keydown listener instead, since a keydown inside
+            // the iframe's separate document never bubbles out to here.
+            await _frameElement.FocusAsync();
             return;
         }
 
@@ -113,6 +125,13 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     {
         if (_module is not null) await _module.InvokeVoidAsync("prev", _elementId);
     }
+
+    private Task HandleKeyDownAsync(KeyboardEventArgs e) => e.Key switch
+    {
+        "ArrowRight" or " " => NextAsync(),
+        "ArrowLeft" => PrevAsync(),
+        _ => Task.CompletedTask,
+    };
 
     private void ToggleTocMenu() => _tocMenuOpen = !_tocMenuOpen;
 

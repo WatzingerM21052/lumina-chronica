@@ -153,7 +153,8 @@ button:focus-visible,
 .btn:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
-select:focus-visible {
+select:focus-visible,
+[tabindex]:focus-visible {
     outline: 2px solid var(--color-gold-accent);
     outline-offset: 2px;
 }

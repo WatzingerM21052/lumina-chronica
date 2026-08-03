@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 namespace LuminaChronica.Client.Components;
@@ -23,6 +24,7 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     private int _currentPage = 1;
     private int _pageCount;
     private double _zoom = 1;
+    private ElementReference _viewportElement;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -37,7 +39,26 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
         _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
         StateHasChanged();
         await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
+
+        // Arrow-key/spacebar page navigation (issue #144, point 2) needs the
+        // viewport to actually hold keyboard focus -- it isn't focusable by
+        // default (a plain div), hence tabindex="0" in the markup, and needs
+        // an explicit focus call since nothing else on the page would give
+        // it focus on its own.
+        await _viewportElement.FocusAsync();
     }
+
+    // Not scoped to the whole component -- @onkeydown lives on
+    // .pdf-reader-viewport specifically, not .pdf-reader-nav, so keypresses
+    // reaching the page-number <input> (a sibling, not a descendant) never
+    // bubble into this handler and arrow keys keep their native
+    // cursor-movement behavior there instead of hijacking page navigation.
+    private Task HandleKeyDownAsync(KeyboardEventArgs e) => e.Key switch
+    {
+        "ArrowRight" or " " => NextAsync(),
+        "ArrowLeft" => PrevAsync(),
+        _ => Task.CompletedTask,
+    };
 
     private async Task NextAsync()
     {
