@@ -44,17 +44,10 @@ else
         }
         <div class="form-actions">
             <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
-            @if (!_confirmingDelete)
-            {
-                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
-            }
-            else
-            {
-                <span>Wirklich löschen?</span>
-                <button type="button" class="btn" @onclick="DeleteShelfAsync">Ja, löschen</button>
-                <button type="button" class="btn" @onclick="() => _confirmingDelete = false">Abbrechen</button>
-            }
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
         </div>
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="Regal wirklich löschen?"
+                       OnConfirm="DeleteShelfAsync" OnCancel="() => _confirmingDelete = false" />
     }
     else
     {

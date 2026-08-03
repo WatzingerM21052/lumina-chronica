@@ -115,17 +115,10 @@ else
                         }
                     }
                     <button type="button" id="edit-button" class="btn" @onclick="StartEditing">Bearbeiten</button>
-                    @if (!_confirmingDelete)
-                    {
-                        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
-                    }
-                    else
-                    {
-                        <span>Wirklich löschen?</span>
-                        <button type="button" class="btn" @onclick="DeleteAsync">Ja, löschen</button>
-                        <button type="button" class="btn" @onclick="() => _confirmingDelete = false">Abbrechen</button>
-                    }
+                    <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
                 </div>
+                <ConfirmDialog IsOpen="_confirmingDelete" Message="Buch wirklich löschen?"
+                               OnConfirm="DeleteAsync" OnCancel="() => _confirmingDelete = false" />
                 @if (_offlineErrorMessage is not null)
                 {
                     <p class="form-error">@_offlineErrorMessage</p>

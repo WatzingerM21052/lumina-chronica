@@ -63,4 +63,39 @@ public class ShelfDetailPageTests : BunitContext
         Assert.Equal(HttpMethod.Delete, capturedRequest?.Method);
         Assert.Equal("/api/shelves/1/books/5", capturedRequest?.RequestUri?.AbsolutePath);
     }
+
+    [Fact]
+    public void ShelfDetail_DeleteButton_OpensConfirmDialog()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ShelfDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
+
+        Assert.Contains("Regal wirklich löschen?", cut.Markup);
+    }
+
+    [Fact]
+    public void ShelfDetail_ConfirmDialog_Confirm_DeletesTheShelfItself()
+    {
+        HttpRequestMessage? deleteRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Delete && r.RequestUri!.AbsolutePath == "/api/shelves/1", r =>
+            {
+                deleteRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":true}""");
+            })
+            .WhenPathEndsWith("/books", ShelfBooksJson)
+            .WhenPathEndsWith("/shelves/1", ShelfJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<ShelfDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Ja, löschen").Click();
+
+        Assert.NotNull(deleteRequest);
+    }
 }
