@@ -46,10 +46,7 @@ else
                                 <span class="reader-setting-group">
                                     <button type="button" class="btn @(_readerMode == "book" ? "is-active" : "")" @onclick='() => SetReaderMode("book")'>Buch</button>
                                     <button type="button" class="btn @(_readerMode == "scroll" ? "is-active" : "")" @onclick='() => SetReaderMode("scroll")'>Scroll</button>
-                                    @if (_book.File.Format is "PDF")
-                                    {
-                                        <button type="button" class="btn @(_readerMode == "realistic" ? "is-active" : "")" @onclick='() => SetReaderMode("realistic")'>Realistisch</button>
-                                    }
+                                    <button type="button" class="btn @(_readerMode == "realistic" ? "is-active" : "")" @onclick='() => SetReaderMode("realistic")'>Realistisch</button>
                                 </span>
                             </div>
                         }

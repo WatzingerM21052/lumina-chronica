@@ -815,11 +815,33 @@ select:focus-visible,
    frame, matching the source spec's layout (§64.4: Zurück/Kapitel/
    Einstellungen above the content, Seite/Fortschritt/Navigation below). */
 
-.epub-reader-frame {
+/* Realistic View (issue #189) needs a StPageFlip overlay positioned
+   exactly on top of the real epub.js rendition (kept alive underneath,
+   used purely as a content/pagination engine to capture pages from -- see
+   epubReader.js) -- this wrapper is the shared `position: relative`
+   ancestor both the rendition frame and the overlay anchor to, carrying
+   the sizing/centering rules the frame used to own directly so neither
+   Book/Scroll View's appearance nor the width-narrow/wide modifiers had
+   to change. */
+.epub-reader-viewport {
+    position: relative;
     width: 100%;
     max-width: min(94vw, 80rem);
     height: calc(100vh - 11rem);
     margin: 0 auto;
+}
+
+.epub-reader-viewport--width-narrow {
+    max-width: min(94vw, 54rem);
+}
+
+.epub-reader-viewport--width-wide {
+    max-width: min(94vw, 100rem);
+}
+
+.epub-reader-frame {
+    width: 100%;
+    height: 100%;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     overflow: hidden;
@@ -856,12 +878,27 @@ select:focus-visible,
    rendition.resize() after the class changes so epub.js recalculates
    its column width against the new size rather than relying solely on
    its own ResizeObserver picking up a Blazor-driven class change. */
-.epub-reader-frame--width-narrow {
-    max-width: min(94vw, 54rem);
+/* Realistic View overlay (issue #189) -- StPageFlip draws its own "open
+   book" look onto an internal canvas, same reasoning as PDF's
+   pdf-reader-frame--realistic variant. Sits exactly on top of the real
+   (kept-alive, capture-source) epub.js rendition underneath; only shown
+   once entry.realistic actually has a page ready to display, so the raw
+   rendition briefly stays visible during the very first capture rather
+   than showing an empty overlay. */
+.epub-reader-frame--realistic {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background-color: transparent;
 }
 
-.epub-reader-frame--width-wide {
-    max-width: min(94vw, 100rem);
+.epub-reader-frame--realistic.is-active {
+    display: flex;
 }
 
 .epub-reader-nav {
