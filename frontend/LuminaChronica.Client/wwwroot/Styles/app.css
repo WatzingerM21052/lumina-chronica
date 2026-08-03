@@ -445,6 +445,47 @@ select:focus-visible {
     color: var(--color-text-muted);
 }
 
+.statistics-genre-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: var(--space-2) 0 var(--space-3);
+}
+
+.statistics-genre-row {
+    display: grid;
+    grid-template-columns: 8rem 1fr 2.5rem;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.statistics-genre-label {
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.statistics-genre-bar-track {
+    height: 0.6rem;
+    border-radius: var(--radius);
+    background-color: var(--color-bg-card);
+    overflow: hidden;
+}
+
+.statistics-genre-bar-fill {
+    height: 100%;
+    background-color: var(--color-primary);
+    border-radius: var(--radius);
+}
+
+.statistics-genre-count {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    text-align: right;
+}
+
 .shelf-book-entry {
     display: flex;
     flex-direction: column;
