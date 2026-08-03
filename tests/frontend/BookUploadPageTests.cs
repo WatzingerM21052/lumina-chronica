@@ -32,6 +32,21 @@ public class BookUploadPageTests : BunitContext
     }
 
     [Fact]
+    public void BookUpload_DraggingFileOverDropzone_TogglesActiveClass()
+    {
+        UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
+
+        var cut = Render<BookUpload>();
+        Assert.DoesNotContain("dropzone--active", cut.Find("#file").ParentElement!.ClassList);
+
+        cut.Find("#file").ParentElement!.TriggerEvent("ondragenter", new Microsoft.AspNetCore.Components.Web.DragEventArgs());
+        Assert.Contains("dropzone--active", cut.Find("#file").ParentElement!.ClassList);
+
+        cut.Find("#file").ParentElement!.TriggerEvent("ondragleave", new Microsoft.AspNetCore.Components.Web.DragEventArgs());
+        Assert.DoesNotContain("dropzone--active", cut.Find("#file").ParentElement!.ClassList);
+    }
+
+    [Fact]
     public void BookUpload_SubmitWithoutFile_ShowsError()
     {
         UseApiResponse("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"not used"}}""");
