@@ -29,6 +29,26 @@ export function ensureLibsLoaded() {
 
 const instances = new Map();
 
+// epub.js's Rendition/Manager keeps mutable internal state (current view,
+// its own render queue) that isn't safe to touch from two calls at once --
+// confirmed live via a rapid-fire next() stress test (same class of bug as
+// the PDF reader's canvas race, see pdfReader.js's renderPage): clicking
+// through pages faster than epub.js's own async page-turn completes threw
+// "Cannot read properties of undefined (reading 'next')" and a second,
+// unrelated-looking "reading 'package'" error from deep inside its queue,
+// then the whole reader crashed. Every entry point below that touches
+// rendition (next/prev/resize/font-size/content-style) is chained through
+// this per-instance queue instead of firing directly, so overlapping calls
+// run strictly one after another -- never concurrently -- regardless of
+// which combination of operations arrives in quick succession. Unlike
+// pdfReader.js's zoom (where only the *final* value matters, so
+// intermediate calls can be dropped), page-turns want every click honored
+// in order, so this deliberately queues rather than coalesces.
+function runSerialized(entry, fn) {
+    entry.opQueue = (entry.opQueue || Promise.resolve()).catch(() => {}).then(fn);
+    return entry.opQueue;
+}
+
 const SANS_FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 const LINE_HEIGHTS = { tight: "1.4", normal: "1.75", loose: "2.2" };
 
@@ -161,14 +181,16 @@ export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, l
 }
 
 export function setFontSize(elementId, fontSize) {
-    instances.get(elementId)?.rendition.themes.fontSize(`${fontSize}px`);
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    runSerialized(entry, () => entry.rendition.themes.fontSize(`${fontSize}px`));
 }
 
 export function setContentStyle(elementId, fontFamily, lineHeight) {
     const entry = instances.get(elementId);
     if (!entry) return;
     entry.contentStyle = { fontFamily, lineHeight };
-    applyContentRules(elementId);
+    runSerialized(entry, () => applyContentRules(elementId));
 }
 
 // "Page width" (see the long comment on buildContentRules above for why
@@ -178,15 +200,21 @@ export function setContentStyle(elementId, fontFamily, lineHeight) {
 // own ResizeObserver, but it's not relied on to catch a class-driven
 // resize on its own -- explicitly re-measuring is the reliable trigger.
 export function resizeContent(elementId) {
-    instances.get(elementId)?.rendition.resize();
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    runSerialized(entry, () => entry.rendition.resize());
 }
 
-export function next(elementId) {
-    instances.get(elementId)?.rendition.next();
+export async function next(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    await runSerialized(entry, () => entry.rendition.next());
 }
 
-export function prev(elementId) {
-    instances.get(elementId)?.rendition.prev();
+export async function prev(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    await runSerialized(entry, () => entry.rendition.prev());
 }
 
 // Best-effort spine-index-based percentage -- deliberately not using
@@ -207,6 +235,10 @@ export function onRelocated(elementId, dotNetRef) {
 export function destroy(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
-    entry.book.destroy();
+    // Delete first so any operation still queued behind this one (see
+    // runSerialized) that re-fetches from instances.get(...) sees it's
+    // gone; queued here to run *after* whatever's already in flight
+    // finishes instead of tearing the rendition down mid-page-turn.
     instances.delete(elementId);
+    runSerialized(entry, () => entry.book.destroy());
 }
