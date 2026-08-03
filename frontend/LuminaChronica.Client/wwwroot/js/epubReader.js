@@ -426,12 +426,36 @@ async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
     // theme's page doesn't get a wrong white flatten either.
     const readerBackground = getComputedStyle(document.documentElement).getPropertyValue("--color-bg-reader").trim() || "#ffffff";
 
+    const iframeWidthBefore = iframe.clientWidth;
     const fullCanvas = await window.html2canvas(iframe.contentDocument.body, {
-        width: iframe.clientWidth,
+        width: iframeWidthBefore,
         height: iframe.clientHeight,
         useCORS: true,
         backgroundColor: readerBackground,
     });
+
+    // html2canvas takes long enough (several hundred ms on a fresh,
+    // image-heavy section -- confirmed live) that epub.js's own layout can
+    // still be settling underneath it: the live iframe's width changed out
+    // from under a capture mid-flight (4074px when html2canvas started its
+    // clone vs. 14938px by the time it resolved, confirmed live via
+    // diagnostic logging), which silently invalidates the scrollLeft/crop
+    // coordinates read before the call -- html2canvas itself works from a
+    // detached clone taken at start time, so it can't reflect a layout
+    // change that happens after that, but this function's crop math must
+    // match what the LIVE container looks like *now* to be meaningful.
+    // Re-reading and comparing catches that directly, rather than only
+    // catching the downstream symptom via looksBlank().
+    const stale = iframe.clientWidth !== iframeWidthBefore
+        || epubContainer.scrollLeft !== scrollLeft
+        || epubContainer.clientWidth !== cropWidth
+        || epubContainer.clientHeight !== cropHeight;
+    console.error(`[DIAG capture] attempt=${attempt} stale=${stale} iframeW ${iframeWidthBefore}->${iframe.clientWidth} scrollLeft ${scrollLeft}->${epubContainer.scrollLeft}`);
+    if (stale && attempt < CAPTURE_MAX_ATTEMPTS) {
+        await settlePaint();
+        await wait(50 * attempt);
+        return captureVisibleEpubPage(elementId, entry, attempt + 1);
+    }
 
     const cropped = document.createElement("canvas");
     cropped.width = cropWidth;
@@ -445,9 +469,7 @@ async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
     croppedCtx.fillRect(0, 0, cropWidth, cropHeight);
     croppedCtx.drawImage(fullCanvas, scrollLeft, 0, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
-    const blank = looksBlank(cropped, readerBackground);
-    console.error(`[DIAG capture] attempt=${attempt} scrollLeft=${scrollLeft} iframeW=${iframe.clientWidth} blank=${blank} bodyTextLen=${iframe.contentDocument.body.textContent.trim().length}`);
-    if (blank && attempt < CAPTURE_MAX_ATTEMPTS) {
+    if (looksBlank(cropped, readerBackground) && attempt < CAPTURE_MAX_ATTEMPTS) {
         await settlePaint();
         await wait(50 * attempt);
         return captureVisibleEpubPage(elementId, entry, attempt + 1);
