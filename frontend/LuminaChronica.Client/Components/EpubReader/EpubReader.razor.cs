@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -35,6 +36,8 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     private string _lastPageWidth = "";
     private bool _pageWidthChangedSinceRender;
     private double _lastPercentage;
+    private List<TocItem> _toc = [];
+    private bool _tocMenuOpen;
 
     private string FrameClass => PageWidth switch
     {
@@ -58,6 +61,8 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
 
             await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight);
             await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
+            _toc = await _module.InvokeAsync<List<TocItem>>("getToc", _elementId) ?? [];
+            StateHasChanged();
             return;
         }
 
@@ -109,6 +114,14 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
         if (_module is not null) await _module.InvokeVoidAsync("prev", _elementId);
     }
 
+    private void ToggleTocMenu() => _tocMenuOpen = !_tocMenuOpen;
+
+    private async Task GoToTocItemAsync(string href)
+    {
+        _tocMenuOpen = false;
+        if (_module is not null) await _module.InvokeVoidAsync("goTo", _elementId, href);
+    }
+
     [JSInvokable]
     public async Task OnRelocated(string cfi, int chapterIndex, double percentage)
     {
@@ -128,3 +141,16 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
 }
 
 public record EpubProgress(string Cfi, int ChapterIndex, double Percentage);
+
+// Mirrors epubReader.js's flattenToc() output.
+public class TocItem
+{
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = string.Empty;
+
+    [JsonPropertyName("href")]
+    public string Href { get; set; } = string.Empty;
+
+    [JsonPropertyName("level")]
+    public int Level { get; set; }
+}

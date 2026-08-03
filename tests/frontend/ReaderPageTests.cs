@@ -151,6 +151,40 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
+    public void Reader_ShowsEpubTableOfContents_AndNavigatesOnClick()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip");
+        UseHandler(handler);
+
+        var epubModule = JSInterop.SetupModule("./js/epubReader.js");
+        epubModule
+            .Setup<List<TocItem>>("getToc", _ => true)
+            .SetResult(
+            [
+                new TocItem { Label = "Kapitel 1", Href = "chapter1.xhtml", Level = 0 },
+                new TocItem { Label = "Kapitel 2", Href = "chapter2.xhtml", Level = 0 },
+            ]);
+        epubModule.SetupVoid("goTo", _ => true).SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        var epubReader = cut.FindComponent<EpubReader>();
+        epubReader.WaitForAssertion(() => Assert.Contains("📑 Inhaltsverzeichnis", epubReader.Markup), TimeSpan.FromSeconds(2));
+        var tocToggle = cut.FindAll("button").Single(b => b.TextContent == "📑 Inhaltsverzeichnis");
+        tocToggle.Click();
+
+        Assert.Contains("Kapitel 1", cut.Markup);
+        Assert.Contains("Kapitel 2", cut.Markup);
+
+        cut.FindAll("button.epub-toc-item").First(b => b.TextContent == "Kapitel 2").Click();
+
+        Assert.Single(JSInterop.Invocations["goTo"], inv => inv.Arguments.Contains("chapter2.xhtml"));
+    }
+
+    [Fact]
     public void Reader_RendersPdfReaderWithoutThrowing()
     {
         var handler = new RoutedFakeHttpMessageHandler()

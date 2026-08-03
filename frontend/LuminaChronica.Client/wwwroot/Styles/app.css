@@ -664,6 +664,51 @@ select:focus-visible {
     width: 100%;
 }
 
+/* Same toggle-button + absolute-positioned-popover pattern as
+   .reader-settings-menu, but a scrollable list instead of setting rows. */
+.epub-toc-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.epub-toc-popover {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    left: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 16rem;
+    max-width: 24rem;
+    max-height: 20rem;
+    overflow-y: auto;
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, var(--radius));
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card-hover, var(--shadow-card));
+}
+
+.epub-toc-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-small);
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
+    padding-right: var(--space-2);
+    cursor: pointer;
+}
+
+.epub-toc-item:hover,
+.epub-toc-item:focus-visible {
+    color: var(--color-primary);
+}
+
 .reader-content {
     max-width: 42rem;
     max-height: calc(100vh - 14rem);

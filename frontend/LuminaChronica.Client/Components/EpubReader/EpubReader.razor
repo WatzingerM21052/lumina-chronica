@@ -5,6 +5,21 @@
 <div id="@_elementId" class="@FrameClass"></div>
 <div class="epub-reader-nav">
     <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
+    @if (_toc.Count > 0)
+    {
+        <div class="epub-toc-menu">
+            <button type="button" class="btn" @onclick="ToggleTocMenu">📑 Inhaltsverzeichnis</button>
+            @if (_tocMenuOpen)
+            {
+                <div class="epub-toc-popover">
+                    @foreach (var item in _toc)
+                    {
+                        <button type="button" class="epub-toc-item" style="padding-left: @(1 + item.Level * 1.25)rem" @onclick="() => GoToTocItemAsync(item.Href)">@item.Label</button>
+                    }
+                </div>
+            }
+        </div>
+    }
     <span class="epub-reader-progress">@_lastPercentage.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%</span>
     <button type="button" class="btn" @onclick="NextAsync">Weiter ▶</button>
 </div>

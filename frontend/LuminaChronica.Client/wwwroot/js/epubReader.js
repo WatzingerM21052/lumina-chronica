@@ -217,6 +217,32 @@ export async function prev(elementId) {
     await runSerialized(entry, () => entry.rendition.prev());
 }
 
+// Flattens epub.js's nested navigation.toc (each item can carry `subitems`)
+// into a single array with a `level` field for indentation -- simpler for
+// Blazor to render as a flat popover list than recreating the tree client-side.
+function flattenToc(items, level) {
+    return items.flatMap((item) => [
+        { label: item.label.trim(), href: item.href, level },
+        ...flattenToc(item.subitems || [], level + 1),
+    ]);
+}
+
+export async function getToc(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return [];
+    await entry.book.loaded.navigation;
+    return flattenToc(entry.book.navigation.toc, 0);
+}
+
+// href comes from getToc's own output (an epub.js-internal spine-relative
+// path), not user input -- rendition.display() resolves it the same way a
+// next()/prev()-driven relocation would.
+export async function goTo(elementId, href) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    await runSerialized(entry, () => entry.rendition.display(href));
+}
+
 // Best-effort spine-index-based percentage -- deliberately not using
 // epub.js's book.locations.generate(), which parses the entire spine on
 // every open. Resume correctness relies on the CFI alone, not this number.
