@@ -61,7 +61,14 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
 
             await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight);
             await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
-            _toc = await _module.InvokeAsync<List<TocItem>>("getToc", _elementId) ?? [];
+            try
+            {
+                _toc = await _module.InvokeAsync<List<TocItem>>("getToc", _elementId) ?? [];
+            }
+            catch (Exception ex)
+            {
+                await JsRuntime.InvokeVoidAsync("console.error", "getToc failed", ex.ToString());
+            }
             StateHasChanged();
             return;
         }
