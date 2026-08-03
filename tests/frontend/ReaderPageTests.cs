@@ -3,6 +3,7 @@ using LuminaChronica.Client.Components;
 using LuminaChronica.Client.Models;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -151,6 +152,31 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
+    public void Reader_EpubFrame_ArrowKeys_CallNextAndPrev()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip");
+        UseHandler(handler);
+
+        var epubModule = JSInterop.SetupModule("./js/epubReader.js");
+        var nextHandler = epubModule.SetupVoid("next", _ => true);
+        nextHandler.SetVoidResult();
+        var prevHandler = epubModule.SetupVoid("prev", _ => true);
+        prevHandler.SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        var frame = cut.Find(".epub-reader-frame");
+
+        frame.KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        Assert.Single(nextHandler.Invocations);
+
+        frame.KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
+        Assert.Single(prevHandler.Invocations);
+    }
+
+    [Fact]
     public void Reader_ShowsEpubTableOfContents_AndNavigatesOnClick()
     {
         var handler = new RoutedFakeHttpMessageHandler()
@@ -201,6 +227,33 @@ public class ReaderPageTests : BunitContext
         // settings don't apply, so the whole reader-controls bar (which
         // does apply to TXT/MD/EPUB) shouldn't render here.
         Assert.DoesNotContain("reader-controls", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_PdfViewport_ArrowKeys_CallNextAndPrev()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("PDF"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake pdf bytes", "application/pdf");
+        UseHandler(handler);
+
+        var pdfModule = JSInterop.SetupModule("./js/pdfReader.js");
+        pdfModule.Setup<int>("init", _ => true).SetResult(10);
+        pdfModule.Setup<int>("getCurrentPage", _ => true).SetResult(1);
+        var nextHandler = pdfModule.SetupVoid("next", _ => true);
+        nextHandler.SetVoidResult();
+        var prevHandler = pdfModule.SetupVoid("prev", _ => true);
+        prevHandler.SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        var viewport = cut.Find(".pdf-reader-viewport");
+
+        viewport.KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        Assert.Single(nextHandler.Invocations);
+
+        viewport.KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
+        Assert.Single(prevHandler.Invocations);
     }
 
     [Fact]

@@ -147,6 +147,27 @@ public class BiblePageTests : BunitContext
     }
 
     [Fact]
+    public void Bible_ArrowRightOnChapter_LoadsChapterFromNextRef()
+    {
+        const string chapter3Json = """
+            {"success":true,"data":{
+                "id":"PHP.3","reference":"Phil. 3","content":"<p>Finally, my brothers...</p>",
+                "copyright":"NIV copyright text","next":null,"previous":{"id":"PHP.2","number":"2"},
+                "fumsToken":"tok-niv-3"
+            }}
+            """;
+        var handler = DefaultHandler()
+            .When(r => r.RequestUri!.AbsolutePath == $"/api/bible/chapters/{NivId}/PHP.3", _ => RoutedFakeHttpMessageHandler.JsonResponse(chapter3Json));
+        UseHandler(handler);
+
+        var cut = Render<Bible>();
+        cut.Find("article.bible-chapter").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "ArrowRight" });
+
+        Assert.Contains("Phil. 3", cut.Markup);
+        Assert.Contains("Finally, my brothers", cut.Markup);
+    }
+
+    [Fact]
     public void Bible_Search_ShowsResults_AndSelectingOneLoadsThatChapter()
     {
         const string searchJson = """

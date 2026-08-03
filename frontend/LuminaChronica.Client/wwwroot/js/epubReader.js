@@ -177,6 +177,7 @@ export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, l
     rendition.hooks.content.register((contents) => contents.addStylesheetRules(buildContentRules(entry)));
     stripPiracyWatermarks(rendition);
     attachSwipeHandler(rendition, elementId);
+    attachKeyboardHandler(rendition, elementId);
 
     await rendition.display(initialCfi || undefined);
 }
@@ -322,6 +323,28 @@ export function onRelocated(elementId, dotNetRef) {
         const total = entry.book.spine?.length || 1;
         const percentage = Math.max(0, Math.min(100, Math.round((index / total) * 100)));
         dotNetRef.invokeMethodAsync("OnRelocated", location.start.cfi, index, percentage);
+    });
+}
+
+// Arrow-key/spacebar page navigation (issue #144, point 2). Same
+// cross-document problem as the swipe handler above: keydown on the outer
+// .epub-reader-frame only fires when focus is *outside* the iframe (handled
+// separately, in Blazor, via a plain @onkeydown on that div) -- this
+// registers a second listener per-section, inside each iframe's own
+// document, for when focus has moved into the actual book content (e.g.
+// after clicking into the text, or after epub.js itself moves focus there
+// following a page turn).
+function attachKeyboardHandler(rendition, elementId) {
+    rendition.hooks.content.register((contents) => {
+        contents.document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowRight" || e.key === " ") {
+                e.preventDefault();
+                next(elementId);
+            } else if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                prev(elementId);
+            }
+        });
     });
 }
 

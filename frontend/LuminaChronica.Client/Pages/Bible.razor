@@ -94,7 +94,7 @@
     }
     else if (_chapter is not null)
     {
-        <article class="bible-chapter">
+        <article class="bible-chapter" tabindex="0" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
             <h2>@_chapter.Reference</h2>
             <div id="bible-chapter-content" class="bible-chapter-content">@((MarkupString)_chapter.Content)</div>
         </article>
@@ -230,6 +230,16 @@
 
     private Task GoToNextChapterAsync() =>
         _chapter?.Next is { } next ? LoadChapterAsync(_selectedTranslationId, next.Id) : Task.CompletedTask;
+
+    // Scoped to .bible-chapter specifically (issue #144, point 2) -- not the
+    // whole page, so arrow keys keep their native behavior in the
+    // Übersetzung/Buch/Kapitel <select> dropdowns and the search input.
+    private Task HandleKeyDownAsync(KeyboardEventArgs e) => e.Key switch
+    {
+        "ArrowRight" or " " => GoToNextChapterAsync(),
+        "ArrowLeft" => GoToPreviousChapterAsync(),
+        _ => Task.CompletedTask,
+    };
 
     private async Task OnSearchKeyDownAsync(KeyboardEventArgs e)
     {

@@ -2,7 +2,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JsRuntime
 
-<div id="@_elementId" class="@FrameClass"></div>
+<div id="@_elementId" class="@FrameClass" tabindex="0" @ref="_frameElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true"></div>
 <div class="epub-reader-nav">
     <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
     @if (_toc.Count > 0)
