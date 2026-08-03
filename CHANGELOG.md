@@ -30,6 +30,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - EPUB reader: subtle page-turn fade transition and swipe-to-turn-page on mobile.
 - QoL: a real confirmation dialog for deleting books/shelves, drag-and-drop file upload for the book/cover forms, and arrow-key/spacebar page navigation in the EPUB, PDF, and Bible readers.
 - Reader mode toggle: a real Book View/Scroll View switch for EPUB and PDF, persisted per the existing client-local settings pattern.
+- Real favicon and header logo mark (flame + open book), replacing the Blazor template placeholder.
 
 ### Fixed
 
