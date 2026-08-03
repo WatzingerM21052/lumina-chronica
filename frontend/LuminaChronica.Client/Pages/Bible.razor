@@ -94,7 +94,7 @@
     }
     else if (_chapter is not null)
     {
-        <article class="bible-chapter" tabindex="0" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
+        <article class="bible-chapter" tabindex="0" @ref="_articleElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
             <h2>@_chapter.Reference</h2>
             <div id="bible-chapter-content" class="bible-chapter-content">@((MarkupString)_chapter.Content)</div>
         </article>
@@ -131,6 +131,8 @@
     private bool _isLoadingChapter;
     private string? _errorMessage;
     private CancellationTokenSource _cts = new();
+    private ElementReference _articleElement;
+    private string? _focusedChapterId;
 
     private BibleTranslation? _selectedTranslation => _translations.FirstOrDefault(t => t.Id == _selectedTranslationId);
 
@@ -147,6 +149,23 @@
         // the user's own description ("secret feature", personal favorite
         // verse) -- not something to resume past on a later visit.
         await LoadChapterAsync(_selectedTranslationId, DefaultChapterId, DefaultVerseSid);
+    }
+
+    // Keeps arrow-key chapter navigation usable for more than one keypress:
+    // loading a new chapter re-renders <article> as a fresh element, which
+    // drops DOM focus back to <body> -- confirmed live (issue #144, point 2)
+    // pressing ArrowRight once worked, but a second press right after did
+    // nothing, since nothing was focused anymore. Re-focusing whenever a
+    // *new* chapter has actually rendered (guarded by _focusedChapterId, not
+    // just "is not null") avoids fighting the user's own focus on every
+    // unrelated re-render, e.g. while they're typing in the search box.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_chapter is not null && _chapter.Id != _focusedChapterId)
+        {
+            _focusedChapterId = _chapter.Id;
+            await _articleElement.FocusAsync();
+        }
     }
 
     private async Task LoadBooksAsync()
