@@ -123,6 +123,32 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
+    public void Reader_EpubFormat_RealisticModeToggle_CallsSetFlowWithRealistic()
+    {
+        // Issue #182: a third reader mode alongside Buch/Scroll. Asserts the
+        // mode string actually reaching epubReader.js's setFlow is
+        // "realistic", not silently coerced to one of the pre-existing two
+        // values by the entry.mode refactor.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+
+        var epubModule = JSInterop.SetupModule("./js/epubReader.js");
+        var setFlowHandler = epubModule.SetupVoid("setFlow", _ => true);
+        setFlowHandler.SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Realistisch").Click();
+
+        var invocation = Assert.Single(setFlowHandler.Invocations);
+        Assert.Equal("realistic", invocation.Arguments[1]);
+    }
+
+    [Fact]
     public void Reader_RendersMarkdownAsHtml()
     {
         var handler = new RoutedFakeHttpMessageHandler()
@@ -297,6 +323,39 @@ public class ReaderPageTests : BunitContext
 
         var invocation = Assert.Single(setFlowHandler.Invocations);
         Assert.Equal("scroll", invocation.Arguments[1]);
+    }
+
+    [Fact]
+    public void Reader_PdfFormat_RealisticModeToggle_CallsSetFlowAndHidesZoomControls()
+    {
+        // Issue #182: Realistic View has fixed StPageFlip book geometry, no
+        // zoom concept -- the zoom +/-/reset buttons should disappear from
+        // the nav bar once this mode is active, same pattern as PDF hiding
+        // the font-size rows that don't apply to it (see the settings-menu
+        // test above).
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("PDF"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake pdf bytes", "application/pdf");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+
+        var pdfModule = JSInterop.SetupModule("./js/pdfReader.js");
+        pdfModule.Setup<int>("init", _ => true).SetResult(10);
+        pdfModule.Setup<int>("getCurrentPage", _ => true).SetResult(1);
+        pdfModule.SetupVoid("onScrolled", _ => true).SetVoidResult();
+        var setFlowHandler = pdfModule.SetupVoid("setFlow", _ => true);
+        setFlowHandler.SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        Assert.Contains("pdf-reader-zoom", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Realistisch").Click();
+
+        var invocation = Assert.Single(setFlowHandler.Invocations);
+        Assert.Equal("realistic", invocation.Arguments[1]);
+        Assert.DoesNotContain("pdf-reader-zoom", cut.Markup);
     }
 
     [Fact]

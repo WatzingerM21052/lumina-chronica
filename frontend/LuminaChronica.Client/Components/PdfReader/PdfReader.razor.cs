@@ -30,6 +30,7 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     private double _zoom = 1;
     private string _lastReaderMode = "";
     private bool _readerModeChangedSinceRender;
+    private bool _realisticPreparing;
     private ElementReference _viewportElement;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -44,7 +45,10 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
             _lastReaderMode = ReaderMode;
             _dotNetRef = DotNetObjectReference.Create(this);
 
+            _realisticPreparing = ReaderMode == "realistic";
+            if (_realisticPreparing) StateHasChanged(); // shows the "wird vorbereitet" indicator before the long init() await below, not just after
             _pageCount = await _module.InvokeAsync<int>("init", _elementId, Bytes, InitialPage, _zoom, ReaderMode);
+            _realisticPreparing = false;
             _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
             // Scroll View's "current page" changes on scroll, not on a
             // discrete next()/prev()/goToPage() call -- registered
@@ -71,7 +75,10 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
         if (_readerModeChangedSinceRender && _module is not null)
         {
             _readerModeChangedSinceRender = false;
+            _realisticPreparing = ReaderMode == "realistic";
+            if (_realisticPreparing) StateHasChanged();
             await _module.InvokeVoidAsync("setFlow", _elementId, ReaderMode);
+            _realisticPreparing = false;
             _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
             StateHasChanged();
         }
