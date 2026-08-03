@@ -176,6 +176,7 @@ export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, l
 
     rendition.hooks.content.register((contents) => contents.addStylesheetRules(buildContentRules(entry)));
     stripPiracyWatermarks(rendition);
+    attachSwipeHandler(rendition, elementId);
 
     await rendition.display(initialCfi || undefined);
 }
@@ -205,16 +206,66 @@ export function resizeContent(elementId) {
     runSerialized(entry, () => entry.rendition.resize());
 }
 
+// Subtle fade rather than a 3D page-curl: source spec §66 explicitly warns
+// against "übertriebene Animationen" (exaggerated animations) and wants
+// transitions to feel calm, not showy. Fades the frame out, swaps the page,
+// then fades back in -- the CSS transition lives on .epub-reader-frame
+// (app.css), this only toggles the modifier class around the page turn.
+async function withPageTransition(elementId, turn) {
+    const el = document.getElementById(elementId);
+    el?.classList.add("epub-reader-frame--turning");
+    await turn();
+    // rAF rather than turn() alone settling: gives the browser one paint
+    // frame with the new (already-swapped) content still hidden, so the
+    // fade-in animates onto the new page instead of flashing it in unfaded.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    el?.classList.remove("epub-reader-frame--turning");
+}
+
 export async function next(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
-    await runSerialized(entry, () => entry.rendition.next());
+    await runSerialized(entry, () => withPageTransition(elementId, () => entry.rendition.next()));
 }
 
 export async function prev(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
-    await runSerialized(entry, () => entry.rendition.prev());
+    await runSerialized(entry, () => withPageTransition(elementId, () => entry.rendition.prev()));
+}
+
+// Swipe-to-turn-page for mobile (source spec §14.1: "Mobile zusätzlich:
+// Wischen zum Umblättern"). epub.js renders each section into its own
+// same-origin iframe with its own separate document/event system, so a
+// listener on the outer .epub-reader-frame div only ever sees touches on
+// its padding, never on the actual rendered page -- registered via the same
+// per-section content hook mechanism as buildContentRules/
+// stripPiracyWatermarks instead, so it's attached inside every section's
+// iframe document as it renders. Horizontal-dominant swipes only (dx greater
+// than both a fixed threshold and 2x the vertical delta), so a normal
+// vertical scroll/tap inside the iframe doesn't accidentally trigger a page
+// turn.
+const SWIPE_MIN_DISTANCE = 50;
+
+function attachSwipeHandler(rendition, elementId) {
+    rendition.hooks.content.register((contents) => {
+        const doc = contents.document;
+        let startX = 0;
+        let startY = 0;
+        doc.addEventListener("touchstart", (e) => {
+            const touch = e.changedTouches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+        }, { passive: true });
+        doc.addEventListener("touchend", (e) => {
+            const touch = e.changedTouches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+            if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 2) return;
+            if (dx < 0) next(elementId);
+            else prev(elementId);
+        }, { passive: true });
+    });
 }
 
 // Flattens epub.js's nested navigation.toc (each item can carry `subitems`)
