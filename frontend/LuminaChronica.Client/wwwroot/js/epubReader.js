@@ -210,10 +210,26 @@ export function resizeContent(elementId) {
 // against "übertriebene Animationen" (exaggerated animations) and wants
 // transitions to feel calm, not showy. Fades the frame out, swaps the page,
 // then fades back in -- the CSS transition lives on .epub-reader-frame
-// (app.css), this only toggles the modifier class around the page turn.
+// (app.css, PAGE_TRANSITION_MS below must match its duration), this only
+// toggles the modifier class around the page turn.
+//
+// Waits out the fade-out's own transition time *before* calling turn(): the
+// class toggle only *starts* the CSS transition, it doesn't block until the
+// animation finishes, so calling turn() right after adding the class would
+// swap the page mid-fade (confirmed live via a MutationObserver -- the class
+// was removed again only ~55ms after being added, well before a 180ms
+// transition completes) rather than while the frame is actually hidden --
+// exactly the hard-cut-mid-fade this feature exists to avoid.
+const PAGE_TRANSITION_MS = 180;
+
+function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function withPageTransition(elementId, turn) {
     const el = document.getElementById(elementId);
     el?.classList.add("epub-reader-frame--turning");
+    if (el) await wait(PAGE_TRANSITION_MS);
     await turn();
     // rAF rather than turn() alone settling: gives the browser one paint
     // frame with the new (already-swapped) content still hidden, so the
