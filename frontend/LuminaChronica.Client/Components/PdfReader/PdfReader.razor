@@ -9,7 +9,7 @@
     {
         <LoadingIndicator Text="Buch wird vorbereitet..." />
     }
-    <div id="@_elementId" class="pdf-reader-frame" style="@(_realisticPreparing ? "display:none" : null)"></div>
+    <div id="@_elementId" class="pdf-reader-frame @(_realisticPreparing ? "pdf-reader-frame--hidden" : "")"></div>
 </div>
 <div class="pdf-reader-nav">
     <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>

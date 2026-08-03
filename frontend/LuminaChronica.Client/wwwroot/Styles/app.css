@@ -967,6 +967,21 @@ select:focus-visible,
     box-shadow: none;
 }
 
+/* Hides the frame while Realistic View's pages are still rendering (the
+   "Buch wird vorbereitet" pause) -- a CSS class rather than an inline
+   style="display:none" binding deliberately: pdfReader.js's
+   initRealisticView sets this same element's style.width/height directly
+   via JS once ready, and a Blazor-owned `style="..."` attribute binding
+   would get re-diffed (and clobber that JS-set inline style) the moment
+   _realisticPreparing flips back to false and StateHasChanged() re-renders
+   -- confirmed live: the width/height set by JS was wiped seemingly at
+   random right after appearing, traced to exactly this re-render. class
+   bindings don't have this problem since JS never touches this element's
+   class list. */
+.pdf-reader-frame--hidden {
+    display: none;
+}
+
 .pdf-reader-nav {
     display: flex;
     justify-content: space-between;
