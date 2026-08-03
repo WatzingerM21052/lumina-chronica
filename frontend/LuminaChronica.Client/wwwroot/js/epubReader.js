@@ -370,17 +370,32 @@ async function captureVisibleEpubPage(elementId, entry) {
     const cropWidth = epubContainer.clientWidth;
     const cropHeight = epubContainer.clientHeight;
 
+    // JPEG has no alpha channel -- a transparent html2canvas capture
+    // (backgroundColor: null) flattens to solid black on toDataURL(),
+    // confirmed live (the whole page showed as a black box). Reading the
+    // theme's real reader background instead, same source buildContentRules
+    // already uses for the iframe's own body background rule, so a dark
+    // theme's page doesn't get a wrong white flatten either.
+    const readerBackground = getComputedStyle(document.documentElement).getPropertyValue("--color-bg-reader").trim() || "#ffffff";
+
     const fullCanvas = await window.html2canvas(iframe.contentDocument.body, {
         width: iframe.clientWidth,
         height: iframe.clientHeight,
         useCORS: true,
-        backgroundColor: null,
+        backgroundColor: readerBackground,
     });
 
     const cropped = document.createElement("canvas");
     cropped.width = cropWidth;
     cropped.height = cropHeight;
-    cropped.getContext("2d").drawImage(fullCanvas, scrollLeft, 0, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+    const croppedCtx = cropped.getContext("2d");
+    // Defensive fill before drawImage: if the crop region ever extends
+    // past the source canvas (e.g. the very last, short page of a
+    // section), the uncovered remainder stays a real color instead of
+    // whatever toDataURL('image/jpeg') would flatten empty pixels to.
+    croppedCtx.fillStyle = readerBackground;
+    croppedCtx.fillRect(0, 0, cropWidth, cropHeight);
+    croppedCtx.drawImage(fullCanvas, scrollLeft, 0, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
     return { dataUrl: cropped.toDataURL("image/jpeg", 0.85), width: cropWidth, height: cropHeight };
 }
