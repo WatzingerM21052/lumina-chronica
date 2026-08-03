@@ -14,12 +14,21 @@
 }
 
 .app-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     font-family: var(--font-family-display);
     font-weight: 600;
     font-size: var(--font-size-h3);
     letter-spacing: 0.01em;
     color: var(--color-text-on-dark);
     text-decoration: none;
+}
+
+.app-logo-mark {
+    width: 1.9em;
+    height: 1.9em;
+    flex-shrink: 0;
 }
 
 .app-profile {
