@@ -61,20 +61,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
 
             await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight);
             await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
-            try
-            {
-                var tocTask = _module.InvokeAsync<List<TocItem>>("getToc", _elementId).AsTask();
-                var completed = await Task.WhenAny(tocTask, Task.Delay(5000));
-                await JsRuntime.InvokeVoidAsync("console.warn", "getToc race finished", completed == tocTask ? "toc-task-won" : "timeout-won", tocTask.IsCompletedSuccessfully, tocTask.IsFaulted, tocTask.IsCompleted);
-                if (completed == tocTask && tocTask.IsCompletedSuccessfully)
-                {
-                    _toc = tocTask.Result ?? [];
-                }
-            }
-            catch (Exception ex)
-            {
-                await JsRuntime.InvokeVoidAsync("console.error", "getToc failed", ex.ToString());
-            }
+            _toc = await _module.InvokeAsync<List<TocItem>>("getToc", _elementId) ?? [];
             StateHasChanged();
             return;
         }
