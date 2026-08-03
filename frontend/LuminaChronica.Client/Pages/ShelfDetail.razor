@@ -58,7 +58,12 @@ else
             }
             <div class="form-group">
                 <label for="shelf-edit-cover">Regalbild ersetzen</label>
-                <InputFile id="shelf-edit-cover" OnChange="OnEditCoverSelected" />
+                <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
+                     @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
+                     @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
+                    <InputFile id="shelf-edit-cover" OnChange="OnEditCoverSelected" />
+                    <span class="dropzone-label">Regalbild hierher ziehen oder klicken zum Auswählen</span>
+                </div>
                 @if (_coverSaveErrorMessage is not null)
                 {
                     <p class="form-error">@_coverSaveErrorMessage</p>
@@ -119,6 +124,7 @@ else
     private string? _saveErrorMessage;
     private string? _coverSaveErrorMessage;
     private IBrowserFile? _selectedEditCover;
+    private bool _isDraggingCover;
     private EditFormModel _editForm = new();
     private bool _confirmingDelete;
 

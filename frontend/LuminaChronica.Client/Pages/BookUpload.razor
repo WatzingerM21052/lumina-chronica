@@ -150,7 +150,12 @@
 
     <div class="form-group">
         <label for="file">Buchdatei (.epub, .pdf, .txt, .md — max. 50MB)</label>
-        <InputFile id="file" OnChange="OnFileSelectedAsync" />
+        <div class="dropzone @(_isDraggingFile ? "dropzone--active" : "")"
+             @ondragenter="() => _isDraggingFile = true" @ondragleave="() => _isDraggingFile = false"
+             @ondragover:preventDefault @ondrop="() => _isDraggingFile = false">
+            <InputFile id="file" OnChange="OnFileSelectedAsync" />
+            <span class="dropzone-label">Datei hierher ziehen oder klicken zum Auswählen</span>
+        </div>
         @if (_fileError is not null)
         {
             <p class="form-error">@_fileError</p>
@@ -159,7 +164,12 @@
 
     <div class="form-group">
         <label for="cover">Cover (optional, .jpg/.png/.webp — max. 5MB)</label>
-        <InputFile id="cover" OnChange="OnCoverSelectedAsync" />
+        <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
+             @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
+             @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
+            <InputFile id="cover" OnChange="OnCoverSelectedAsync" />
+            <span class="dropzone-label">Cover hierher ziehen oder klicken zum Auswählen</span>
+        </div>
         @if (_coverError is not null)
         {
             <p class="form-error">@_coverError</p>
@@ -194,6 +204,8 @@
     private string? _extractedCoverContentType;
     private byte[]? _enrichedCoverBytes;
     private string? _enrichedCoverContentType;
+    private bool _isDraggingFile;
+    private bool _isDraggingCover;
     private bool _isSubmitting;
     private bool _isLookingUpEnrichment;
     private string? _errorMessage;
