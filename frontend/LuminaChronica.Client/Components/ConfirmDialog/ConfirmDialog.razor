@@ -1,0 +1,15 @@
+@namespace LuminaChronica.Client.Components
+
+@if (IsOpen)
+{
+    <div class="confirm-dialog-overlay" @onclick="CancelAsync">
+        <div class="confirm-dialog" role="alertdialog" aria-modal="true" tabindex="-1"
+             @ref="_dialogElement" @onclick:stopPropagation="true" @onkeydown="HandleKeyDownAsync">
+            <p class="confirm-dialog-message">@Message</p>
+            <div class="confirm-dialog-actions">
+                <button type="button" class="btn btn-primary" @onclick="ConfirmAsync">@ConfirmText</button>
+                <button type="button" class="btn" @onclick="CancelAsync">@CancelText</button>
+            </div>
+        </div>
+    </div>
+}
