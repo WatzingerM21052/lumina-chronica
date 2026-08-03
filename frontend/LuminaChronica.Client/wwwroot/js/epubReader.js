@@ -352,20 +352,55 @@ async function withPageTransition(elementId, turn) {
 // Chromium regardless of content -- confirmed via a live probe against a
 // real rendition's iframe before writing any of this. html2canvas does
 // work, at the ~735ms/page cost noted above.
-// epub.js's rendition.next()/prev() promises were found live to resolve
-// before the browser has actually painted the newly-navigated-to content
-// -- a capture taken immediately after showed solid black (real content
-// confirmed present a moment later by temporarily hiding the overlay),
-// while the very first capture on entering the mode (no navigation, just
-// capturing whatever was already settled on screen) worked correctly.
-// Two rAFs is the standard "wait for a real paint" pattern (one alone can
-// still land before the browser's actual paint), same idea already used
-// by withPageTransition's fade-in below.
+// epub.js's rendition.next()/prev()/display() promises were found live to
+// resolve before the browser has actually painted the newly-navigated-to
+// content -- a capture taken immediately after showed solid black (real
+// content confirmed present a moment later by temporarily hiding the
+// overlay). A fixed double-rAF settle (the standard "wait for a real
+// paint" pattern) fixed same-section forward navigation, but was still
+// too short for a fresh section load (confirmed live: resuming into a
+// section that had never been rendered before -- a heavier operation,
+// creating and laying out a whole new iframe -- still captured blank).
+// Rather than guess a longer fixed delay that might still be wrong on a
+// slower device, captureVisibleEpubPage verifies its own output and
+// retries with backoff instead of trusting timing alone.
 function settlePaint() {
     return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 }
 
-async function captureVisibleEpubPage(elementId, entry) {
+// Resolves any valid CSS color string to its actual RGB by letting the
+// canvas itself parse it, rather than hand-rolling a CSS color parser.
+function colorToRgb(cssColor) {
+    const c = document.createElement("canvas");
+    c.width = 1;
+    c.height = 1;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = cssColor;
+    ctx.fillRect(0, 0, 1, 1);
+    return ctx.getImageData(0, 0, 1, 1).data;
+}
+
+// Samples a 5x5 grid across the page rather than scanning every pixel --
+// cheap, and a real page with any text or image is extremely unlikely to
+// miss every sample point by chance. A genuinely blank page (rare, but
+// real -- a blank leaf between illustrations) also correctly reports
+// "blank" here and is used as-is once retries are exhausted, which is the
+// right outcome for that case too.
+function looksBlank(canvas, backgroundColor) {
+    const ctx = canvas.getContext("2d");
+    const [bgR, bgG, bgB] = colorToRgb(backgroundColor);
+    for (const xf of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+        for (const yf of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+            const [r, g, b] = ctx.getImageData(Math.floor(xf * canvas.width), Math.floor(yf * canvas.height), 1, 1).data;
+            if (Math.abs(r - bgR) > 8 || Math.abs(g - bgG) > 8 || Math.abs(b - bgB) > 8) return false;
+        }
+    }
+    return true;
+}
+
+const CAPTURE_MAX_ATTEMPTS = 4;
+
+async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
     const container = document.getElementById(elementId);
     const epubContainer = container?.querySelector(".epub-container");
     const iframe = container?.querySelector("iframe");
@@ -409,6 +444,12 @@ async function captureVisibleEpubPage(elementId, entry) {
     croppedCtx.fillStyle = readerBackground;
     croppedCtx.fillRect(0, 0, cropWidth, cropHeight);
     croppedCtx.drawImage(fullCanvas, scrollLeft, 0, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+    if (looksBlank(cropped, readerBackground) && attempt < CAPTURE_MAX_ATTEMPTS) {
+        await settlePaint();
+        await wait(50 * attempt);
+        return captureVisibleEpubPage(elementId, entry, attempt + 1);
+    }
 
     return { dataUrl: cropped.toDataURL("image/jpeg", 0.85), width: cropWidth, height: cropHeight };
 }
