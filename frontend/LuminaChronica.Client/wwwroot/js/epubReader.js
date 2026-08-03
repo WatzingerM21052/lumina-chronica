@@ -408,11 +408,37 @@ function looksBlank(canvas, backgroundColor) {
 const CAPTURE_MAX_ATTEMPTS = 8;
 const CAPTURE_RETRY_BACKOFF_MS = 150;
 
+// Live diagnostics traced the remaining relayout churn to section images
+// still loading: epub.js's column count changed from 3 to 11 on the same
+// section between capture attempts (a huge jump, not just font-metrics
+// settling) as each <img> resolved its real dimensions and content
+// reflowed around it -- confirmed by every "Added image blob:..."
+// html2canvas debug line corresponding to one of this section's images.
+// Waiting for every image in the section to actually finish loading
+// before measuring scrollLeft/cropWidth addresses the trigger directly,
+// rather than only reacting to its symptom via the stale-coordinate
+// check above. A 3s-per-image cap guards against a genuinely broken
+// image (network failure, corrupt data) hanging the capture forever --
+// falls through to capture whatever's there rather than waiting forever.
+function waitForImagesToLoad(doc) {
+    const images = Array.from(doc.images).filter((img) => !img.complete);
+    if (images.length === 0) return Promise.resolve();
+    return Promise.all(images.map((img) => new Promise((resolve) => {
+        const done = () => resolve();
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+        setTimeout(done, 3000);
+    })));
+}
+
 async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
     const container = document.getElementById(elementId);
     const epubContainer = container?.querySelector(".epub-container");
     const iframe = container?.querySelector("iframe");
     if (!epubContainer || !iframe) throw new Error("EPUB Realistic View: no rendition content to capture yet");
+
+    await waitForImagesToLoad(iframe.contentDocument);
+    await settlePaint();
 
     // epub.js reveals successive CSS-column "pages" within a section by
     // scrolling .epub-container horizontally by one column-width per page
