@@ -82,6 +82,47 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
+    public void Reader_TxtFormat_SettingsMenu_DoesNotShowReaderModeToggle()
+    {
+        // TXT/MD are continuous-scroll-only -- real pagination is a separate,
+        // later story (issue #174) -- so the Book/Scroll View toggle should
+        // only appear for EPUB/PDF, which actually support both.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Hello from a plain text book.", "text/plain");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+
+        Assert.DoesNotContain("Ansicht", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_EpubFormat_ScrollModeToggle_HidesPageTurnButtonsAndAppliesScrollClass()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("Weiter ▶", cut.Markup);
+        Assert.Contains("◀ Zurück", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Scroll").Click();
+
+        Assert.DoesNotContain("Weiter ▶", cut.Markup);
+        Assert.DoesNotContain("◀ Zurück", cut.Markup);
+        Assert.Contains("epub-reader-frame--scroll", cut.Markup);
+    }
+
+    [Fact]
     public void Reader_RendersMarkdownAsHtml()
     {
         var handler = new RoutedFakeHttpMessageHandler()
@@ -223,10 +264,39 @@ public class ReaderPageTests : BunitContext
 
         Assert.Contains("pdf-reader-frame", cut.Markup);
         Assert.Contains("pdf-reader-zoom", cut.Markup);
-        // PDF has no text layout -- font size/family/line-height/page-width
-        // settings don't apply, so the whole reader-controls bar (which
-        // does apply to TXT/MD/EPUB) shouldn't render here.
-        Assert.DoesNotContain("reader-controls", cut.Markup);
+        // PDF gets a settings menu now (issue #174: the Book/Scroll View
+        // toggle applies to PDF too), but font-size/family/line-height/
+        // page-width still don't -- PDF has no text layout for them to act
+        // on -- so those specific rows should be absent from the popover.
+        Assert.Contains("reader-controls", cut.Markup);
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        Assert.Contains("Ansicht", cut.Markup);
+        Assert.DoesNotContain("Schriftgröße", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_PdfFormat_ScrollModeToggle_CallsSetFlow()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("PDF"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake pdf bytes", "application/pdf");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+
+        var pdfModule = JSInterop.SetupModule("./js/pdfReader.js");
+        pdfModule.Setup<int>("init", _ => true).SetResult(10);
+        pdfModule.Setup<int>("getCurrentPage", _ => true).SetResult(1);
+        pdfModule.SetupVoid("onScrolled", _ => true).SetVoidResult();
+        var setFlowHandler = pdfModule.SetupVoid("setFlow", _ => true);
+        setFlowHandler.SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Scroll").Click();
+
+        var invocation = Assert.Single(setFlowHandler.Invocations);
+        Assert.Equal("scroll", invocation.Arguments[1]);
     }
 
     [Fact]

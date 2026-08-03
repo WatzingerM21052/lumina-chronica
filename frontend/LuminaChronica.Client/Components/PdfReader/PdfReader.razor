@@ -3,7 +3,7 @@
 @inject IJSRuntime JsRuntime
 @inject ReaderSettingsService ReaderSettings
 
-<div class="pdf-reader-viewport @(_zoom != 1 ? "pdf-reader-viewport--zoomed" : "")"
+<div class="pdf-reader-viewport @(_zoom != 1 ? "pdf-reader-viewport--zoomed" : "") @(ReaderMode == "scroll" ? "pdf-reader-viewport--scroll" : "")"
      tabindex="0" @ref="_viewportElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
     <div id="@_elementId" class="pdf-reader-frame"></div>
 </div>

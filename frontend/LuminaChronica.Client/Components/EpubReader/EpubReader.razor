@@ -4,7 +4,10 @@
 
 <div id="@_elementId" class="@FrameClass" tabindex="0" @ref="_frameElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true"></div>
 <div class="epub-reader-nav">
-    <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
+    @if (ReaderMode != "scroll")
+    {
+        <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
+    }
     @if (_toc.Count > 0)
     {
         <div class="epub-toc-menu">
@@ -21,5 +24,8 @@
         </div>
     }
     <span class="epub-reader-progress">@_lastPercentage.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%</span>
-    <button type="button" class="btn" @onclick="NextAsync">Weiter ▶</button>
+    @if (ReaderMode != "scroll")
+    {
+        <button type="button" class="btn" @onclick="NextAsync">Weiter ▶</button>
+    }
 </div>

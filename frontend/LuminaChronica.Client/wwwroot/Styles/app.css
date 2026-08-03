@@ -834,6 +834,14 @@ select:focus-visible,
     opacity: 0;
 }
 
+/* Scroll View (issue #174, §14.1) -- the base rule's overflow: hidden is
+   correct for Book View (epub.js's own pagination fills the frame exactly),
+   but Scroll View needs the frame itself to be the scrollable element for
+   epub.js's "scrolled" flow to have anywhere to scroll. */
+.epub-reader-frame--scroll {
+    overflow-y: auto;
+}
+
 /* epub.js's own pagination/layout engine sets width, column-width,
    max-width and padding as *inline* styles directly on the rendered
    <body> (needed for its CSS-multi-column page-turn math) -- an inline
@@ -890,6 +898,15 @@ select:focus-visible,
     justify-content: flex-start;
 }
 
+/* Scroll View (issue #174) -- same flex-start reasoning as the zoomed rule
+   above: a top-anchored, vertically stacked document can't be centered the
+   way a single fit-content page can, since centering can't be scrolled to
+   its own leading edge. */
+.pdf-reader-viewport--scroll {
+    align-items: center;
+    justify-content: flex-start;
+}
+
 .pdf-reader-frame {
     width: fit-content;
     height: fit-content;
@@ -904,6 +921,34 @@ select:focus-visible,
 }
 
 .pdf-reader-frame canvas {
+    display: block;
+}
+
+/* Scroll View (issue #174, §14.1) -- swaps the single centered fit-content
+   frame for a top-anchored vertical stack of per-page wrappers, each sized
+   in advance from its own pdf.js viewport so the scrollbar reflects the
+   real total document length even before every page has actually rendered
+   a canvas (pdfReader.js's IntersectionObserver-driven lazy render). */
+.pdf-reader-frame--scroll {
+    width: auto;
+    height: auto;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.pdf-reader-page {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-reader);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+.pdf-reader-page canvas {
     display: block;
 }
 

@@ -31,7 +31,7 @@ else if (_book.File is null)
 }
 else
 {
-    @if (_book.File.Format is not "PDF")
+    @if (_book.File.Format is "TXT" or "MD" or "EPUB" or "PDF")
     {
         <div class="reader-controls">
             <div class="reader-settings-menu">
@@ -39,37 +39,50 @@ else
                 @if (_settingsMenuOpen)
                 {
                     <div class="reader-settings-popover">
-                        <div class="reader-setting-row">
-                            <span class="reader-setting-label">Schriftgröße</span>
-                            <span class="reader-setting-group">
-                                <button type="button" class="btn" @onclick="DecreaseFontSize">A-</button>
-                                <span>@(_fontSize)px</span>
-                                <button type="button" class="btn" @onclick="IncreaseFontSize">A+</button>
-                            </span>
-                        </div>
-                        <div class="reader-setting-row">
-                            <span class="reader-setting-label">Schriftart</span>
-                            <span class="reader-setting-group">
-                                <button type="button" class="btn @(_fontFamily == "serif" ? "is-active" : "")" @onclick='() => SetFontFamily("serif")'>Serif</button>
-                                <button type="button" class="btn @(_fontFamily == "sans" ? "is-active" : "")" @onclick='() => SetFontFamily("sans")'>Sans</button>
-                            </span>
-                        </div>
-                        <div class="reader-setting-row">
-                            <span class="reader-setting-label">Zeilenabstand</span>
-                            <span class="reader-setting-group">
-                                <button type="button" class="btn @(_lineHeight == "tight" ? "is-active" : "")" @onclick='() => SetLineHeight("tight")'>Eng</button>
-                                <button type="button" class="btn @(_lineHeight == "normal" ? "is-active" : "")" @onclick='() => SetLineHeight("normal")'>Normal</button>
-                                <button type="button" class="btn @(_lineHeight == "loose" ? "is-active" : "")" @onclick='() => SetLineHeight("loose")'>Weit</button>
-                            </span>
-                        </div>
-                        <div class="reader-setting-row">
-                            <span class="reader-setting-label">Seitenbreite</span>
-                            <span class="reader-setting-group">
-                                <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>Schmal</button>
-                                <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>Normal</button>
-                                <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>Breit</button>
-                            </span>
-                        </div>
+                        @if (_book.File.Format is "EPUB" or "PDF")
+                        {
+                            <div class="reader-setting-row">
+                                <span class="reader-setting-label">Ansicht</span>
+                                <span class="reader-setting-group">
+                                    <button type="button" class="btn @(_readerMode == "book" ? "is-active" : "")" @onclick='() => SetReaderMode("book")'>Buch</button>
+                                    <button type="button" class="btn @(_readerMode == "scroll" ? "is-active" : "")" @onclick='() => SetReaderMode("scroll")'>Scroll</button>
+                                </span>
+                            </div>
+                        }
+                        @if (_book.File.Format is not "PDF")
+                        {
+                            <div class="reader-setting-row">
+                                <span class="reader-setting-label">Schriftgröße</span>
+                                <span class="reader-setting-group">
+                                    <button type="button" class="btn" @onclick="DecreaseFontSize">A-</button>
+                                    <span>@(_fontSize)px</span>
+                                    <button type="button" class="btn" @onclick="IncreaseFontSize">A+</button>
+                                </span>
+                            </div>
+                            <div class="reader-setting-row">
+                                <span class="reader-setting-label">Schriftart</span>
+                                <span class="reader-setting-group">
+                                    <button type="button" class="btn @(_fontFamily == "serif" ? "is-active" : "")" @onclick='() => SetFontFamily("serif")'>Serif</button>
+                                    <button type="button" class="btn @(_fontFamily == "sans" ? "is-active" : "")" @onclick='() => SetFontFamily("sans")'>Sans</button>
+                                </span>
+                            </div>
+                            <div class="reader-setting-row">
+                                <span class="reader-setting-label">Zeilenabstand</span>
+                                <span class="reader-setting-group">
+                                    <button type="button" class="btn @(_lineHeight == "tight" ? "is-active" : "")" @onclick='() => SetLineHeight("tight")'>Eng</button>
+                                    <button type="button" class="btn @(_lineHeight == "normal" ? "is-active" : "")" @onclick='() => SetLineHeight("normal")'>Normal</button>
+                                    <button type="button" class="btn @(_lineHeight == "loose" ? "is-active" : "")" @onclick='() => SetLineHeight("loose")'>Weit</button>
+                                </span>
+                            </div>
+                            <div class="reader-setting-row">
+                                <span class="reader-setting-label">Seitenbreite</span>
+                                <span class="reader-setting-group">
+                                    <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>Schmal</button>
+                                    <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>Normal</button>
+                                    <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>Breit</button>
+                                </span>
+                            </div>
+                        }
                         <button type="button" class="btn reader-settings-done" @onclick="ToggleSettingsMenu">Fertig</button>
                     </div>
                 }
@@ -92,11 +105,11 @@ else
     }
     else if (_book.File.Format == "EPUB" && _epubBytes is not null)
     {
-        <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" FontFamily="@_fontFamily" LineHeight="@_lineHeight" PageWidth="@_pageWidth" OnProgress="HandleEpubProgress" />
+        <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" FontFamily="@_fontFamily" LineHeight="@_lineHeight" PageWidth="@_pageWidth" ReaderMode="@_readerMode" OnProgress="HandleEpubProgress" />
     }
     else if (_book.File.Format == "PDF" && _pdfBytes is not null)
     {
-        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" OnProgress="HandlePdfProgress" />
+        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" OnProgress="HandlePdfProgress" />
     }
     else
     {
@@ -125,6 +138,7 @@ else
     private string _fontFamily = "serif";
     private string _lineHeight = "normal";
     private string _pageWidth = "normal";
+    private string _readerMode = "book";
     private bool _settingsMenuOpen;
     private Timer? _saveTimer;
 
@@ -142,6 +156,7 @@ else
         _fontFamily = await ReaderSettings.GetFontFamilyAsync();
         _lineHeight = await ReaderSettings.GetLineHeightAsync();
         _pageWidth = await ReaderSettings.GetPageWidthAsync();
+        _readerMode = await ReaderSettings.GetReaderModeAsync();
 
         var bookResponse = await ApiClient.GetAsync<Book>($"/api/books/{Id}");
 
@@ -332,6 +347,12 @@ else
     {
         _pageWidth = pageWidth;
         await ReaderSettings.SetPageWidthAsync(_pageWidth);
+    }
+
+    private async Task SetReaderMode(string mode)
+    {
+        _readerMode = mode;
+        await ReaderSettings.SetReaderModeAsync(_readerMode);
     }
 
     private void ToggleSettingsMenu() => _settingsMenuOpen = !_settingsMenuOpen;

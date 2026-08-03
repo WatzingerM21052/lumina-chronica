@@ -157,7 +157,29 @@ function stripPiracyWatermarks(rendition) {
     });
 }
 
-export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, lineHeight) {
+// Shared by init() and setFlow() (Book View <-> Scroll View, issue #174):
+// creates a fresh rendition for entry.book with the given flow and
+// re-registers every per-rendition hook (theming, watermark strip, swipe,
+// keyboard, relocated tracking). Pulled out so switching modes mid-read
+// doesn't have to duplicate this list and risk the two paths drifting apart.
+function setupRendition(entry, elementId, flow) {
+    const options = { width: "100%", height: "100%", flow };
+    if (flow === "paginated") options.spread = "none"; // spread is a paginated-only concept
+    const rendition = entry.book.renderTo(elementId, options);
+    entry.rendition = rendition;
+    entry.flow = flow;
+    rendition.themes.fontSize(`${entry.fontSize}px`);
+
+    rendition.hooks.content.register((contents) => contents.addStylesheetRules(buildContentRules(entry)));
+    stripPiracyWatermarks(rendition);
+    attachSwipeHandler(rendition, elementId);
+    attachKeyboardHandler(rendition, elementId);
+    if (entry.dotNetRef) attachRelocatedListener(entry);
+
+    return rendition;
+}
+
+export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, lineHeight, flow) {
     await ensureLibsLoaded();
 
     // Defensive: a byte[] interop parameter is *usually* a Uint8Array over
@@ -165,26 +187,40 @@ export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, l
     // guards against a pooled/offset view regardless.
     const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     const book = ePub(arrayBuffer);
-    const rendition = book.renderTo(elementId, { width: "100%", height: "100%", flow: "paginated", spread: "none" });
-    rendition.themes.fontSize(`${fontSize}px`);
 
     const entry = {
-        book, rendition,
+        book,
+        fontSize,
         contentStyle: { fontFamily: fontFamily || "serif", lineHeight: lineHeight || "normal" },
     };
     instances.set(elementId, entry);
 
-    rendition.hooks.content.register((contents) => contents.addStylesheetRules(buildContentRules(entry)));
-    stripPiracyWatermarks(rendition);
-    attachSwipeHandler(rendition, elementId);
-    attachKeyboardHandler(rendition, elementId);
-
+    const rendition = setupRendition(entry, elementId, flow === "scroll" ? "scrolled" : "paginated");
     await rendition.display(initialCfi || undefined);
+}
+
+// Book View <-> Scroll View (issue #174, source spec §14.1). epub.js doesn't
+// support changing an existing rendition's flow in place in this vendored
+// build (same class of "documented API doesn't reliably apply" surprise as
+// themes.register() -- see buildContentRules above), so this tears the
+// current rendition down and builds a fresh one instead, restoring the
+// reading position via CFI (location-based, so it's meaningful in either
+// flow) rather than trying to carry over paginated-mode-specific state.
+export async function setFlow(elementId, flow) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    await runSerialized(entry, async () => {
+        const currentCfi = entry.rendition.currentLocation()?.start?.cfi;
+        entry.rendition.destroy();
+        const rendition = setupRendition(entry, elementId, flow === "scroll" ? "scrolled" : "paginated");
+        await rendition.display(currentCfi || undefined);
+    });
 }
 
 export function setFontSize(elementId, fontSize) {
     const entry = instances.get(elementId);
     if (!entry) return;
+    entry.fontSize = fontSize;
     runSerialized(entry, () => entry.rendition.themes.fontSize(`${fontSize}px`));
 }
 
@@ -228,6 +264,14 @@ function wait(ms) {
 }
 
 async function withPageTransition(elementId, turn) {
+    // Fade only makes sense for a discrete page swap -- in Scroll View,
+    // next()/prev() just scroll by roughly a screenful, and fading the whole
+    // frame out mid-scroll would look like a glitch, not a page turn.
+    const entry = instances.get(elementId);
+    if (entry?.flow === "scrolled") {
+        await turn();
+        return;
+    }
     const el = document.getElementById(elementId);
     el?.classList.add("epub-reader-frame--turning");
     if (el) await wait(PAGE_TRANSITION_MS);
@@ -314,16 +358,24 @@ export async function goTo(elementId, href) {
 // Best-effort spine-index-based percentage -- deliberately not using
 // epub.js's book.locations.generate(), which parses the entire spine on
 // every open. Resume correctness relies on the CFI alone, not this number.
-export function onRelocated(elementId, dotNetRef) {
-    const entry = instances.get(elementId);
-    if (!entry) return;
-
+// Pulled out of onRelocated so setupRendition can re-attach it to a freshly
+// created rendition after a Book View <-> Scroll View switch (issue #174) --
+// the listener lives on the old, now-destroyed rendition otherwise, and
+// progress silently stops updating.
+function attachRelocatedListener(entry) {
     entry.rendition.on("relocated", (location) => {
         const index = location?.start?.index ?? 0;
         const total = entry.book.spine?.length || 1;
         const percentage = Math.max(0, Math.min(100, Math.round((index / total) * 100)));
-        dotNetRef.invokeMethodAsync("OnRelocated", location.start.cfi, index, percentage);
+        entry.dotNetRef.invokeMethodAsync("OnRelocated", location.start.cfi, index, percentage);
     });
+}
+
+export function onRelocated(elementId, dotNetRef) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    entry.dotNetRef = dotNetRef;
+    attachRelocatedListener(entry);
 }
 
 // Arrow-key/spacebar page navigation (issue #144, point 2). Same
