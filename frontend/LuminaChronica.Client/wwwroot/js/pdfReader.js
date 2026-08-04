@@ -389,11 +389,14 @@ async function initRealisticView(elementId) {
         teardownRealisticView(elementId, entry);
         entry.mode = "book";
         await teardownToBookView(elementId);
-        // Known gap: PdfReader.razor's ReaderMode/_readerMode still say
-        // "realistic" after this silent fallback (no JSInvokable channel
-        // back to Blazor for it) -- the Ansicht toggle would show
-        // Realistisch as active while Book View is what's actually on
-        // screen, until the user picks a mode again. Acceptable for a rare
+        // Tells PdfReader.razor's ReaderMode/_readerMode to correct
+        // themselves to "book" -- without this, the Ansicht toggle kept
+        // showing Realistisch as active while a single Book View page was
+        // what actually rendered, which reads exactly like "half the book
+        // is missing" to anyone expecting the two-page spread (confirmed
+        // live: this was reported as a display bug, not recognized as the
+        // documented silent-fallback gap it actually was).
+        entry.dotNetRef?.invokeMethodAsync("OnRealisticViewUnavailable");
         // failure path; a real fix would add a callback symmetrical to
         // onScrolled/onRelocated.
     }

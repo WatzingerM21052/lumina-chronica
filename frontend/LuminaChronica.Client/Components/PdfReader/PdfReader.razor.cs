@@ -25,6 +25,18 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     [Parameter]
     public EventCallback<PdfProgress> OnProgress { get; set; }
 
+    // Realistic View can silently fail to initialize (a pre-existing pdf.js
+    // worker instability, issue #213) and fall back to Book View entirely
+    // inside pdfReader.js -- this is how that JS-side fallback tells the
+    // parent to correct ReaderMode/persisted settings back to "book" too.
+    // Without it, the Ansicht toggle kept showing Realistisch as active
+    // while a single Book View page was what actually rendered -- reported
+    // live as "only half the book is shown, shifted right", which is
+    // exactly what a single narrow page looks like next to the two-page
+    // spread the toggle claims should be there.
+    [Parameter]
+    public EventCallback OnRealisticUnavailable { get; set; }
+
     private readonly string _elementId = $"pdf-reader-{Guid.NewGuid():N}";
     private IJSObjectReference? _module;
     private DotNetObjectReference<PdfReader>? _dotNetRef;
@@ -149,6 +161,16 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
         _pageCount = pageCount;
         StateHasChanged();
         await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
+    }
+
+    [JSInvokable]
+    public async Task OnRealisticViewUnavailable()
+    {
+        // JS already tore itself down to Book View by the time this fires
+        // (see pdfReader.js's initRealisticView catch block) -- this just
+        // lets the parent correct ReaderMode/persisted settings to match,
+        // so the Ansicht toggle stops claiming Realistisch is active.
+        await OnRealisticUnavailable.InvokeAsync();
     }
 
     // Not scoped to the whole component -- @onkeydown lives on
