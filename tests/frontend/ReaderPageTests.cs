@@ -123,11 +123,16 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
-    public void Reader_EpubFormat_RealisticModeToggle_CallsSetFlowWithRealistic()
+    public void Reader_EpubFormat_SettingsMenu_DoesNotShowRealisticModeYet()
     {
-        // Issue #189: EPUB's realistic mode (lazy-capture page-flip),
-        // un-gated now that epubReader.js actually implements it. Asserts
-        // the mode string reaching epubReader.js's setFlow is "realistic".
+        // Issue #182: Realistic View shipped for PDF first (PR #183-187);
+        // EPUB's realistic mode isn't implemented in epubReader.js yet, so
+        // the toggle is deliberately gated to PDF-only for now -- showing
+        // it for EPUB would let the Ansicht toggle claim "Realistisch" is
+        // active while epubReader.js's setFlow silently falls back to Book
+        // View underneath (its else-branch, not a recognized "realistic"
+        // case). Remove this test once EPUB's realistic mode ships and the
+        // button is un-gated in Reader.razor.
         var handler = new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
             .WhenPathEndsWith("/api/reading/1", NoProgressJson)
@@ -135,16 +140,10 @@ public class ReaderPageTests : BunitContext
         UseHandler(handler);
         JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
 
-        var epubModule = JSInterop.SetupModule("./js/epubReader.js");
-        var setFlowHandler = epubModule.SetupVoid("setFlow", _ => true);
-        setFlowHandler.SetVoidResult();
-
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
-        cut.FindAll("button").Single(b => b.TextContent == "Realistisch").Click();
 
-        var invocation = Assert.Single(setFlowHandler.Invocations);
-        Assert.Equal("realistic", invocation.Arguments[1]);
+        Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent == "Realistisch");
     }
 
     [Fact]

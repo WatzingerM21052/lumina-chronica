@@ -2,19 +2,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JsRuntime
 
-<div class="@ViewportClass">
-    <div id="@_elementId" class="@FrameClass" tabindex="0" @ref="_frameElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true"></div>
-    @* The inner div (StPageFlip's actual container) deliberately has no Razor-bound
-       attributes -- StPageFlip mutates its classList directly (adds "stf__parent"
-       etc.), and a Blazor-owned class/style binding on the same element would get
-       re-diffed and clobber that on the next render, the same class of bug found
-       and fixed on PdfReader.razor's realistic-mode container (see pdfReader.js's
-       initRealisticView comment). Only the *outer* wrapper's show/hide class is
-       Razor-bound; JS never touches that element. *@
-    <div class="epub-reader-frame--realistic @(ReaderMode == "realistic" ? "is-active" : "")">
-        <div id="@_realisticElementId"></div>
-    </div>
-</div>
+<div id="@_elementId" class="@FrameClass" tabindex="0" @ref="_frameElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true"></div>
 <div class="epub-reader-nav">
     @if (ReaderMode != "scroll")
     {

@@ -27,32 +27,7 @@ export function ensureLibsLoaded() {
     return libsLoadedPromise;
 }
 
-// StPageFlip and html2canvas (issue #189, EPUB realistic page-flip mode)
-// are both classic UMD/global scripts, lazily loaded the same way as
-// epub.js/jszip above -- most reader sessions never touch realistic mode.
-let pageFlipLibLoadedPromise = null;
-function ensurePageFlipLibLoaded() {
-    if (!pageFlipLibLoadedPromise) pageFlipLibLoadedPromise = loadScript("lib/pageflip/page-flip.browser.js");
-    return pageFlipLibLoadedPromise;
-}
-let html2canvasLibLoadedPromise = null;
-function ensureHtml2CanvasLoaded() {
-    if (!html2canvasLibLoadedPromise) html2canvasLibLoadedPromise = loadScript("lib/html2canvas/html2canvas.min.js");
-    return html2canvasLibLoadedPromise;
-}
-
 const instances = new Map();
-
-// Single source of truth for which of the three rendering paths (Book View,
-// Scroll View, Realistic View) owns the container -- issue #189 needed an
-// explicit discriminator the same way issue #182 added one to pdfReader.js,
-// since epub.js's own `flow` ("paginated"/"scrolled") isn't 1:1 with these
-// three modes: Realistic View reuses a "paginated" rendition underneath
-// (see initRealisticView) purely as a content/pagination engine to capture
-// pages from, so `entry.flow` alone can't tell "book" and "realistic" apart.
-function modeOf(flow) {
-    return flow === "scroll" ? "scroll" : flow === "realistic" ? "realistic" : "book";
-}
 
 // epub.js's Rendition/Manager keeps mutable internal state (current view,
 // its own render queue) that isn't safe to touch from two calls at once --
@@ -204,7 +179,7 @@ function setupRendition(entry, elementId, flow) {
     return rendition;
 }
 
-export async function init(elementId, realisticElementId, bytes, initialCfi, fontSize, fontFamily, lineHeight, flow) {
+export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, lineHeight, flow) {
     await ensureLibsLoaded();
 
     // Defensive: a byte[] interop parameter is *usually* a Uint8Array over
@@ -217,48 +192,28 @@ export async function init(elementId, realisticElementId, bytes, initialCfi, fon
         book,
         fontSize,
         contentStyle: { fontFamily: fontFamily || "serif", lineHeight: lineHeight || "normal" },
-        realisticElementId,
-        mode: modeOf(flow),
     };
     instances.set(elementId, entry);
 
-    const rendition = setupRendition(entry, elementId, entry.mode === "scroll" ? "scrolled" : "paginated");
+    const rendition = setupRendition(entry, elementId, flow === "scroll" ? "scrolled" : "paginated");
     await rendition.display(initialCfi || undefined);
-
-    if (entry.mode === "realistic") await initRealisticView(elementId);
 }
 
-// Book View <-> Scroll View <-> Realistic View (issue #174/#189, source spec
-// §14.1). epub.js doesn't support changing an existing rendition's flow in
-// place in this vendored build (same class of "documented API doesn't
-// reliably apply" surprise as themes.register() -- see buildContentRules
-// above), so a real flow change (paginated <-> scrolled) tears the current
-// rendition down and builds a fresh one instead, restoring the reading
-// position via CFI (location-based, so it's meaningful in any flow).
-// Realistic View reuses a "paginated" rendition underneath (see
-// initRealisticView's comment) -- switching into/out of it while already
-// paginated (i.e. Book <-> Realistic) skips the destroy/rebuild entirely
-// and just re-displays the rendition at wherever was visually shown.
+// Book View <-> Scroll View (issue #174, source spec §14.1). epub.js doesn't
+// support changing an existing rendition's flow in place in this vendored
+// build (same class of "documented API doesn't reliably apply" surprise as
+// themes.register() -- see buildContentRules above), so this tears the
+// current rendition down and builds a fresh one instead, restoring the
+// reading position via CFI (location-based, so it's meaningful in either
+// flow) rather than trying to carry over paginated-mode-specific state.
 export async function setFlow(elementId, flow) {
     const entry = instances.get(elementId);
     if (!entry) return;
     await runSerialized(entry, async () => {
-        const newMode = modeOf(flow);
-        const resyncCfi = entry.mode === "realistic"
-            ? teardownRealisticView(elementId, entry)
-            : entry.rendition.currentLocation()?.start?.cfi;
-        entry.mode = newMode;
-
-        const targetFlow = newMode === "scroll" ? "scrolled" : "paginated";
-        if (entry.flow !== targetFlow) {
-            entry.rendition.destroy();
-            const rendition = setupRendition(entry, elementId, targetFlow);
-            await rendition.display(resyncCfi || undefined);
-        } else {
-            await entry.rendition.display(resyncCfi || undefined);
-        }
-
-        if (newMode === "realistic") await initRealisticView(elementId);
+        const currentCfi = entry.rendition.currentLocation()?.start?.cfi;
+        entry.rendition.destroy();
+        const rendition = setupRendition(entry, elementId, flow === "scroll" ? "scrolled" : "paginated");
+        await rendition.display(currentCfi || undefined);
     });
 }
 
@@ -328,380 +283,15 @@ async function withPageTransition(elementId, turn) {
     el?.classList.remove("epub-reader-frame--turning");
 }
 
-// ---- Realistic View: real page-flip animation via StPageFlip (issue #189) -
-// Unlike pdfReader.js's realistic mode (issue #182), which eager-renders
-// every page up front because pdf.js has a real getPage(i)/render() per
-// page, EPUB has no such primitive -- reflowable content is paginated
-// dynamically by CSS columns, so the only way to get a page image is
-// "navigate the rendition to a location, then rasterize whatever's
-// currently displayed" (~735ms measured live, mostly html2canvas). Eager-
-// rendering an entire novel this way would mean minutes of loading, not
-// seconds -- so this captures lazily instead: only the current page is
-// captured on entering the mode, forward navigation into never-visited
-// territory captures on demand, and backward navigation is always into
-// already-captured pages (nothing to re-render, since every visited page
-// stays cached in entry.realistic.images for the rest of the session).
-// The underlying rendition (kept alive, always "paginated" flow) is used
-// purely as the capture source -- entry.realistic.cfis is the actual
-// source of truth for "what page is the user looking at" while this mode
-// is active, since backward flips through cached pages never touch the
-// rendition at all and would leave its own currentLocation() stale.
-
-// A cheap SVG <foreignObject> rasterization trick (no extra dependency)
-// was tried first and found to unconditionally taint the canvas in
-// Chromium regardless of content -- confirmed via a live probe against a
-// real rendition's iframe before writing any of this. html2canvas does
-// work, at the ~735ms/page cost noted above.
-// epub.js's rendition.next()/prev()/display() promises were found live to
-// resolve before the browser has actually painted the newly-navigated-to
-// content -- a capture taken immediately after showed solid black (real
-// content confirmed present a moment later by temporarily hiding the
-// overlay). A fixed double-rAF settle (the standard "wait for a real
-// paint" pattern) fixed same-section forward navigation, but was still
-// too short for a fresh section load (confirmed live: resuming into a
-// section that had never been rendered before -- a heavier operation,
-// creating and laying out a whole new iframe -- still captured blank).
-// Rather than guess a longer fixed delay that might still be wrong on a
-// slower device, captureVisibleEpubPage verifies its own output and
-// retries with backoff instead of trusting timing alone.
-function settlePaint() {
-    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-}
-
-// Resolves any valid CSS color string to its actual RGB by letting the
-// canvas itself parse it, rather than hand-rolling a CSS color parser.
-function colorToRgb(cssColor) {
-    const c = document.createElement("canvas");
-    c.width = 1;
-    c.height = 1;
-    const ctx = c.getContext("2d");
-    ctx.fillStyle = cssColor;
-    ctx.fillRect(0, 0, 1, 1);
-    return ctx.getImageData(0, 0, 1, 1).data;
-}
-
-// Samples a 5x5 grid across the page rather than scanning every pixel --
-// cheap, and a real page with any text or image is extremely unlikely to
-// miss every sample point by chance. A genuinely blank page (rare, but
-// real -- a blank leaf between illustrations) also correctly reports
-// "blank" here and is used as-is once retries are exhausted, which is the
-// right outcome for that case too.
-function looksBlank(canvas, backgroundColor) {
-    const ctx = canvas.getContext("2d");
-    const [bgR, bgG, bgB] = colorToRgb(backgroundColor);
-    for (const xf of [0.1, 0.3, 0.5, 0.7, 0.9]) {
-        for (const yf of [0.1, 0.3, 0.5, 0.7, 0.9]) {
-            const [r, g, b] = ctx.getImageData(Math.floor(xf * canvas.width), Math.floor(yf * canvas.height), 1, 1).data;
-            if (Math.abs(r - bgR) > 8 || Math.abs(g - bgG) > 8 || Math.abs(b - bgB) > 8) return false;
-        }
-    }
-    return true;
-}
-
-// Live-observed settle times ran close to the previous, smaller retry
-// budget's cumulative wait on a fresh, image-heavy section -- widened so a
-// genuinely slow section (more images, a slower device) doesn't exhaust
-// retries while epub.js is still legitimately settling, at the cost of a
-// longer worst-case wait before this function gives up and accepts
-// whatever it has (~4s cumulative backoff across 7 retries, only ever hit
-// on the rare slow case -- the common case still resolves on attempt 1-2).
-const CAPTURE_MAX_ATTEMPTS = 8;
-const CAPTURE_RETRY_BACKOFF_MS = 150;
-
-// Live diagnostics traced the remaining relayout churn to section images
-// still loading: epub.js's column count changed from 3 to 11 on the same
-// section between capture attempts (a huge jump, not just font-metrics
-// settling) as each <img> resolved its real dimensions and content
-// reflowed around it -- confirmed by every "Added image blob:..."
-// html2canvas debug line corresponding to one of this section's images.
-// Waiting for every image in the section to actually finish loading
-// before measuring scrollLeft/cropWidth addresses the trigger directly,
-// rather than only reacting to its symptom via the stale-coordinate
-// check above. A 3s-per-image cap guards against a genuinely broken
-// image (network failure, corrupt data) hanging the capture forever --
-// falls through to capture whatever's there rather than waiting forever.
-function waitForImagesToLoad(doc) {
-    const images = Array.from(doc.images).filter((img) => !img.complete);
-    if (images.length === 0) return Promise.resolve();
-    return Promise.all(images.map((img) => new Promise((resolve) => {
-        const done = () => resolve();
-        img.addEventListener("load", done, { once: true });
-        img.addEventListener("error", done, { once: true });
-        setTimeout(done, 3000);
-    })));
-}
-
-async function captureVisibleEpubPage(elementId, entry, attempt = 1) {
-    const container = document.getElementById(elementId);
-    const epubContainer = container?.querySelector(".epub-container");
-    const iframe = container?.querySelector("iframe");
-    if (!epubContainer || !iframe) throw new Error("EPUB Realistic View: no rendition content to capture yet");
-
-    await waitForImagesToLoad(iframe.contentDocument);
-    await settlePaint();
-
-    // epub.js reveals successive CSS-column "pages" within a section by
-    // scrolling .epub-container horizontally by one column-width per page
-    // (confirmed live: .epub-container.scrollLeft stepped from 0 to
-    // exactly the body's own column-width after one next() call) -- the
-    // iframe itself is sized to the section's *entire* multi-column
-    // width, not just the visible page, so html2canvas against the full
-    // iframe body captures every column at once and has to be cropped
-    // down to just the currently-scrolled-to slice.
-    const scrollLeft = epubContainer.scrollLeft;
-    const cropWidth = epubContainer.clientWidth;
-    const cropHeight = epubContainer.clientHeight;
-
-    // JPEG has no alpha channel -- a transparent html2canvas capture
-    // (backgroundColor: null) flattens to solid black on toDataURL(),
-    // confirmed live (the whole page showed as a black box). Reading the
-    // theme's real reader background instead, same source buildContentRules
-    // already uses for the iframe's own body background rule, so a dark
-    // theme's page doesn't get a wrong white flatten either.
-    const readerBackground = getComputedStyle(document.documentElement).getPropertyValue("--color-bg-reader").trim() || "#ffffff";
-
-    const iframeWidthBefore = iframe.clientWidth;
-    const fullCanvas = await window.html2canvas(iframe.contentDocument.body, {
-        width: iframeWidthBefore,
-        height: iframe.clientHeight,
-        useCORS: true,
-        backgroundColor: readerBackground,
-    });
-
-    // html2canvas takes long enough (several hundred ms on a fresh,
-    // image-heavy section -- confirmed live) that epub.js's own layout can
-    // still be settling underneath it: the live iframe's width changed out
-    // from under a capture mid-flight (4074px when html2canvas started its
-    // clone vs. 14938px by the time it resolved, confirmed live via
-    // diagnostic logging), which silently invalidates the scrollLeft/crop
-    // coordinates read before the call -- html2canvas itself works from a
-    // detached clone taken at start time, so it can't reflect a layout
-    // change that happens after that, but this function's crop math must
-    // match what the LIVE container looks like *now* to be meaningful.
-    // Re-reading and comparing catches that directly, rather than only
-    // catching the downstream symptom via looksBlank().
-    const stale = iframe.clientWidth !== iframeWidthBefore
-        || epubContainer.scrollLeft !== scrollLeft
-        || epubContainer.clientWidth !== cropWidth
-        || epubContainer.clientHeight !== cropHeight;
-    console.error(`[DIAG capture] attempt=${attempt} stale=${stale} iframeW ${iframeWidthBefore}->${iframe.clientWidth} scrollLeft ${scrollLeft}->${epubContainer.scrollLeft}`);
-    if (stale && attempt < CAPTURE_MAX_ATTEMPTS) {
-        await settlePaint();
-        await wait(CAPTURE_RETRY_BACKOFF_MS * attempt);
-        return captureVisibleEpubPage(elementId, entry, attempt + 1);
-    }
-
-    const cropped = document.createElement("canvas");
-    cropped.width = cropWidth;
-    cropped.height = cropHeight;
-    const croppedCtx = cropped.getContext("2d");
-    // Defensive fill before drawImage: if the crop region ever extends
-    // past the source canvas (e.g. the very last, short page of a
-    // section), the uncovered remainder stays a real color instead of
-    // whatever toDataURL('image/jpeg') would flatten empty pixels to.
-    croppedCtx.fillStyle = readerBackground;
-    croppedCtx.fillRect(0, 0, cropWidth, cropHeight);
-    croppedCtx.drawImage(fullCanvas, scrollLeft, 0, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-
-    if (looksBlank(cropped, readerBackground) && attempt < CAPTURE_MAX_ATTEMPTS) {
-        await settlePaint();
-        await wait(CAPTURE_RETRY_BACKOFF_MS * attempt);
-        return captureVisibleEpubPage(elementId, entry, attempt + 1);
-    }
-
-    return { dataUrl: cropped.toDataURL("image/jpeg", 0.85), width: cropWidth, height: cropHeight };
-}
-
-function reportRealisticProgress(entry) {
-    const r = entry.realistic;
-    const cfi = r?.cfis[r.cursor];
-    if (!r || !cfi || !entry.dotNetRef) return;
-    const index = entry.book.spine?.get(cfi)?.index ?? 0;
-    const total = entry.book.spine?.length || 1;
-    const percentage = Math.max(0, Math.min(100, Math.round((index / total) * 100)));
-    entry.dotNetRef.invokeMethodAsync("OnRelocated", cfi, index, percentage);
-}
-
-// Keeps the rendition one page ahead of what's visually shown, so a native
-// StPageFlip drag/corner-tap flip (which can't await an async capture the
-// way next() below does) usually lands on an already-known page instead
-// of hitting the edge of what's captured so far. Best-effort: a reader
-// moving faster than one capture (~735ms) can still briefly outrun this,
-// same documented trade-off as pdfReader.js's realistic mode.
-function schedulePrefetchNext(elementId, entry) {
-    const r = entry.realistic;
-    console.error(`[DIAG prefetch] called cursor=${r?.cursor} images.length=${r?.images.length} prefetching=${r?.prefetching}`);
-    if (!r || r.prefetching || r.cursor + 1 < r.images.length) return;
-    r.prefetching = true;
-    runSerialized(entry, async () => {
-        try {
-            const before = entry.rendition.currentLocation()?.start?.cfi;
-            await entry.rendition.next();
-            const after = entry.rendition.currentLocation()?.start?.cfi;
-            console.error(`[DIAG prefetch] before=${before} after=${after}`);
-            if (after && after !== before) {
-                await settlePaint();
-                const captured = await captureVisibleEpubPage(elementId, entry);
-                r.images.push(captured.dataUrl);
-                r.cfis.push(after);
-                r.pageFlip.updateFromImages(r.images);
-                console.error(`[DIAG prefetch] pushed, images.length now=${r.images.length}`);
-            }
-        } catch (err) {
-            console.error("EPUB Realistic View prefetch failed:", err);
-        } finally {
-            r.prefetching = false;
-        }
-    });
-}
-
-async function initRealisticView(elementId) {
-    const entry = instances.get(elementId);
-    if (!entry) return;
-    try {
-        await initRealisticViewUnsafe(elementId, entry);
-    } catch (err) {
-        // Same "never leave the reader stuck" discipline as pdfReader.js's
-        // realistic mode: log loudly and leave the (already-showing,
-        // already-correctly-positioned) underlying rendition as the
-        // fallback rather than an overlay stuck on nothing.
-        console.error("EPUB Realistic View failed to initialize, falling back to Book View:", err);
-        teardownRealisticView(elementId, entry);
-        entry.mode = "book";
-    }
-}
-
-async function initRealisticViewUnsafe(elementId, entry) {
-    await Promise.all([ensurePageFlipLibLoaded(), ensureHtml2CanvasLoaded()]);
-
-    const overlayContainer = document.getElementById(entry.realisticElementId);
-    if (!overlayContainer) throw new Error("EPUB Realistic View: overlay container not found");
-
-    // A rendition.display() call always precedes this (init()'s own
-    // display(), or setFlow()'s resync/rebuild display()) -- same paint-
-    // timing race as rendition.next() below, so the same settle applies.
-    await settlePaint();
-    const captured = await captureVisibleEpubPage(elementId, entry);
-    if (!instances.has(elementId)) return; // torn down while awaiting the capture
-
-    const pageFlip = new window.St.PageFlip(overlayContainer, {
-        width: captured.width,
-        height: captured.height,
-        size: "fixed",
-        showCover: false,
-        maxShadowOpacity: 0.5,
-        mobileScrollSupport: false,
-    });
-    pageFlip.loadFromImages([captured.dataUrl]);
-
-    // Same container-sizing fix as pdfReader.js's realistic mode:
-    // StPageFlip's own autoSize percentage-based sizing needs a plain
-    // block-flow parent to resolve against, which a flex-centered overlay
-    // isn't -- read the book's own reported bounds instead of trusting it.
-    const bounds = pageFlip.getBoundsRect();
-    overlayContainer.style.width = `${bounds.width}px`;
-    overlayContainer.style.height = `${bounds.height}px`;
-
-    entry.realistic = {
-        pageFlip,
-        images: [captured.dataUrl],
-        cfis: [entry.rendition.currentLocation()?.start?.cfi ?? null],
-        cursor: 0,
-        prefetching: false,
-    };
-
-    // Drag-follow-finger-until-release and tap-a-corner-to-turn are both
-    // StPageFlip's native default interaction -- this only handles
-    // reporting progress for flips the library itself drives (always into
-    // already-captured territory, by the prefetch invariant above);
-    // next()/prev() below update entry.realistic.cursor themselves before
-    // calling the library's own flip(), rather than relying solely on
-    // this event, since a forward flip into new territory needs the
-    // capture to finish *before* the library is told to animate there.
-    pageFlip.on("flip", (e) => {
-        entry.realistic.cursor = e.data;
-        reportRealisticProgress(entry);
-    });
-
-    schedulePrefetchNext(elementId, entry);
-}
-
-// Returns the CFI that was visually shown (entry.realistic.cfis[cursor]),
-// for the caller to resync the underlying rendition to -- backward flips
-// through cached pages never move the rendition, so its own
-// currentLocation() can be stale by the time realistic mode ends.
-function teardownRealisticView(elementId, entry) {
-    const r = entry.realistic;
-    const resyncCfi = r?.cfis[r.cursor];
-    r?.pageFlip?.destroy();
-    entry.realistic = null;
-    const overlayContainer = document.getElementById(entry.realisticElementId);
-    if (overlayContainer) {
-        overlayContainer.innerHTML = "";
-        overlayContainer.style.width = "";
-        overlayContainer.style.height = "";
-    }
-    return resyncCfi;
-}
-
-async function realisticNext(elementId, entry) {
-    const r = entry.realistic;
-    if (!r) return;
-    console.error(`[DIAG next] cursor=${r.cursor} images.length=${r.images.length}`);
-    if (r.cursor + 1 < r.images.length) {
-        // Already captured (prefetch, or the user paged back earlier in
-        // this session) -- flip locally, no rendition/capture work at all.
-        r.cursor += 1;
-        r.pageFlip.flip(r.cursor);
-        reportRealisticProgress(entry);
-        console.error(`[DIAG next] used cached image at cursor=${r.cursor}`);
-        return;
-    }
-    // At the frontier of what's been visited -- advance the real rendition
-    // and capture what it now shows before the library can flip there.
-    const before = entry.rendition.currentLocation()?.start?.cfi;
-    await entry.rendition.next();
-    const after = entry.rendition.currentLocation()?.start?.cfi;
-    console.error(`[DIAG next] frontier before=${before} after=${after}`);
-    if (!after || after === before) return; // end of book -- nothing more to turn to
-    await settlePaint();
-    const captured = await captureVisibleEpubPage(elementId, entry);
-    r.images.push(captured.dataUrl);
-    r.cfis.push(after);
-    r.pageFlip.updateFromImages(r.images);
-    r.cursor += 1;
-    r.pageFlip.flip(r.cursor);
-    reportRealisticProgress(entry);
-    schedulePrefetchNext(elementId, entry);
-}
-
-function realisticPrev(elementId, entry) {
-    const r = entry.realistic;
-    if (!r || r.cursor <= 0) return;
-    // Backward is always into already-captured territory by construction
-    // (every page the cursor could have come from is still in the cache).
-    r.cursor -= 1;
-    r.pageFlip.flip(r.cursor);
-    reportRealisticProgress(entry);
-}
-
 export async function next(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
-    if (entry.mode === "realistic") {
-        await runSerialized(entry, () => realisticNext(elementId, entry));
-        return;
-    }
     await runSerialized(entry, () => withPageTransition(elementId, () => entry.rendition.next()));
 }
 
 export async function prev(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
-    if (entry.mode === "realistic") {
-        await runSerialized(entry, () => realisticPrev(elementId, entry));
-        return;
-    }
     await runSerialized(entry, () => withPageTransition(elementId, () => entry.rendition.prev()));
 }
 
@@ -818,6 +408,5 @@ export function destroy(elementId) {
     // gone; queued here to run *after* whatever's already in flight
     // finishes instead of tearing the rendition down mid-page-turn.
     instances.delete(elementId);
-    if (entry.mode === "realistic") teardownRealisticView(elementId, entry);
     runSerialized(entry, () => entry.book.destroy());
 }
