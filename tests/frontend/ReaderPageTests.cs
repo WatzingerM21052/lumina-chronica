@@ -353,13 +353,14 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
-    public void Reader_PdfFormat_RealisticModeToggle_CallsSetFlowAndHidesZoomControls()
+    public void Reader_PdfFormat_RealisticModeToggle_CallsSetFlowAndKeepsZoomControls()
     {
-        // Issue #182: Realistic View has fixed StPageFlip book geometry, no
-        // zoom concept -- the zoom +/-/reset buttons should disappear from
-        // the nav bar once this mode is active, same pattern as PDF hiding
-        // the font-size rows that don't apply to it (see the settings-menu
-        // test above).
+        // Issue #182, zoom added to Realistic View in a later follow-up
+        // (user-requested: "möglichkeit alles größer zu machen"): StPageFlip's
+        // book geometry is still fixed at init, but pdfReader.js's setZoom now
+        // applies a CSS transform to the already-rendered container instead of
+        // re-rendering -- so unlike the original design, the zoom controls
+        // stay visible and usable in this mode too.
         var handler = new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/books/1", BookJson("PDF"))
             .WhenPathEndsWith("/api/reading/1", NoProgressJson)
@@ -382,7 +383,7 @@ public class ReaderPageTests : BunitContext
 
         var invocation = Assert.Single(setFlowHandler.Invocations);
         Assert.Equal("realistic", invocation.Arguments[1]);
-        Assert.DoesNotContain("pdf-reader-zoom", cut.Markup);
+        Assert.Contains("pdf-reader-zoom", cut.Markup);
     }
 
     [Fact]

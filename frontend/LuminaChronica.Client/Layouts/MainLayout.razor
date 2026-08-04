@@ -1,5 +1,7 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @using LuminaChronica.Client.Components
+@inject NavigationManager Navigation
 
 <div class="app-shell">
     <header class="app-header">
@@ -18,7 +20,7 @@
         </AuthorizeView>
     </header>
 
-    <main class="app-content">
+    <main class="@ContentClass">
         <ErrorPage>
             @Body
         </ErrorPage>
@@ -29,3 +31,27 @@
         <a class="app-footer-link" href="impressum">Impressum</a>
     </footer>
 </div>
+
+@code {
+    // The reader's own Seitenbreite tiers (min(90vw, 90rem) up to
+    // min(94vw, 140rem) -- see EpubReader/PdfReader's ViewportClass) were
+    // silently having zero visible effect: this shared layout's .app-content
+    // caps every page's content column to 88rem regardless, so both Normal
+    // and Breit were being clamped down to the same ~88rem well before
+    // either tier's own max-width ever came into play. The reader route
+    // opts out of that outer cap entirely so its own, more granular width
+    // tiers are what actually governs. MainLayout persists across
+    // client-side navigations (only @Body swaps), so this needs an explicit
+    // LocationChanged subscription -- @Body changing alone doesn't re-render
+    // this component's own markup.
+    private string ContentClass => Navigation.Uri.EndsWith("/read") ? "app-content app-content--reader" : "app-content";
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => StateHasChanged();
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}

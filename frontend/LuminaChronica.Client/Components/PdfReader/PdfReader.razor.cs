@@ -41,7 +41,7 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
         get
         {
             var classes = "pdf-reader-viewport";
-            if (_zoom != 1 && ReaderMode != "realistic") classes += " pdf-reader-viewport--zoomed";
+            if (_zoom != 1) classes += " pdf-reader-viewport--zoomed";
             if (ReaderMode == "scroll") classes += " pdf-reader-viewport--scroll";
             classes += PageWidth switch { "narrow" => " pdf-reader-viewport--width-narrow", "wide" => " pdf-reader-viewport--width-wide", _ => "" };
             return classes;

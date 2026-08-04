@@ -394,6 +394,32 @@ async function initRealisticViewUnsafe(elementId, entry, container) {
     });
 
     entry.pageFlip = pageFlip;
+
+    // Re-applies a zoom level that was already set (e.g. persisted from a
+    // prior Book View session, or the user zoomed, switched to Realistisch,
+    // and came back) -- see applyRealisticZoom below for why this is a CSS
+    // transform rather than a re-render.
+    applyRealisticZoom(elementId, entry);
+}
+
+// Realistic View's book geometry (StPageFlip's width/height) is fixed once
+// at init -- a real page-flip needs a stable size for its own layout math,
+// unlike Book View's single canvas which can just be redrawn at a new
+// scale. Re-rendering every page's image at a new resolution on every zoom
+// click would mean redoing the whole "Buch wird vorbereitet" pipeline each
+// time, unacceptable for what's meant to be a live +/- control -- a CSS
+// transform on the already-rendered container is the cheap alternative,
+// same tradeoff pdfReader.js already accepts elsewhere for anything that
+// isn't a hot path. transform-origin is pinned to top-left rather than the
+// default center so growth is anchored at the same corner
+// pdf-reader-viewport--zoomed's flex-start alignment scrolls from -- see
+// PdfReader.razor.cs's ViewportClass, which now also applies --zoomed in
+// Realistic mode so that scrolling can actually reach the rest of the book.
+function applyRealisticZoom(elementId, entry) {
+    const container = document.getElementById(elementId);
+    if (!container) return;
+    container.style.transformOrigin = "top left";
+    container.style.transform = entry.zoom !== 1 ? `scale(${entry.zoom})` : "";
 }
 
 function teardownRealisticView(elementId, entry) {
@@ -408,6 +434,12 @@ function teardownRealisticView(elementId, entry) {
         // page size the book happened to be showing in Realistic View.
         container.style.width = "";
         container.style.height = "";
+        // Same for the CSS-transform zoom applyRealisticZoom sets -- Book/
+        // Scroll View apply zoom by re-rendering the canvas at a new scale,
+        // not a transform, and a leftover one would visually scale their
+        // canvas twice over.
+        container.style.transform = "";
+        container.style.transformOrigin = "";
     }
 }
 
@@ -459,10 +491,10 @@ export async function setZoom(elementId, zoom) {
     const entry = instances.get(elementId);
     if (!entry) return;
     entry.zoom = zoom;
-    // Realistic View has fixed book geometry (StPageFlip's width/height
-    // are set once at init) -- no zoom concept, and the UI hides the zoom
-    // controls in this mode, but this stays a defensive no-op regardless.
-    if (entry.mode === "realistic") return;
+    if (entry.mode === "realistic") {
+        applyRealisticZoom(elementId, entry);
+        return;
+    }
     // Simplest correct approach for scroll mode: every wrapper's size and
     // every already-rendered canvas depend on zoom, so rebuilding the whole
     // scroll view is far less code than incrementally resizing/re-rendering

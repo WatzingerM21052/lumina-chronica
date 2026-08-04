@@ -862,6 +862,14 @@ select:focus-visible,
    epub.js's "scrolled" flow to have anywhere to scroll. */
 .epub-reader-frame--scroll {
     overflow-y: auto;
+    /* Windows' classic (non-overlay) scrollbar reserves a gutter that isn't
+       accounted for until the vertical scrollbar actually appears -- content
+       sized to the full pre-scrollbar width then overflows horizontally by
+       that same gutter width the instant the vertical one shows up,
+       producing a horizontal scrollbar that serves no real content.
+       scrollbar-gutter reserves the space unconditionally so width
+       calculations are correct from the very first render. */
+    scrollbar-gutter: stable;
 }
 
 /* Realistic View overlay (issue #189) -- StPageFlip draws its own "open
@@ -923,6 +931,10 @@ select:focus-visible,
     align-items: center;
     justify-content: center;
     overflow: auto;
+    /* Same reasoning as epub-reader-frame--scroll's scrollbar-gutter above --
+       applies here too since this element is also the scrolling container
+       in both Scroll View and a zoomed/Realistic View past its own bounds. */
+    scrollbar-gutter: stable;
 }
 
 .pdf-reader-viewport--width-narrow {
@@ -934,11 +946,14 @@ select:focus-visible,
 }
 
 /* Above 100% zoom the frame legitimately grows past the viewport's own
-   size (see pdfReader.js's renderPage) so the viewport must scroll to
-   reveal it. Centered flex content can't be scrolled to its leading edge
-   (no negative scrollLeft/Top), so zoomed mode switches to flex-start
-   alignment instead of center -- the frame anchors top-left and the whole
-   page becomes reachable by scrolling right/down. */
+   size (Book/Scroll View via pdfReader.js's renderPage re-rendering the
+   canvas at a new scale; Realistic View via a CSS transform on the
+   StPageFlip container instead -- see applyRealisticZoom, re-rendering
+   every page's image on each zoom click would be too expensive there) so
+   the viewport must scroll to reveal it. Centered flex content can't be
+   scrolled to its leading edge (no negative scrollLeft/Top), so zoomed mode
+   switches to flex-start alignment instead of center -- the frame anchors
+   top-left and the whole page becomes reachable by scrolling right/down. */
 .pdf-reader-viewport--zoomed {
     align-items: flex-start;
     justify-content: flex-start;
