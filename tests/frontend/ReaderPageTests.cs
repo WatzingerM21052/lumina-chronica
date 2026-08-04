@@ -228,6 +228,49 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
+    public void Reader_MarkdownHeading_GetsGitHubStyleSlugId()
+    {
+        // User-reported: a hand-written TOC's #kapitel-1--der-schleier-...
+        // links (double hyphen, from a heading containing " – ") didn't work
+        // -- Markdig's *default* auto-identifier slug collapses to a single
+        // hyphen instead. AutoIdentifierOptions.GitHub matches what a TOC
+        // written against GitHub's own markdown preview actually expects;
+        // this pins that exact slug so a future pipeline change can't
+        // silently regress it back to the single-hyphen default.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("MD"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "### Kapitel 1 – Der Schleier des Morgens", "text/markdown");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("id=\"kapitel-1--der-schleier-des-morgens\"", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_TxtFormat_SplitsOnPageBreakMarker_IntoSeparateSegments()
+    {
+        // User-requested: a literal ---Seitenumbruch--- line forces a page
+        // break in Book View (CSS break-after, see app.css), since plain
+        // text has no other structure to hang one off. The marker itself
+        // must not appear in the rendered text.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Erster Teil.\n---Seitenumbruch---\nZweiter Teil.", "text/plain");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        var segments = cut.FindAll(".reader-content-txt-segment");
+        Assert.Equal(2, segments.Count);
+        Assert.Equal("Erster Teil.", segments[0].TextContent);
+        Assert.Equal("Zweiter Teil.", segments[1].TextContent);
+        Assert.DoesNotContain("Seitenumbruch", cut.Markup);
+    }
+
+    [Fact]
     public void Reader_RendersMarkdownAsHtml()
     {
         var handler = new RoutedFakeHttpMessageHandler()
@@ -238,7 +281,10 @@ public class ReaderPageTests : BunitContext
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
 
-        Assert.Contains("<h1>Heading</h1>", cut.Markup);
+        // UseAutoIdentifiers (added for TOC anchor-link support, issue #155
+        // follow-up) gives every heading a real id attribute now, so this can't
+        // assert the exact literal "<h1>Heading</h1>" anymore.
+        Assert.Contains("<h1 id=\"heading\">Heading</h1>", cut.Markup);
         Assert.Contains("<strong>bold</strong>", cut.Markup);
     }
 
