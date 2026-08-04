@@ -46,7 +46,17 @@ else
                                 <span class="reader-setting-group">
                                     <button type="button" class="btn @(_readerMode == "book" ? "is-active" : "")" @onclick='() => SetReaderMode("book")'>Buch</button>
                                     <button type="button" class="btn @(_readerMode == "scroll" ? "is-active" : "")" @onclick='() => SetReaderMode("scroll")'>Scroll</button>
-                                    <button type="button" class="btn @(_readerMode == "realistic" ? "is-active" : "")" @onclick='() => SetReaderMode("realistic")'>Realistisch</button>
+                                    @* EPUB's Realistic View (issue #189) stays gated off here -- the section-capture
+                                       implementation still has an unresolved bug where it silently falls back to
+                                       looking identical to Buch View, so the toggle is hidden again rather than
+                                       offering a mode that doesn't actually work. epubReader.js's realistic-view
+                                       code is deliberately left in place (not reverted) as a starting point for a
+                                       future attempt -- only this toggle is hidden. PDF's Realistic View is
+                                       unaffected and stays available. *@
+                                    @if (_book.File.Format is "PDF")
+                                    {
+                                        <button type="button" class="btn @(_readerMode == "realistic" ? "is-active" : "")" @onclick='() => SetReaderMode("realistic")'>Realistisch</button>
+                                    }
                                 </span>
                             </div>
                         }
@@ -186,6 +196,17 @@ else
             return;
         }
         _book = book;
+
+        // A "realistic" mode saved from before the toggle above was hidden again
+        // (issue #189) would otherwise still reach EpubReader's ReaderMode
+        // parameter and try to init the broken realistic view on every load --
+        // the toggle being hidden only stops new selections, not an already
+        // -persisted one. Correct and persist it once here instead.
+        if (_book.File?.Format == "EPUB" && _readerMode == "realistic")
+        {
+            _readerMode = "book";
+            await ReaderSettings.SetReaderModeAsync(_readerMode);
+        }
 
         if (_book.File is null || _book.File.Format is not ("TXT" or "MD" or "EPUB" or "PDF"))
         {
