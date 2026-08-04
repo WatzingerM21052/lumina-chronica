@@ -447,6 +447,24 @@ function buildPageFlip(elementId, entry, width, height) {
     container.appendChild(host);
     entry.realisticHost = host;
 
+    // StPageFlip decides portrait (one page) vs. landscape (two-page spread)
+    // exactly once, at construction, by comparing `host`'s *current* CSS
+    // width against 2x the single-page width above -- confirmed live
+    // against the real vendored library. `container` at this point is
+    // whatever a previous build left it at (or unsized on the very first
+    // build), almost always narrower than a real two-page spread needs, so
+    // without this it locks portrait mode permanently regardless of how
+    // much actual room the viewport has -- reported live as "zeigt nur
+    // rechte Seite und die linke nicht" (the book never gets a chance to
+    // show as an open two-page spread at all). Pre-sizing `container` to
+    // the real available viewport space *before* constructing PageFlip
+    // lets it measure genuine room and choose correctly; applyBounds()
+    // below then shrinks `container` back down to the book's actual
+    // rendered size once the real decision has been made, same as before.
+    const { width: availableWidth } = getAvailableSize(elementId);
+    container.style.width = `${Math.max(availableWidth, width)}px`;
+    container.style.height = `${height}px`;
+
     const pageFlip = new window.St.PageFlip(host, {
         width,
         height,
