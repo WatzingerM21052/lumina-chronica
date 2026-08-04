@@ -40,4 +40,16 @@ public class TextPaginatorService(IJSRuntime jsRuntime)
         var module = await _moduleTask.Value;
         await module.InvokeVoidAsync("destroy", contentId);
     }
+
+    public async Task InitChapterModeAsync(string contentId, object dotNetRef)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("initChapterMode", contentId, dotNetRef);
+    }
+
+    public async Task DestroyChapterModeAsync(string contentId)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("destroyChapterMode", contentId);
+    }
 }
