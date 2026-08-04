@@ -32,7 +32,6 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     public EventCallback<EpubProgress> OnProgress { get; set; }
 
     private readonly string _elementId = $"epub-reader-{Guid.NewGuid():N}";
-    private readonly string _realisticElementId = $"epub-reader-realistic-{Guid.NewGuid():N}";
     private IJSObjectReference? _module;
     private DotNetObjectReference<EpubReader>? _dotNetRef;
     private int _lastFontSize;
@@ -47,21 +46,12 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     private bool _tocMenuOpen;
     private ElementReference _frameElement;
 
-    private string ViewportClass
-    {
-        get
-        {
-            var classes = "epub-reader-viewport";
-            classes += PageWidth switch { "narrow" => " epub-reader-viewport--width-narrow", "wide" => " epub-reader-viewport--width-wide", _ => "" };
-            return classes;
-        }
-    }
-
     private string FrameClass
     {
         get
         {
             var classes = "epub-reader-frame";
+            classes += PageWidth switch { "narrow" => " epub-reader-frame--width-narrow", "wide" => " epub-reader-frame--width-wide", _ => "" };
             if (ReaderMode == "scroll") classes += " epub-reader-frame--scroll";
             return classes;
         }
@@ -81,7 +71,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
             _lastPageWidth = PageWidth;
             _lastReaderMode = ReaderMode;
 
-            await _module.InvokeVoidAsync("init", _elementId, _realisticElementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight, ReaderMode);
+            await _module.InvokeVoidAsync("init", _elementId, Bytes, InitialCfi, FontSize, FontFamily, LineHeight, ReaderMode);
             await _module.InvokeVoidAsync("onRelocated", _elementId, _dotNetRef);
             _toc = await _module.InvokeAsync<List<TocItem>>("getToc", _elementId) ?? [];
             StateHasChanged();
