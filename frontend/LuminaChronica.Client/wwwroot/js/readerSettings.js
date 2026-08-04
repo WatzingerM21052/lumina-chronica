@@ -93,6 +93,22 @@ export function getHideScrollbars() {
     return localStorage.getItem(HIDE_SCROLLBARS_STORAGE_KEY) === "true";
 }
 
+// Aliases for the pre-rename names (this setting shipped first as
+// getScrollbarHide/setScrollbarHide, string-valued). Deployed JS and the
+// Blazor DLL calling it are cached independently (10 min JS cache) and can
+// land on a user's browser out of sync after a rename -- a real incident,
+// not a hypothetical: a fresh DLL calling getHideScrollbars hit a
+// still-cached pre-rename JS bundle that only had getScrollbarHide, and
+// broke the reader page until the JS cache expired. Kept as thin aliases so
+// future renames of interop exports don't reproduce this.
+export function getScrollbarHide() {
+    return getHideScrollbars();
+}
+
+export function setScrollbarHide(value) {
+    setHideScrollbars(value === "both" || value === true);
+}
+
 export function setHideScrollbars(value) {
     localStorage.setItem(HIDE_SCROLLBARS_STORAGE_KEY, String(value));
 }
