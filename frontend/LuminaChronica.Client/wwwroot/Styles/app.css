@@ -826,17 +826,17 @@ select:focus-visible,
 .epub-reader-viewport {
     position: relative;
     width: 100%;
-    max-width: min(94vw, 80rem);
+    max-width: min(90vw, 90rem);
     height: calc(100vh - 11rem);
     margin: 0 auto;
 }
 
 .epub-reader-viewport--width-narrow {
-    max-width: min(94vw, 54rem);
+    max-width: min(90vw, 54rem);
 }
 
 .epub-reader-viewport--width-wide {
-    max-width: min(94vw, 100rem);
+    max-width: min(94vw, 140rem);
 }
 
 .epub-reader-frame {
@@ -891,8 +891,16 @@ select:focus-visible,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: min(94vw, 80rem);
+    max-width: min(90vw, 90rem);
     margin: var(--space-2) auto 0;
+}
+
+.epub-reader-nav--width-narrow {
+    max-width: min(90vw, 54rem);
+}
+
+.epub-reader-nav--width-wide {
+    max-width: min(94vw, 140rem);
 }
 
 .epub-reader-progress {
@@ -900,14 +908,29 @@ select:focus-visible,
     color: var(--color-text-secondary);
 }
 
+/* Seitenbreite (PageWidth) applies here the same way it does to
+   epub-reader-viewport above -- PDF pages are fixed-layout (no reflow to
+   fill extra width the way EPUB text does), but the *viewport* still
+   benefits from more room: less horizontal scrolling once the user zooms
+   in past 100% (see pdf-reader-viewport--zoomed) and, on wide monitors,
+   avoids the reader looking pinned to a narrow middle column regardless
+   of window size. */
 .pdf-reader-viewport {
-    max-width: min(94vw, 80rem);
+    max-width: min(90vw, 90rem);
     height: calc(100vh - 11rem);
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: auto;
+}
+
+.pdf-reader-viewport--width-narrow {
+    max-width: min(90vw, 54rem);
+}
+
+.pdf-reader-viewport--width-wide {
+    max-width: min(94vw, 140rem);
 }
 
 /* Above 100% zoom the frame legitimately grows past the viewport's own
@@ -1009,8 +1032,16 @@ select:focus-visible,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: min(94vw, 80rem);
+    max-width: min(90vw, 90rem);
     margin: var(--space-2) auto 0;
+}
+
+.pdf-reader-nav--width-narrow {
+    max-width: min(90vw, 54rem);
+}
+
+.pdf-reader-nav--width-wide {
+    max-width: min(94vw, 140rem);
 }
 
 .pdf-reader-zoom {

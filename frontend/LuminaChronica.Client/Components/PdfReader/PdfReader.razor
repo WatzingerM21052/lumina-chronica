@@ -3,7 +3,7 @@
 @inject IJSRuntime JsRuntime
 @inject ReaderSettingsService ReaderSettings
 
-<div class="pdf-reader-viewport @(_zoom != 1 && ReaderMode != "realistic" ? "pdf-reader-viewport--zoomed" : "") @(ReaderMode == "scroll" ? "pdf-reader-viewport--scroll" : "")"
+<div class="@ViewportClass"
      tabindex="0" @ref="_viewportElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
     @if (_realisticPreparing)
     {
@@ -11,7 +11,7 @@
     }
     <div id="@_elementId" class="pdf-reader-frame @(_realisticPreparing ? "pdf-reader-frame--hidden" : "")"></div>
 </div>
-<div class="pdf-reader-nav">
+<div class="@NavClass">
     <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
     <span>
         Seite

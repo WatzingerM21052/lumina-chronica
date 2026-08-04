@@ -661,8 +661,23 @@ async function initRealisticViewUnsafe(elementId, entry) {
     // StPageFlip's own auto-sizing resolves to 0x0 inside a flex container,
     // so the container is sized explicitly from the library's own reported
     // bounds instead of trusted to size itself.
+    //
+    // bounds.width is ALWAYS the double-page (spread) width -- StPageFlip
+    // reserves that footprint even in single-page "portrait" mode and
+    // offsets the one visible page inside it. Using it here sized the
+    // container to exactly 2x the page width, which then fed back into
+    // StPageFlip's own portrait-vs-landscape check (it measures *this*
+    // container's width): container == 2x page width means "wide enough
+    // for a spread", so it never fell back to single-page display and
+    // instead rendered genuine two-up spreads too wide for the actual
+    // reader viewport. EPUB pages are independently-padded column
+    // captures, not scanned book leaves that pair with a facing page (see
+    // the showCover comment above), so this always sizes to exactly one
+    // page -- keeps the container itself narrower than 2x page width,
+    // which forces StPageFlip's own usePortrait fallback (default true)
+    // to stay in single-page mode on every flip, not just the first.
     const bounds = pageFlip.getBoundsRect();
-    realisticEl.style.width = `${bounds.width}px`;
+    realisticEl.style.width = `${bounds.pageWidth}px`;
     realisticEl.style.height = `${bounds.height}px`;
 
     // Drag-follow-finger and tap-a-corner-to-turn are both StPageFlip's

@@ -75,15 +75,15 @@ else
                                     <button type="button" class="btn @(_lineHeight == "loose" ? "is-active" : "")" @onclick='() => SetLineHeight("loose")'>Weit</button>
                                 </span>
                             </div>
-                            <div class="reader-setting-row">
-                                <span class="reader-setting-label">Seitenbreite</span>
-                                <span class="reader-setting-group">
-                                    <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>Schmal</button>
-                                    <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>Normal</button>
-                                    <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>Breit</button>
-                                </span>
-                            </div>
                         }
+                        <div class="reader-setting-row">
+                            <span class="reader-setting-label">Seitenbreite</span>
+                            <span class="reader-setting-group">
+                                <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>Schmal</button>
+                                <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>Normal</button>
+                                <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>Breit</button>
+                            </span>
+                        </div>
                         <button type="button" class="btn reader-settings-done" @onclick="ToggleSettingsMenu">Fertig</button>
                     </div>
                 }
@@ -110,7 +110,7 @@ else
     }
     else if (_book.File.Format == "PDF" && _pdfBytes is not null)
     {
-        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" OnProgress="HandlePdfProgress" />
+        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" PageWidth="@_pageWidth" OnProgress="HandlePdfProgress" />
     }
     else
     {
