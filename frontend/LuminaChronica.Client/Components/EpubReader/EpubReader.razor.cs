@@ -29,7 +29,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
     public string ReaderMode { get; set; } = "book";
 
     [Parameter]
-    public string ScrollbarHide { get; set; } = "none";
+    public bool HideScrollbars { get; set; }
 
     [Parameter]
     public EventCallback<EpubProgress> OnProgress { get; set; }
@@ -71,13 +71,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
                 // Only meaningful in Scroll View -- this element (not the
                 // viewport) is the one with overflow-y:auto, see
                 // .epub-reader-frame--scroll in app.css.
-                classes += ScrollbarHide switch
-                {
-                    "vertical" => " scrollbar-hide-vertical",
-                    "horizontal" => " scrollbar-hide-horizontal",
-                    "both" => " scrollbar-hide-both",
-                    _ => "",
-                };
+                if (HideScrollbars) classes += " scrollbar-hide-both";
             }
             return classes;
         }

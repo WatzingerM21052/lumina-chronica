@@ -23,7 +23,7 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     public string PageWidth { get; set; } = "normal";
 
     [Parameter]
-    public string ScrollbarHide { get; set; } = "none";
+    public bool HideScrollbars { get; set; }
 
     [Parameter]
     public EventCallback<PdfProgress> OnProgress { get; set; }
@@ -66,13 +66,7 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
                 // Realistic View can also scroll it when zoomed, but the
                 // preference is scoped to Scroll View specifically per the
                 // source request.
-                classes += ScrollbarHide switch
-                {
-                    "vertical" => " scrollbar-hide-vertical",
-                    "horizontal" => " scrollbar-hide-horizontal",
-                    "both" => " scrollbar-hide-both",
-                    _ => "",
-                };
+                if (HideScrollbars) classes += " scrollbar-hide-both";
             }
             classes += PageWidth switch { "narrow" => " pdf-reader-viewport--width-narrow", "wide" => " pdf-reader-viewport--width-wide", _ => "" };
             return classes;

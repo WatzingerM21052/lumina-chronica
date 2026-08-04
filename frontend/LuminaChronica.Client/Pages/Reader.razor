@@ -63,12 +63,7 @@ else
                             {
                                 <div class="reader-setting-row">
                                     <span class="reader-setting-label">Scrollbalken ausblenden</span>
-                                    <select class="reader-setting-select" value="@_scrollbarHide" @onchange="SetScrollbarHide">
-                                        <option value="none">Nichts</option>
-                                        <option value="vertical">Vertikal</option>
-                                        <option value="horizontal">Horizontal</option>
-                                        <option value="both">Beides</option>
-                                    </select>
+                                    <input type="checkbox" checked="@_hideScrollbars" @onchange="SetHideScrollbars" />
                                 </div>
                             }
                         }
@@ -128,11 +123,11 @@ else
     }
     else if (_book.File.Format == "EPUB" && _epubBytes is not null)
     {
-        <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" FontFamily="@_fontFamily" LineHeight="@_lineHeight" PageWidth="@_pageWidth" ReaderMode="@_readerMode" ScrollbarHide="@_scrollbarHide" OnProgress="HandleEpubProgress" />
+        <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" FontFamily="@_fontFamily" LineHeight="@_lineHeight" PageWidth="@_pageWidth" ReaderMode="@_readerMode" HideScrollbars="@_hideScrollbars" OnProgress="HandleEpubProgress" />
     }
     else if (_book.File.Format == "PDF" && _pdfBytes is not null)
     {
-        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" PageWidth="@_pageWidth" ScrollbarHide="@_scrollbarHide" OnProgress="HandlePdfProgress" OnRealisticUnavailable="HandleRealisticUnavailable" />
+        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" PageWidth="@_pageWidth" HideScrollbars="@_hideScrollbars" OnProgress="HandlePdfProgress" OnRealisticUnavailable="HandleRealisticUnavailable" />
     }
     else
     {
@@ -162,7 +157,7 @@ else
     private string _lineHeight = "normal";
     private string _pageWidth = "normal";
     private string _readerMode = "book";
-    private string _scrollbarHide = "none";
+    private bool _hideScrollbars;
     private bool _settingsMenuOpen;
     private Timer? _saveTimer;
 
@@ -181,7 +176,7 @@ else
         _lineHeight = await ReaderSettings.GetLineHeightAsync();
         _pageWidth = await ReaderSettings.GetPageWidthAsync();
         _readerMode = await ReaderSettings.GetReaderModeAsync();
-        _scrollbarHide = await ReaderSettings.GetScrollbarHideAsync();
+        _hideScrollbars = await ReaderSettings.GetHideScrollbarsAsync();
 
         var bookResponse = await ApiClient.GetAsync<Book>($"/api/books/{Id}");
 
@@ -400,10 +395,10 @@ else
         await ReaderSettings.SetPageWidthAsync(_pageWidth);
     }
 
-    private async Task SetScrollbarHide(ChangeEventArgs e)
+    private async Task SetHideScrollbars(ChangeEventArgs e)
     {
-        _scrollbarHide = e.Value?.ToString() ?? "none";
-        await ReaderSettings.SetScrollbarHideAsync(_scrollbarHide);
+        _hideScrollbars = e.Value is bool b && b;
+        await ReaderSettings.SetHideScrollbarsAsync(_hideScrollbars);
     }
 
     private async Task SetReaderMode(string mode)
