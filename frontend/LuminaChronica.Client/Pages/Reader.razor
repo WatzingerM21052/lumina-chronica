@@ -185,6 +185,7 @@ else
     private string? _pendingRestorePosition;
     private bool _txtMdReaderModeChangedSinceRender;
     private bool _txtMdLayoutChangedSinceRender;
+    private bool _txtMdPaginationInitialized;
 
     private string ReaderContentClass => string.Join(" ", new[]
     {
@@ -335,8 +336,16 @@ else
     {
         if (_book?.File?.Format is not ("TXT" or "MD")) return;
 
-        if (firstRender)
+        // Deliberately not gated on Blazor's own `firstRender` -- that flag
+        // means "the first time this component ever rendered", which fires
+        // during OnParametersSetAsync's very first await suspension (while
+        // _book/_textContent/_renderedMarkdown are all still null, well
+        // before the content that needs paginating exists). Gating on
+        // firstRender here silently skipped pagination init on every real
+        // load; this checks readiness directly and only runs once instead.
+        if (!_txtMdPaginationInitialized && (_textContent is not null || _renderedMarkdown is not null))
         {
+            _txtMdPaginationInitialized = true;
             if (_readerMode == "book")
             {
                 await InitTxtMdPaginationAsync(restorePosition: true);
