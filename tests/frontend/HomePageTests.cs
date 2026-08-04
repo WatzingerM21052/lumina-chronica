@@ -73,10 +73,16 @@ public class HomePageTests : BunitContext
 
         var cut = Render<Home>();
 
-        Assert.Contains("dashboard-stat-value\">4<", cut.Markup);
-        Assert.Contains("dashboard-stat-value\">2<", cut.Markup);
-        Assert.Contains("dashboard-stat-value\">1<", cut.Markup);
-        Assert.Contains("dashboard-stat-value\">3<", cut.Markup);
+        // Issue #180: this used to assert the raw substring
+        // dashboard-stat-value">4< against cut.Markup -- which can never
+        // match, since Home.razor.css gives Home a scoped-CSS id that
+        // Blazor inserts as its own attribute between class="..." and the
+        // element's closing >, e.g. class="dashboard-stat-value" b-xxxxxxx>4.
+        // Querying the actual elements (like the rest of this suite does
+        // elsewhere) isn't sensitive to that attribute's presence, order, or
+        // exact scope hash.
+        var values = cut.FindAll(".dashboard-stat-value").Select(e => e.TextContent).ToList();
+        Assert.Equal(["4", "2", "1", "3"], values);
     }
 
     [Fact]
