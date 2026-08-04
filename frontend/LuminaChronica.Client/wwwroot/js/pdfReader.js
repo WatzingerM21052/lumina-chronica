@@ -32,6 +32,44 @@ function ensurePageFlipLibLoaded() {
 
 const instances = new Map();
 
+// Capped at 2 even on 3x-DPR displays -- quadruples-not-nonuples the
+// render/memory cost per step past that, for a sharpness gain that's
+// negligible at normal reading distance. Confirmed live via code read (no
+// devicePixelRatio anywhere in this file, canvas.width was always set
+// straight from the CSS-pixel viewport size) -- every canvas rendered here
+// was under-resolved on any scaled/HiDPI display, not just when zoomed.
+const OUTPUT_SCALE = Math.min(window.devicePixelRatio || 1, 2);
+
+// Standard pdf.js HiDPI pattern: the canvas *bitmap* (width/height
+// attributes) is sized in real device pixels, its *displayed* CSS size is
+// pinned back down to the logical viewport size via style.width/height (an
+// unstyled canvas otherwise displays at its attribute size, which would
+// make the page render OUTPUT_SCALE times too big on screen), and the
+// render transform scales pdf.js's drawing commands up to match the larger
+// bitmap.
+function sizeCanvasForViewport(canvas, viewport) {
+    canvas.width = Math.floor(viewport.width * OUTPUT_SCALE);
+    canvas.height = Math.floor(viewport.height * OUTPUT_SCALE);
+    canvas.style.width = `${Math.floor(viewport.width)}px`;
+    canvas.style.height = `${Math.floor(viewport.height)}px`;
+    return OUTPUT_SCALE !== 1 ? [OUTPUT_SCALE, 0, 0, OUTPUT_SCALE, 0, 0] : undefined;
+}
+
+// Zoom/Seitenbreite growing the frame past the viewport used to leave the
+// browser's default scrollLeft/Top of 0 in place (flush top-left) even
+// though app.css's grid centering makes the full overflow reachable in
+// both directions -- confirmed live that CSS alignment alone only controls
+// whether the centered position *can* be scrolled to, not where the scroll
+// position starts after a resize. Called after every render that could
+// have changed the frame's size.
+function centerScroll(elementId, { vertical = true } = {}) {
+    const container = document.getElementById(elementId);
+    const viewport = container?.parentElement;
+    if (!viewport) return;
+    viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
+    if (vertical) viewport.scrollTop = (viewport.scrollHeight - viewport.clientHeight) / 2;
+}
+
 // Single source of truth for which of the three rendering paths (Book View,
 // Scroll View, Realistic View) owns the container -- issue #182 replaced the
 // previous entry.pageWrappers-truthy check (a de-facto two-mode discriminator)
@@ -111,11 +149,10 @@ async function renderCurrentPage(elementId) {
         canvas = document.createElement("canvas");
         container.appendChild(canvas);
     }
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    const transform = sizeCanvasForViewport(canvas, viewport);
 
     const context = canvas.getContext("2d");
-    await page.render({ canvasContext: context, viewport }).promise;
+    await page.render({ canvasContext: context, viewport, transform }).promise;
 }
 
 // ---- Scroll View: every page its own wrapper, lazily rendered -------------
@@ -150,12 +187,11 @@ async function renderScrollPage(elementId, pageNumber) {
     const viewport = page.getViewport({ scale: fitScale * entry.zoom });
 
     const canvas = document.createElement("canvas");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    const transform = sizeCanvasForViewport(canvas, viewport);
     wrapper.appendChild(canvas);
 
     const context = canvas.getContext("2d");
-    await page.render({ canvasContext: context, viewport }).promise;
+    await page.render({ canvasContext: context, viewport, transform }).promise;
 }
 
 async function initScrollView(elementId) {
@@ -285,18 +321,32 @@ async function renderAllPagesAsImages(elementId) {
         // Pages with a different aspect ratio than the first (mixed
         // portrait/landscape scans) are centered on a white page rather
         // than stretched to fit, so content is never distorted.
-        const contentScale = Math.min(pageWidth / unscaledViewport.width, pageHeight / unscaledViewport.height);
-        const contentViewport = page.getViewport({ scale: contentScale });
+        //
+        // OUTPUT_SCALE headroom baked into the *asset* here (not into
+        // StPageFlip's displayed size, set separately by buildPageFlip)
+        // -- same HiDPI reasoning as sizeCanvasForViewport above. Deliberately
+        // NOT also baking in headroom for zoom beyond 100%: this render pass
+        // already intermittently hits its own 15s per-page timeout on real
+        // documents (see withTimeout below), and multiplying every page's
+        // pixel area by the zoom range on top of OUTPUT_SCALE would make
+        // that worse, not better. Zooming in Realistic View past 100% will
+        // still show some upscale softening -- a smaller, more honest
+        // regression than today's CSS-transform-scaled blur at every zoom
+        // level including 100%.
+        const assetWidth = Math.round(pageWidth * OUTPUT_SCALE);
+        const assetHeight = Math.round(pageHeight * OUTPUT_SCALE);
+        const assetContentScale = Math.min(assetWidth / unscaledViewport.width, assetHeight / unscaledViewport.height);
+        const assetContentViewport = page.getViewport({ scale: assetContentScale });
 
         const canvas = document.createElement("canvas");
-        canvas.width = pageWidth;
-        canvas.height = pageHeight;
+        canvas.width = assetWidth;
+        canvas.height = assetHeight;
         const context = canvas.getContext("2d");
         context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, pageWidth, pageHeight);
-        context.translate((pageWidth - contentViewport.width) / 2, (pageHeight - contentViewport.height) / 2);
+        context.fillRect(0, 0, assetWidth, assetHeight);
+        context.translate((assetWidth - assetContentViewport.width) / 2, (assetHeight - assetContentViewport.height) / 2);
         await withTimeout(
-            page.render({ canvasContext: context, viewport: contentViewport }).promise,
+            page.render({ canvasContext: context, viewport: assetContentViewport }).promise,
             15000,
             `page ${i} render()`,
         );
@@ -358,36 +408,52 @@ async function initRealisticViewUnsafe(elementId, entry, container) {
     const { images, pageWidth, pageHeight } = await renderAllPagesAsImages(elementId);
     if (!instances.has(elementId)) return; // torn down while awaiting renders
 
-    const pageFlip = new window.St.PageFlip(container, {
-        width: pageWidth,
-        height: pageHeight,
+    // Cached so a later zoom change (see resizeRealisticFlip) can rebuild
+    // the flip UI from these same images instead of re-running the PDF
+    // render pass above -- pageWidth/Height are the *fit-to-box* size at
+    // zoom 1, before OUTPUT_SCALE/zoom are applied.
+    entry.realisticImages = images;
+    entry.realisticBaseWidth = pageWidth;
+    entry.realisticBaseHeight = pageHeight;
+
+    buildPageFlip(elementId, entry, Math.round(pageWidth * entry.zoom), Math.round(pageHeight * entry.zoom));
+    entry.pageFlip.turnToPage(entry.currentPage - 1);
+}
+
+// Confirmed live (synthetic test against the real vendored library, not
+// just the docs): PageFlip.destroy() removes whatever element it was
+// constructed on *from its parent entirely*, not just that element's own
+// children -- calling it directly on `container` (the elementId div Blazor
+// renders and tracks via interop) would silently rip a live element out of
+// Blazor's DOM without Blazor ever knowing. A fresh, disposable JS-owned
+// child ("host") absorbs that removal instead; the same test confirmed
+// `container` and its interop identity survive any number of destroy/
+// rebuild cycles this way, and that turnToPage() after rebuilding on the
+// same cached images lands back on the exact page it was on before (both
+// in well under a millisecond -- rebuilding is cheap; only the PDF render
+// pass in renderAllPagesAsImages is not).
+function buildPageFlip(elementId, entry, width, height) {
+    const container = document.getElementById(elementId);
+    if (!container) return;
+    const host = document.createElement("div");
+    container.appendChild(host);
+    entry.realisticHost = host;
+
+    const pageFlip = new window.St.PageFlip(host, {
+        width,
+        height,
         size: "fixed",
         showCover: true,
         maxShadowOpacity: 0.5,
         mobileScrollSupport: false,
     });
-    pageFlip.loadFromImages(images);
-    pageFlip.turnToPage(entry.currentPage - 1);
-
-    // StPageFlip's own autoSize/size:"fixed" container sizing sets
-    // width:100%/max-width on the container and expects a plain block-flow
-    // parent to resolve that percentage against -- .pdf-reader-frame is a
-    // flex item here (its base rule is display:flex), so width:auto on a
-    // flex item is shrink-to-fit, not fill-container, and with nothing else
-    // to size against, the library's own inline style resolves to 0x0
-    // (confirmed live: .stf__wrapper's padding-bottom aspect-ratio trick had
-    // nothing to size relative to). Explicitly sizing the container from
-    // the book's own reported bounds sidesteps that percentage-vs-flex
-    // interaction entirely, matching this file's existing pattern elsewhere
-    // of computing sizes itself rather than trusting a vendored library's
-    // "auto" behavior against an unknown surrounding layout.
-    const bounds = pageFlip.getBoundsRect();
-    container.style.width = `${bounds.width}px`;
-    container.style.height = `${bounds.height}px`;
+    pageFlip.loadFromImages(entry.realisticImages);
 
     // Drag-follow-finger-until-release and tap-a-corner-to-turn (source
     // request, issue #182) are both StPageFlip's native default interaction
-    // -- no custom gesture wiring needed here.
+    // -- no custom gesture wiring needed here. Re-registered on every
+    // rebuild since destroy() above tore down the previous instance's own
+    // listener along with it.
     pageFlip.on("flip", (e) => {
         entry.currentPage = e.data + 1;
         entry.dotNetRef?.invokeMethodAsync("OnScrolled", entry.currentPage, entry.doc.numPages);
@@ -395,51 +461,61 @@ async function initRealisticViewUnsafe(elementId, entry, container) {
 
     entry.pageFlip = pageFlip;
 
-    // Re-applies a zoom level that was already set (e.g. persisted from a
-    // prior Book View session, or the user zoomed, switched to Realistisch,
-    // and came back) -- see applyRealisticZoom below for why this is a CSS
-    // transform rather than a re-render.
-    applyRealisticZoom(elementId, entry);
+    // StPageFlip's own autoSize/size:"fixed" container sizing sets
+    // width:100%/max-width on `host` and expects a plain block-flow parent
+    // to resolve that percentage against -- .pdf-reader-frame is a flex
+    // item here (its base rule is display:flex), so width:auto on a flex
+    // item is shrink-to-fit, not fill-container, and with nothing else to
+    // size against, the library's own inline style resolves to 0x0
+    // (confirmed live: .stf__wrapper's padding-bottom aspect-ratio trick had
+    // nothing to size relative to). Explicitly sizing `container` (not
+    // `host`, which StPageFlip already sizes itself) from the book's own
+    // reported bounds sidesteps that percentage-vs-flex interaction
+    // entirely, matching this file's existing pattern elsewhere of
+    // computing sizes itself rather than trusting a vendored library's
+    // "auto" behavior against an unknown surrounding layout.
+    const bounds = pageFlip.getBoundsRect();
+    container.style.width = `${bounds.width}px`;
+    container.style.height = `${bounds.height}px`;
 }
 
-// Realistic View's book geometry (StPageFlip's width/height) is fixed once
-// at init -- a real page-flip needs a stable size for its own layout math,
-// unlike Book View's single canvas which can just be redrawn at a new
-// scale. Re-rendering every page's image at a new resolution on every zoom
-// click would mean redoing the whole "Buch wird vorbereitet" pipeline each
-// time, unacceptable for what's meant to be a live +/- control -- a CSS
-// transform on the already-rendered container is the cheap alternative,
-// same tradeoff pdfReader.js already accepts elsewhere for anything that
-// isn't a hot path. transform-origin is pinned to top-left rather than the
-// default center so growth is anchored at the same corner
-// pdf-reader-viewport--zoomed's flex-start alignment scrolls from -- see
-// PdfReader.razor.cs's ViewportClass, which now also applies --zoomed in
-// Realistic mode so that scrolling can actually reach the rest of the book.
-function applyRealisticZoom(elementId, entry) {
-    const container = document.getElementById(elementId);
-    if (!container) return;
-    container.style.transformOrigin = "top left";
-    container.style.transform = entry.zoom !== 1 ? `scale(${entry.zoom})` : "";
+// Rebuilds the flip UI at a new pixel size from the already-rendered
+// images cached in initRealisticViewUnsafe -- no PDF re-render, so this
+// stays cheap enough to run on every +/- click (see buildPageFlip's
+// comment for the measured cost). Replaces an earlier CSS
+// transform:scale() approach: that visually stretched an already-fixed-
+// resolution render (blurrier at every step past 100%, worse than the
+// honest softening documented in renderAllPagesAsImages), fought
+// app.css's centering (transform doesn't participate in layout, so the
+// viewport had nothing but the *pre-scale* box to center against), and
+// desynced StPageFlip's own drag/flip-progress math from the visual size
+// a transform paints without changing layout. Rebuilding at the real
+// target size avoids all three: genuine geometry, no separate centering
+// case needed, and StPageFlip's pointer math is never out of step with
+// what's on screen because nothing above it lies about the size.
+function resizeRealisticFlip(elementId, entry) {
+    if (!entry.pageFlip || !entry.realisticImages) return;
+    const page = entry.currentPage;
+    entry.pageFlip.destroy(); // also removes entry.realisticHost from the DOM -- see buildPageFlip
+    buildPageFlip(elementId, entry, Math.round(entry.realisticBaseWidth * entry.zoom), Math.round(entry.realisticBaseHeight * entry.zoom));
+    entry.pageFlip.turnToPage(page - 1);
+    centerScroll(elementId);
 }
 
 function teardownRealisticView(elementId, entry) {
     entry.pageFlip?.destroy();
     entry.pageFlip = null;
+    entry.realisticHost = null;
+    entry.realisticImages = null;
     const container = document.getElementById(elementId);
     if (container) {
         container.classList.remove("pdf-reader-frame--realistic");
-        // Undo the explicit pixel size set in initRealisticView -- Book/
-        // Scroll View both size themselves via CSS (fit-content / auto),
-        // and a leftover inline width/height would pin them to whatever
-        // page size the book happened to be showing in Realistic View.
+        // Undo the explicit pixel size set in buildPageFlip -- Book/Scroll
+        // View both size themselves via CSS (fit-content / auto), and a
+        // leftover inline width/height would pin them to whatever page
+        // size the book happened to be showing in Realistic View.
         container.style.width = "";
         container.style.height = "";
-        // Same for the CSS-transform zoom applyRealisticZoom sets -- Book/
-        // Scroll View apply zoom by re-rendering the canvas at a new scale,
-        // not a transform, and a leftover one would visually scale their
-        // canvas twice over.
-        container.style.transform = "";
-        container.style.transformOrigin = "";
     }
 }
 
@@ -492,7 +568,7 @@ export async function setZoom(elementId, zoom) {
     if (!entry) return;
     entry.zoom = zoom;
     if (entry.mode === "realistic") {
-        applyRealisticZoom(elementId, entry);
+        resizeRealisticFlip(elementId, entry);
         return;
     }
     // Simplest correct approach for scroll mode: every wrapper's size and
@@ -505,6 +581,36 @@ export async function setZoom(elementId, zoom) {
     } else {
         await renderPage(elementId);
     }
+    centerScroll(elementId, { vertical: entry.mode !== "scroll" });
+}
+
+// Seitenbreite (page width) changes the *available* box (see
+// getAvailableSize's viewport measurement), so unlike zoom -- which only
+// grows/shrinks the fit scale within the same box -- every mode needs a
+// genuine re-render against the new size, not just a resize. Confirmed
+// live as the actual root cause of a reported bug: without this, changing
+// Seitenbreite only ever resized the empty .pdf-reader-viewport around a
+// canvas that was still sized for the *previous* width, which app.css's
+// min-width:fit-content fix (see comment there) then exposed as reachable
+// overflow instead of silently clipping -- but the canvas itself never
+// re-fit the new box until some other action (zoom, page turn) happened to
+// trigger a re-render.
+export async function resize(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    if (entry.mode === "scroll") {
+        await initScrollView(elementId);
+    } else if (entry.mode === "realistic") {
+        // Unlike zoom, this really does need the PDF re-rendered (the fit
+        // box itself changed, not just the scale within it) -- acceptable
+        // since Seitenbreite is a rare, deliberate setting change, not a
+        // hot path like the zoom +/- buttons.
+        teardownRealisticView(elementId, entry);
+        await initRealisticView(elementId);
+    } else {
+        await renderPage(elementId);
+    }
+    centerScroll(elementId, { vertical: entry.mode !== "scroll" });
 }
 
 export function getCurrentPage(elementId) {

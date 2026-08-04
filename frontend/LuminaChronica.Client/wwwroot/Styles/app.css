@@ -870,6 +870,14 @@ select:focus-visible,
        scrollbar-gutter reserves the space unconditionally so width
        calculations are correct from the very first render. */
     scrollbar-gutter: stable;
+    /* Confirmed live: setting only overflow-y forces the UA to compute
+       overflow-x as auto too (per the CSS Overflow spec, "visible" on one
+       axis paired with a non-visible value on the other is not allowed --
+       it silently becomes auto), which combined with scrollbar-gutter above
+       reserves and paints an inert horizontal scrollbar track even when
+       there is zero horizontal overflow to scroll. Explicit overflow-x:
+       hidden opts back out of that pairing rule. */
+    overflow-x: hidden;
 }
 
 /* Realistic View overlay (issue #189) -- StPageFlip draws its own "open
@@ -927,9 +935,20 @@ select:focus-visible,
     max-width: min(90vw, 90rem);
     height: calc(100vh - 11rem);
     margin: 0 auto;
-    display: flex;
+    /* display:flex + align/justify-content:center used to live here, but
+       flex's *content* alignment only ever exposes scrollable overflow on
+       one side once a child grows past the container (the "safe centering"
+       fallback the spec mandates for flex) -- confirmed live via a
+       synthetic 400px-in-200px test: flex center and even grid's own
+       place-content:center both reported only half (100px of 200px) of the
+       needed scrollable range. Grid *item* alignment (align-items/
+       justify-items, not -content) doesn't get that fallback -- the same
+       test measured the full 200px range and a correct scrollWidth. So
+       zoomed/wide content stays genuinely centered *and* fully reachable in
+       both directions, no separate flex-start fallback class needed. */
+    display: grid;
     align-items: center;
-    justify-content: center;
+    justify-items: center;
     overflow: auto;
     /* Same reasoning as epub-reader-frame--scroll's scrollbar-gutter above --
        applies here too since this element is also the scrolling container
@@ -945,27 +964,11 @@ select:focus-visible,
     max-width: min(94vw, 140rem);
 }
 
-/* Above 100% zoom the frame legitimately grows past the viewport's own
-   size (Book/Scroll View via pdfReader.js's renderPage re-rendering the
-   canvas at a new scale; Realistic View via a CSS transform on the
-   StPageFlip container instead -- see applyRealisticZoom, re-rendering
-   every page's image on each zoom click would be too expensive there) so
-   the viewport must scroll to reveal it. Centered flex content can't be
-   scrolled to its leading edge (no negative scrollLeft/Top), so zoomed mode
-   switches to flex-start alignment instead of center -- the frame anchors
-   top-left and the whole page becomes reachable by scrolling right/down. */
-.pdf-reader-viewport--zoomed {
-    align-items: flex-start;
-    justify-content: flex-start;
-}
-
-/* Scroll View (issue #174) -- same flex-start reasoning as the zoomed rule
-   above: a top-anchored, vertically stacked document can't be centered the
-   way a single fit-content page can, since centering can't be scrolled to
-   its own leading edge. */
+/* Scroll View (issue #174) -- a top-anchored, vertically stacked document
+   shouldn't be vertically centered (it's taller than the viewport by
+   design), but should stay horizontally centered like a single page. */
 .pdf-reader-viewport--scroll {
-    align-items: center;
-    justify-content: flex-start;
+    align-items: start;
 }
 
 .pdf-reader-frame {
@@ -979,6 +982,20 @@ select:focus-visible,
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Confirmed live: as a grid item with overflow:hidden, this frame's
+       automatic min-width resolves to 0 instead of its content size (the
+       CSS Sizing spec only uses a content-based automatic minimum when the
+       item's own overflow is visible), so .pdf-reader-viewport's grid
+       layout was free to compress the frame's *scrollable overflow region*
+       down to the viewport's own width whenever a page (zoomed, or a
+       narrower Seitenbreite than the rendered canvas) was actually wider --
+       silently clipping the excess instead of leaving it reachable via the
+       viewport's scrollbar. A synthetic test (200px grid container,
+       overflow:hidden child wanting 400px) measured scrollWidth stuck at
+       300 with no min-width set, and the full 400 once min-width:
+       fit-content was added -- flex-shrink:0 measured no different from
+       unset, since the parent is grid, not flex. */
+    min-width: fit-content;
 }
 
 .pdf-reader-frame canvas {
