@@ -452,6 +452,25 @@ async function captureCurrentSection(elementId, entry, sectionIndex, cfi, attemp
     await waitForImagesToLoad(doc);
     await settlePaint();
 
+    // epub.js can swap in a fresh iframe while the two awaits above are
+    // pending -- confirmed live: a plain page load straight into a
+    // persisted "Realistisch" preference (the cold-start path, entry.mode
+    // already "realistic" before the first capture) hit this every time,
+    // throwing "Cannot read properties of null (reading 'scrollWidth')"
+    // because the iframe grabbed before the awaits had already been
+    // detached by the time this line ran. Its own post-display layout is
+    // still settling at that point; manually switching to Realistic View
+    // later in a session never hits it because epub.js has long since
+    // finished settling by then. Treat a detached iframe as the same kind
+    // of "layout still settling" condition as the scrollWidth check below
+    // and retry the whole section instead of throwing straight to the
+    // Book View fallback.
+    if (!iframe.isConnected) {
+        if (attempt >= CAPTURE_MAX_ATTEMPTS) throw new Error("Realistic View: epub.js iframe never settled");
+        await wait(CAPTURE_RETRY_BACKOFF_MS * attempt);
+        return captureCurrentSection(elementId, entry, sectionIndex, cfi, attempt + 1);
+    }
+
     const epubContainer = iframe.closest(".epub-container") || iframe.parentElement;
     const scrollWidthBefore = epubContainer.scrollWidth;
     const clientWidth = epubContainer.clientWidth;
@@ -645,11 +664,11 @@ async function initRealisticViewUnsafe(elementId, entry) {
         width: r.pageWidth,
         height: r.pageHeight,
         size: "fixed",
-        // false, unlike pdfReader.js's realistic view: each captured image here
-        // is already one full page with its own padding baked in (a captured
-        // epub.js column), not a scanned book leaf that pairs naturally with its
-        // facing page. showCover: true would pair them into 2-up spreads and
-        // scale both down to fit, clipping/misaligning the left page's margin.
+        // false (also the library's own default, kept explicit here): only
+        // marks the first/last page as a single "hard cover" page rather than
+        // part of a pairing -- NOT the single-vs-spread display control, despite
+        // an earlier version of this comment claiming otherwise. That control
+        // is usePortrait + the container-width check described below.
         showCover: false,
         // StPageFlip only ever shows one page per view (its "portrait" spread,
         // vs. a paired-up "landscape" spread) when its own measurement of this
