@@ -114,7 +114,18 @@ function buildContentRules(entry) {
     const lineHeight = LINE_HEIGHTS[entry.contentStyle.lineHeight] || LINE_HEIGHTS.normal;
 
     return {
-        body: { background, color, "font-family": fontFamily, "line-height": lineHeight },
+        body: { background, color, "line-height": lineHeight },
+        // Confirmed live (Drachenreiter EPUB): Schriftart had zero visible
+        // effect because this rule only ever set font-family on <body>, and
+        // most real EPUBs carry their own non-!important `p { font-family:
+        // ... }` rule -- a *direct* declaration on the element beats an
+        // *inherited* one from body regardless of specificity or stylesheet
+        // order, since inheritance isn't part of the same cascade
+        // competition at all. !important on body wouldn't have helped
+        // either, for the same reason. Targeting every element directly
+        // (matching the img !important precedent below) is the only way to
+        // reliably win against a book's own per-element font-family rules.
+        "*": { "font-family": `${fontFamily} !important` },
         a: { color: linkColor },
         // min(100%, 28em) rather than a flat 100%: 100% alone only stops
         // an image overflowing its container, it doesn't scale with font

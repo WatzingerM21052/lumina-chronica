@@ -32,7 +32,9 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     private int _pageCount;
     private double _zoom = 1;
     private string _lastReaderMode = "";
+    private string _lastPageWidth = "";
     private bool _readerModeChangedSinceRender;
+    private bool _pageWidthChangedSinceRender;
     private bool _realisticPreparing;
     private ElementReference _viewportElement;
 
@@ -41,7 +43,6 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
         get
         {
             var classes = "pdf-reader-viewport";
-            if (_zoom != 1) classes += " pdf-reader-viewport--zoomed";
             if (ReaderMode == "scroll") classes += " pdf-reader-viewport--scroll";
             classes += PageWidth switch { "narrow" => " pdf-reader-viewport--width-narrow", "wide" => " pdf-reader-viewport--width-wide", _ => "" };
             return classes;
@@ -68,6 +69,7 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
             if (_module is null) return; // no JS runtime backing this call (e.g. bUnit's default Loose mode)
 
             _lastReaderMode = ReaderMode;
+            _lastPageWidth = PageWidth;
             _dotNetRef = DotNetObjectReference.Create(this);
 
             _realisticPreparing = ReaderMode == "realistic";
@@ -107,6 +109,21 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
             _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
             StateHasChanged();
         }
+        else if (_pageWidthChangedSinceRender && _module is not null)
+        {
+            // Deferred here for the same reason as the reader-mode branch
+            // above -- ViewportClass's width-narrow/wide modifier only
+            // takes effect once Blazor has actually patched the DOM, and
+            // resize() needs the *new* .pdf-reader-viewport size in place
+            // before it measures the container to re-fit the canvas.
+            // Without this, Seitenbreite only ever resized the empty
+            // viewport around a canvas that was still rendered for the
+            // *previous* width -- issue reported live: Schmal left a
+            // too-wide canvas silently clipped by the frame's own
+            // overflow:hidden instead of scaled down or scrollable.
+            _pageWidthChangedSinceRender = false;
+            await _module.InvokeVoidAsync("resize", _elementId);
+        }
     }
 
     protected override void OnParametersSet()
@@ -116,6 +133,12 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
         {
             _lastReaderMode = ReaderMode;
             _readerModeChangedSinceRender = true;
+        }
+
+        if (PageWidth != _lastPageWidth)
+        {
+            _lastPageWidth = PageWidth;
+            _pageWidthChangedSinceRender = true;
         }
     }
 
