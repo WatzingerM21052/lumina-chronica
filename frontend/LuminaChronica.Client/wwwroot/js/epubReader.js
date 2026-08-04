@@ -421,8 +421,23 @@ function getEpubIframe(elementId) {
     return document.getElementById(elementId)?.querySelector("iframe") || null;
 }
 
+// html2canvas has no built-in timeout -- a live spike proved it CAN render a
+// whole section correctly, but a direct-module test hung indefinitely on a
+// later call with no thrown error (same "worker round-trip that just never
+// settles" class of failure pdfReader.js already hit and wrapped, see its
+// own withTimeout). Because captureCurrentSection always runs inside
+// runSerialized's queue, a single stuck call would otherwise wedge *every*
+// later operation on this instance forever, not just this one capture.
+function withTimeout(promise, ms, label) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Realistic View: ${label} timed out after ${ms}ms`)), ms)),
+    ]);
+}
+
 const CAPTURE_MAX_ATTEMPTS = 5;
 const CAPTURE_RETRY_BACKOFF_MS = 150;
+const CAPTURE_TIMEOUT_MS = 15000;
 
 // Captures the section epub.js is *currently displaying* (the hidden,
 // kept-alive rendition underneath the overlay -- see initRealisticView),
@@ -430,31 +445,40 @@ const CAPTURE_RETRY_BACKOFF_MS = 150;
 // Must run inside runSerialized: it reads/relies on entry.rendition's
 // current position, which next()/prev()/goTo() also touch.
 async function captureCurrentSection(elementId, entry, sectionIndex, cfi, attempt = 1) {
+    console.error(`[DIAG realistic] captureCurrentSection start section=${sectionIndex} attempt=${attempt}`);
     const iframe = getEpubIframe(elementId);
     if (!iframe?.contentDocument) throw new Error("Realistic View: no epub.js iframe to capture");
     const doc = iframe.contentDocument;
 
     await waitForImagesToLoad(doc);
+    console.error(`[DIAG realistic] images loaded section=${sectionIndex}`);
     await settlePaint();
+    console.error(`[DIAG realistic] paint settled section=${sectionIndex}`);
 
     const epubContainer = iframe.closest(".epub-container") || iframe.parentElement;
     const scrollWidthBefore = epubContainer.scrollWidth;
     const clientWidth = epubContainer.clientWidth;
     const clientHeight = epubContainer.clientHeight;
+    console.error(`[DIAG realistic] measured section=${sectionIndex} scrollWidth=${scrollWidthBefore} clientWidth=${clientWidth} clientHeight=${clientHeight}`);
 
     const themeStyles = getComputedStyle(document.documentElement);
     const bg = themeStyles.getPropertyValue("--color-bg-reader").trim() || "#ffffff";
 
-    const strip = await window.html2canvas(doc.body, {
-        backgroundColor: bg,
-        width: scrollWidthBefore,
-        windowWidth: scrollWidthBefore,
-        height: clientHeight,
-        x: 0,
-        y: 0,
-        scrollX: 0,
-        scrollY: 0,
-    });
+    const strip = await withTimeout(
+        window.html2canvas(doc.body, {
+            backgroundColor: bg,
+            width: scrollWidthBefore,
+            windowWidth: scrollWidthBefore,
+            height: clientHeight,
+            x: 0,
+            y: 0,
+            scrollX: 0,
+            scrollY: 0,
+        }),
+        CAPTURE_TIMEOUT_MS,
+        `html2canvas section ${sectionIndex}`,
+    );
+    console.error(`[DIAG realistic] html2canvas done section=${sectionIndex} stripW=${strip.width}`);
 
     // Re-check after the (relatively slow, image-heavy) capture call --
     // if epub.js's layout was still settling, retry the whole section
