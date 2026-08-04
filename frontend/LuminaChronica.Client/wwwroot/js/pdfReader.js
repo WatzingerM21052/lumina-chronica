@@ -482,9 +482,37 @@ function buildPageFlip(elementId, entry, width, height) {
     // entirely, matching this file's existing pattern elsewhere of
     // computing sizes itself rather than trusting a vendored library's
     // "auto" behavior against an unknown surrounding layout.
-    const bounds = pageFlip.getBoundsRect();
-    container.style.width = `${bounds.width}px`;
-    container.style.height = `${bounds.height}px`;
+    //
+    // getBoundsRect().width is ALWAYS the two-page-spread width (2x the
+    // single page width passed to the constructor), even when the library
+    // has decided to render a single page in "portrait" orientation (e.g.
+    // a book with an odd page count, or a container too narrow for a
+    // spread) -- confirmed live against the real vendored library: sizing
+    // `container` to the full spread width while StPageFlip paints a
+    // single portrait page stretches that page vertically to fill the
+    // extra width and preserve its aspect ratio, roughly doubling its
+    // rendered height and leaving it clipped top/bottom by this frame's
+    // overflow:hidden -- reported live as "only half the book shown,
+    // shifted right". `bounds.pageWidth` is the single-page width the
+    // formula already computes; using it instead of `bounds.width` in
+    // portrait mode gives the page the width it actually needs, which
+    // measured live also self-corrects the height back to `bounds.height`
+    // with no separate fix needed there.
+    applyBounds();
+    // The library can flip orientation again after this initial build (its
+    // own resize handling reacts even in size:"fixed" mode, confirmed live
+    // by shrinking `container` post-build and watching the canvas repaint
+    // at the corrected size) -- without this listener, a later orientation
+    // change would leave `container` sized for whichever orientation was
+    // current at build time, reintroducing the same stretched/clipped page.
+    pageFlip.on("changeOrientation", applyBounds);
+
+    function applyBounds() {
+        const bounds = pageFlip.getBoundsRect();
+        const isPortrait = pageFlip.getOrientation() === "portrait";
+        container.style.width = `${isPortrait ? bounds.pageWidth : bounds.width}px`;
+        container.style.height = `${bounds.height}px`;
+    }
 }
 
 // Rebuilds the flip UI at a new pixel size from the already-rendered
