@@ -803,6 +803,39 @@ select:focus-visible,
     max-width: 54rem;
 }
 
+/* TXT/MD Book View (issue #155): #reader-content becomes the clipping
+   viewport (fixed height, hidden overflow) and #reader-content-inner
+   (textPaginator.js) becomes the CSS multi-column box that overflows it
+   horizontally -- one column per page, same technique epub.js uses
+   internally for its own paginated flow. Scroll View is unaffected: this
+   class is only applied when Ansicht is set to "Buch". */
+.reader-content--paginated {
+    height: calc(100vh - 14rem);
+    max-height: none;
+    overflow: hidden;
+}
+
+.reader-content-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 42rem;
+    margin: var(--space-2) auto 0;
+}
+
+.reader-content-nav--width-narrow {
+    max-width: 34rem;
+}
+
+.reader-content-nav--width-wide {
+    max-width: 54rem;
+}
+
+.reader-content-nav span {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+}
+
 /* min(100%, 28em) rather than a flat 100% -- 100% alone only stops an
    image overflowing its container, it doesn't scale with the font-size
    change .reader-content's inline font-size drives; em is relative to the

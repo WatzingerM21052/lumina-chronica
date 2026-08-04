@@ -26,6 +26,7 @@ builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<BlobUrlService>();
 builder.Services.AddScoped<ScrollTrackerService>();
+builder.Services.AddScoped<TextPaginatorService>();
 builder.Services.AddScoped<ReaderSettingsService>();
 builder.Services.AddScoped<OfflineStorageService>();
 builder.Services.AddScoped<BibleClientService>();

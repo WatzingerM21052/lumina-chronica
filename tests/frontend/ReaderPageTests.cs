@@ -32,6 +32,7 @@ public class ReaderPageTests : BunitContext
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ScrollTrackerService>();
+        Services.AddSingleton<TextPaginatorService>();
         Services.AddSingleton<ReaderSettingsService>();
         Services.AddSingleton<OfflineStorageService>();
     }
@@ -82,21 +83,72 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
-    public void Reader_TxtFormat_SettingsMenu_DoesNotShowReaderModeToggle()
+    public void Reader_TxtFormat_SettingsMenu_ShowsReaderModeToggle_WithoutRealisticOption()
     {
-        // TXT/MD are continuous-scroll-only -- real pagination is a separate,
-        // later story (issue #174) -- so the Book/Scroll View toggle should
-        // only appear for EPUB/PDF, which actually support both.
+        // Issue #155: TXT/MD gained a real Book/Scroll View toggle (CSS
+        // multi-column pagination, see textPaginator.js) -- Realistisch stays
+        // PDF-only, that's unrelated (StPageFlip/pdf.js specific).
         var handler = new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
             .WhenPathEndsWith("/api/reading/1", NoProgressJson)
             .WhenPathEndsWith("/api/books/1/file", "Hello from a plain text book.", "text/plain");
         UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
 
-        Assert.DoesNotContain("Ansicht", cut.Markup);
+        Assert.Contains("Ansicht", cut.Markup);
+        Assert.DoesNotContain("Realistisch", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_TxtFormat_BookMode_ShowsPageNav_ScrollMode_DoesNot()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Hello from a plain text book.", "text/plain");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+        JSInterop.SetupModule("./js/textPaginator.js").Setup<int>("init", _ => true).SetResult(1);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("Weiter ▶", cut.Markup);
+        Assert.Contains("◀ Zurück", cut.Markup);
+        Assert.Contains("reader-content--paginated", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent == "Scroll").Click();
+
+        Assert.DoesNotContain("Weiter ▶", cut.Markup);
+        Assert.DoesNotContain("◀ Zurück", cut.Markup);
+        Assert.DoesNotContain("reader-content--paginated", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_TxtFormat_PersistedRealisticMode_CoercedToBook()
+    {
+        // Same coercion class as EPUB's (Reader_EpubFormat_PersistedRealisticMode_CoercedToBook)
+        // -- _readerMode is one global persisted setting shared across every
+        // format, so a value from a PDF/EPUB session ("realistic") could
+        // otherwise reach TXT/MD, which only understands "book"/"scroll".
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Hello from a plain text book.", "text/plain");
+        UseHandler(handler);
+        var readerSettingsModule = JSInterop.SetupModule("./js/readerSettings.js");
+        readerSettingsModule.Setup<string>("getReaderMode", _ => true).SetResult("realistic");
+        var setReaderModeHandler = readerSettingsModule.SetupVoid("setReaderMode", _ => true);
+        setReaderModeHandler.SetVoidResult();
+        JSInterop.SetupModule("./js/textPaginator.js").Setup<int>("init", _ => true).SetResult(1);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains(setReaderModeHandler.Invocations, i => i.Arguments[0] as string == "book");
+        Assert.Contains("Weiter ▶", cut.Markup);
     }
 
     [Fact]
