@@ -27,7 +27,32 @@ export function ensureLibsLoaded() {
     return libsLoadedPromise;
 }
 
+// StPageFlip and html2canvas (issue #189, Realistic View) are both classic
+// UMD scripts (globals `St.PageFlip` / `html2canvas`), lazy-loaded the same
+// way as epub.js itself -- most reader sessions never touch Realistic View.
+let pageFlipLibLoadedPromise = null;
+function ensurePageFlipLibLoaded() {
+    if (!pageFlipLibLoadedPromise) pageFlipLibLoadedPromise = loadScript("lib/pageflip/page-flip.browser.js");
+    return pageFlipLibLoadedPromise;
+}
+
+let html2canvasLoadedPromise = null;
+function ensureHtml2CanvasLoaded() {
+    if (!html2canvasLoadedPromise) html2canvasLoadedPromise = loadScript("lib/html2canvas/html2canvas.min.js");
+    return html2canvasLoadedPromise;
+}
+
 const instances = new Map();
+
+// Single source of truth for which of the three rendering paths (Book View,
+// Scroll View, Realistic View) owns the container -- mirrors pdfReader.js's
+// same-named helper. Realistic View reuses the *same* "paginated" epub.js
+// rendition as Book View underneath (kept alive as a hidden capture source,
+// see initRealisticView) -- only Scroll actually needs a different epub.js
+// flow.
+function modeOf(flow) {
+    return flow === "scroll" ? "scroll" : flow === "realistic" ? "realistic" : "book";
+}
 
 // epub.js's Rendition/Manager keeps mutable internal state (current view,
 // its own render queue) that isn't safe to touch from two calls at once --
@@ -179,7 +204,7 @@ function setupRendition(entry, elementId, flow) {
     return rendition;
 }
 
-export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, lineHeight, flow) {
+export async function init(elementId, realisticElementId, bytes, initialCfi, fontSize, fontFamily, lineHeight, flow) {
     await ensureLibsLoaded();
 
     // Defensive: a byte[] interop parameter is *usually* a Uint8Array over
@@ -192,31 +217,56 @@ export async function init(elementId, bytes, initialCfi, fontSize, fontFamily, l
         book,
         fontSize,
         contentStyle: { fontFamily: fontFamily || "serif", lineHeight: lineHeight || "normal" },
+        realisticElementId,
+        mode: modeOf(flow),
     };
     instances.set(elementId, entry);
 
+    // Realistic View also renders "paginated" underneath -- see modeOf.
     const rendition = setupRendition(entry, elementId, flow === "scroll" ? "scrolled" : "paginated");
     await rendition.display(initialCfi || undefined);
+
+    if (entry.mode === "realistic") await initRealisticView(elementId);
 }
 
-// Book View <-> Scroll View (issue #174, source spec §14.1). epub.js doesn't
-// support changing an existing rendition's flow in place in this vendored
-// build (same class of "documented API doesn't reliably apply" surprise as
-// themes.register() -- see buildContentRules above), so this tears the
-// current rendition down and builds a fresh one instead, restoring the
-// reading position via CFI (location-based, so it's meaningful in either
-// flow) rather than trying to carry over paginated-mode-specific state.
+// Book View <-> Scroll View <-> Realistic View (issue #174, extended by
+// #189). epub.js doesn't support changing an existing rendition's flow in
+// place in this vendored build (same class of "documented API doesn't
+// reliably apply" surprise as themes.register() -- see buildContentRules
+// above), so an actual epub.js flow change (anything involving Scroll) tears
+// the current rendition down and builds a fresh one, restoring the reading
+// position via CFI. Book <-> Realistic is cheaper: both use the same
+// underlying "paginated" rendition (Realistic just overlays a StPageFlip
+// capture on top of it), so no rebuild is needed there.
 export async function setFlow(elementId, flow) {
     const entry = instances.get(elementId);
     if (!entry) return;
+    const newMode = modeOf(flow);
+    if (newMode === entry.mode) return;
+    if (entry.mode === "realistic") teardownRealisticView(entry);
+
     await runSerialized(entry, async () => {
-        const currentCfi = entry.rendition.currentLocation()?.start?.cfi;
-        entry.rendition.destroy();
-        const rendition = setupRendition(entry, elementId, flow === "scroll" ? "scrolled" : "paginated");
-        await rendition.display(currentCfi || undefined);
+        const newEpubFlow = newMode === "scroll" ? "scrolled" : "paginated";
+        if (entry.flow !== newEpubFlow) {
+            const currentCfi = entry.rendition.currentLocation()?.start?.cfi;
+            entry.rendition.destroy();
+            const rendition = setupRendition(entry, elementId, newEpubFlow);
+            await rendition.display(currentCfi || undefined);
+        }
+        entry.mode = newMode;
+        if (newMode === "realistic") await initRealisticView(elementId);
     });
 }
 
+// Font size/family/line-height/page-width changes below always apply to the
+// hidden underlying rendition (kept correct for whenever the user leaves
+// Realistic View, or for the next section captureNextSection captures), but
+// deliberately do *not* retroactively re-capture pages already sitting in
+// entry.realistic.pages -- same honest scope cut as PDF Realistic View
+// disabling zoom entirely; changing reading settings mid-flip is rare
+// enough that a brief mismatch until the next section change is an
+// acceptable tradeoff against the cost of a full realistic-view rebuild on
+// every settings tweak.
 export function setFontSize(elementId, fontSize) {
     const entry = instances.get(elementId);
     if (!entry) return;
@@ -283,15 +333,353 @@ async function withPageTransition(elementId, turn) {
     el?.classList.remove("epub-reader-frame--turning");
 }
 
+// ---- Realistic View: real page-flip via StPageFlip, captured section-by-
+// section (issue #189) ------------------------------------------------------
+//
+// Two earlier approaches were tried and abandoned before this one (see
+// Roadmap.md's "EPUB Realistic View" entries for the full history):
+// eagerly rendering the whole book up front doesn't scale to a 300-page
+// novel (no "render page N" primitive for reflowable content, only
+// "navigate to a location, then rasterize what's showing", at a real
+// per-page cost); capturing one page at a time on demand (mirroring the
+// live-scrolled epub.js viewport) chased a stale-coordinate race against
+// epub.js's own column relayout for eight PRs and was reverted.
+//
+// This version captures an entire *section* in a single html2canvas call
+// (epub.js lays out every column of a section in the DOM at once for its
+// CSS-multi-column pagination, even the ones scrolled out of view -- a
+// capture targeting the section's full scrollWidth renders all of them,
+// confirmed via a live spike before writing this), then slices that one
+// canvas into per-page images locally with plain canvas math. Navigating
+// between pages *within* an already-captured section is then a pure local
+// array lookup -- no DOM measurement, no live capture, nothing left to
+// race. A new live capture only happens when crossing into a section that
+// hasn't been captured yet, roughly once per chapter instead of once per
+// page, which is both far less exposed to relayout timing and far cheaper
+// overall for a long book.
+
+function settlePaint() {
+    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+// Waits for every <img> in a section to finish loading before any capture
+// measurement -- confirmed live (the previous per-page attempt, PR #198) as
+// the actual root cause of stale captures: html2canvas can take over a
+// second on an image-heavy section, long enough for epub.js's own column
+// relayout to still be running underneath it as each image resolves its
+// real dimensions (column count observed jumping 3->11 on the same section
+// between capture attempts). A capped per-image timeout guards against an
+// image that never fires load/error (e.g. a broken src) hanging this
+// forever.
+function waitForImagesToLoad(doc) {
+    const images = Array.from(doc.images).filter((img) => !img.complete);
+    if (images.length === 0) return Promise.resolve();
+    return Promise.all(images.map((img) => new Promise((resolve) => {
+        const done = () => resolve();
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+        setTimeout(done, 3000);
+    })));
+}
+
+function colorToRgb(cssColor) {
+    const c = document.createElement("canvas");
+    c.width = 1;
+    c.height = 1;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = cssColor;
+    ctx.fillRect(0, 0, 1, 1);
+    return ctx.getImageData(0, 0, 1, 1).data;
+}
+
+// Coarse blank-page detector -- samples a 5x5 grid rather than every pixel
+// (cheap, and a genuine capture failure is either fully blank or fully
+// fine, never a handful of stray correct pixels). Checked per sliced page,
+// not on the raw multi-column strip, so a failure localized to one column
+// (e.g. only the first column of a section actually rendered) is caught
+// instead of averaged away by the other, correctly-rendered columns.
+function looksBlank(canvas, backgroundColor) {
+    const ctx = canvas.getContext("2d");
+    const bg = colorToRgb(backgroundColor);
+    const tolerance = 8;
+    const cols = 5;
+    const rows = 5;
+    for (let cx = 0; cx < cols; cx++) {
+        for (let cy = 0; cy < rows; cy++) {
+            const x = Math.min(canvas.width - 1, Math.floor((canvas.width * (cx + 0.5)) / cols));
+            const y = Math.min(canvas.height - 1, Math.floor((canvas.height * (cy + 0.5)) / rows));
+            const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
+            if (Math.abs(r - bg[0]) > tolerance || Math.abs(g - bg[1]) > tolerance || Math.abs(b - bg[2]) > tolerance) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function getEpubIframe(elementId) {
+    return document.getElementById(elementId)?.querySelector("iframe") || null;
+}
+
+const CAPTURE_MAX_ATTEMPTS = 5;
+const CAPTURE_RETRY_BACKOFF_MS = 150;
+
+// Captures the section epub.js is *currently displaying* (the hidden,
+// kept-alive rendition underneath the overlay -- see initRealisticView),
+// slices it into per-page images, and appends them to entry.realistic.pages.
+// Must run inside runSerialized: it reads/relies on entry.rendition's
+// current position, which next()/prev()/goTo() also touch.
+async function captureCurrentSection(elementId, entry, sectionIndex, cfi, attempt = 1) {
+    const iframe = getEpubIframe(elementId);
+    if (!iframe?.contentDocument) throw new Error("Realistic View: no epub.js iframe to capture");
+    const doc = iframe.contentDocument;
+
+    await waitForImagesToLoad(doc);
+    await settlePaint();
+
+    const epubContainer = iframe.closest(".epub-container") || iframe.parentElement;
+    const scrollWidthBefore = epubContainer.scrollWidth;
+    const clientWidth = epubContainer.clientWidth;
+    const clientHeight = epubContainer.clientHeight;
+
+    const themeStyles = getComputedStyle(document.documentElement);
+    const bg = themeStyles.getPropertyValue("--color-bg-reader").trim() || "#ffffff";
+
+    const strip = await window.html2canvas(doc.body, {
+        backgroundColor: bg,
+        width: scrollWidthBefore,
+        windowWidth: scrollWidthBefore,
+        height: clientHeight,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
+    });
+
+    // Re-check after the (relatively slow, image-heavy) capture call --
+    // if epub.js's layout was still settling, retry the whole section
+    // rather than slicing a strip whose width no longer matches reality.
+    const scrollWidthAfter = epubContainer.scrollWidth;
+    if (scrollWidthAfter !== scrollWidthBefore) {
+        if (attempt >= CAPTURE_MAX_ATTEMPTS) throw new Error("Realistic View: section layout never settled");
+        await wait(CAPTURE_RETRY_BACKOFF_MS * attempt);
+        return captureCurrentSection(elementId, entry, sectionIndex, cfi, attempt + 1);
+    }
+
+    // epub.js's CSS-multi-column layout puts real space (column-gap)
+    // between columns -- confirmed live via getComputedStyle on the
+    // rendered body; naively slicing at multiples of columnWidth alone
+    // lands each slice partway into the gap plus the next column, both of
+    // which read as "blank" via the check below. The real stride is
+    // columnWidth + columnGap.
+    const bodyStyles = getComputedStyle(doc.body);
+    const columnWidth = Math.round(parseFloat(bodyStyles.columnWidth)) || clientWidth;
+    const columnGap = Math.round(parseFloat(bodyStyles.columnGap)) || 0;
+    const stride = columnWidth + columnGap;
+    const numPages = Math.max(1, Math.round(scrollWidthAfter / stride));
+
+    const images = [];
+    let anyBlank = false;
+    for (let i = 0; i < numPages; i++) {
+        const slice = document.createElement("canvas");
+        slice.width = columnWidth;
+        slice.height = clientHeight;
+        const ctx = slice.getContext("2d");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, columnWidth, clientHeight);
+        ctx.drawImage(strip, i * stride, 0, columnWidth, clientHeight, 0, 0, columnWidth, clientHeight);
+        if (looksBlank(slice, bg)) anyBlank = true;
+        images.push(slice.toDataURL("image/jpeg", 0.85));
+    }
+
+    if (anyBlank) {
+        if (attempt >= CAPTURE_MAX_ATTEMPTS) throw new Error("Realistic View: section captured blank after max attempts");
+        await wait(CAPTURE_RETRY_BACKOFF_MS * attempt);
+        return captureCurrentSection(elementId, entry, sectionIndex, cfi, attempt + 1);
+    }
+
+    const r = entry.realistic;
+    if (!r.pageWidth) {
+        r.pageWidth = columnWidth;
+        r.pageHeight = clientHeight;
+    }
+    const startFlat = r.pages.length;
+    r.pages.push(...images);
+    r.sectionMeta.set(sectionIndex, { startFlat, count: images.length, cfi: cfi || "" });
+    r.lastSectionIndex = sectionIndex;
+
+    r.pageFlip?.updateFromImages(r.pages);
+}
+
+// Advances the real (hidden) rendition to the next spine section and
+// captures it -- called both when the user's local flip cursor reaches the
+// end of already-captured pages (must await this before flipping) and
+// speculatively ahead of that point (maybeSchedulePrefetch, fire-and-forget)
+// so a fast forward flip usually doesn't have to wait at all. Returns false
+// at the end of the book.
+async function captureNextSection(elementId, entry) {
+    const r = entry.realistic;
+    if (!r) return false;
+    const total = entry.book.spine?.length || 0;
+    const nextIndex = (r.lastSectionIndex ?? -1) + 1;
+    if (nextIndex >= total) return false;
+    const section = entry.book.spine.get(nextIndex);
+    if (!section) return false;
+
+    await entry.rendition.display(section.href);
+    const loc = entry.rendition.currentLocation();
+    await captureCurrentSection(elementId, entry, nextIndex, loc?.start?.cfi);
+    return true;
+}
+
+// Resume/progress reporting in Realistic View is deliberately
+// section-granular, not per-page: a per-page CFI would need epub.js's live
+// rendition to actually visit that exact page (the very thing this design
+// avoids doing on every flip). Resuming at "the start of the section you
+// were reading" is an honest, explicit scope cut for a personal reading
+// app, the same spirit as PDF Realistic View's own scope cuts.
+function reportRealisticProgress(entry, flatIndex) {
+    if (!entry.dotNetRef) return;
+    const r = entry.realistic;
+    if (!r) return;
+    let sectionIndex = r.lastSectionIndex ?? 0;
+    let cfi = "";
+    for (const [idx, meta] of r.sectionMeta) {
+        if (flatIndex >= meta.startFlat && flatIndex < meta.startFlat + meta.count) {
+            sectionIndex = idx;
+            cfi = meta.cfi;
+            break;
+        }
+    }
+    const total = entry.book.spine?.length || 1;
+    const percentage = Math.max(0, Math.min(100, Math.round((sectionIndex / total) * 100)));
+    entry.dotNetRef.invokeMethodAsync("OnRelocated", cfi, sectionIndex, percentage);
+}
+
+const PREFETCH_TRIGGER_PAGES_REMAINING = 2;
+
+function maybeSchedulePrefetch(elementId, entry, flatIndex) {
+    const r = entry.realistic;
+    if (!r || r.prefetching) return;
+    if (r.pages.length - flatIndex - 1 > PREFETCH_TRIGGER_PAGES_REMAINING) return;
+    r.prefetching = true;
+    runSerialized(entry, () => captureNextSection(elementId, entry))
+        .catch((err) => console.error("Realistic View: background prefetch failed", err))
+        .finally(() => { r.prefetching = false; });
+}
+
+async function initRealisticView(elementId) {
+    const entry = instances.get(elementId);
+    if (!entry) return;
+    try {
+        await initRealisticViewUnsafe(elementId, entry);
+    } catch (err) {
+        // A failed capture must not leave the reader stuck on an empty
+        // overlay with no way out -- log loudly (matches pdfReader.js's
+        // same fallback reasoning) and drop back to Book View.
+        console.error("EPUB Realistic View failed to initialize, falling back to Book View:", err);
+        teardownRealisticView(entry);
+        entry.mode = "book";
+    }
+}
+
+async function initRealisticViewUnsafe(elementId, entry) {
+    await ensurePageFlipLibLoaded();
+    await ensureHtml2CanvasLoaded();
+
+    entry.realistic = {
+        pages: [],
+        sectionMeta: new Map(),
+        lastSectionIndex: null,
+        pageFlip: null,
+        pageWidth: 0,
+        pageHeight: 0,
+        prefetching: false,
+    };
+
+    const loc = entry.rendition.currentLocation();
+    const startIndex = loc?.start?.index ?? 0;
+    await captureCurrentSection(elementId, entry, startIndex, loc?.start?.cfi);
+    if (!instances.has(elementId)) return; // torn down while awaiting the capture
+
+    const r = entry.realistic;
+    const realisticEl = document.getElementById(entry.realisticElementId);
+    if (!realisticEl) throw new Error("Realistic View: overlay element missing");
+
+    const pageFlip = new window.St.PageFlip(realisticEl, {
+        width: r.pageWidth,
+        height: r.pageHeight,
+        size: "fixed",
+        showCover: true,
+        maxShadowOpacity: 0.5,
+        mobileScrollSupport: false,
+    });
+    pageFlip.loadFromImages(r.pages);
+
+    // Same percentage-vs-flex-item sizing interaction as PdfReader.razor's
+    // realistic mode (see pdfReader.js's initRealisticViewUnsafe) --
+    // StPageFlip's own auto-sizing resolves to 0x0 inside a flex container,
+    // so the container is sized explicitly from the library's own reported
+    // bounds instead of trusted to size itself.
+    const bounds = pageFlip.getBoundsRect();
+    realisticEl.style.width = `${bounds.width}px`;
+    realisticEl.style.height = `${bounds.height}px`;
+
+    // Drag-follow-finger and tap-a-corner-to-turn are both StPageFlip's
+    // native default interaction -- no custom gesture wiring needed.
+    pageFlip.on("flip", (e) => {
+        reportRealisticProgress(entry, e.data);
+        maybeSchedulePrefetch(elementId, entry, e.data);
+    });
+
+    r.pageFlip = pageFlip;
+    reportRealisticProgress(entry, 0);
+}
+
+function teardownRealisticView(entry) {
+    entry.realistic?.pageFlip?.destroy();
+    const realisticEl = document.getElementById(entry.realisticElementId);
+    if (realisticEl) {
+        realisticEl.style.width = "";
+        realisticEl.style.height = "";
+    }
+    entry.realistic = null;
+}
+
+async function realisticNext(elementId, entry) {
+    const r = entry.realistic;
+    if (!r?.pageFlip) return;
+    const current = r.pageFlip.getCurrentPageIndex();
+    if (current + 1 >= r.pages.length) {
+        const captured = await runSerialized(entry, () => captureNextSection(elementId, entry));
+        if (!captured) return; // end of book
+    }
+    r.pageFlip.flipNext();
+}
+
+function realisticPrev(entry) {
+    // Backward is always into already-captured territory -- entry.realistic
+    // only ever grows forward, so no capture is ever needed going back.
+    entry.realistic?.pageFlip?.flipPrev();
+}
+
 export async function next(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
+    if (entry.mode === "realistic") {
+        await realisticNext(elementId, entry);
+        return;
+    }
     await runSerialized(entry, () => withPageTransition(elementId, () => entry.rendition.next()));
 }
 
 export async function prev(elementId) {
     const entry = instances.get(elementId);
     if (!entry) return;
+    if (entry.mode === "realistic") {
+        realisticPrev(entry);
+        return;
+    }
     await runSerialized(entry, () => withPageTransition(elementId, () => entry.rendition.prev()));
 }
 
@@ -352,7 +740,19 @@ export async function getToc(elementId) {
 export async function goTo(elementId, href) {
     const entry = instances.get(elementId);
     if (!entry) return;
-    await runSerialized(entry, () => entry.rendition.display(href));
+    await runSerialized(entry, async () => {
+        await entry.rendition.display(href);
+        // A TOC jump can land anywhere in the book, forward or backward of
+        // whatever entry.realistic.pages currently covers -- captured pages
+        // only ever grow forward from wherever Realistic View was entered
+        // (see captureNextSection), so an arbitrary jump re-anchors by
+        // rebuilding fresh at the new location rather than trying to splice
+        // a disjoint range into the existing flat page array.
+        if (entry.mode === "realistic") {
+            teardownRealisticView(entry);
+            await initRealisticView(elementId);
+        }
+    });
 }
 
 // Best-effort spine-index-based percentage -- deliberately not using
@@ -408,5 +808,6 @@ export function destroy(elementId) {
     // gone; queued here to run *after* whatever's already in flight
     // finishes instead of tearing the rendition down mid-page-turn.
     instances.delete(elementId);
+    if (entry.mode === "realistic") teardownRealisticView(entry);
     runSerialized(entry, () => entry.book.destroy());
 }
