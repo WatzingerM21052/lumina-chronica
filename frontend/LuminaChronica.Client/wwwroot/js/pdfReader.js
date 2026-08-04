@@ -52,7 +52,12 @@ function sizeCanvasForViewport(canvas, viewport) {
     canvas.height = Math.floor(viewport.height * OUTPUT_SCALE);
     canvas.style.width = `${Math.floor(viewport.width)}px`;
     canvas.style.height = `${Math.floor(viewport.height)}px`;
-    return OUTPUT_SCALE !== 1 ? [OUTPUT_SCALE, 0, 0, OUTPUT_SCALE, 0, 0] : undefined;
+    // null, not undefined -- matches pdf.js's own documented usage of this
+    // parameter (`transform: null` means "no extra transform"). `undefined
+    // !== null`, so an internal `transform !== null` check (rather than a
+    // truthiness check) would treat undefined as "yes, a transform was
+    // given" and then fail trying to use it as a 6-element matrix.
+    return OUTPUT_SCALE !== 1 ? [OUTPUT_SCALE, 0, 0, OUTPUT_SCALE, 0, 0] : null;
 }
 
 // Zoom/Seitenbreite growing the frame past the viewport used to leave the
