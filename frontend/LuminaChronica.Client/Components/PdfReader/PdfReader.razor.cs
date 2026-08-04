@@ -23,6 +23,9 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     public string PageWidth { get; set; } = "normal";
 
     [Parameter]
+    public string ScrollbarHide { get; set; } = "none";
+
+    [Parameter]
     public EventCallback<PdfProgress> OnProgress { get; set; }
 
     // Realistic View can silently fail to initialize (a pre-existing pdf.js
@@ -55,7 +58,22 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
         get
         {
             var classes = "pdf-reader-viewport";
-            if (ReaderMode == "scroll") classes += " pdf-reader-viewport--scroll";
+            if (ReaderMode == "scroll")
+            {
+                classes += " pdf-reader-viewport--scroll";
+                // Only meaningful in Scroll View -- this is the element with
+                // overflow:auto (see .pdf-reader-viewport in app.css); Book/
+                // Realistic View can also scroll it when zoomed, but the
+                // preference is scoped to Scroll View specifically per the
+                // source request.
+                classes += ScrollbarHide switch
+                {
+                    "vertical" => " scrollbar-hide-vertical",
+                    "horizontal" => " scrollbar-hide-horizontal",
+                    "both" => " scrollbar-hide-both",
+                    _ => "",
+                };
+            }
             classes += PageWidth switch { "narrow" => " pdf-reader-viewport--width-narrow", "wide" => " pdf-reader-viewport--width-wide", _ => "" };
             return classes;
         }

@@ -703,6 +703,40 @@ select:focus-visible,
     width: 100%;
 }
 
+.reader-setting-select {
+    font-family: inherit;
+    font-size: var(--font-size-small);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-light);
+    color: var(--color-text-primary);
+}
+
+/* Scrollbar-hide preference (source request) for Scroll View -- purely
+   cosmetic, the container stays scrollable via mouse wheel/touch/keyboard
+   either way. Firefox's scrollbar-width has no per-axis variant (it's
+   all-or-nothing), so "vertical"/"horizontal" only take visible effect in
+   Chromium/WebKit browsers, which do support per-axis ::-webkit-scrollbar
+   targeting; Firefox users choosing just one axis will still see both
+   until they pick "both" or "none". "both" hides reliably everywhere. */
+.scrollbar-hide-vertical::-webkit-scrollbar:vertical {
+    display: none;
+}
+
+.scrollbar-hide-horizontal::-webkit-scrollbar:horizontal {
+    display: none;
+}
+
+.scrollbar-hide-both {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.scrollbar-hide-both::-webkit-scrollbar {
+    display: none;
+}
+
 /* Same toggle-button + absolute-positioned-popover pattern as
    .reader-settings-menu, but a scrollable list instead of setting rows. */
 .epub-toc-menu {
