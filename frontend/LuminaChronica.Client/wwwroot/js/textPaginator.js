@@ -17,8 +17,18 @@ function measure(viewportId, contentId) {
     const content = document.getElementById(contentId);
     if (!viewport || !content) return null;
 
-    const width = viewport.clientWidth;
-    const height = viewport.clientHeight;
+    // viewportId (#reader-content) carries the reader's own padding
+    // (app.css's .reader-content rule) -- clientWidth/clientHeight include
+    // that padding, but contentId is a plain child sitting *inside* it, so
+    // using the raw clientWidth/clientHeight overshoots by the padding
+    // amount on every side, clipping a padding-width sliver of every
+    // column's left edge (and the content's bottom) once overflow:hidden
+    // clips the box. Subtract the viewport's own padding first.
+    const cs = getComputedStyle(viewport);
+    const paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const width = viewport.clientWidth - paddingX;
+    const height = viewport.clientHeight - paddingY;
 
     content.style.transform = "translateX(0)";
     content.style.columnWidth = `${width}px`;
