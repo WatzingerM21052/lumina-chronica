@@ -82,17 +82,17 @@ export function setReaderMode(mode) {
     localStorage.setItem(READER_MODE_STORAGE_KEY, mode);
 }
 
-// Which native scrollbar(s) to hide in Scroll View ("none"/"vertical"/
-// "horizontal"/"both") -- source request, a purely cosmetic preference
-// (the container stays scrollable either way; see app.css's scrollbar-hide-*
-// classes for how each is actually hidden).
-const SCROLLBAR_HIDE_STORAGE_KEY = "lumina_reader_scrollbar_hide";
-const DEFAULT_SCROLLBAR_HIDE = "none";
+// Whether to hide Scroll View's scrollbars -- source request, a purely
+// cosmetic preference (the container stays scrollable either way; see
+// app.css's scrollbar-hide-both class, which works identically across
+// Chromium/WebKit/Firefox, unlike the per-axis webkit-only variant this
+// setting started as before being simplified down to a single checkbox).
+const HIDE_SCROLLBARS_STORAGE_KEY = "lumina_reader_hide_scrollbars";
 
-export function getScrollbarHide() {
-    return localStorage.getItem(SCROLLBAR_HIDE_STORAGE_KEY) || DEFAULT_SCROLLBAR_HIDE;
+export function getHideScrollbars() {
+    return localStorage.getItem(HIDE_SCROLLBARS_STORAGE_KEY) === "true";
 }
 
-export function setScrollbarHide(value) {
-    localStorage.setItem(SCROLLBAR_HIDE_STORAGE_KEY, value);
+export function setHideScrollbars(value) {
+    localStorage.setItem(HIDE_SCROLLBARS_STORAGE_KEY, String(value));
 }

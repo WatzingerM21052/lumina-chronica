@@ -82,15 +82,15 @@ public class ReaderSettingsService(IJSRuntime jsRuntime)
         await module.InvokeVoidAsync("setReaderMode", mode);
     }
 
-    public async Task<string> GetScrollbarHideAsync()
+    public async Task<bool> GetHideScrollbarsAsync()
     {
         var module = await _moduleTask.Value;
-        return await module.InvokeAsync<string>("getScrollbarHide");
+        return await module.InvokeAsync<bool>("getHideScrollbars");
     }
 
-    public async Task SetScrollbarHideAsync(string value)
+    public async Task SetHideScrollbarsAsync(bool value)
     {
         var module = await _moduleTask.Value;
-        await module.InvokeVoidAsync("setScrollbarHide", value);
+        await module.InvokeVoidAsync("setHideScrollbars", value);
     }
 }
