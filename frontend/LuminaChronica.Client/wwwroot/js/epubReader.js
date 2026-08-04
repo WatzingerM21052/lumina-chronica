@@ -645,7 +645,12 @@ async function initRealisticViewUnsafe(elementId, entry) {
         width: r.pageWidth,
         height: r.pageHeight,
         size: "fixed",
-        showCover: true,
+        // false, unlike pdfReader.js's realistic view: each captured image here
+        // is already one full page with its own padding baked in (a captured
+        // epub.js column), not a scanned book leaf that pairs naturally with its
+        // facing page. showCover: true would pair them into 2-up spreads and
+        // scale both down to fit, clipping/misaligning the left page's margin.
+        showCover: false,
         maxShadowOpacity: 0.5,
         mobileScrollSupport: false,
     });
