@@ -4,7 +4,9 @@
 @using System.Globalization
 @using System.Text
 @using Markdig
+@using Markdig.Extensions.AutoIdentifiers
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
@@ -120,7 +122,10 @@ else
             <div id="@ContentInnerId">
                 @if (_book.File.Format == "TXT")
                 {
-                    <pre>@_textContent</pre>
+                    @foreach (var segment in _txtSegments)
+                    {
+                        <pre class="reader-content-txt-segment">@segment</pre>
+                    }
                 }
                 else
                 {
@@ -152,15 +157,33 @@ else
 }
 
 @code {
-    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().Build();
+    // UseAutoIdentifiers: without it, Markdig headings get no id attribute at
+    // all, so a hand-written TOC's #kapitel-1--... links have nothing to
+    // target -- confirmed via a real MD file with such a TOC, reported live.
+    // GitHub option specifically: Markdig's *default* slug algorithm collapses
+    // "Kapitel 1 – Der..." to a single hyphen (kapitel-1-der-...), but a TOC
+    // written assuming GitHub's own preview renderer expects GitHub's algorithm
+    // (kapitel-1--der..., double hyphen from " – ") -- verified directly
+    // against the reported file's exact heading text before picking this,
+    // not assumed.
+    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().UseAutoIdentifiers(AutoIdentifierOptions.GitHub).Build();
     private static readonly TimeSpan SaveInterval = TimeSpan.FromSeconds(15);
 
     [Parameter]
     public int Id { get; set; }
 
+    // A literal marker line a TXT author can place to force a page break in
+    // Book View (there's no other structure in plain text to hang one off,
+    // unlike MD's "---" which already renders as a real <hr> element) --
+    // user-requested. Split out at render time into separate <pre> blocks so
+    // CSS break-after (see .reader-content-txt-segment in app.css) has an
+    // element boundary to act on.
+    private const string TxtPageBreakMarker = "---Seitenumbruch---";
+
     private Book? _book;
     private string? _loadErrorMessage;
     private string? _textContent;
+    private List<string> _txtSegments = [];
     private string? _renderedMarkdown;
     private byte[]? _epubBytes;
     private string? _initialCfi;
@@ -186,6 +209,7 @@ else
     private bool _txtMdReaderModeChangedSinceRender;
     private bool _txtMdLayoutChangedSinceRender;
     private bool _txtMdPaginationInitialized;
+    private DotNetObjectReference<Reader>? _txtMdDotNetRef;
 
     private string ReaderContentClass => string.Join(" ", new[]
     {
@@ -304,6 +328,9 @@ else
         else
         {
             _textContent = text;
+            _txtSegments = text.Split(TxtPageBreakMarker)
+                .Select(segment => segment.Trim('\r', '\n'))
+                .ToList();
         }
 
         // Book mode's restore (a page index, not a fraction) happens in
@@ -384,11 +411,26 @@ else
 
     private async Task InitTxtMdPaginationAsync(bool restorePosition)
     {
-        _txtMdPageCount = await TextPaginator.InitAsync(ContentViewportId, ContentInnerId);
+        _txtMdDotNetRef ??= DotNetObjectReference.Create(this);
+        _txtMdPageCount = await TextPaginator.InitAsync(ContentViewportId, ContentInnerId, _txtMdDotNetRef);
         var targetPage = restorePosition && _pendingRestorePosition is { } raw
             ? ConvertSavedPositionToPage(raw, _txtMdPageCount)
             : 1;
         _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, targetPage);
+        StateHasChanged();
+    }
+
+    // Fired from textPaginator.js when a TOC/anchor link click inside the
+    // paginated content jumps to a different page -- native browser anchor
+    // scrolling can't work through #reader-content's overflow:hidden +
+    // transform-based pagination, so the JS click handler computes the
+    // target page and turns to it directly, then reports back here so the
+    // "Seite X / Y" nav bar (and the next Weiter/Zurück click, which reads
+    // _txtMdCurrentPage) doesn't go stale.
+    [JSInvokable]
+    public void OnTxtMdPageChanged(int page)
+    {
+        _txtMdCurrentPage = page;
         StateHasChanged();
     }
 
@@ -572,5 +614,6 @@ else
         {
             _ = SaveProgressAsync();
         }
+        _txtMdDotNetRef?.Dispose();
     }
 }

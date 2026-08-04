@@ -824,6 +824,20 @@ select:focus-visible,
     overflow: hidden;
 }
 
+/* User-requested: MD's "---" (renders as a real <hr>) and TXT's literal
+   ---Seitenumbruch--- marker (split into separate .reader-content-txt-segment
+   <pre> blocks by Reader.razor, since plain text has no element to hang a
+   break rule off) should force a new page in Book View rather than letting
+   the column layout pack straight through a chapter boundary. break-after
+   is the real CSS Fragmentation property for this -- verified against real
+   multi-column layout before shipping, not assumed to work from the spec
+   text alone. No-op in Scroll View, since #reader-content-inner has no
+   column layout there. */
+.reader-content--paginated hr,
+.reader-content--paginated .reader-content-txt-segment {
+    break-after: column;
+}
+
 .reader-content-nav {
     display: flex;
     justify-content: space-between;

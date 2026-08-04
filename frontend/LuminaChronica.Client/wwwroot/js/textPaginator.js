@@ -40,10 +40,11 @@ function measure(viewportId, contentId) {
     return { width, height, pageCount };
 }
 
-export function init(viewportId, contentId) {
+export function init(viewportId, contentId, dotNetRef) {
     const m = measure(viewportId, contentId);
     if (!m) return 1;
-    instances.set(contentId, { ...m, currentPage: 1 });
+    instances.set(contentId, { ...m, currentPage: 1, dotNetRef });
+    wireAnchorClicks(contentId);
     return m.pageCount;
 }
 
@@ -56,8 +57,47 @@ export function relayout(viewportId, contentId) {
     const m = measure(viewportId, contentId);
     if (!m) return 1;
     const entry = instances.get(contentId);
-    instances.set(contentId, { ...m, currentPage: entry?.currentPage ?? 1 });
+    instances.set(contentId, { ...m, currentPage: entry?.currentPage ?? 1, dotNetRef: entry?.dotNetRef });
     return m.pageCount;
+}
+
+// A TOC (or any in-content anchor link, e.g. Markdig's UseAutoIdentifiers
+// heading ids) targets an element by id -- the browser's native "scroll
+// into view" for such a click can't work here, since #reader-content
+// clips with overflow:hidden and this content is positioned via a
+// translateX transform, not real scroll offset. Intercept the click,
+// compute which page the target id falls on, and jump there directly.
+// Wired once per content element (guarded via a dataset flag) since this
+// listener needs to survive Scroll<->Book toggles, which reuse the same
+// DOM node rather than recreating it -- re-attaching on every init() would
+// stack duplicate listeners.
+function wireAnchorClicks(contentId) {
+    const content = document.getElementById(contentId);
+    if (!content || content.dataset.paginatorAnchorsWired) return;
+    content.dataset.paginatorAnchorsWired = "true";
+
+    content.addEventListener("click", (event) => {
+        const link = event.target.closest('a[href^="#"]');
+        if (!link) return;
+
+        const entry = instances.get(contentId);
+        if (!entry) return; // not paginated (Scroll View) -- let the native anchor jump handle it
+
+        const targetId = decodeURIComponent(link.getAttribute("href").slice(1));
+        const target = document.getElementById(targetId);
+        if (!target) return;
+
+        event.preventDefault();
+        // getBoundingClientRect() reflects contentId's *current* on-screen
+        // (post-transform) position, and target moves by the identical
+        // transform as a descendant -- so this delta is the target's true
+        // offset within the untransformed column flow regardless of which
+        // page is currently showing.
+        const offset = target.getBoundingClientRect().left - content.getBoundingClientRect().left;
+        const targetPage = Math.max(1, Math.round(offset / (entry.width + GAP_PX)) + 1);
+        const actualPage = goToPage(contentId, targetPage);
+        entry.dotNetRef?.invokeMethodAsync("OnTxtMdPageChanged", actualPage);
+    });
 }
 
 export function goToPage(contentId, page) {
