@@ -112,3 +112,19 @@ export function setScrollbarHide(value) {
 export function setHideScrollbars(value) {
     localStorage.setItem(HIDE_SCROLLBARS_STORAGE_KEY, String(value));
 }
+
+// TXT/MD Book View only (source request, follow-up to issue #155): when on,
+// each chapter/segment becomes its own independently-scrollable page instead
+// of flowing through textPaginator.js's fixed-size CSS-column pages -- a
+// chapter longer than one column-height page otherwise gets split across
+// multiple pages, which break-after:column (see app.css) can't prevent since
+// it only forces a break *after* a boundary, not a cap on what's between two.
+const PAGE_PER_CHAPTER_STORAGE_KEY = "lumina_reader_page_per_chapter";
+
+export function getPagePerChapter() {
+    return localStorage.getItem(PAGE_PER_CHAPTER_STORAGE_KEY) === "true";
+}
+
+export function setPagePerChapter(value) {
+    localStorage.setItem(PAGE_PER_CHAPTER_STORAGE_KEY, String(value));
+}

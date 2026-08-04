@@ -271,6 +271,129 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
+    public void Reader_TxtFormat_SettingsMenu_ShowsPagePerChapterCheckbox_OnlyInBookMode()
+    {
+        // Source follow-up to issue #155: a chapter longer than one
+        // column-height page still spanned multiple pages under the flowed
+        // layout (break-after:column only forces a break *after* a boundary,
+        // not a cap on what's between two) -- "Seite pro Kapitel" is the
+        // user-requested alternative mode. The checkbox only makes sense in
+        // Book View (Scroll View already shows everything, scrolled).
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Hello.", "text/plain");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+        JSInterop.SetupModule("./js/textPaginator.js").Setup<int>("init", _ => true).SetResult(1);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+
+        Assert.Contains("Seite pro Kapitel", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent == "Scroll").Click();
+
+        Assert.DoesNotContain("Seite pro Kapitel", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_TxtFormat_PagePerChapter_ShowsOneSegmentAtATime_AndNavigates()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Erster Teil.\n---Seitenumbruch---\nZweiter Teil.", "text/plain");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+        var paginatorModule = JSInterop.SetupModule("./js/textPaginator.js");
+        paginatorModule.Setup<int>("init", _ => true).SetResult(1);
+        paginatorModule.SetupVoid("destroy", _ => true).SetVoidResult();
+        paginatorModule.SetupVoid("initChapterMode", _ => true).SetVoidResult();
+        paginatorModule.SetupVoid("destroyChapterMode", _ => true).SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.Find("input[type=checkbox]").Change(true);
+
+        var segments = cut.FindAll(".reader-content-txt-segment");
+        Assert.Single(segments);
+        Assert.Equal("Erster Teil.", segments[0].TextContent);
+        Assert.Contains("Seite 1 / 2", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent == "Weiter ▶").Click();
+
+        segments = cut.FindAll(".reader-content-txt-segment");
+        Assert.Single(segments);
+        Assert.Equal("Zweiter Teil.", segments[0].TextContent);
+        Assert.Contains("Seite 2 / 2", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_MdFormat_PagePerChapter_SplitsOnHr_AndShowsOneChapterAtATime()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("MD"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "# Kapitel 1\n\nErster Text.\n\n---\n\n# Kapitel 2\n\nZweiter Text.", "text/markdown");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+        var paginatorModule = JSInterop.SetupModule("./js/textPaginator.js");
+        paginatorModule.Setup<int>("init", _ => true).SetResult(1);
+        paginatorModule.SetupVoid("destroy", _ => true).SetVoidResult();
+        paginatorModule.SetupVoid("initChapterMode", _ => true).SetVoidResult();
+        paginatorModule.SetupVoid("destroyChapterMode", _ => true).SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.Find("input[type=checkbox]").Change(true);
+
+        Assert.Contains("Kapitel 1", cut.Markup);
+        Assert.Contains("Erster Text.", cut.Markup);
+        Assert.DoesNotContain("Kapitel 2", cut.Markup);
+        Assert.Contains("Seite 1 / 2", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent == "Weiter ▶").Click();
+
+        Assert.Contains("Kapitel 2", cut.Markup);
+        Assert.Contains("Zweiter Text.", cut.Markup);
+        Assert.DoesNotContain("Erster Text.", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_MdFormat_PagePerChapter_TocLinkAcrossSegments_SwitchesToOwningSegment()
+    {
+        // The common case: a TOC lives in its own leading segment and links
+        // to headings in *later* segments, which aren't in the DOM while
+        // chapter mode only renders the current one -- textPaginator.js's
+        // initChapterMode reports that back via OnChapterAnchorNotFound
+        // (invoked here directly, standing in for the JS click interception
+        // bUnit can't exercise for real).
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("MD"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "# TOC\n\n[Kapitel 2](#kapitel-2)\n\n---\n\n# Kapitel 1\n\nText.\n\n---\n\n# Kapitel 2\n\nZiel-Text.", "text/markdown");
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+        var paginatorModule = JSInterop.SetupModule("./js/textPaginator.js");
+        paginatorModule.Setup<int>("init", _ => true).SetResult(1);
+        paginatorModule.SetupVoid("destroy", _ => true).SetVoidResult();
+        paginatorModule.SetupVoid("initChapterMode", _ => true).SetVoidResult();
+        paginatorModule.SetupVoid("destroyChapterMode", _ => true).SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.Find("input[type=checkbox]").Change(true);
+
+        Assert.Contains("Seite 1 / 3", cut.Markup);
+
+        cut.InvokeAsync(() => cut.Instance.OnChapterAnchorNotFound("kapitel-2"));
+
+        Assert.Contains("Seite 3 / 3", cut.Markup);
+        Assert.Contains("Ziel-Text.", cut.Markup);
+    }
+
+    [Fact]
     public void Reader_RendersMarkdownAsHtml()
     {
         var handler = new RoutedFakeHttpMessageHandler()

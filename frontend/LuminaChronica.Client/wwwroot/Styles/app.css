@@ -838,6 +838,13 @@ select:focus-visible,
     break-after: column;
 }
 
+/* "Seite pro Kapitel" mode (source follow-up to issue #155): deliberately
+   does NOT add .reader-content--paginated -- there's no CSS-column layout
+   here at all, just the base .reader-content's own overflow-y:auto/
+   max-height (the same scrollable-page look Scroll View already uses),
+   showing one chapter/segment at a time. scrollbar-hide-both (existing
+   Scroll View class) applies here too when the setting is on. */
+
 .reader-content-nav {
     display: flex;
     justify-content: space-between;

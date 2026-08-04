@@ -93,4 +93,16 @@ public class ReaderSettingsService(IJSRuntime jsRuntime)
         var module = await _moduleTask.Value;
         await module.InvokeVoidAsync("setHideScrollbars", value);
     }
+
+    public async Task<bool> GetPagePerChapterAsync()
+    {
+        var module = await _moduleTask.Value;
+        return await module.InvokeAsync<bool>("getPagePerChapter");
+    }
+
+    public async Task SetPagePerChapterAsync(bool value)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("setPagePerChapter", value);
+    }
 }

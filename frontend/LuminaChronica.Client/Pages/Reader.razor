@@ -3,6 +3,7 @@
 @implements IDisposable
 @using System.Globalization
 @using System.Text
+@using System.Text.RegularExpressions
 @using Markdig
 @using Markdig.Extensions.AutoIdentifiers
 @using Microsoft.AspNetCore.Authorization
@@ -69,6 +70,20 @@ else
                                     <input type="checkbox" checked="@_hideScrollbars" @onchange="SetHideScrollbars" />
                                 </div>
                             }
+                            @if (_readerMode == "book" && _book.File.Format is "TXT" or "MD")
+                            {
+                                <div class="reader-setting-row">
+                                    <span class="reader-setting-label">Seite pro Kapitel</span>
+                                    <input type="checkbox" checked="@_pagePerChapter" @onchange="SetPagePerChapter" />
+                                </div>
+                                @if (_pagePerChapter)
+                                {
+                                    <div class="reader-setting-row">
+                                        <span class="reader-setting-label">Scrollbalken ausblenden</span>
+                                        <input type="checkbox" checked="@_hideScrollbars" @onchange="SetHideScrollbars" />
+                                    </div>
+                                }
+                            }
                         }
                         @if (_book.File.Format is not "PDF")
                         {
@@ -120,7 +135,18 @@ else
                clobber those on every re-render (the same lesson PdfReader hit
                with its own JS-sized elements, see Architecture.md). *@
             <div id="@ContentInnerId">
-                @if (_book.File.Format == "TXT")
+                @if (_readerMode == "book" && _pagePerChapter)
+                {
+                    @if (_book.File.Format == "TXT")
+                    {
+                        <pre class="reader-content-txt-segment">@CurrentChapterSegment</pre>
+                    }
+                    else
+                    {
+                        @((MarkupString)CurrentChapterSegment)
+                    }
+                }
+                else if (_book.File.Format == "TXT")
                 {
                     @foreach (var segment in _txtSegments)
                     {
@@ -185,6 +211,8 @@ else
     private string? _textContent;
     private List<string> _txtSegments = [];
     private string? _renderedMarkdown;
+    private List<string> _mdSegments = [];
+    private Dictionary<string, int> _mdHeadingSegmentIndex = new();
     private byte[]? _epubBytes;
     private string? _initialCfi;
     private EpubProgress? _latestEpubProgress;
@@ -197,6 +225,11 @@ else
     private string _pageWidth = "normal";
     private string _readerMode = "book";
     private bool _hideScrollbars;
+    // "Seite pro Kapitel" (source follow-up to issue #155): each chapter/
+    // segment becomes its own scrollable page instead of flowing through
+    // textPaginator.js's fixed-size CSS-column pages -- see the checkbox's
+    // reader-setting-row and CurrentChapterSegment/ChapterSegments below.
+    private bool _pagePerChapter;
     private bool _settingsMenuOpen;
     private Timer? _saveTimer;
 
@@ -217,8 +250,27 @@ else
         _fontFamily == "sans" ? "reader-content--font-sans" : null,
         _lineHeight switch { "tight" => "reader-content--line-tight", "loose" => "reader-content--line-loose", _ => null },
         _pageWidth switch { "narrow" => "reader-content--width-narrow", "wide" => "reader-content--width-wide", _ => null },
-        _book?.File?.Format is "TXT" or "MD" && _readerMode == "book" ? "reader-content--paginated" : null,
+        _book?.File?.Format is "TXT" or "MD" && _readerMode == "book" && !_pagePerChapter ? "reader-content--paginated" : null,
+        _book?.File?.Format is "TXT" or "MD" && _readerMode == "book" && _pagePerChapter && _hideScrollbars ? "scrollbar-hide-both" : null,
     }.Where(c => c is not null));
+
+    // The segmentation source for "Seite pro Kapitel" mode -- TXT reuses the
+    // same marker-split segments the flowed layout's break-after rule
+    // already relies on; MD splits on rendered <hr> boundaries (Markdig
+    // always renders a thematic break as <hr /> regardless of whether the
+    // source used "---", "***", or "___").
+    private List<string> ChapterSegments => _book?.File?.Format == "TXT" ? _txtSegments : _mdSegments;
+
+    private string CurrentChapterSegment
+    {
+        get
+        {
+            var segments = ChapterSegments;
+            if (segments.Count == 0) return string.Empty;
+            var index = Math.Clamp(_txtMdCurrentPage - 1, 0, segments.Count - 1);
+            return segments[index];
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -228,6 +280,7 @@ else
         _pageWidth = await ReaderSettings.GetPageWidthAsync();
         _readerMode = await ReaderSettings.GetReaderModeAsync();
         _hideScrollbars = await ReaderSettings.GetHideScrollbarsAsync();
+        _pagePerChapter = await ReaderSettings.GetPagePerChapterAsync();
 
         var bookResponse = await ApiClient.GetAsync<Book>($"/api/books/{Id}");
 
@@ -324,6 +377,27 @@ else
         if (_book.File.Format == "MD")
         {
             _renderedMarkdown = Markdown.ToHtml(text, MarkdownPipeline);
+            _mdSegments = Regex.Split(_renderedMarkdown, @"<hr\s*/?>", RegexOptions.IgnoreCase)
+                .Select(segment => segment.Trim())
+                .Where(segment => segment.Length > 0)
+                .ToList();
+            if (_mdSegments.Count == 0)
+            {
+                _mdSegments = [_renderedMarkdown];
+            }
+
+            // Maps each heading id to the segment it lives in, so a TOC link
+            // clicked while a *different* segment is showing (the common
+            // case -- the TOC itself is usually its own leading segment)
+            // knows which page to switch to; see OnChapterAnchorNotFound.
+            _mdHeadingSegmentIndex = new Dictionary<string, int>();
+            for (var i = 0; i < _mdSegments.Count; i++)
+            {
+                foreach (Match match in Regex.Matches(_mdSegments[i], "id=\"([^\"]+)\""))
+                {
+                    _mdHeadingSegmentIndex[match.Groups[1].Value] = i;
+                }
+            }
         }
         else
         {
@@ -373,7 +447,11 @@ else
         if (!_txtMdPaginationInitialized && (_textContent is not null || _renderedMarkdown is not null))
         {
             _txtMdPaginationInitialized = true;
-            if (_readerMode == "book")
+            if (_readerMode == "book" && _pagePerChapter)
+            {
+                await InitChapterModeAsync(restorePosition: true);
+            }
+            else if (_readerMode == "book")
             {
                 await InitTxtMdPaginationAsync(restorePosition: true);
             }
@@ -383,17 +461,24 @@ else
         if (_txtMdReaderModeChangedSinceRender)
         {
             _txtMdReaderModeChangedSinceRender = false;
-            if (_readerMode == "book")
+            if (_readerMode == "book" && _pagePerChapter)
             {
+                await TextPaginator.DestroyAsync(ContentInnerId);
+                await InitChapterModeAsync(restorePosition: false);
+            }
+            else if (_readerMode == "book")
+            {
+                await TextPaginator.DestroyChapterModeAsync(ContentInnerId);
                 await InitTxtMdPaginationAsync(restorePosition: false);
             }
             else
             {
                 await TextPaginator.DestroyAsync(ContentInnerId);
+                await TextPaginator.DestroyChapterModeAsync(ContentInnerId);
             }
             StateHasChanged();
         }
-        else if (_txtMdLayoutChangedSinceRender && _readerMode == "book")
+        else if (_txtMdLayoutChangedSinceRender && _readerMode == "book" && !_pagePerChapter)
         {
             // A font-size/family/line-height/page-width change resizes the
             // content -- pageCount can change entirely, so the current page
@@ -407,6 +492,13 @@ else
             _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, targetPage);
             StateHasChanged();
         }
+        else if (_txtMdLayoutChangedSinceRender)
+        {
+            // Chapter-mode page count is the segment count, which a font-
+            // size/width change never affects -- nothing to relayout, the
+            // div's own style attribute already picks up the new font-size.
+            _txtMdLayoutChangedSinceRender = false;
+        }
     }
 
     private async Task InitTxtMdPaginationAsync(bool restorePosition)
@@ -418,6 +510,36 @@ else
             : 1;
         _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, targetPage);
         StateHasChanged();
+    }
+
+    private async Task InitChapterModeAsync(bool restorePosition)
+    {
+        _txtMdPageCount = Math.Max(1, ChapterSegments.Count);
+        _txtMdDotNetRef ??= DotNetObjectReference.Create(this);
+        var targetPage = restorePosition && _pendingRestorePosition is { } raw
+            ? ConvertSavedPositionToPage(raw, _txtMdPageCount)
+            : 1;
+        _txtMdCurrentPage = Math.Clamp(targetPage, 1, _txtMdPageCount);
+        await TextPaginator.InitChapterModeAsync(ContentInnerId, _txtMdDotNetRef);
+        StateHasChanged();
+    }
+
+    // Fired from textPaginator.js's initChapterMode when a TOC/anchor click
+    // targets a heading id that isn't in the currently-rendered segment
+    // (chapter mode only ever renders one segment at a time, unlike the
+    // flowed layout where every page already sits in the DOM) -- look up
+    // which segment owns it and switch. Native scroll already handled the
+    // case where the id IS in the current segment, so this only needs to
+    // move to the right page; the new segment renders from its own top,
+    // which is normally exactly where the heading is.
+    [JSInvokable]
+    public void OnChapterAnchorNotFound(string id)
+    {
+        if (_book?.File?.Format == "MD" && _mdHeadingSegmentIndex.TryGetValue(id, out var index))
+        {
+            _txtMdCurrentPage = Math.Clamp(index + 1, 1, _txtMdPageCount);
+            StateHasChanged();
+        }
     }
 
     // Fired from textPaginator.js when a TOC/anchor link click inside the
@@ -458,12 +580,16 @@ else
 
     private async Task PrevTxtMdPageAsync()
     {
-        _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, _txtMdCurrentPage - 1);
+        _txtMdCurrentPage = _pagePerChapter
+            ? Math.Max(1, _txtMdCurrentPage - 1)
+            : await TextPaginator.GoToPageAsync(ContentInnerId, _txtMdCurrentPage - 1);
     }
 
     private async Task NextTxtMdPageAsync()
     {
-        _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, _txtMdCurrentPage + 1);
+        _txtMdCurrentPage = _pagePerChapter
+            ? Math.Min(_txtMdPageCount, _txtMdCurrentPage + 1)
+            : await TextPaginator.GoToPageAsync(ContentInnerId, _txtMdCurrentPage + 1);
     }
 
     private async Task<OfflineBookFile?> TryGetOfflineFileAsync()
@@ -596,6 +722,15 @@ else
     {
         _hideScrollbars = e.Value is bool b && b;
         await ReaderSettings.SetHideScrollbarsAsync(_hideScrollbars);
+    }
+
+    private async Task SetPagePerChapter(ChangeEventArgs e)
+    {
+        _pagePerChapter = e.Value is bool b && b;
+        await ReaderSettings.SetPagePerChapterAsync(_pagePerChapter);
+        // Reuses the same re-init dance as the Ansicht (Buch/Scroll) toggle --
+        // tear down whichever pagination mode was active and bring up the other.
+        if (IsTxtMd) _txtMdReaderModeChangedSinceRender = true;
     }
 
     private async Task SetReaderMode(string mode)

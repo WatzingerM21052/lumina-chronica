@@ -129,3 +129,40 @@ export function destroy(contentId) {
     }
     instances.delete(contentId);
 }
+
+// "Seite pro Kapitel" mode (source follow-up to issue #155): each
+// chapter/segment is its own independently-scrollable page (plain
+// overflow-y:auto, no CSS columns, no transform), so unlike init() above
+// there's no layout to measure -- only TOC anchor clicks need JS help here,
+// and only for the case where the linked heading isn't in the *currently
+// rendered* segment (Reader.razor only renders one segment at a time in
+// this mode). If the target id IS already in the DOM, it lives in the
+// current segment and native fragment navigation already scrolls the
+// nearest scrollable ancestor into view correctly -- no interception needed.
+const chapterInstances = new Map();
+
+export function initChapterMode(contentId, dotNetRef) {
+    const content = document.getElementById(contentId);
+    if (!content) return;
+    chapterInstances.set(contentId, { dotNetRef });
+    if (content.dataset.chapterAnchorsWired) return;
+    content.dataset.chapterAnchorsWired = "true";
+
+    content.addEventListener("click", (event) => {
+        const link = event.target.closest('a[href^="#"]');
+        if (!link) return;
+
+        const entry = chapterInstances.get(contentId);
+        if (!entry) return; // not in chapter mode right now -- let the other handler (or native scroll) take it
+
+        const targetId = decodeURIComponent(link.getAttribute("href").slice(1));
+        if (document.getElementById(targetId)) return; // in the currently-rendered segment already -- native scroll handles it
+
+        event.preventDefault();
+        entry.dotNetRef?.invokeMethodAsync("OnChapterAnchorNotFound", targetId);
+    });
+}
+
+export function destroyChapterMode(contentId) {
+    chapterInstances.delete(contentId);
+}
