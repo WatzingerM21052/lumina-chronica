@@ -86,7 +86,12 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
 
             _realisticPreparing = ReaderMode == "realistic";
             if (_realisticPreparing) StateHasChanged(); // shows the "wird vorbereitet" indicator before the long init() await below, not just after
-            _pageCount = await _module.InvokeAsync<int>("init", _elementId, Bytes, InitialPage, _zoom, ReaderMode);
+            // _dotNetRef passed in directly (not left to the onScrolled() call
+            // below) so it's registered before init() -- if ReaderMode starts
+            // as "realistic" (a persisted setting, the common case), its
+            // failure/fallback path runs inside this same call, and needs
+            // OnRealisticViewUnavailable's target already wired up.
+            _pageCount = await _module.InvokeAsync<int>("init", _elementId, Bytes, InitialPage, _zoom, ReaderMode, _dotNetRef);
             _realisticPreparing = false;
             _currentPage = await _module.InvokeAsync<int>("getCurrentPage", _elementId);
             // Scroll View's "current page" changes on scroll, not on a
