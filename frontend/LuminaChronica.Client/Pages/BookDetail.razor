@@ -149,11 +149,20 @@ else
 
                     <div class="form-group">
                         <label for="edit-cover">Cover ersetzen</label>
-                        <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
+                        <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "") @(_selectedEditCover is not null ? "dropzone--filled" : "")"
                              @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
                              @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
                             <InputFile id="edit-cover" OnChange="OnEditCoverSelected" />
-                            <span class="dropzone-label">Cover hierher ziehen oder klicken zum Auswählen</span>
+                            <span class="dropzone-label">
+                                @if (_selectedEditCover is not null)
+                                {
+                                    <text>📄 @_selectedEditCover.Name</text>
+                                }
+                                else
+                                {
+                                    <text>Cover hierher ziehen oder klicken zum Auswählen</text>
+                                }
+                            </span>
                         </div>
                         @if (_coverSaveErrorMessage is not null)
                         {

@@ -224,6 +224,15 @@ select:focus-visible,
     background-color: var(--color-bg-card);
 }
 
+.dropzone--filled {
+    border-style: solid;
+    border-color: var(--color-success);
+}
+
+.dropzone--filled .dropzone-label {
+    color: var(--color-text-primary);
+}
+
 .dropzone input[type="file"] {
     position: absolute;
     inset: 0;
