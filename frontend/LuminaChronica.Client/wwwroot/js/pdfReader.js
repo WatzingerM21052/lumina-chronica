@@ -555,14 +555,26 @@ function teardownRealisticView(elementId, entry) {
     }
 }
 
-export async function init(elementId, bytes, initialPage, initialZoom, flow) {
+export async function init(elementId, bytes, initialPage, initialZoom, flow, dotNetRef) {
     // Same interop-buffer gotcha as epubReader.js: bytes.buffer is a
     // reused/pooled buffer, not the exact call data -- must slice first.
     const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     const doc = await pdfjsLib.getDocument({ data }).promise;
     const page = Math.min(Math.max(initialPage || 1, 1), doc.numPages);
 
-    instances.set(elementId, { doc, currentPage: page, zoom: initialZoom > 0 ? initialZoom : 1, mode: modeOf(flow) });
+    // dotNetRef must be registered *before* the realistic/scroll branch
+    // below, not just via the separate onScrolled() call PdfReader.razor.cs
+    // makes after init() returns -- confirmed live: when "realistic" is the
+    // *initial* mode (a persisted setting from a previous session, the
+    // common case), initRealisticView's failure/fallback path runs inside
+    // this same call, before onScrolled() ever gets a chance to run. Without
+    // dotNetRef set here already, entry.dotNetRef?.invokeMethodAsync(...) in
+    // that fallback path silently no-ops (optional chaining on undefined),
+    // leaving the Ansicht toggle stuck on "Realistisch" -- confirmed live on
+    // the deployed reader, this was the actual reason PR #214's fix appeared
+    // not to work: it only ever fired for a fallback triggered by a *later*
+    // setFlow() call, once onScrolled() had already registered the ref.
+    instances.set(elementId, { doc, currentPage: page, zoom: initialZoom > 0 ? initialZoom : 1, mode: modeOf(flow), dotNetRef });
 
     if (flow === "scroll") {
         await initScrollView(elementId);
