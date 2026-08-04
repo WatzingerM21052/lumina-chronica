@@ -1070,8 +1070,26 @@ select:focus-visible,
    random right after appearing, traced to exactly this re-render. class
    bindings don't have this problem since JS never touches this element's
    class list. */
+/* visibility:hidden, not display:none -- confirmed live to be the actual
+   reason Realistic View only ever showed a single page on the very first
+   load (fixed itself the moment any later action, e.g. a Seitenbreite
+   change, rebuilt the flip UI while the frame was visible again).
+   buildPageFlip() runs *during* this hidden window (initRealisticView is
+   awaited before _realisticPreparing flips back to false), and a
+   display:none subtree gives every descendant a zero-size layout box --
+   StPageFlip's own portrait-vs-landscape check reads exactly that (a
+   descendant canvas's offsetWidth), so it always measured 0 and always
+   concluded "not enough room for a spread" regardless of the real
+   available width. visibility:hidden keeps the box (and everything
+   inside it) genuinely laid out and measurable while still invisible to
+   the user; position:absolute takes it out of this grid container's
+   normal flow so its real (non-zero, often full-viewport-width) footprint
+   doesn't reserve visible space next to the "wird vorbereitet" spinner. */
 .pdf-reader-frame--hidden {
-    display: none;
+    visibility: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 .pdf-reader-nav {
