@@ -123,11 +123,14 @@ public class ReaderPageTests : BunitContext
     }
 
     [Fact]
-    public void Reader_EpubFormat_RealisticModeToggle_CallsSetFlowWithRealistic()
+    public void Reader_EpubFormat_SettingsMenu_DoesNotShowRealisticModeToggle()
     {
-        // Issue #189: EPUB's realistic mode (section-capture page-flip),
-        // un-gated now that epubReader.js implements it. Asserts the mode
-        // string reaching epubReader.js's setFlow is "realistic".
+        // Issue #189: the section-capture implementation still has an
+        // unresolved bug (silently falls back to looking identical to Buch
+        // View) -- gated back off for EPUB rather than offering a mode that
+        // doesn't actually work. epubReader.js's realistic-view code is
+        // deliberately left in place as a starting point for a future
+        // attempt; only this toggle is hidden. Buch/Scroll stay available.
         var handler = new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
             .WhenPathEndsWith("/api/reading/1", NoProgressJson)
@@ -135,16 +138,41 @@ public class ReaderPageTests : BunitContext
         UseHandler(handler);
         JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
 
-        var epubModule = JSInterop.SetupModule("./js/epubReader.js");
-        var setFlowHandler = epubModule.SetupVoid("setFlow", _ => true);
-        setFlowHandler.SetVoidResult();
-
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
-        cut.FindAll("button").Single(b => b.TextContent == "Realistisch").Click();
 
-        var invocation = Assert.Single(setFlowHandler.Invocations);
-        Assert.Equal("realistic", invocation.Arguments[1]);
+        Assert.Contains("Buch", cut.Markup);
+        Assert.Contains("Scroll", cut.Markup);
+        Assert.DoesNotContain("Realistisch", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_EpubFormat_PersistedRealisticMode_CoercedToBook()
+    {
+        // A "realistic" mode saved from before the toggle above was hidden
+        // again would otherwise still reach EpubReader's ReaderMode
+        // parameter and try to init the broken realistic view on every
+        // load -- Reader.razor corrects an already-persisted value even
+        // though the toggle itself is gone.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip");
+        UseHandler(handler);
+        var readerSettingsModule = JSInterop.SetupModule("./js/readerSettings.js");
+        readerSettingsModule.Setup<string>("getReaderMode", _ => true).SetResult("realistic");
+        var setReaderModeHandler = readerSettingsModule.SetupVoid("setReaderMode", _ => true);
+        setReaderModeHandler.SetVoidResult();
+
+        var epubModule = JSInterop.SetupModule("./js/epubReader.js");
+        var initHandler = epubModule.SetupVoid("init", _ => true);
+        initHandler.SetVoidResult();
+
+        Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+
+        var invocation = Assert.Single(initHandler.Invocations);
+        Assert.Equal("book", invocation.Arguments[^1]);
+        Assert.Contains(setReaderModeHandler.Invocations, i => i.Arguments[0] as string == "book");
     }
 
     [Fact]
