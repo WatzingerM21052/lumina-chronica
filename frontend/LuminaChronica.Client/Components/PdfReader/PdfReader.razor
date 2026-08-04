@@ -18,13 +18,10 @@
         <input type="number" min="1" max="@_pageCount" value="@_currentPage" @onchange="OnPageInputChangedAsync" />
         / @_pageCount
     </span>
-    @if (ReaderMode != "realistic")
-    {
-        <span class="pdf-reader-zoom">
-            <button type="button" class="btn" @onclick="DecreaseZoomAsync" disabled="@(_zoom <= MinZoom)" aria-label="Verkleinern">−</button>
-            <button type="button" class="btn pdf-reader-zoom-reset" @onclick="ResetZoomAsync" title="Zoom zurücksetzen">@((_zoom * 100).ToString("F0"))%</button>
-            <button type="button" class="btn" @onclick="IncreaseZoomAsync" disabled="@(_zoom >= MaxZoom)" aria-label="Vergrößern">+</button>
-        </span>
-    }
+    <span class="pdf-reader-zoom">
+        <button type="button" class="btn" @onclick="DecreaseZoomAsync" disabled="@(_zoom <= MinZoom)" aria-label="Verkleinern">−</button>
+        <button type="button" class="btn pdf-reader-zoom-reset" @onclick="ResetZoomAsync" title="Zoom zurücksetzen">@((_zoom * 100).ToString("F0"))%</button>
+        <button type="button" class="btn" @onclick="IncreaseZoomAsync" disabled="@(_zoom >= MaxZoom)" aria-label="Vergrößern">+</button>
+    </span>
     <button type="button" class="btn" @onclick="NextAsync">Weiter ▶</button>
 </div>
