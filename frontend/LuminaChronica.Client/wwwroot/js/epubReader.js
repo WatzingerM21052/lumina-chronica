@@ -445,21 +445,17 @@ const CAPTURE_TIMEOUT_MS = 15000;
 // Must run inside runSerialized: it reads/relies on entry.rendition's
 // current position, which next()/prev()/goTo() also touch.
 async function captureCurrentSection(elementId, entry, sectionIndex, cfi, attempt = 1) {
-    console.error(`[DIAG realistic] captureCurrentSection start section=${sectionIndex} attempt=${attempt}`);
     const iframe = getEpubIframe(elementId);
     if (!iframe?.contentDocument) throw new Error("Realistic View: no epub.js iframe to capture");
     const doc = iframe.contentDocument;
 
     await waitForImagesToLoad(doc);
-    console.error(`[DIAG realistic] images loaded section=${sectionIndex}`);
     await settlePaint();
-    console.error(`[DIAG realistic] paint settled section=${sectionIndex}`);
 
     const epubContainer = iframe.closest(".epub-container") || iframe.parentElement;
     const scrollWidthBefore = epubContainer.scrollWidth;
     const clientWidth = epubContainer.clientWidth;
     const clientHeight = epubContainer.clientHeight;
-    console.error(`[DIAG realistic] measured section=${sectionIndex} scrollWidth=${scrollWidthBefore} clientWidth=${clientWidth} clientHeight=${clientHeight}`);
 
     const themeStyles = getComputedStyle(document.documentElement);
     const bg = themeStyles.getPropertyValue("--color-bg-reader").trim() || "#ffffff";
@@ -474,11 +470,25 @@ async function captureCurrentSection(elementId, entry, sectionIndex, cfi, attemp
             y: 0,
             scrollX: 0,
             scrollY: 0,
+            // html2canvas clones the target element into an off-screen
+            // document before rendering it, and the clone inherits the
+            // *original* body's inline `width: <one-column-width>px` --
+            // confirmed live: without this, the clone's own box stays
+            // pinned to one column wide regardless of the `width`/
+            // `windowWidth` options above (those size the output canvas
+            // and render viewport, not the cloned element's own box), so
+            // everything past column 1 rendered as empty background. Only
+            // column 1 is affected by the *live* rendition's real width
+            // (epub.js manages that one directly) -- forcing the clone's
+            // width to the full section width here is what actually makes
+            // the overflowing columns render.
+            onclone: (_clonedDoc, clonedBody) => {
+                clonedBody.style.width = `${scrollWidthBefore}px`;
+            },
         }),
         CAPTURE_TIMEOUT_MS,
         `html2canvas section ${sectionIndex}`,
     );
-    console.error(`[DIAG realistic] html2canvas done section=${sectionIndex} stripW=${strip.width}`);
 
     // Re-check after the (relatively slow, image-heavy) capture call --
     // if epub.js's layout was still settling, retry the whole section
@@ -490,16 +500,17 @@ async function captureCurrentSection(elementId, entry, sectionIndex, cfi, attemp
         return captureCurrentSection(elementId, entry, sectionIndex, cfi, attempt + 1);
     }
 
-    // epub.js's CSS-multi-column layout puts real space (column-gap)
-    // between columns -- confirmed live via getComputedStyle on the
-    // rendered body; naively slicing at multiples of columnWidth alone
-    // lands each slice partway into the gap plus the next column, both of
-    // which read as "blank" via the check below. The real stride is
-    // columnWidth + columnGap.
+    // epub.js's own column-width is the real page-to-page stride --
+    // confirmed live via two independent sections (scrollWidth divided
+    // evenly by columnWidth alone in both, 4074/1358=3 and 5432/1358=4).
+    // column-gap (also present in the computed style) turned out not to
+    // contribute to the container's scrollable width at all -- an earlier
+    // version of this code added it to the stride on the assumption that
+    // it did, which landed every slice past the first column partway into
+    // dead space and read as blank.
     const bodyStyles = getComputedStyle(doc.body);
     const columnWidth = Math.round(parseFloat(bodyStyles.columnWidth)) || clientWidth;
-    const columnGap = Math.round(parseFloat(bodyStyles.columnGap)) || 0;
-    const stride = columnWidth + columnGap;
+    const stride = columnWidth;
     const numPages = Math.max(1, Math.round(scrollWidthAfter / stride));
 
     const images = [];
