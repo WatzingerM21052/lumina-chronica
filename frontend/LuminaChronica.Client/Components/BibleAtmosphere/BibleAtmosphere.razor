@@ -1,0 +1,61 @@
+@namespace LuminaChronica.Client.Components
+@implements IDisposable
+@inject BibleAtmosphereService Atmosphere
+
+@* Fixed, full-viewport -- deliberately a sibling of .bible-page's content,
+   not a wrapper around it, so it never affects layout/scroll of the real
+   content and can't be clipped by any ancestor's overflow. z-index keeps it
+   behind everything in Bible.razor. See BibleAtmosphere.razor.css for the
+   full visual treatment (background image, gradient grading, glow, dust). *@
+<div class="bible-atmosphere" aria-hidden="true">
+    <div id="@BackgroundId" class="bible-atmosphere-background"></div>
+    <div class="bible-atmosphere-vignette"></div>
+    <div class="bible-atmosphere-glow bible-atmosphere-glow--1"></div>
+    <div class="bible-atmosphere-glow bible-atmosphere-glow--2"></div>
+    <div class="bible-atmosphere-dust">
+        @for (var i = 0; i < DustMoteCount; i++)
+        {
+            <span class="bible-atmosphere-mote"></span>
+        }
+    </div>
+</div>
+
+@* Photo credit relocated here from the (removed, in this theme) hero banner
+   -- the CC BY-SA license requires it stay visible regardless of layout. *@
+<p class="bible-atmosphere-credit">
+    Foto: Diego Delso,
+    <a href="https://delso.photo" target="_blank" rel="noopener noreferrer">delso.photo</a>,
+    Lizenz <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA</a>
+</p>
+
+@code {
+    private const int DustMoteCount = 14;
+    private const string BackgroundId = "bible-atmosphere-background";
+
+    // The id of Bible.razor's own content wrapper (containing the .ba-fade-in
+    // chapter heading/text elements) -- deliberately NOT an id BibleAtmosphere
+    // generates itself, since the fade-in targets live in the parent's
+    // markup, not in anything this component renders. BackgroundId, in
+    // contrast, IS self-owned: it's this component's own parallax layer.
+    [Parameter, EditorRequired]
+    public string ContentRootId { get; set; } = string.Empty;
+
+    private bool _initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _initialized = true;
+            await Atmosphere.InitAsync(ContentRootId, BackgroundId);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_initialized)
+        {
+            _ = Atmosphere.DestroyAsync(ContentRootId);
+        }
+    }
+}

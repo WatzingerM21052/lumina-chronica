@@ -5,23 +5,41 @@
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BibleClientService BibleClient
+@inject BibleAtmosphereService Atmosphere
 
 <PageTitle>Die Heilige Schrift — Lumina Chronica</PageTitle>
 
-<div class="bible-page">
-    <div class="bible-hero">
-        <img src="images/bible-hero.jpg" alt="" class="bible-hero-image" />
-        <div class="bible-hero-scrim"></div>
-        <div class="bible-hero-content">
-            <h1>Die Heilige Schrift</h1>
-            <p class="bible-hero-subtitle">"Tut alles ohne Murren und Bedenken." — Philipper 2,14</p>
-        </div>
-        <p class="bible-hero-credit">
-            Foto: Diego Delso,
-            <a href="https://delso.photo" target="_blank" rel="noopener noreferrer">delso.photo</a>,
-            Lizenz <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA</a>
-        </p>
+@if (_bibleTheme == DarkAcademiaTheme)
+{
+    <BibleAtmosphere ContentRootId="@ContentRootId" />
+}
+
+<div id="@ContentRootId" class="bible-page @(_bibleTheme == DarkAcademiaTheme ? "bible-page--dark-academia" : "")">
+    <div class="bible-theme-toggle">
+        <button type="button" class="btn @(_bibleTheme == DefaultTheme ? "is-active" : "")" @onclick='() => SetBibleThemeAsync(DefaultTheme)'>Standard</button>
+        <button type="button" class="btn @(_bibleTheme == DarkAcademiaTheme ? "is-active" : "")" @onclick='() => SetBibleThemeAsync(DarkAcademiaTheme)'>Dark Academia</button>
     </div>
+
+    @if (_bibleTheme == DefaultTheme)
+    {
+        <div class="bible-hero">
+            <img src="images/bible-hero.jpg" alt="" class="bible-hero-image" />
+            <div class="bible-hero-scrim"></div>
+            <div class="bible-hero-content">
+                <h1>Die Heilige Schrift</h1>
+                <p class="bible-hero-subtitle">"Tut alles ohne Murren und Bedenken." — Philipper 2,14</p>
+            </div>
+            <p class="bible-hero-credit">
+                Foto: Diego Delso,
+                <a href="https://delso.photo" target="_blank" rel="noopener noreferrer">delso.photo</a>,
+                Lizenz <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA</a>
+            </p>
+        </div>
+    }
+    else
+    {
+        <h1 class="bible-title-immersive">Die Heilige Schrift</h1>
+    }
 
     <div class="bible-controls">
         <label class="bible-control">
@@ -94,7 +112,7 @@
     }
     else if (_chapter is not null)
     {
-        <article class="bible-chapter" tabindex="0" @ref="_articleElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
+        <article class="bible-chapter ba-fade-in" @key="_chapter.Id" tabindex="0" @ref="_articleElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
             <h2>@_chapter.Reference</h2>
             <div id="bible-chapter-content" class="bible-chapter-content">@((MarkupString)_chapter.Content)</div>
         </article>
@@ -120,6 +138,12 @@
     private const string DefaultChapterId = "PHP.2";
     private const string DefaultVerseSid = "PHP 2:14";
 
+    // Issue #143 -- the "Dark Academia" immersive theme, opt-in and
+    // page-scoped only (see bible.js's own separate localStorage key).
+    private const string DefaultTheme = "default";
+    private const string DarkAcademiaTheme = "dark-academia";
+    private const string ContentRootId = "bible-page-root";
+
     private List<BibleTranslation> _translations = [];
     private List<BibleBook> _books = [];
     private List<BibleChapterRef> _chapters = [];
@@ -133,11 +157,14 @@
     private CancellationTokenSource _cts = new();
     private ElementReference _articleElement;
     private string? _focusedChapterId;
+    private string _bibleTheme = DefaultTheme;
 
     private BibleTranslation? _selectedTranslation => _translations.FirstOrDefault(t => t.Id == _selectedTranslationId);
 
     protected override async Task OnInitializedAsync()
     {
+        _bibleTheme = await BibleClient.GetBibleThemeAsync() ?? DefaultTheme;
+
         var translationsResponse = await ApiClient.GetAsync<List<BibleTranslation>>("/api/bible/translations");
         _translations = translationsResponse is { Success: true, Data: not null } ? translationsResponse.Data : [];
 
@@ -203,10 +230,23 @@
         _isLoadingChapter = false;
         StateHasChanged();
 
-        if (highlightSid is not null && _chapter is not null)
+        if (_chapter is not null)
         {
-            await Task.Delay(80, _cts.Token); // let the content render before scrolling
-            await BibleClient.ScrollToVerseAsync("bible-chapter-content", highlightSid);
+            await Task.Delay(80, _cts.Token); // let the content render before scrolling/observing it
+
+            if (highlightSid is not null)
+            {
+                await BibleClient.ScrollToVerseAsync("bible-chapter-content", highlightSid);
+            }
+
+            // New chapter -> a fresh .ba-fade-in <article> (@key="_chapter.Id"
+            // forces Blazor to treat it as a new element, not a reused/patched
+            // one) -- re-wire the IntersectionObserver so it fades in too, not
+            // just the very first chapter shown on page load.
+            if (_bibleTheme == DarkAcademiaTheme)
+            {
+                await Atmosphere.ObserveNewFadeInsAsync(ContentRootId);
+            }
         }
     }
 
@@ -288,6 +328,21 @@
     }
 
     private static string Truncate(string text) => text.Length <= 140 ? text : text[..140] + "…";
+
+    // Switching TO dark-academia mounts <BibleAtmosphere>, whose own
+    // OnAfterRenderAsync(firstRender) already wires the IntersectionObserver
+    // against whatever .ba-fade-in content exists at that point -- no need
+    // to duplicate that here. LoadChapterAsync's own explicit
+    // ObserveNewFadeInsAsync call covers the other case (theme already
+    // active, user navigates to a new chapter while <BibleAtmosphere> stays
+    // mounted, so nothing else re-wires the fresh <article>).
+    private async Task SetBibleThemeAsync(string theme)
+    {
+        if (theme == _bibleTheme) return;
+
+        _bibleTheme = theme;
+        await BibleClient.SetBibleThemeAsync(_bibleTheme);
+    }
 
     public void Dispose()
     {
