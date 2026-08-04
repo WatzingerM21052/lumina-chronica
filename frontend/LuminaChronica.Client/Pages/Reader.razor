@@ -10,6 +10,7 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject ScrollTrackerService ScrollTracker
+@inject TextPaginatorService TextPaginator
 @inject ReaderSettingsService ReaderSettings
 @inject OfflineStorageService OfflineStorage
 
@@ -39,7 +40,7 @@ else
                 @if (_settingsMenuOpen)
                 {
                     <div class="reader-settings-popover">
-                        @if (_book.File.Format is "EPUB" or "PDF")
+                        @if (_book.File.Format is "TXT" or "MD" or "EPUB" or "PDF")
                         {
                             <div class="reader-setting-row">
                                 <span class="reader-setting-label">Ansicht</span>
@@ -59,7 +60,7 @@ else
                                     }
                                 </span>
                             </div>
-                            @if (_readerMode == "scroll")
+                            @if (_readerMode == "scroll" && _book.File.Format is "EPUB" or "PDF")
                             {
                                 <div class="reader-setting-row">
                                     <span class="reader-setting-label">Scrollbalken ausblenden</span>
@@ -110,16 +111,31 @@ else
 
     @if (_book.File.Format is "TXT" or "MD")
     {
-        <div id="reader-content" class="@ReaderContentClass" style="font-size: @(_fontSize)px">
-            @if (_book.File.Format == "TXT")
-            {
-                <pre>@_textContent</pre>
-            }
-            else
-            {
-                @((MarkupString)(_renderedMarkdown ?? string.Empty))
-            }
+        <div id="@ContentViewportId" class="@ReaderContentClass" style="font-size: @(_fontSize)px">
+            @* #reader-content-inner is left without a Razor-bound style attribute
+               deliberately -- textPaginator.js sets column-width/column-gap/
+               height/transform on it directly, and a Blazor-bound style would
+               clobber those on every re-render (the same lesson PdfReader hit
+               with its own JS-sized elements, see Architecture.md). *@
+            <div id="@ContentInnerId">
+                @if (_book.File.Format == "TXT")
+                {
+                    <pre>@_textContent</pre>
+                }
+                else
+                {
+                    @((MarkupString)(_renderedMarkdown ?? string.Empty))
+                }
+            </div>
         </div>
+        @if (_readerMode == "book")
+        {
+            <div class="reader-content-nav @(_pageWidth switch { "narrow" => "reader-content-nav--width-narrow", "wide" => "reader-content-nav--width-wide", _ => "" })">
+                <button type="button" class="btn" @onclick="PrevTxtMdPageAsync" disabled="@(_txtMdCurrentPage <= 1)">◀ Zurück</button>
+                <span>Seite @_txtMdCurrentPage / @_txtMdPageCount</span>
+                <button type="button" class="btn" @onclick="NextTxtMdPageAsync" disabled="@(_txtMdCurrentPage >= _txtMdPageCount)">Weiter ▶</button>
+            </div>
+        }
     }
     else if (_book.File.Format == "EPUB" && _epubBytes is not null)
     {
@@ -161,12 +177,22 @@ else
     private bool _settingsMenuOpen;
     private Timer? _saveTimer;
 
+    // TXT/MD Book View pagination (issue #155) -- textPaginator.js state.
+    private const string ContentViewportId = "reader-content";
+    private const string ContentInnerId = "reader-content-inner";
+    private int _txtMdPageCount = 1;
+    private int _txtMdCurrentPage = 1;
+    private string? _pendingRestorePosition;
+    private bool _txtMdReaderModeChangedSinceRender;
+    private bool _txtMdLayoutChangedSinceRender;
+
     private string ReaderContentClass => string.Join(" ", new[]
     {
         "reader-content",
         _fontFamily == "sans" ? "reader-content--font-sans" : null,
         _lineHeight switch { "tight" => "reader-content--line-tight", "loose" => "reader-content--line-loose", _ => null },
         _pageWidth switch { "narrow" => "reader-content--width-narrow", "wide" => "reader-content--width-wide", _ => null },
+        _book?.File?.Format is "TXT" or "MD" && _readerMode == "book" ? "reader-content--paginated" : null,
     }.Where(c => c is not null));
 
     protected override async Task OnParametersSetAsync()
@@ -212,6 +238,17 @@ else
         // the toggle being hidden only stops new selections, not an already
         // -persisted one. Correct and persist it once here instead.
         if (_book.File?.Format == "EPUB" && _readerMode == "realistic")
+        {
+            _readerMode = "book";
+            await ReaderSettings.SetReaderModeAsync(_readerMode);
+        }
+
+        // _readerMode is a single global persisted setting shared across every
+        // format -- a user who last read a PDF in "realistic" mode would
+        // otherwise arrive at a TXT/MD file with that same invalid value, and
+        // TXT/MD only ever understands "book"/"scroll". Same coercion pattern
+        // as the EPUB guard above.
+        if (_book.File?.Format is "TXT" or "MD" && _readerMode is not ("book" or "scroll"))
         {
             _readerMode = "book";
             await ReaderSettings.SetReaderModeAsync(_readerMode);
@@ -268,21 +305,114 @@ else
             _textContent = text;
         }
 
-        var savedFraction = savedPosition is { } positionText &&
-            double.TryParse(positionText, NumberStyles.Float, CultureInfo.InvariantCulture, out var fraction)
-            ? fraction
-            : (double?)null;
+        // Book mode's restore (a page index, not a fraction) happens in
+        // OnAfterRenderAsync instead -- textPaginator.js needs to measure
+        // real layout first to know the page count savedPosition converts
+        // against, which isn't available yet at this point in the lifecycle.
+        _pendingRestorePosition = savedPosition;
 
         StateHasChanged();
 
-        if (savedFraction is { } resumeFraction)
+        if (_readerMode == "scroll")
         {
-            await Task.Delay(50); // let the content render before restoring scroll position
-            await ScrollTracker.SetScrollFractionAsync("reader-content", resumeFraction);
+            var savedFraction = savedPosition is { } positionText &&
+                double.TryParse(positionText, NumberStyles.Float, CultureInfo.InvariantCulture, out var fraction)
+                ? fraction
+                : (double?)null;
+
+            if (savedFraction is { } resumeFraction)
+            {
+                await Task.Delay(50); // let the content render before restoring scroll position
+                await ScrollTracker.SetScrollFractionAsync(ContentViewportId, resumeFraction);
+            }
         }
 
         _saveTimer?.Dispose();
         _saveTimer = new Timer(_ => _ = SaveProgressAsync(), null, SaveInterval, SaveInterval);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_book?.File?.Format is not ("TXT" or "MD")) return;
+
+        if (firstRender)
+        {
+            if (_readerMode == "book")
+            {
+                await InitTxtMdPaginationAsync(restorePosition: true);
+            }
+            return;
+        }
+
+        if (_txtMdReaderModeChangedSinceRender)
+        {
+            _txtMdReaderModeChangedSinceRender = false;
+            if (_readerMode == "book")
+            {
+                await InitTxtMdPaginationAsync(restorePosition: false);
+            }
+            else
+            {
+                await TextPaginator.DestroyAsync(ContentInnerId);
+            }
+            StateHasChanged();
+        }
+        else if (_txtMdLayoutChangedSinceRender && _readerMode == "book")
+        {
+            // A font-size/family/line-height/page-width change resizes the
+            // content -- pageCount can change entirely, so the current page
+            // index alone is meaningless afterward. Convert through a
+            // fraction (same conversion the saved-position migration uses)
+            // instead of just clamping the old page number into the new range.
+            _txtMdLayoutChangedSinceRender = false;
+            var fraction = _txtMdPageCount > 1 ? (double)(_txtMdCurrentPage - 1) / (_txtMdPageCount - 1) : 0;
+            _txtMdPageCount = await TextPaginator.RelayoutAsync(ContentViewportId, ContentInnerId);
+            var targetPage = _txtMdPageCount > 1 ? (int)Math.Round(fraction * (_txtMdPageCount - 1)) + 1 : 1;
+            _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, targetPage);
+            StateHasChanged();
+        }
+    }
+
+    private async Task InitTxtMdPaginationAsync(bool restorePosition)
+    {
+        _txtMdPageCount = await TextPaginator.InitAsync(ContentViewportId, ContentInnerId);
+        var targetPage = restorePosition && _pendingRestorePosition is { } raw
+            ? ConvertSavedPositionToPage(raw, _txtMdPageCount)
+            : 1;
+        _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, targetPage);
+        StateHasChanged();
+    }
+
+    // Saved TXT/MD positions predate real pagination and are 0-1 scroll
+    // fractions (always written with "F4" -- see SaveProgressAsync -- so
+    // they always contain a '.'); a page index written by this feature
+    // never does. That's a real invariant of the existing data, not a
+    // guess, and is how a legacy fraction is told apart from a page index
+    // without a schema change.
+    private static int ConvertSavedPositionToPage(string raw, int pageCount)
+    {
+        if (raw.Contains('.') && double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var fraction))
+        {
+            var clamped = Math.Clamp(fraction, 0, 1);
+            return pageCount > 1 ? (int)Math.Round(clamped * (pageCount - 1)) + 1 : 1;
+        }
+
+        if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var page))
+        {
+            return Math.Clamp(page, 1, pageCount);
+        }
+
+        return 1;
+    }
+
+    private async Task PrevTxtMdPageAsync()
+    {
+        _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, _txtMdCurrentPage - 1);
+    }
+
+    private async Task NextTxtMdPageAsync()
+    {
+        _txtMdCurrentPage = await TextPaginator.GoToPageAsync(ContentInnerId, _txtMdCurrentPage + 1);
     }
 
     private async Task<OfflineBookFile?> TryGetOfflineFileAsync()
@@ -351,9 +481,18 @@ else
                 Percentage = pdfProgress.PageCount > 0 ? Math.Round(pdfProgress.Page * 100.0 / pdfProgress.PageCount, 1) : 0,
             };
         }
+        else if (_readerMode == "book")
+        {
+            request = new SaveProgressRequest
+            {
+                BookId = Id,
+                Position = _txtMdCurrentPage.ToString(CultureInfo.InvariantCulture),
+                Percentage = _txtMdPageCount > 0 ? Math.Round(_txtMdCurrentPage * 100.0 / _txtMdPageCount, 1) : 0,
+            };
+        }
         else
         {
-            var fraction = await ScrollTracker.GetScrollFractionAsync("reader-content");
+            var fraction = await ScrollTracker.GetScrollFractionAsync(ContentViewportId);
             request = new SaveProgressRequest
             {
                 BookId = Id,
@@ -365,34 +504,41 @@ else
         await ApiClient.PostAsync<SaveProgressRequest, ReadingProgress>("/api/reading/update", request);
     }
 
+    private bool IsTxtMd => _book?.File?.Format is "TXT" or "MD";
+
     private async Task IncreaseFontSize()
     {
         _fontSize = Math.Min(_fontSize + 2, 32);
         await ReaderSettings.SetFontSizeAsync(_fontSize);
+        if (IsTxtMd) _txtMdLayoutChangedSinceRender = true;
     }
 
     private async Task DecreaseFontSize()
     {
         _fontSize = Math.Max(_fontSize - 2, 12);
         await ReaderSettings.SetFontSizeAsync(_fontSize);
+        if (IsTxtMd) _txtMdLayoutChangedSinceRender = true;
     }
 
     private async Task SetFontFamily(string fontFamily)
     {
         _fontFamily = fontFamily;
         await ReaderSettings.SetFontFamilyAsync(_fontFamily);
+        if (IsTxtMd) _txtMdLayoutChangedSinceRender = true;
     }
 
     private async Task SetLineHeight(string lineHeight)
     {
         _lineHeight = lineHeight;
         await ReaderSettings.SetLineHeightAsync(_lineHeight);
+        if (IsTxtMd) _txtMdLayoutChangedSinceRender = true;
     }
 
     private async Task SetPageWidth(string pageWidth)
     {
         _pageWidth = pageWidth;
         await ReaderSettings.SetPageWidthAsync(_pageWidth);
+        if (IsTxtMd) _txtMdLayoutChangedSinceRender = true;
     }
 
     private async Task SetHideScrollbars(ChangeEventArgs e)
@@ -405,6 +551,7 @@ else
     {
         _readerMode = mode;
         await ReaderSettings.SetReaderModeAsync(_readerMode);
+        if (IsTxtMd) _txtMdReaderModeChangedSinceRender = true;
     }
 
     private void ToggleSettingsMenu() => _settingsMenuOpen = !_settingsMenuOpen;
