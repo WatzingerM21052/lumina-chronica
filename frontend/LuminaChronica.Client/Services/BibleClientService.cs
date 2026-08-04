@@ -37,4 +37,16 @@ public class BibleClientService(IJSRuntime jsRuntime)
         var module = await _moduleTask.Value;
         await module.InvokeVoidAsync("scrollToVerse", containerId, sid);
     }
+
+    public async Task<string> GetBibleThemeAsync()
+    {
+        var module = await _moduleTask.Value;
+        return await module.InvokeAsync<string>("getBibleTheme");
+    }
+
+    public async Task SetBibleThemeAsync(string theme)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("setBibleTheme", theme);
+    }
 }

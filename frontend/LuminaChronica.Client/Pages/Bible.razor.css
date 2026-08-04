@@ -306,3 +306,173 @@
         --bible-burgundy: #d98a9a;
     }
 }
+
+/* ============================================================
+   Dark Academia / Baroque immersive theme (issue #143)
+   ============================================================
+   Opt-in, page-scoped, additive only -- every rule below is gated behind
+   .bible-page--dark-academia so the default theme above is completely
+   unaffected. Independent of [data-theme="..."]/prefers-color-scheme: this
+   theme looks the same regardless of the app's own light/dark setting,
+   since it's meant to feel like its own place, not a reskinned app page.
+
+   The immersive full-viewport background/glow/dust live in
+   BibleAtmosphere.razor.css (a separate fixed-position component, sibling
+   to .bible-page) -- this file only styles .bible-page's own content
+   panels sitting on top of that background: translucent "glass" panels so
+   the atmosphere reads through slightly, restyled typography, and the
+   scroll-triggered fade-in utility.
+   ============================================================ */
+
+.bible-page--dark-academia {
+    --ba-ink: #ece1c4;
+    --ba-ink-muted: #c9bda1;
+    --ba-gold: #b8935a;
+    --ba-gold-bright: #d9b978;
+    --ba-burgundy: #8a2f42;
+    --ba-panel: rgba(18, 13, 10, 0.62);
+    --ba-panel-strong: rgba(15, 11, 9, 0.82);
+    --ba-border: rgba(184, 147, 90, 0.35);
+
+    color: var(--ba-ink);
+}
+
+/* Theme toggle -- top-right pill, visible/reachable in both themes so
+   switching back is always one click away. Sits above the fixed
+   background (z-index unnecessary here -- .bible-atmosphere is itself
+   z-index:-1, so any normal-flow content already stacks above it). */
+.bible-theme-toggle {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-1);
+    padding: var(--space-2) 0 var(--space-1);
+}
+
+.bible-page--dark-academia .bible-theme-toggle .btn {
+    background: var(--ba-panel);
+    border: 1px solid var(--ba-border);
+    color: var(--ba-ink-muted);
+}
+
+.bible-page--dark-academia .bible-theme-toggle .btn.is-active {
+    color: var(--ba-gold-bright);
+    border-color: var(--ba-gold);
+}
+
+.bible-title-immersive {
+    font-family: var(--font-family-display);
+    font-size: clamp(2rem, 4.5vw, 3.25rem);
+    text-align: center;
+    letter-spacing: 0.04em;
+    color: var(--ba-gold-bright);
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.7);
+    margin: var(--space-2) 0 var(--space-4);
+}
+
+/* Controls / search -- translucent glass panels over the fixed background,
+   same layout as the default theme, new material only. */
+.bible-page--dark-academia .bible-controls {
+    background: var(--ba-panel);
+    border-color: var(--ba-border);
+    backdrop-filter: blur(6px);
+}
+
+.bible-page--dark-academia .bible-control {
+    color: var(--ba-ink-muted);
+}
+
+.bible-page--dark-academia .bible-control select,
+.bible-page--dark-academia .bible-search input[type="search"] {
+    background: var(--ba-panel-strong);
+    border-color: var(--ba-border);
+    color: var(--ba-ink);
+}
+
+.bible-page--dark-academia .bible-search-result {
+    background: var(--ba-panel);
+    border-color: var(--ba-border);
+    color: var(--ba-ink-muted);
+}
+
+.bible-page--dark-academia .bible-search-result:hover {
+    background: var(--ba-panel-strong);
+}
+
+.bible-page--dark-academia .bible-search-result strong {
+    color: var(--ba-gold-bright);
+}
+
+/* Chapter panel -- less transparent than the controls (long-form reading
+   needs steadier contrast than a quick select/search glance does). */
+.bible-page--dark-academia .bible-chapter {
+    background: var(--ba-panel-strong);
+    border-color: var(--ba-gold);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.bible-page--dark-academia .bible-chapter h2 {
+    color: var(--ba-gold-bright);
+    border-bottom-color: var(--ba-gold);
+}
+
+.bible-page--dark-academia .bible-chapter-content {
+    color: var(--ba-ink);
+}
+
+/* Verse markup comes from api.bible's injected MarkupString -- ::deep is
+   required for Blazor's scoped CSS to reach it at all (see the module
+   comment at the top of this file). Confirmed this exact shape --
+   ancestor modifier class, then a scoped element, then ::deep -- compiles
+   to a working selector before writing the rest of this block on top of it. */
+.bible-page--dark-academia .bible-chapter-content ::deep p.s1 {
+    color: var(--ba-gold-bright);
+}
+
+.bible-page--dark-academia .bible-chapter-content ::deep span.v {
+    color: var(--ba-gold);
+}
+
+.bible-page--dark-academia .bible-chapter-content ::deep p:first-of-type::first-letter {
+    color: var(--ba-gold-bright);
+}
+
+.bible-page--dark-academia .bible-chapter-content ::deep .bible-verse-highlight {
+    background: rgba(184, 147, 90, 0.4);
+}
+
+.bible-page--dark-academia .bible-attribution {
+    color: var(--ba-ink-muted);
+}
+
+.bible-page--dark-academia .bible-attribution a {
+    color: var(--ba-gold-bright);
+}
+
+/* Scroll-triggered fade-in (bibleAtmosphere.js toggles .is-visible via
+   IntersectionObserver) -- scoped to this theme only, so the default
+   theme's chapter content (which also carries the .ba-fade-in class,
+   applied unconditionally in Bible.razor to keep the markup simple) is
+   never affected: without this ancestor selector, opacity:0 would just
+   never apply there. */
+.bible-page--dark-academia .ba-fade-in {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.bible-page--dark-academia .ba-fade-in.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bible-page--dark-academia .ba-fade-in {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .bible-page--dark-academia .bible-theme-toggle .btn {
+        transition: none;
+    }
+}

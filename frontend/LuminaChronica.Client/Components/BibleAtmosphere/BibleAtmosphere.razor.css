@@ -1,0 +1,158 @@
+/*
+  Dark Academia theme (issue #143) -- the immersive full-viewport background
+  layer. Fixed and z-indexed behind Bible.razor's own content, which stays a
+  normal, independently-scrolling document on top of it (this is NOT a
+  scroll-hijacking or full-page-canvas design -- much simpler, much cheaper,
+  and it's what "the background moves slightly slower than the page" (a
+  parallax effect) actually requires: a fixed layer the real content just
+  scrolls over).
+*/
+
+.bible-atmosphere {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background: #0c0908;
+}
+
+.bible-atmosphere-background {
+    position: absolute;
+    inset: -60px -20px -20px -20px; /* overshoot so the parallax offset never reveals an edge */
+    background-image: url("images/bible-hero.jpg");
+    background-size: cover;
+    background-position: center 30%;
+    filter: brightness(0.38) saturate(0.85) sepia(0.15);
+    transform: translateY(var(--ba-parallax-y, 0px));
+    will-change: transform;
+}
+
+.bible-atmosphere-vignette {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at center, transparent 35%, rgba(6, 4, 3, 0.55) 100%),
+        linear-gradient(180deg, rgba(8, 5, 4, 0.75) 0%, rgba(8, 5, 4, 0.25) 22%, rgba(8, 5, 4, 0.35) 70%, rgba(4, 2, 2, 0.9) 100%);
+}
+
+/* Two soft, slowly-pulsing warm blobs standing in for candlelight -- pure
+   CSS (opacity/transform only, GPU-composited), no canvas/particle engine. */
+.bible-atmosphere-glow {
+    position: absolute;
+    width: 42vw;
+    height: 42vw;
+    max-width: 620px;
+    max-height: 620px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(211, 165, 92, 0.16) 0%, rgba(211, 165, 92, 0) 70%);
+    animation: ba-glow-pulse 9s ease-in-out infinite;
+}
+
+.bible-atmosphere-glow--1 {
+    top: 8%;
+    left: 12%;
+    animation-delay: 0s;
+}
+
+.bible-atmosphere-glow--2 {
+    bottom: 5%;
+    right: 8%;
+    animation-delay: -4.5s;
+}
+
+@keyframes ba-glow-pulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.08); }
+}
+
+/* Dust motes drifting in the candlelight -- a fixed small count of plain
+   spans, each given a random-ish drift path via nth-child offsets rather
+   than inline styles (keeps this component free of per-render style
+   computation; the pattern doesn't need true randomness to read as
+   atmospheric). */
+.bible-atmosphere-dust {
+    position: absolute;
+    inset: 0;
+}
+
+.bible-atmosphere-mote {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(230, 201, 118, 0.55);
+    box-shadow: 0 0 4px 1px rgba(230, 201, 118, 0.3);
+    opacity: 0;
+    animation: ba-dust-drift 16s linear infinite;
+}
+
+@keyframes ba-dust-drift {
+    0% { opacity: 0; transform: translate(0, 100vh) scale(0.6); }
+    8% { opacity: 0.8; }
+    92% { opacity: 0.5; }
+    100% { opacity: 0; transform: translate(28px, -8vh) scale(1); }
+}
+
+/* 14 motes (see BibleAtmosphere.razor's DustMoteCount), each offset in
+   start position/timing purely via nth-child math -- no JS, no inline
+   style attribute per element. */
+.bible-atmosphere-mote:nth-child(1) { left: 6%; animation-duration: 14s; animation-delay: -1s; }
+.bible-atmosphere-mote:nth-child(2) { left: 14%; animation-duration: 19s; animation-delay: -6s; }
+.bible-atmosphere-mote:nth-child(3) { left: 21%; animation-duration: 15s; animation-delay: -11s; }
+.bible-atmosphere-mote:nth-child(4) { left: 29%; animation-duration: 21s; animation-delay: -3s; }
+.bible-atmosphere-mote:nth-child(5) { left: 37%; animation-duration: 17s; animation-delay: -9s; }
+.bible-atmosphere-mote:nth-child(6) { left: 44%; animation-duration: 13s; animation-delay: -14s; }
+.bible-atmosphere-mote:nth-child(7) { left: 52%; animation-duration: 20s; animation-delay: -2s; }
+.bible-atmosphere-mote:nth-child(8) { left: 59%; animation-duration: 16s; animation-delay: -8s; }
+.bible-atmosphere-mote:nth-child(9) { left: 67%; animation-duration: 22s; animation-delay: -13s; }
+.bible-atmosphere-mote:nth-child(10) { left: 74%; animation-duration: 14.5s; animation-delay: -5s; }
+.bible-atmosphere-mote:nth-child(11) { left: 81%; animation-duration: 18s; animation-delay: -10s; }
+.bible-atmosphere-mote:nth-child(12) { left: 88%; animation-duration: 15.5s; animation-delay: -7s; }
+.bible-atmosphere-mote:nth-child(13) { left: 93%; animation-duration: 19.5s; animation-delay: -12s; }
+.bible-atmosphere-mote:nth-child(14) { left: 97%; animation-duration: 13.5s; animation-delay: -4s; }
+
+.bible-atmosphere-credit {
+    position: fixed;
+    right: var(--space-2);
+    bottom: var(--space-1);
+    z-index: 1;
+    margin: 0;
+    font-size: var(--font-size-caption);
+    color: rgba(230, 220, 200, 0.65);
+}
+
+.bible-atmosphere-credit a {
+    color: rgba(211, 165, 92, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bible-atmosphere-background {
+        transform: none;
+    }
+
+    .bible-atmosphere-glow,
+    .bible-atmosphere-mote {
+        animation: none;
+    }
+
+    .bible-atmosphere-glow {
+        opacity: 0.6;
+    }
+
+    .bible-atmosphere-mote {
+        opacity: 0;
+    }
+}
+
+/* Mobile: bibleAtmosphere.js never wires up the parallax scroll listener
+   below this width (see PARALLAX_MAX_WIDTH), so --ba-parallax-y simply
+   never changes -- this media query only needs to drop the dust layer,
+   the one purely-decorative effect still animating continuously
+   regardless of scroll, to save a little paint/composite work on weaker
+   hardware. Glow keeps animating; it's two elements, negligible cost. */
+@media (max-width: 640px) {
+    .bible-atmosphere-dust {
+        display: none;
+    }
+}

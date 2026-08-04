@@ -30,5 +30,6 @@ builder.Services.AddScoped<TextPaginatorService>();
 builder.Services.AddScoped<ReaderSettingsService>();
 builder.Services.AddScoped<OfflineStorageService>();
 builder.Services.AddScoped<BibleClientService>();
+builder.Services.AddScoped<BibleAtmosphereService>();
 
 await builder.Build().RunAsync();

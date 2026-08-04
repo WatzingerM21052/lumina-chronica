@@ -18,6 +18,21 @@ export function setLastTranslationId(bibleId) {
     localStorage.setItem(STORAGE_KEY, bibleId);
 }
 
+// "Dark Academia" theme toggle (issue #143) -- page-scoped, mirrors theme.js's
+// own get/set-in-localStorage shape exactly, but deliberately its own key and
+// module rather than reusing theme.js: this is a Bible-page-only visual mode,
+// not one of the app-wide themes theme.js applies to <html>.
+const THEME_STORAGE_KEY = "lumina-bible-theme";
+const DEFAULT_BIBLE_THEME = "default";
+
+export function getBibleTheme() {
+    return localStorage.getItem(THEME_STORAGE_KEY) || DEFAULT_BIBLE_THEME;
+}
+
+export function setBibleTheme(theme) {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
+
 let fumsScriptRequested = false;
 
 // The window.fums/fumsData stub must exist before the real script loads --

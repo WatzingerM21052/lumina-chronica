@@ -63,6 +63,7 @@ public class BiblePageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BibleClientService>();
+        Services.AddSingleton<BibleAtmosphereService>();
     }
 
     private RoutedFakeHttpMessageHandler DefaultHandler() =>
@@ -199,5 +200,74 @@ public class BiblePageTests : BunitContext
 
         Assert.Contains("Phil. 4", cut.Markup);
         Assert.Contains("Rejoice in the Lord always", cut.Markup);
+    }
+
+    [Fact]
+    public void Bible_DefaultsToStandardTheme_ShowsHero_NoAtmosphere()
+    {
+        UseHandler(DefaultHandler());
+
+        var cut = Render<Bible>();
+
+        Assert.Contains("bible-hero", cut.Markup);
+        Assert.DoesNotContain("bible-page--dark-academia", cut.Markup);
+        Assert.DoesNotContain("bible-atmosphere", cut.Markup);
+    }
+
+    [Fact]
+    public void Bible_TogglingDarkAcademia_HidesHero_ShowsAtmosphere_AndPersistsChoice()
+    {
+        var setThemeHandler = JSInterop.SetupVoid("setBibleTheme", _ => true);
+        setThemeHandler.SetVoidResult();
+        UseHandler(DefaultHandler());
+
+        var cut = Render<Bible>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dark Academia").Click();
+
+        Assert.DoesNotContain("bible-hero-image", cut.Markup);
+        Assert.Contains("bible-page--dark-academia", cut.Markup);
+        Assert.Contains("bible-atmosphere", cut.Markup);
+        Assert.Contains("bible-title-immersive", cut.Markup);
+
+        var invocation = Assert.Single(setThemeHandler.Invocations);
+        Assert.Equal("dark-academia", invocation.Arguments[0]);
+    }
+
+    [Fact]
+    public void Bible_PersistedDarkAcademiaTheme_RestoresOnLoad()
+    {
+        JSInterop.Setup<string>("getBibleTheme", _ => true).SetResult("dark-academia");
+        UseHandler(DefaultHandler());
+
+        var cut = Render<Bible>();
+
+        Assert.DoesNotContain("bible-hero-image", cut.Markup);
+        Assert.Contains("bible-page--dark-academia", cut.Markup);
+        Assert.Contains("bible-atmosphere", cut.Markup);
+    }
+
+    [Fact]
+    public void Bible_DarkAcademiaTheme_NextChapter_StaysInThemeAndLoadsNewChapter()
+    {
+        // The theme choice shouldn't reset or fight chapter navigation --
+        // BibleAtmosphere stays mounted (ContentRootId unchanged) across a
+        // chapter change within the same theme.
+        const string chapter3Json = """
+            {"success":true,"data":{
+                "id":"PHP.3","reference":"Phil. 3","content":"<p>Finally, my brothers...</p>",
+                "copyright":"NIV copyright text","next":null,"previous":{"id":"PHP.2","number":"2"},
+                "fumsToken":"tok-niv-3"
+            }}
+            """;
+        JSInterop.Setup<string>("getBibleTheme", _ => true).SetResult("dark-academia");
+        var handler = DefaultHandler()
+            .When(r => r.RequestUri!.AbsolutePath == $"/api/bible/chapters/{NivId}/PHP.3", _ => RoutedFakeHttpMessageHandler.JsonResponse(chapter3Json));
+        UseHandler(handler);
+
+        var cut = Render<Bible>();
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Nächstes Kapitel")).Click();
+
+        Assert.Contains("Phil. 3", cut.Markup);
+        Assert.Contains("bible-page--dark-academia", cut.Markup);
     }
 }
