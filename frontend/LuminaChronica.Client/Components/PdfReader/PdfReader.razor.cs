@@ -20,6 +20,9 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     public string ReaderMode { get; set; } = "book";
 
     [Parameter]
+    public string PageWidth { get; set; } = "normal";
+
+    [Parameter]
     public EventCallback<PdfProgress> OnProgress { get; set; }
 
     private readonly string _elementId = $"pdf-reader-{Guid.NewGuid():N}";
@@ -32,6 +35,28 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
     private bool _readerModeChangedSinceRender;
     private bool _realisticPreparing;
     private ElementReference _viewportElement;
+
+    private string ViewportClass
+    {
+        get
+        {
+            var classes = "pdf-reader-viewport";
+            if (_zoom != 1 && ReaderMode != "realistic") classes += " pdf-reader-viewport--zoomed";
+            if (ReaderMode == "scroll") classes += " pdf-reader-viewport--scroll";
+            classes += PageWidth switch { "narrow" => " pdf-reader-viewport--width-narrow", "wide" => " pdf-reader-viewport--width-wide", _ => "" };
+            return classes;
+        }
+    }
+
+    private string NavClass
+    {
+        get
+        {
+            var classes = "pdf-reader-nav";
+            classes += PageWidth switch { "narrow" => " pdf-reader-nav--width-narrow", "wide" => " pdf-reader-nav--width-wide", _ => "" };
+            return classes;
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

@@ -67,6 +67,16 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
         }
     }
 
+    private string NavClass
+    {
+        get
+        {
+            var classes = "epub-reader-nav";
+            classes += PageWidth switch { "narrow" => " epub-reader-nav--width-narrow", "wide" => " epub-reader-nav--width-wide", _ => "" };
+            return classes;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
