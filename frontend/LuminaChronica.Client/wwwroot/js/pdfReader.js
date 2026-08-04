@@ -93,7 +93,30 @@ function getAvailableSize(elementId) {
     // fit into is instead the frame's parent, .pdf-reader-viewport, which
     // has a real CSS-determined size independent of its content.
     const availableEl = container?.parentElement || container;
-    return { width: availableEl?.clientWidth || 600, height: availableEl?.clientHeight || 800 };
+    let width = availableEl?.clientWidth || 600;
+    let height = availableEl?.clientHeight || 800;
+
+    // .pdf-reader-frame's own border (1px each side in Book/Realistic mode,
+    // 0 in Scroll mode -- read live rather than hardcoded so this tracks
+    // whichever mode's classes are currently applied) sits *outside* the
+    // canvas this fits, so a canvas sized to exactly fill the viewport's
+    // clientWidth/Height still ends up 2px larger than that once the
+    // frame's border wraps it. Confirmed live: whichever axis a page is
+    // actually constrained by (not the height axis specifically -- any
+    // page can be width- or height-bound depending on its own aspect ratio
+    // and the current viewport shape/Seitenbreite) ends up exactly at that
+    // axis's available size with no margin, so the border reliably tips it
+    // 1-2px past the viewport's own box and triggers a scrollbar nothing
+    // was actually there to need -- reported live as an unwanted horizontal
+    // scrollbar at 100% zoom on a normal page. Subtracting the border here
+    // once, for both axes, fixes it regardless of which axis is binding.
+    if (container) {
+        const cs = getComputedStyle(container);
+        width -= (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+        height -= (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    }
+
+    return { width, height };
 }
 
 // ---- Book View: one canvas, swapped on next()/prev() ----------------------
