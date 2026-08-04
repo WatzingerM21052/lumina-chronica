@@ -120,7 +120,7 @@ else
     }
     else if (_book.File.Format == "PDF" && _pdfBytes is not null)
     {
-        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" PageWidth="@_pageWidth" OnProgress="HandlePdfProgress" />
+        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" PageWidth="@_pageWidth" OnProgress="HandlePdfProgress" OnRealisticUnavailable="HandleRealisticUnavailable" />
     }
     else
     {
@@ -298,6 +298,21 @@ else
     {
         _latestPdfProgress = progress;
         return Task.CompletedTask;
+    }
+
+    // Realistic View failed inside pdfReader.js and already fell back to
+    // Book View on its own -- this just corrects _readerMode/persisted
+    // settings to match, so the Ansicht toggle stops claiming Realistisch
+    // is still active while a single Book View page is what's on screen.
+    // Explicit StateHasChanged (unlike SetReaderMode's other callers, all
+    // plain @onclick handlers where Blazor re-renders automatically): this
+    // one arrives via a [JSInvokable] call on a child component, a path
+    // that doesn't reliably trigger this component's own re-render on its
+    // own.
+    private async Task HandleRealisticUnavailable()
+    {
+        await SetReaderMode("book");
+        StateHasChanged();
     }
 
     private async Task SaveProgressAsync()
