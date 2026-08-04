@@ -150,11 +150,20 @@
 
     <div class="form-group">
         <label for="file">Buchdatei (.epub, .pdf, .txt, .md — max. 50MB)</label>
-        <div class="dropzone @(_isDraggingFile ? "dropzone--active" : "")"
+        <div class="dropzone @(_isDraggingFile ? "dropzone--active" : "") @(_selectedFile is not null ? "dropzone--filled" : "")"
              @ondragenter="() => _isDraggingFile = true" @ondragleave="() => _isDraggingFile = false"
              @ondragover:preventDefault @ondrop="() => _isDraggingFile = false">
             <InputFile id="file" OnChange="OnFileSelectedAsync" />
-            <span class="dropzone-label">Datei hierher ziehen oder klicken zum Auswählen</span>
+            <span class="dropzone-label">
+                @if (_selectedFile is not null)
+                {
+                    <text>📄 @_selectedFile.Name</text>
+                }
+                else
+                {
+                    <text>Datei hierher ziehen oder klicken zum Auswählen</text>
+                }
+            </span>
         </div>
         @if (_fileError is not null)
         {
@@ -164,11 +173,20 @@
 
     <div class="form-group">
         <label for="cover">Cover (optional, .jpg/.png/.webp — max. 5MB)</label>
-        <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
+        <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "") @(_selectedCover is not null ? "dropzone--filled" : "")"
              @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
              @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
             <InputFile id="cover" OnChange="OnCoverSelectedAsync" />
-            <span class="dropzone-label">Cover hierher ziehen oder klicken zum Auswählen</span>
+            <span class="dropzone-label">
+                @if (_selectedCover is not null)
+                {
+                    <text>📄 @_selectedCover.Name</text>
+                }
+                else
+                {
+                    <text>Cover hierher ziehen oder klicken zum Auswählen</text>
+                }
+            </span>
         </div>
         @if (_coverError is not null)
         {
