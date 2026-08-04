@@ -471,28 +471,52 @@ function buildPageFlip(elementId, entry, width, height) {
     entry.realisticHost = host;
 
     // StPageFlip decides portrait (one page) vs. landscape (two-page spread)
-    // exactly once, at construction, by comparing `host`'s *current* CSS
-    // width against 2x the single-page width above -- confirmed live
-    // against the real vendored library. `container` at this point is
-    // whatever a previous build left it at (or unsized on the very first
-    // build), almost always narrower than a real two-page spread needs, so
-    // without this it locks portrait mode permanently regardless of how
-    // much actual room the viewport has -- reported live as "zeigt nur
-    // rechte Seite und die linke nicht" (the book never gets a chance to
-    // show as an open two-page spread at all). Pre-sizing `container` to
-    // the real available viewport space *before* constructing PageFlip
-    // lets it measure genuine room and choose correctly; applyBounds()
-    // below then shrinks `container` back down to the book's actual
-    // rendered size once the real decision has been made, same as before.
+    // exactly once, at construction, by comparing `host`'s *current*
+    // computed width (specifically its rendered canvas's, for
+    // loadFromImages -- see getDistElement()/distElement=this.canvas in
+    // the vendored source) against 2x the single-page width above.
+    //
+    // autoSize (the library's default, true, previously left unset here)
+    // is what breaks this for a wrapped `host` like PDF's: found by reading
+    // the vendored source directly, not just observed live -- with fixed
+    // size, autoSize also sets `host.style.minWidth` from `width` and
+    // `host.style.maxWidth` from `maxWidth` (an option this file never
+    // set, defaulting to 0), and CSS resolves a min-width/max-width
+    // conflict in min-width's favor -- so `host` was silently clamped to
+    // exactly the single-page width no matter how wide `container` was
+    // pre-sized, permanently locking portrait regardless of real available
+    // room. This is exactly the mechanism epubReader.js's own
+    // initRealisticViewUnsafe already documents fighting (opposite
+    // direction: it wants to *force* single-page and disables autoSize so
+    // its own narrower sizing sticks instead of the library's). Same fix
+    // here, mirrored: autoSize:false stops the library from touching
+    // host's width via that min/max-width mechanism at all, so this file's
+    // own sizing (below, and in applyBounds()) is what actually governs --
+    // both `container` (Blazor-tracked, .pdf-reader-frame's own box) and
+    // `host` (StPageFlip's actual target, a disposable child -- see the
+    // destroy()-removes-its-target comment above) need it set explicitly,
+    // since neither has any other CSS driving its width on its own.
+    //
+    // Pre-sized here to the real available viewport space *before*
+    // constructing PageFlip so its one-time orientation decision sees
+    // genuine room for a two-page spread -- reported live as "zeigt nur
+    // rechte Seite und die linke nicht" when this was missing (the book
+    // never got a chance to show as an open spread at all). applyBounds()
+    // below then shrinks both back down to the book's actual rendered size
+    // once the real decision has been made.
     const { width: availableWidth } = getAvailableSize(elementId);
-    container.style.width = `${Math.max(availableWidth, width)}px`;
+    const preSizeWidth = Math.max(availableWidth, width);
+    container.style.width = `${preSizeWidth}px`;
     container.style.height = `${height}px`;
+    host.style.width = `${preSizeWidth}px`;
+    host.style.height = `${height}px`;
 
     const pageFlip = new window.St.PageFlip(host, {
         width,
         height,
         size: "fixed",
         showCover: true,
+        autoSize: false,
         maxShadowOpacity: 0.5,
         mobileScrollSupport: false,
     });
@@ -510,49 +534,36 @@ function buildPageFlip(elementId, entry, width, height) {
 
     entry.pageFlip = pageFlip;
 
-    // StPageFlip's own autoSize/size:"fixed" container sizing sets
-    // width:100%/max-width on `host` and expects a plain block-flow parent
-    // to resolve that percentage against -- .pdf-reader-frame is a flex
-    // item here (its base rule is display:flex), so width:auto on a flex
-    // item is shrink-to-fit, not fill-container, and with nothing else to
-    // size against, the library's own inline style resolves to 0x0
-    // (confirmed live: .stf__wrapper's padding-bottom aspect-ratio trick had
-    // nothing to size relative to). Explicitly sizing `container` (not
-    // `host`, which StPageFlip already sizes itself) from the book's own
-    // reported bounds sidesteps that percentage-vs-flex interaction
-    // entirely, matching this file's existing pattern elsewhere of
-    // computing sizes itself rather than trusting a vendored library's
-    // "auto" behavior against an unknown surrounding layout.
-    //
     // getBoundsRect().width is ALWAYS the two-page-spread width (2x the
     // single page width passed to the constructor), even when the library
     // has decided to render a single page in "portrait" orientation (e.g.
-    // a book with an odd page count, or a container too narrow for a
-    // spread) -- confirmed live against the real vendored library: sizing
-    // `container` to the full spread width while StPageFlip paints a
-    // single portrait page stretches that page vertically to fill the
-    // extra width and preserve its aspect ratio, roughly doubling its
-    // rendered height and leaving it clipped top/bottom by this frame's
+    // a container too narrow for a spread, or usePortrait's own default
+    // fallback) -- confirmed live against the real vendored library:
+    // sizing to the full spread width while StPageFlip paints a single
+    // portrait page stretches that page vertically to fill the extra
+    // width and preserve its aspect ratio, roughly doubling its rendered
+    // height and leaving it clipped top/bottom by this frame's
     // overflow:hidden -- reported live as "only half the book shown,
     // shifted right". `bounds.pageWidth` is the single-page width the
     // formula already computes; using it instead of `bounds.width` in
-    // portrait mode gives the page the width it actually needs, which
-    // measured live also self-corrects the height back to `bounds.height`
-    // with no separate fix needed there.
+    // portrait mode gives the page the width it actually needs.
     applyBounds();
-    // The library can flip orientation again after this initial build (its
-    // own resize handling reacts even in size:"fixed" mode, confirmed live
-    // by shrinking `container` post-build and watching the canvas repaint
-    // at the corrected size) -- without this listener, a later orientation
-    // change would leave `container` sized for whichever orientation was
-    // current at build time, reintroducing the same stretched/clipped page.
+    // The library can flip orientation again after this initial build (a
+    // window resize, or a narrower Seitenbreite change re-running this same
+    // buildPageFlip at a smaller `width`/`height`) -- without this listener,
+    // a later orientation change would leave `container`/`host` sized for
+    // whichever orientation was current at build time, reintroducing the
+    // same stretched/clipped page.
     pageFlip.on("changeOrientation", applyBounds);
 
     function applyBounds() {
         const bounds = pageFlip.getBoundsRect();
         const isPortrait = pageFlip.getOrientation() === "portrait";
-        container.style.width = `${isPortrait ? bounds.pageWidth : bounds.width}px`;
+        const w = isPortrait ? bounds.pageWidth : bounds.width;
+        container.style.width = `${w}px`;
         container.style.height = `${bounds.height}px`;
+        host.style.width = `${w}px`;
+        host.style.height = `${bounds.height}px`;
     }
 }
 
