@@ -956,6 +956,20 @@ select:focus-visible,
     scrollbar-gutter: stable;
 }
 
+/* PdfReader.razor.cs calls FocusAsync() on this element right after every
+   load so arrow-key/spacebar page navigation works immediately (issue
+   #144 point 2) -- without an explicit override, that programmatic focus
+   still matches the global [tabindex]:focus-visible rule above in most
+   browsers' heuristics (they can't distinguish "focused so a feature
+   works" from "focused because the user tabbed here"), drawing a gold
+   ring around the whole reader on every single page load. Reported live
+   as an unexplained orange border appearing "beim Laden der Seite".
+   Keyboard nav itself doesn't depend on the ring being visible, so this
+   just turns it off for this one programmatically-focused element. */
+.pdf-reader-viewport:focus-visible {
+    outline: none;
+}
+
 .pdf-reader-viewport--width-narrow {
     max-width: min(90vw, 54rem);
 }
