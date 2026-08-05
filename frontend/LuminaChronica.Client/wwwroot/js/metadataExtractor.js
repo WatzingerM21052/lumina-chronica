@@ -95,32 +95,59 @@ export async function extractPdf(bytes) {
     };
 }
 
+// Same pdf.js worker hang already documented and fixed for the reader
+// (issue #213, pdfReader.js's withTimeout) -- getPage()/render() can hang
+// indefinitely here too, confirmed live: fetch and extractPdf's own
+// getDocument()/getMetadata() both completed normally, but this render call
+// specifically never settled. Without a timeout, a hung cover render left
+// the upload silently coverless forever with no error surfaced -- the form
+// itself was never blocked (cover extraction runs independently of
+// SubmitAsync), so nothing here needs a C#-side change; failing soft to
+// null is enough for BookUpload.razor's existing "no cover" handling.
+const COVER_RENDER_TIMEOUT_MS = 15000;
+
+function withTimeout(promise, ms, label) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+    ]);
+}
+
 async function resolveCoverBlob() {
     if (cachedCoverBlob !== undefined) return cachedCoverBlob;
     if (!pending) return (cachedCoverBlob = null);
 
-    if (pending.book) {
-        cachedCoverBlob = await pending.book.archive.getBlob(pending.coverPath);
-        return cachedCoverBlob;
-    }
+    try {
+        if (pending.book) {
+            cachedCoverBlob = await withTimeout(pending.book.archive.getBlob(pending.coverPath), COVER_RENDER_TIMEOUT_MS, "cover getBlob");
+            return cachedCoverBlob;
+        }
 
-    if (pending.pdfDoc) {
-        // Same fit-to-size render approach as pdfReader.js's renderPage,
-        // capped at 800px on the long edge since this only feeds a cover
-        // thumbnail, not the reading view.
-        const page = await pending.pdfDoc.getPage(1);
-        const unscaledViewport = page.getViewport({ scale: 1 });
-        const maxDimension = 800;
-        const scale = Math.min(1, maxDimension / Math.max(unscaledViewport.width, unscaledViewport.height));
-        const viewport = page.getViewport({ scale });
+        if (pending.pdfDoc) {
+            // Same fit-to-size render approach as pdfReader.js's renderPage,
+            // capped at 800px on the long edge since this only feeds a cover
+            // thumbnail, not the reading view.
+            const page = await withTimeout(pending.pdfDoc.getPage(1), COVER_RENDER_TIMEOUT_MS, "cover getPage(1)");
+            const unscaledViewport = page.getViewport({ scale: 1 });
+            const maxDimension = 800;
+            const scale = Math.min(1, maxDimension / Math.max(unscaledViewport.width, unscaledViewport.height));
+            const viewport = page.getViewport({ scale });
 
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+            const canvas = document.createElement("canvas");
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await withTimeout(
+                page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise,
+                COVER_RENDER_TIMEOUT_MS,
+                "cover render"
+            );
 
-        cachedCoverBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
-        return cachedCoverBlob;
+            cachedCoverBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+            return cachedCoverBlob;
+        }
+    } catch (err) {
+        console.error("Cover extraction failed, continuing without a cover:", err);
+        return (cachedCoverBlob = null);
     }
 
     return (cachedCoverBlob = null);
