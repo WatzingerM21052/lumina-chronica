@@ -17,6 +17,12 @@ public class BibleAtmosphereService(IJSRuntime jsRuntime)
         await module.InvokeVoidAsync("init", backgroundId);
     }
 
+    public async Task PlayEntranceAsync()
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("playEntrance");
+    }
+
     public async Task DestroyAsync()
     {
         var module = await _moduleTask.Value;

@@ -6,15 +6,47 @@
   and it's what "the background moves slightly slower than the page" (a
   parallax effect) actually requires: a fixed layer the real content just
   scrolls over).
+
+  z-index (issue #143 v2, live-verification): NOT -1. That was the original
+  value and it silently lost to the app shell's own paint layer in the real
+  browser -- confirmed directly (elementFromPoint at a point over this layer
+  returned an ancestor div, and forcing z-index to a high value made the
+  background instantly visible where it had been fully invisible before,
+  with every other CSS property already correct). z-index:0 here plus
+  .bible-page--dark-academia's own explicit z-index:1 (Bible.razor.css)
+  replaces the implicit "negative z-index always loses" assumption with an
+  explicit, verified stacking order.
 */
+
+.ba-curtain {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: #050302;
+    opacity: 0;
+    pointer-events: none;
+}
 
 .bible-atmosphere {
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: 0;
     overflow: hidden;
     pointer-events: none;
     background: #0c0908;
+}
+
+.ba-ignite {
+    position: absolute;
+    top: 36%;
+    left: 50%;
+    width: 240px;
+    height: 240px;
+    margin: -120px 0 0 -120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 214, 130, 0.95) 0%, rgba(230, 180, 90, 0.45) 38%, rgba(230, 180, 90, 0) 70%);
+    filter: blur(2px);
+    opacity: 0;
 }
 
 .bible-atmosphere-background {
@@ -23,7 +55,7 @@
     background-image: url("images/bible-hero.jpg");
     background-size: cover;
     background-position: center 30%;
-    filter: brightness(0.38) saturate(0.85) sepia(0.15);
+    filter: brightness(0.52) saturate(0.9) sepia(0.12);
     transform: translateY(var(--ba-parallax-y, 0px));
     will-change: transform;
 }
@@ -32,8 +64,8 @@
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse at center, transparent 35%, rgba(6, 4, 3, 0.55) 100%),
-        linear-gradient(180deg, rgba(8, 5, 4, 0.75) 0%, rgba(8, 5, 4, 0.25) 22%, rgba(8, 5, 4, 0.35) 70%, rgba(4, 2, 2, 0.9) 100%);
+        radial-gradient(ellipse at center, transparent 40%, rgba(6, 4, 3, 0.45) 100%),
+        linear-gradient(180deg, rgba(8, 5, 4, 0.65) 0%, rgba(8, 5, 4, 0.15) 24%, rgba(8, 5, 4, 0.25) 70%, rgba(4, 2, 2, 0.82) 100%);
 }
 
 /* Two soft, slowly-pulsing warm blobs standing in for candlelight -- pure
