@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../../backend/src/index";
+import { OAUTH_NO_PASSWORD_SENTINEL } from "../../backend/src/utils/crypto";
 import { createFakeD1 } from "./fakeD1";
 import { readJson } from "./testUtils";
 
@@ -130,10 +131,10 @@ describe("GET /api/auth/oauth/:provider/callback", () => {
         const user = await env.DB.prepare("SELECT id, email, password_hash FROM users WHERE email = ?").bind("newuser@example.com").first<{
             id: number;
             email: string;
-            password_hash: string | null;
+            password_hash: string;
         }>();
         expect(user).not.toBeNull();
-        expect(user!.password_hash).toBeNull();
+        expect(user!.password_hash).toBe(OAUTH_NO_PASSWORD_SENTINEL);
 
         const identity = await env.DB.prepare("SELECT * FROM oauth_identities WHERE provider_user_id = ?").bind("google-1").first();
         expect(identity).not.toBeNull();
@@ -263,7 +264,7 @@ describe("POST /api/auth/oauth/exchange", () => {
 });
 
 describe("password login against an OAuth-only account", () => {
-    it("fails cleanly with 401, not a crash, since password_hash is null", async () => {
+    it("fails cleanly with 401 since password_hash is the OAUTH_NO_PASSWORD_SENTINEL, not a real hash", async () => {
         const startRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
         const state = extractQueryParam(startRes.headers.get("location")!, "state")!;
         stubFetchQueue([

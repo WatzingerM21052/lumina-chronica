@@ -1,5 +1,5 @@
 import { roleName } from "./authService";
-import { randomToken, sha256Hex, signJwt } from "../utils/crypto";
+import { OAUTH_NO_PASSWORD_SENTINEL, randomToken, sha256Hex, signJwt } from "../utils/crypto";
 import { type OAuthProfile, type OAuthProviderName, providerFor } from "./oauthProviders";
 
 // 7 days -- mirrors authService.ts's TOKEN_EXPIRY_SECONDS exactly, so an
@@ -82,8 +82,8 @@ async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderN
 
         const username = await generateUniqueUsername(db, profile);
         const insertUser = await db
-            .prepare("INSERT INTO users (username, email, password_hash, avatar_url, role_id) VALUES (?, ?, NULL, ?, ?)")
-            .bind(username, profile.email, profile.avatarUrl ?? null, userRole.id)
+            .prepare("INSERT INTO users (username, email, password_hash, avatar_url, role_id) VALUES (?, ?, ?, ?, ?)")
+            .bind(username, profile.email, OAUTH_NO_PASSWORD_SENTINEL, profile.avatarUrl ?? null, userRole.id)
             .run();
         userId = insertUser.meta.last_row_id;
 
