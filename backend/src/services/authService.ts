@@ -15,7 +15,9 @@ type UserRow = {
     role_id: number;
 };
 
-async function roleName(db: D1Database, roleId: number): Promise<string> {
+// Exported for oauthService.ts, which needs the same lookup when issuing a
+// token at exchange time.
+export async function roleName(db: D1Database, roleId: number): Promise<string> {
     const role = await db.prepare("SELECT name FROM roles WHERE id = ?").bind(roleId).first<{ name: string }>();
     return role?.name ?? "USER";
 }

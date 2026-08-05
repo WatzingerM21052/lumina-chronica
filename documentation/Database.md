@@ -50,6 +50,13 @@ Registration, login, logout, profile view/edit, and password change (PR #33/#34)
 
 `deleteBook` and `deleteShelf` both clean up their respective join-table rows (`favorites`/`shelf_books`/`book_tags`/`reading_progress` for a deleted book; `shelf_books` for a deleted shelf) before the parent row, since real D1 enforces foreign keys (see the `fakeD1.ts` note under Phase 4 Story 1's lessons in `Roadmap.md`).
 
+### `0005_oauth.sql` (OAuth login, issue #40)
+
+- **`users.password_hash`** became **nullable** — an OAuth-only account has none. SQLite can't drop a `NOT NULL` constraint via `ALTER TABLE`, so this migration does the standard SQLite table-rebuild (`users_new` with the new shape → copy → `DROP TABLE users` → rename back), with `PRAGMA foreign_keys` toggled off/around it since `user_settings`/`books`/`reading_progress`/`favorites`/`shelves` all hold FKs to `users(id)`.
+- **`oauth_identities`** — `id`, `user_id` (FK → `users.id`, `ON DELETE CASCADE`), `provider` (`google`/`github`), `provider_user_id` (the provider's own stable subject id, never the email), `email`, `created_at`. `UNIQUE(provider, provider_user_id)`. A user can have a password, one or more linked identities, or both.
+- **`oauth_states`** — `state` (PK), `provider`, `expires_at`. The CSRF `state` param for the authorize redirect, persisted here (not in-memory) since the Worker is stateless/horizontally scaled and `/callback` may land on a different instance than `/start`. Deleted on read (single-use).
+- **`oauth_exchange_codes`** — `code_hash` (PK, SHA-256 of the actual code — the raw value is never stored, same principle as `password_hash`), `user_id` (FK → `users.id`, `ON DELETE CASCADE`), `expires_at`, `consumed_at`. The cross-origin token handoff: see `Architecture.md`'s "OAuth login" row for why the JWT itself is only ever signed at exchange time, not stored here.
+
 ## Planned schema (not yet migrated)
 
 The rest of the full schema from Teil 4 (§49–§51) — `bookmarks` (explicitly "Spätere Version" in the source), `projects`, `project_members`, `characters`, `locations`, `timeline_events`, `project_files`, `followers`, `ratings`, `comments`, `user_statistics` — will be migrated incrementally as each phase needs them, per the project's phase-gating rule. See `documentation/master-project-bible/extracted-spec-summary.md` for the full extracted column list, and `Technical-Standards.md` for the R2 file-key structure used alongside these tables.

@@ -54,7 +54,11 @@ export async function hashPassword(plain: string): Promise<string> {
     return `pbkdf2$${PBKDF2_ITERATIONS}$${toBase64Url(salt)}$${toBase64Url(hash)}`;
 }
 
-export async function verifyPassword(plain: string, stored: string): Promise<boolean> {
+// stored is nullable since OAuth-only accounts (issue #40) have no password
+// at all -- any password attempt against such an account must fail cleanly,
+// not throw.
+export async function verifyPassword(plain: string, stored: string | null): Promise<boolean> {
+    if (!stored) return false;
     const parts = stored.split("$");
     if (parts.length !== 4 || parts[0] !== "pbkdf2") return false;
 
@@ -118,4 +122,20 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
 
     if (typeof payload.exp !== "number" || payload.exp < Math.floor(Date.now() / 1000)) return null;
     return payload;
+}
+
+// OAuth (issue #40): a CSRF `state` value for the authorize redirect, and a
+// bearer-style single-use code for the cross-origin token handoff (see
+// oauthService.ts). Both are high-entropy random values, not derived from
+// anything guessable.
+export function randomToken(bytes = 32): string {
+    return toBase64Url(crypto.getRandomValues(new Uint8Array(bytes)));
+}
+
+// The exchange code table stores only this hash, never the raw code -- same
+// principle as never storing a plaintext password: a leaked DB row alone
+// can't be replayed without also having intercepted the original redirect.
+export async function sha256Hex(input: string): Promise<string> {
+    const digest = await crypto.subtle.digest("SHA-256", textEncoder.encode(input));
+    return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }

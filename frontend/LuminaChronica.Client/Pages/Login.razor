@@ -4,6 +4,7 @@
 @inject ApiClient ApiClient
 @inject LuminaAuthStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject HttpClient HttpClient
 
 <PageTitle>Anmelden — Lumina Chronica</PageTitle>
 
@@ -38,6 +39,8 @@
         </div>
     }
 </EditForm>
+
+<OAuthButtons ApiBaseUrl="@(HttpClient.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty)" />
 
 <p class="text-muted">Noch kein Konto? <a href="register">Registrieren</a></p>
 
