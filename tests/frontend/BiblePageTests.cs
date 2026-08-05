@@ -250,8 +250,8 @@ public class BiblePageTests : BunitContext
     public void Bible_DarkAcademiaTheme_NextChapter_StaysInThemeAndLoadsNewChapter()
     {
         // The theme choice shouldn't reset or fight chapter navigation --
-        // BibleAtmosphere stays mounted (ContentRootId unchanged) across a
-        // chapter change within the same theme.
+        // BibleAtmosphere stays mounted across a chapter change within the
+        // same theme.
         const string chapter3Json = """
             {"success":true,"data":{
                 "id":"PHP.3","reference":"Phil. 3","content":"<p>Finally, my brothers...</p>",

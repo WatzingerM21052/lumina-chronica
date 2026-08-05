@@ -448,28 +448,25 @@
     color: var(--ba-gold-bright);
 }
 
-/* Scroll-triggered fade-in (bibleAtmosphere.js toggles .is-visible via
-   IntersectionObserver) -- scoped to this theme only, so the default
-   theme's chapter content (which also carries the .ba-fade-in class,
-   applied unconditionally in Bible.razor to keep the markup simple) is
-   never affected: without this ancestor selector, opacity:0 would just
-   never apply there. */
-.bible-page--dark-academia .ba-fade-in {
-    opacity: 0;
-    transform: translateY(14px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
+/* Chapter entrance -- plain CSS animation, not a JS/IntersectionObserver
+   toggle: an earlier version drove this via bibleAtmosphere.js adding an
+   .is-visible class, which left chapter text stuck at opacity:0 whenever
+   the JS/Blazor render-order handshake raced (confirmed live). @key on the
+   <article> in Bible.razor already gives every chapter navigation a fresh
+   element, so a plain @keyframes animation replays on its own with nothing
+   that can silently fail content invisible. */
+.bible-page--dark-academia .bible-chapter {
+    animation: ba-chapter-rise 0.7s ease both;
 }
 
-.bible-page--dark-academia .ba-fade-in.is-visible {
-    opacity: 1;
-    transform: none;
+@keyframes ba-chapter-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .bible-page--dark-academia .ba-fade-in {
-        opacity: 1;
-        transform: none;
-        transition: none;
+    .bible-page--dark-academia .bible-chapter {
+        animation: none;
     }
 
     .bible-page--dark-academia .bible-theme-toggle .btn {
