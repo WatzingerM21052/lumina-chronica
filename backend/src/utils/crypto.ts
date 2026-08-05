@@ -13,6 +13,16 @@ const PBKDF2_ITERATIONS = 8000;
 const PBKDF2_SALT_BYTES = 16;
 const PBKDF2_HASH_BITS = 256;
 
+// OAuth-only accounts (issue #40) have no password. users.password_hash
+// stays NOT NULL (see the migration's own comment for why: making it
+// nullable requires a SQLite table-rebuild that real D1 rejects with a
+// FOREIGN KEY constraint error even with PRAGMA foreign_keys = OFF around
+// it -- confirmed against the actual production database, not just assumed
+// -- so this sentinel avoids the schema change entirely). It never starts
+// with "pbkdf2$", so verifyPassword's format check below rejects it exactly
+// like any other malformed value: cleanly, no crash, no possible match.
+export const OAUTH_NO_PASSWORD_SENTINEL = "oauth:no-password";
+
 const textEncoder = new TextEncoder();
 
 function toBase64Url(bytes: ArrayBuffer | Uint8Array): string {
