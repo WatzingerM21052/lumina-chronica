@@ -204,8 +204,15 @@ select:focus-visible,
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: var(--space-2);
     text-decoration: none;
     padding: var(--space-2);
+}
+
+.btn-oauth-icon {
+    width: 1.1em;
+    height: 1.1em;
+    flex-shrink: 0;
 }
 
 .form-group {
