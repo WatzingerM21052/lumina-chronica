@@ -2,12 +2,26 @@
 @implements IDisposable
 @inject BibleAtmosphereService Atmosphere
 
+@* .ba-curtain is a top-level sibling (not nested in .bible-atmosphere) so
+   its z-index can sit above literally everything, including .bible-page's
+   own content, for the brief entrance sequence -- see BibleAtmosphere.razor.css.
+   Both this and .ba-ignite default to invisible in plain CSS; JS only ever
+   makes them visible right before animating them back out, so a failed/slow
+   GSAP load degrades to "no intro" rather than a stuck black screen. *@
+<div class="ba-curtain" aria-hidden="true"></div>
+
 @* Fixed, full-viewport -- deliberately a sibling of .bible-page's content,
    not a wrapper around it, so it never affects layout/scroll of the real
-   content and can't be clipped by any ancestor's overflow. z-index keeps it
-   behind everything in Bible.razor. See BibleAtmosphere.razor.css for the
-   full visual treatment (background image, gradient grading, glow, dust). *@
+   content and can't be clipped by any ancestor's overflow. See
+   BibleAtmosphere.razor.css for the full visual treatment (background
+   image, gradient grading, glow, dust) and for the stacking-order fix
+   (issue #143 v2): z-index:-1 here silently lost to the app shell's own
+   paint layer in the real browser, confirmed live -- the background image
+   never actually rendered visibly despite every CSS property on it being
+   correct. Explicit low-but-positive z-index + .bible-page--dark-academia's
+   own explicit z-index:1 replaces the implicit "-1 always loses" assumption. *@
 <div class="bible-atmosphere" aria-hidden="true">
+    <div class="ba-ignite" aria-hidden="true"></div>
     <div id="@BackgroundId" class="bible-atmosphere-background"></div>
     <div class="bible-atmosphere-vignette"></div>
     <div class="bible-atmosphere-glow bible-atmosphere-glow--1"></div>
@@ -40,6 +54,9 @@
         {
             _initialized = true;
             await Atmosphere.InitAsync(BackgroundId);
+            // Fire-and-forget: the entrance is a decorative flourish, not
+            // something the rest of the page's readiness should wait on.
+            _ = Atmosphere.PlayEntranceAsync();
         }
     }
 

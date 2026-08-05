@@ -334,13 +334,13 @@
     --ba-panel-strong: rgba(15, 11, 9, 0.82);
     --ba-border: rgba(184, 147, 90, 0.35);
 
+    position: relative;
+    z-index: 1; /* explicit stacking above .bible-atmosphere (z-index:0) -- see BibleAtmosphere.razor.css's note on the z-index:-1 bug this replaced */
     color: var(--ba-ink);
 }
 
 /* Theme toggle -- top-right pill, visible/reachable in both themes so
-   switching back is always one click away. Sits above the fixed
-   background (z-index unnecessary here -- .bible-atmosphere is itself
-   z-index:-1, so any normal-flow content already stacks above it). */
+   switching back is always one click away. */
 .bible-theme-toggle {
     display: flex;
     justify-content: flex-end;
@@ -366,7 +366,19 @@
     letter-spacing: 0.04em;
     color: var(--ba-gold-bright);
     text-shadow: 0 2px 20px rgba(0, 0, 0, 0.7);
-    margin: var(--space-2) 0 var(--space-4);
+    margin: var(--space-2) 0 var(--space-1);
+}
+
+/* Draws itself in on entrance (bibleAtmosphere.js's playEntrance, GSAP
+   scaleX 0 -> 1) -- default scaleX(1) here so the rule is simply already
+   "drawn" if GSAP never loads/runs, never a stuck-undrawn sliver. */
+.bible-title-rule {
+    display: block;
+    width: 140px;
+    height: 2px;
+    margin: 0 auto var(--space-4);
+    background: linear-gradient(90deg, transparent, var(--ba-gold-bright), transparent);
+    transform-origin: center;
 }
 
 /* Controls / search -- translucent glass panels over the fixed background,
