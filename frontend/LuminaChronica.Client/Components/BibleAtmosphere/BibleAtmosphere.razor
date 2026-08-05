@@ -32,14 +32,6 @@
     private const int DustMoteCount = 14;
     private const string BackgroundId = "bible-atmosphere-background";
 
-    // The id of Bible.razor's own content wrapper (containing the .ba-fade-in
-    // chapter heading/text elements) -- deliberately NOT an id BibleAtmosphere
-    // generates itself, since the fade-in targets live in the parent's
-    // markup, not in anything this component renders. BackgroundId, in
-    // contrast, IS self-owned: it's this component's own parallax layer.
-    [Parameter, EditorRequired]
-    public string ContentRootId { get; set; } = string.Empty;
-
     private bool _initialized;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -47,7 +39,7 @@
         if (firstRender)
         {
             _initialized = true;
-            await Atmosphere.InitAsync(ContentRootId, BackgroundId);
+            await Atmosphere.InitAsync(BackgroundId);
         }
     }
 
@@ -55,7 +47,7 @@
     {
         if (_initialized)
         {
-            _ = Atmosphere.DestroyAsync(ContentRootId);
+            _ = Atmosphere.DestroyAsync();
         }
     }
 }
