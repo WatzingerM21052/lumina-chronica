@@ -1165,6 +1165,21 @@ select:focus-visible,
     display: block;
 }
 
+/* Issue #213 -- pdfReader.js's showRenderError, shown in place of a page's
+   canvas when pdf.js's worker hangs past RENDER_TIMEOUT_MS. Self-centering
+   (not relying on the parent's own layout) so it looks right both inside
+   Book View's flex-centered .pdf-reader-frame and inside a Scroll View
+   .pdf-reader-page wrapper, which has no centering of its own. */
+.pdf-reader-render-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
 /* Realistic View (issue #182) -- StPageFlip draws the whole "open book"
    look itself (facing pages, spine shadow, page-edge stack) directly onto
    its own internal canvas; pdfReader.js's initRealisticView sets this

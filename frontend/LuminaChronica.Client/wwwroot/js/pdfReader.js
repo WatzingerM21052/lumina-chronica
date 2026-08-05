@@ -32,6 +32,10 @@ function ensurePageFlipLibLoaded() {
 
 const instances = new Map();
 
+// Matches Realistic View's existing per-page timeout (renderAllPagesAsImages)
+// -- same worker, same observed hang, no reason for a different threshold.
+const RENDER_TIMEOUT_MS = 15000;
+
 // Capped at 2 even on 3x-DPR displays -- quadruples-not-nonuples the
 // render/memory cost per step past that, for a sharpness gain that's
 // negligible at normal reading distance. Confirmed live via code read (no
@@ -155,32 +159,46 @@ async function renderCurrentPage(elementId) {
     const container = document.getElementById(elementId);
     if (!container) return;
 
-    const { width: availableWidth, height: availableHeight } = getAvailableSize(elementId);
+    try {
+        const { width: availableWidth, height: availableHeight } = getAvailableSize(elementId);
 
-    const page = await entry.doc.getPage(entry.currentPage);
-    const unscaledViewport = page.getViewport({ scale: 1 });
-    // Fit within both the available width AND height so the whole page is
-    // visible without cropping/scrolling, regardless of the PDF's own page
-    // aspect ratio (portrait, landscape, wide illustrated pages, etc).
-    // `entry.zoom` multiplies onto this fit scale afterwards -- 1 means
-    // "fit to screen", not "100% of the PDF's native size" -- so text that's
-    // too small at fit-to-screen (a common complaint with scanned/A4 pages
-    // on a wide monitor) can be zoomed in without the viewport clientWidth/
-    // Height measurement above shrinking to match (it's read from the fixed
-    // -size viewport, not the fit-content frame, so it stays stable even
-    // once zooming makes the frame larger than the viewport and scrollable).
-    const fitScale = Math.min(availableWidth / unscaledViewport.width, availableHeight / unscaledViewport.height);
-    const viewport = page.getViewport({ scale: fitScale * entry.zoom });
+        const page = await withTimeout(entry.doc.getPage(entry.currentPage), RENDER_TIMEOUT_MS, `getPage(${entry.currentPage})`);
+        const unscaledViewport = page.getViewport({ scale: 1 });
+        // Fit within both the available width AND height so the whole page is
+        // visible without cropping/scrolling, regardless of the PDF's own page
+        // aspect ratio (portrait, landscape, wide illustrated pages, etc).
+        // `entry.zoom` multiplies onto this fit scale afterwards -- 1 means
+        // "fit to screen", not "100% of the PDF's native size" -- so text that's
+        // too small at fit-to-screen (a common complaint with scanned/A4 pages
+        // on a wide monitor) can be zoomed in without the viewport clientWidth/
+        // Height measurement above shrinking to match (it's read from the fixed
+        // -size viewport, not the fit-content frame, so it stays stable even
+        // once zooming makes the frame larger than the viewport and scrollable).
+        const fitScale = Math.min(availableWidth / unscaledViewport.width, availableHeight / unscaledViewport.height);
+        const viewport = page.getViewport({ scale: fitScale * entry.zoom });
 
-    let canvas = container.querySelector("canvas");
-    if (!canvas) {
-        canvas = document.createElement("canvas");
-        container.appendChild(canvas);
+        let canvas = container.querySelector("canvas");
+        if (!canvas) {
+            canvas = document.createElement("canvas");
+            container.appendChild(canvas);
+        }
+        const transform = sizeCanvasForViewport(canvas, viewport);
+
+        const context = canvas.getContext("2d");
+        await withTimeout(page.render({ canvasContext: context, viewport, transform }).promise, RENDER_TIMEOUT_MS, `render(${entry.currentPage})`);
+    } catch (err) {
+        // Issue #213: pdf.js's worker round-trip (getPage()/render()) was
+        // found live to sometimes never settle -- main thread responsive,
+        // nothing thrown, just a promise that neither resolves nor rejects.
+        // Realistic View already had a timeout+fallback for this; Book View
+        // had neither, leaving the reader stuck with no recovery and no
+        // error surfaced. Caught here (not left to propagate) so the
+        // Blazor-side await that triggered this render (next/prev/goToPage/
+        // setZoom) still resolves normally -- the failure shows up as an
+        // inline retry UI in the page area, not a broken component.
+        console.error(`Book View: page ${entry.currentPage} failed to render:`, err);
+        showRenderError(container, () => renderPage(elementId));
     }
-    const transform = sizeCanvasForViewport(canvas, viewport);
-
-    const context = canvas.getContext("2d");
-    await page.render({ canvasContext: context, viewport, transform }).promise;
 }
 
 // ---- Scroll View: every page its own wrapper, lazily rendered -------------
@@ -208,18 +226,30 @@ async function renderScrollPage(elementId, pageNumber) {
     const wrapper = entry.pageWrappers[pageNumber - 1];
     if (!wrapper) return;
 
-    const page = await entry.doc.getPage(pageNumber);
-    const { width: availableWidth, height: availableHeight } = getAvailableSize(elementId);
-    const unscaledViewport = page.getViewport({ scale: 1 });
-    const fitScale = Math.min(availableWidth / unscaledViewport.width, availableHeight / unscaledViewport.height);
-    const viewport = page.getViewport({ scale: fitScale * entry.zoom });
+    try {
+        const page = await withTimeout(entry.doc.getPage(pageNumber), RENDER_TIMEOUT_MS, `getPage(${pageNumber})`);
+        const { width: availableWidth, height: availableHeight } = getAvailableSize(elementId);
+        const unscaledViewport = page.getViewport({ scale: 1 });
+        const fitScale = Math.min(availableWidth / unscaledViewport.width, availableHeight / unscaledViewport.height);
+        const viewport = page.getViewport({ scale: fitScale * entry.zoom });
 
-    const canvas = document.createElement("canvas");
-    const transform = sizeCanvasForViewport(canvas, viewport);
-    wrapper.appendChild(canvas);
+        const canvas = document.createElement("canvas");
+        const transform = sizeCanvasForViewport(canvas, viewport);
+        wrapper.appendChild(canvas);
 
-    const context = canvas.getContext("2d");
-    await page.render({ canvasContext: context, viewport, transform }).promise;
+        const context = canvas.getContext("2d");
+        await withTimeout(page.render({ canvasContext: context, viewport, transform }).promise, RENDER_TIMEOUT_MS, `render(${pageNumber})`);
+    } catch (err) {
+        // Issue #213, same failure mode as Book View above -- see that
+        // function's comment. entry.renderedPages is rolled back so both
+        // the IntersectionObserver (if the page scrolls out and back into
+        // view) and the explicit retry button below can genuinely retry,
+        // not silently no-op against the "already rendered" guard at the
+        // top of this function.
+        console.error(`Scroll View: page ${pageNumber} failed to render:`, err);
+        entry.renderedPages.delete(pageNumber);
+        showRenderError(wrapper, () => renderScrollPage(elementId, pageNumber));
+    }
 }
 
 async function initScrollView(elementId) {
@@ -306,15 +336,40 @@ async function teardownToBookView(elementId) {
 
 // A pdf.js worker round-trip (getPage(), page.render().promise) was found
 // live to sometimes never settle -- main thread stayed responsive, nothing
-// thrown, just a promise that neither resolved nor rejected. Every such
-// call in Realistic View's render pass is wrapped in this so a stuck call
-// fails loudly (and gets caught by initRealisticView's fallback to Book
-// View) instead of hanging the reader forever with no escape.
+// thrown, just a promise that neither resolved nor rejected. Originally
+// wrapped only around Realistic View's render pass (fails loudly, caught by
+// initRealisticView's fallback to Book View); issue #213 found the same
+// hang in Book/Scroll View's own getPage()/render() calls, which had no
+// equivalent safety net at all -- see renderCurrentPage/renderScrollPage.
 function withTimeout(promise, ms, label) {
     return Promise.race([
         promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error(`Realistic View: ${label} timed out after ${ms}ms`)), ms)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
     ]);
+}
+
+// Book/Scroll View's recovery UI for issue #213 (Realistic View has its own
+// separate fallback-to-Book-View path instead, see initRealisticView).
+// hostElement is whatever DOM the caller directly owns and can safely
+// replace -- the Book View container itself, or one Scroll View page's
+// wrapper -- there's no simpler reader mode to fall back to here, so this
+// asks the user to retry the specific page instead.
+function showRenderError(hostElement, onRetry) {
+    hostElement.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.className = "pdf-reader-render-error";
+    const message = document.createElement("p");
+    message.textContent = "Seite konnte nicht geladen werden.";
+    const retryButton = document.createElement("button");
+    retryButton.type = "button";
+    retryButton.className = "btn";
+    retryButton.textContent = "Erneut versuchen";
+    retryButton.addEventListener("click", () => {
+        hostElement.innerHTML = "";
+        onRetry();
+    });
+    wrap.append(message, retryButton);
+    hostElement.appendChild(wrap);
 }
 
 // ---- Realistic View: real page-flip animation via StPageFlip (issue #182) -
@@ -335,7 +390,7 @@ async function renderAllPagesAsImages(elementId) {
     // and StPageFlip's width/height are fixed for the whole book, not
     // configurable per page.
     console.log("[realistic] fetching page 1");
-    const firstPage = await withTimeout(entry.doc.getPage(1), 15000, "getPage(1)");
+    const firstPage = await withTimeout(entry.doc.getPage(1), RENDER_TIMEOUT_MS, "getPage(1)");
     const firstUnscaled = firstPage.getViewport({ scale: 1 });
     const fitScale = Math.min(availableWidth / firstUnscaled.width, availableHeight / firstUnscaled.height);
     const pageWidth = Math.round(firstUnscaled.width * fitScale);
@@ -344,7 +399,7 @@ async function renderAllPagesAsImages(elementId) {
     const images = [];
     for (let i = 1; i <= entry.doc.numPages; i++) {
         console.log(`[realistic] rendering page ${i}/${entry.doc.numPages}`);
-        const page = i === 1 ? firstPage : await withTimeout(entry.doc.getPage(i), 15000, `getPage(${i})`);
+        const page = i === 1 ? firstPage : await withTimeout(entry.doc.getPage(i), RENDER_TIMEOUT_MS, `getPage(${i})`);
         const unscaledViewport = page.getViewport({ scale: 1 });
         // Pages with a different aspect ratio than the first (mixed
         // portrait/landscape scans) are centered on a white page rather
@@ -375,7 +430,7 @@ async function renderAllPagesAsImages(elementId) {
         context.translate((assetWidth - assetContentViewport.width) / 2, (assetHeight - assetContentViewport.height) / 2);
         await withTimeout(
             page.render({ canvasContext: context, viewport: assetContentViewport }).promise,
-            15000,
+            RENDER_TIMEOUT_MS,
             `page ${i} render()`,
         );
 
@@ -427,7 +482,7 @@ async function initRealisticView(elementId) {
 
 async function initRealisticViewUnsafe(elementId, entry, container) {
     console.log("[realistic] loading page-flip.browser.js");
-    await withTimeout(ensurePageFlipLibLoaded(), 15000, "page-flip.browser.js load");
+    await withTimeout(ensurePageFlipLibLoaded(), RENDER_TIMEOUT_MS, "page-flip.browser.js load");
     console.log("[realistic] page-flip.browser.js loaded, rendering pages");
     teardownScrollObservers(entry);
     container.classList.remove("pdf-reader-frame--scroll");
