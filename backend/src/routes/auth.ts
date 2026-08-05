@@ -115,7 +115,16 @@ authRoute.get("/oauth/:provider/callback", async (c) => {
     const credentials = credentialsFor(c, provider);
     const code = c.req.query("code");
     const state = c.req.query("state");
-    const frontendCallback = new URL("/oauth-callback", c.env.FRONTEND_URL);
+    // NOT `new URL("/oauth-callback", c.env.FRONTEND_URL)` -- a leading "/"
+    // in the second-arg form is root-relative and silently discards the
+    // base URL's own path, which on this GitHub Pages *project* site
+    // (FRONTEND_URL = ".../lumina-chronica") turned "/oauth-callback" into
+    // "https://watzingerm21052.github.io/oauth-callback" -- a real 404,
+    // confirmed live. Plain concatenation avoids the relative-resolution
+    // semantics entirely. Same bug category as the frontend's own
+    // NavigateTo("/...") leading-slash gotcha (issue #38) -- the lesson
+    // didn't transfer across languages the first time.
+    const frontendCallback = new URL(`${c.env.FRONTEND_URL}/oauth-callback`);
 
     if (!credentials || !code || !state) {
         frontendCallback.searchParams.set("error", "oauth_failed");

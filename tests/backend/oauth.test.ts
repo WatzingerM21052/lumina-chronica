@@ -20,7 +20,13 @@ beforeEach(() => {
     env = {
         DB: createFakeD1(),
         JWT_SECRET: "test-secret-do-not-use-in-production",
-        FRONTEND_URL: "https://example.test",
+        // Deliberately has a path segment, mirroring the real deployment
+        // (GitHub Pages *project* site, not a bare domain) -- a bare-domain
+        // FRONTEND_URL in this env would never have caught the real bug
+        // where new URL("/oauth-callback", FRONTEND_URL) silently dropped
+        // that path segment (root-relative resolution). See routes/auth.ts's
+        // comment on frontendCallback.
+        FRONTEND_URL: "https://example.test/some-app",
         GOOGLE_CLIENT_ID: "google-client-id",
         GOOGLE_CLIENT_SECRET: "google-client-secret",
         GITHUB_CLIENT_ID: "github-client-id",
@@ -108,7 +114,7 @@ describe("GET /api/auth/oauth/:provider/callback", () => {
         );
         expect(res.status).toBe(302);
         const location = res.headers.get("location")!;
-        expect(location).toContain("https://example.test/oauth-callback");
+        expect(location).toContain("https://example.test/some-app/oauth-callback");
         expect(extractQueryParam(location, "error")).toBe("invalid_state");
     });
 
@@ -124,7 +130,7 @@ describe("GET /api/auth/oauth/:provider/callback", () => {
         const res = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
         expect(res.status).toBe(302);
         const location = res.headers.get("location")!;
-        expect(location).toContain("https://example.test/oauth-callback");
+        expect(location).toContain("https://example.test/some-app/oauth-callback");
         const code = extractQueryParam(location, "code");
         expect(code).toBeTruthy();
 
