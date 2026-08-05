@@ -30,6 +30,22 @@ public class LoginPageTests : BunitContext
     }
 
     [Fact]
+    public void Login_RendersOAuthButtons_PointingAtBackendOrigin()
+    {
+        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"Username/email or password is incorrect."}}""");
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        RegisterAuthServices(this);
+
+        var cut = Render<Login>();
+
+        var links = cut.FindAll("a.btn-oauth");
+        Assert.Equal(2, links.Count);
+        Assert.Contains(links, a => a.GetAttribute("href")!.EndsWith("/api/auth/oauth/google/start"));
+        Assert.Contains(links, a => a.GetAttribute("href")!.EndsWith("/api/auth/oauth/github/start"));
+    }
+
+    [Fact]
     public void Login_FailedSubmit_ShowsErrorMessage()
     {
         var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"Username/email or password is incorrect."}}""");

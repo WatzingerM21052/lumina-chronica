@@ -2,6 +2,11 @@ name = "lumina-chronica-api"
 main = "src/index.ts"
 compatibility_date = "2026-07-29"
 
+# Not secret -- where OAuth callbacks (issue #40) redirect the browser back
+# to after issuing an exchange code. Overridden in .dev.vars for local dev.
+[vars]
+FRONTEND_URL = "https://watzingerm21052.github.io/lumina-chronica"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "lumina-chronica-db"

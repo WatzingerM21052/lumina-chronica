@@ -65,7 +65,14 @@ export async function updateUserProfile(db: D1Database, userId: number, input: U
 
     let newPasswordHash: string | null = null;
     if (input.newPassword) {
-        const current = await db.prepare("SELECT password_hash FROM users WHERE id = ?").bind(userId).first<{ password_hash: string }>();
+        // password_hash is nullable since issue #40 (OAuth-only accounts have
+        // none) -- verifyPassword already treats a null stored hash as "no
+        // match" rather than throwing, so an OAuth-only account attempting
+        // this flow correctly gets InvalidPasswordError rather than a crash.
+        // Setting an initial password for such an account is a distinct,
+        // not-yet-built flow (it shouldn't require a "current password" that
+        // never existed) -- out of scope here.
+        const current = await db.prepare("SELECT password_hash FROM users WHERE id = ?").bind(userId).first<{ password_hash: string | null }>();
         if (!current || !input.currentPassword || !(await verifyPassword(input.currentPassword, current.password_hash))) {
             throw new InvalidPasswordError();
         }

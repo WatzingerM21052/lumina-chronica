@@ -33,6 +33,14 @@ public class AuthResult
     public int UserId { get; set; }
 }
 
+// Issue #40 (OAuth). Posted to /api/auth/oauth/exchange by OAuthCallback.razor
+// with the short-lived, single-use code the backend redirected back with.
+public class OAuthExchangeRequest
+{
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = string.Empty;
+}
+
 // Mirrors backend/src/services/userService.ts's UserProfile.
 public class UserProfile
 {

@@ -1,0 +1,19 @@
+@namespace LuminaChronica.Client.Components
+
+@* Plain <a> links, not buttons -- clicking them is meant to leave the SPA
+   entirely for a full browser navigation to the backend's own
+   /api/auth/oauth/:provider/start route (which 302s on to Google/GitHub).
+   ApiBaseUrl is the same value ApiClient's HttpClient is configured with
+   (wwwroot/appsettings*.json) -- these links need the full absolute origin
+   since they're not an XHR/fetch call through that HttpClient at all. *@
+<div class="auth-divider"><span>oder</span></div>
+
+<div class="auth-oauth-buttons">
+    <a class="btn btn-oauth" href="@($"{ApiBaseUrl}/api/auth/oauth/google/start")">Mit Google anmelden</a>
+    <a class="btn btn-oauth" href="@($"{ApiBaseUrl}/api/auth/oauth/github/start")">Mit GitHub anmelden</a>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string ApiBaseUrl { get; set; } = string.Empty;
+}
