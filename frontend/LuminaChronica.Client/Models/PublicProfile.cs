@@ -57,6 +57,18 @@ public class PublicProfileResponse
     [JsonPropertyName("avatarUrl")]
     public string? AvatarUrl { get; set; }
 
+    [JsonPropertyName("followerCount")]
+    public int FollowerCount { get; set; }
+
+    [JsonPropertyName("followingCount")]
+    public int FollowingCount { get; set; }
+
+    [JsonPropertyName("isFollowing")]
+    public bool IsFollowing { get; set; }
+
+    [JsonPropertyName("isOwnProfile")]
+    public bool IsOwnProfile { get; set; }
+
     [JsonPropertyName("books")]
     public List<PublicBook> Books { get; set; } = [];
 

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
-import { requireAuth } from "../middleware/auth";
+import { optionalAuth, requireAuth } from "../middleware/auth";
 import {
     EmailTakenError,
     InvalidPasswordError,
@@ -10,19 +10,46 @@ import {
     updateUserProfile,
 } from "../services/userService";
 import { getPublicProfile } from "../services/publicProfileService";
+import { NotFoundError, SelfFollowError, followUser, unfollowUser } from "../services/followService";
 
 export const usersRoute = new Hono<AppEnv>();
 
 const MIN_PASSWORD_LENGTH = 8;
 
-// Community Phase 1 (issue #300) -- no auth at all, not just optionalAuth:
-// this is meant to be reachable by a fully logged-out visitor. Registered as
+// Community Phase 1 (issue #300) -- optionalAuth, not requireAuth: still
+// reachable by a fully logged-out visitor (viewerId falls back to null),
+// but Phase 2 (issue #304) needs to know the caller's identity when they
+// do have one, to compute isFollowing/isOwnProfile. Registered as
 // /:username/public (not a bare /:username) so it can never shadow the
 // static /me routes below regardless of router matching order.
-usersRoute.get("/:username/public", async (c) => {
-    const profile = await getPublicProfile(c.env.DB, c.req.param("username"));
+usersRoute.get("/:username/public", optionalAuth, async (c) => {
+    const profile = await getPublicProfile(c.env.DB, c.req.param("username") ?? "", c.get("userId") ?? null);
     if (!profile) return c.json(failure("NOT_FOUND", "User not found."), 404);
     return c.json(success(profile));
+});
+
+// Community Phase 2 (issue #304). Idempotent by design (INSERT OR IGNORE /
+// plain DELETE) -- POSTing to follow someone you already follow, or
+// DELETEing a follow that doesn't exist, both succeed rather than erroring.
+usersRoute.post("/:username/follow", requireAuth, async (c) => {
+    try {
+        await followUser(c.env.DB, c.get("userId"), c.req.param("username") ?? "");
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "User not found."), 404);
+        if (err instanceof SelfFollowError) return c.json(failure("VALIDATION_ERROR", "You cannot follow yourself."), 400);
+        throw err;
+    }
+});
+
+usersRoute.delete("/:username/follow", requireAuth, async (c) => {
+    try {
+        await unfollowUser(c.env.DB, c.get("userId"), c.req.param("username") ?? "");
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "User not found."), 404);
+        throw err;
+    }
 });
 
 usersRoute.get("/me", requireAuth, async (c) => {
