@@ -577,6 +577,183 @@ select:focus-visible,
     text-align: right;
 }
 
+/* Statistics page (v1.5 extended stats): header, stat-tile row reuse
+   .dashboard-overview/.dashboard-stat as-is, then two side-by-side panels
+   (goal ring + reading calendar), then a yearly-overview list reusing the
+   same bar-track/bar-fill visual as the genre breakdown below it. */
+.stats-header {
+    margin-bottom: var(--space-2);
+}
+
+.stats-subtitle {
+    color: var(--color-text-secondary);
+}
+
+.stats-overview .dashboard-stat {
+    min-width: 8rem;
+}
+
+.stats-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: var(--space-3);
+    margin: var(--space-3) 0;
+}
+
+.stats-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, var(--radius));
+    background-color: var(--color-bg-card);
+}
+
+.stats-panel h2 {
+    align-self: flex-start;
+    margin: 0;
+}
+
+/* A conic-gradient ring rather than an SVG/JS chart -- the "modern, high-tech"
+   touch the redesign asked for, kept to plain CSS custom properties so it
+   still themes correctly across all four color themes with no JS. */
+.goal-ring {
+    --goal-pct: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 8rem;
+    height: 8rem;
+    border-radius: 50%;
+    background: conic-gradient(var(--color-primary) calc(var(--goal-pct) * 1%), var(--color-border) 0);
+    transition: background 0.3s ease;
+}
+
+.goal-ring-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 6.2rem;
+    height: 6.2rem;
+    border-radius: 50%;
+    background-color: var(--color-bg-card);
+}
+
+.goal-ring-value {
+    font-family: var(--font-family-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.goal-ring-of {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.goal-status {
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.goal-form {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-1);
+    width: 100%;
+}
+
+.goal-form input[type="number"] {
+    flex: 1;
+    min-width: 8rem;
+}
+
+/* GitHub-contribution-style heatmap: one column per week, 7 rows, colored
+   by a 0-4 intensity level scaled against the user's own busiest day
+   (computed in Statistics.razor's BuildCalendarWeeks, not here). */
+.calendar-heatmap {
+    display: flex;
+    gap: 3px;
+    overflow-x: auto;
+    padding-bottom: var(--space-1);
+    max-width: 100%;
+}
+
+.calendar-week {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.calendar-cell {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 2px;
+    background-color: var(--color-bg-paper);
+    border: 1px solid var(--color-border);
+}
+
+.calendar-cell--level-1 {
+    background-color: color-mix(in srgb, var(--color-primary) 25%, var(--color-bg-paper));
+    border-color: transparent;
+}
+
+.calendar-cell--level-2 {
+    background-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-bg-paper));
+    border-color: transparent;
+}
+
+.calendar-cell--level-3 {
+    background-color: color-mix(in srgb, var(--color-primary) 75%, var(--color-bg-paper));
+    border-color: transparent;
+}
+
+.calendar-cell--level-4 {
+    background-color: var(--color-primary);
+    border-color: transparent;
+}
+
+.calendar-legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.calendar-legend-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.yearly-overview-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-2) 0 var(--space-3);
+}
+
+.yearly-overview-row {
+    display: grid;
+    grid-template-columns: 4rem 1fr;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.yearly-overview-year {
+    font-family: var(--font-family-display);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.yearly-overview-detail {
+    grid-column: 1 / -1;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
 .shelf-book-entry {
     display: flex;
     flex-direction: column;

@@ -1,5 +1,6 @@
 @page "/statistics"
 @attribute [Authorize]
+@using System.Globalization
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
@@ -8,7 +9,10 @@
 
 <PageTitle>Statistik — Lumina Chronica</PageTitle>
 
-<h1>Statistik</h1>
+<div class="stats-header">
+    <h1>Statistik</h1>
+    <p class="stats-subtitle">Deine Lesereise in Zahlen.</p>
+</div>
 
 @if (_stats is null)
 {
@@ -20,7 +24,7 @@ else if (_stats is { BooksRead: 0, BooksInProgress: 0 })
 }
 else
 {
-    <div class="dashboard-overview">
+    <div class="dashboard-overview stats-overview">
         <div class="dashboard-stat">
             <span class="dashboard-stat-value">@_stats.BooksRead</span>
             <span class="dashboard-stat-label">Gelesene Bücher</span>
@@ -33,21 +37,111 @@ else
             <span class="dashboard-stat-value">@_stats.PagesRead</span>
             <span class="dashboard-stat-label">Gelesene Seiten</span>
         </div>
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">🔥 @_stats.Streaks.CurrentStreak</span>
+            <span class="dashboard-stat-label">Serie (Tage)</span>
+        </div>
+        <div class="dashboard-stat">
+            <span class="dashboard-stat-value">🏆 @_stats.Streaks.LongestStreak</span>
+            <span class="dashboard-stat-label">Längste Serie</span>
+        </div>
     </div>
+
+    <div class="stats-panels">
+        <section class="stats-panel goal-card">
+            <h2>🎯 Jahresziel</h2>
+            @if (_stats.Goal.TargetBooks is { } target && target > 0)
+            {
+                var pct = Math.Clamp(_stats.Goal.BooksFinishedThisYear * 100.0 / target, 0, 100);
+                <div class="goal-ring" style="--goal-pct: @(pct.ToString("F0", CultureInfo.InvariantCulture))">
+                    <div class="goal-ring-inner">
+                        <span class="goal-ring-value">@_stats.Goal.BooksFinishedThisYear</span>
+                        <span class="goal-ring-of">von @target</span>
+                    </div>
+                </div>
+                <p class="goal-status">
+                    @if (_stats.Goal.BooksFinishedThisYear >= target)
+                    {
+                        <text>Ziel erreicht — großartig!</text>
+                    }
+                    else
+                    {
+                        <text>Noch @(target - _stats.Goal.BooksFinishedThisYear) Bücher bis zum Ziel.</text>
+                    }
+                </p>
+            }
+            else
+            {
+                <p class="text-muted">Setz dir ein Leseziel für dieses Jahr.</p>
+            }
+            <form class="goal-form" @onsubmit="SaveGoalAsync" @onsubmit:preventDefault="true">
+                <input type="number" min="1" placeholder="Bücher pro Jahr" @bind="_goalInput" @bind:event="oninput" />
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                @if (_stats.Goal.TargetBooks is not null)
+                {
+                    <button type="button" class="btn" @onclick="ClearGoalAsync">Entfernen</button>
+                }
+            </form>
+        </section>
+
+        <section class="stats-panel calendar-card">
+            <h2>📅 Lesekalender</h2>
+            <div class="calendar-heatmap">
+                @foreach (var week in _calendarWeeks)
+                {
+                    <div class="calendar-week">
+                        @foreach (var day in week)
+                        {
+                            <div class="calendar-cell calendar-cell--level-@day.Level" title="@day.Tooltip"></div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="calendar-legend">
+                <span class="calendar-legend-label">Weniger</span>
+                <span class="calendar-cell calendar-cell--level-0"></span>
+                <span class="calendar-cell calendar-cell--level-1"></span>
+                <span class="calendar-cell calendar-cell--level-2"></span>
+                <span class="calendar-cell calendar-cell--level-3"></span>
+                <span class="calendar-cell calendar-cell--level-4"></span>
+                <span class="calendar-legend-label">Mehr</span>
+            </div>
+        </section>
+    </div>
+
+    @if (_stats.YearlyOverview.Count > 0)
+    {
+        <h2>📈 Jahresübersicht</h2>
+        <div class="yearly-overview-list">
+            @{
+                var maxBooksPerYear = Math.Max(1, _stats.YearlyOverview.Max(y => y.BooksFinished));
+            }
+            @foreach (var year in _stats.YearlyOverview)
+            {
+                <div class="yearly-overview-row">
+                    <span class="yearly-overview-year">@year.Year</span>
+                    <div class="statistics-genre-bar-track">
+                        <div class="statistics-genre-bar-fill" style="width: @(year.BooksFinished * 100.0 / maxBooksPerYear)%"></div>
+                    </div>
+                    <span class="yearly-overview-detail">@year.BooksFinished Bücher · @year.PagesRead Seiten · @year.ActiveDays aktive Tage</span>
+                </div>
+            }
+        </div>
+    }
 
     @if (_stats.GenreBreakdown.Count > 0)
     {
         <h2>Genres</h2>
         <div class="statistics-genre-list">
             @{
-                var maxCount = _stats.GenreBreakdown.Max(g => g.Count);
+                var maxGenreCount = _stats.GenreBreakdown.Max(g => g.Count);
             }
             @foreach (var genre in _stats.GenreBreakdown)
             {
                 <div class="statistics-genre-row">
                     <span class="statistics-genre-label">@genre.Genre</span>
                     <div class="statistics-genre-bar-track">
-                        <div class="statistics-genre-bar-fill" style="width: @(genre.Count * 100.0 / maxCount)%"></div>
+                        <div class="statistics-genre-bar-fill" style="width: @(genre.Count * 100.0 / maxGenreCount)%"></div>
                     </div>
                     <span class="statistics-genre-count">@genre.Count</span>
                 </div>
@@ -69,10 +163,83 @@ else
 
 @code {
     private StatisticsResponse? _stats;
+    private int? _goalInput;
+    private List<List<CalendarCell>> _calendarWeeks = [];
 
     protected override async Task OnInitializedAsync()
     {
         var response = await ApiClient.GetAsync<StatisticsResponse>("/api/statistics");
         _stats = response is { Success: true, Data: not null } ? response.Data : new StatisticsResponse();
+        _goalInput = _stats.Goal.TargetBooks;
+        BuildCalendarWeeks();
+    }
+
+    // Builds a full Monday-start grid covering the last 52 weeks, even for
+    // days with zero activity -- the API only returns days that actually
+    // have a reading_activity row (sparse), but a heatmap needs every cell.
+    private void BuildCalendarWeeks()
+    {
+        if (_stats is null)
+        {
+            _calendarWeeks = [];
+            return;
+        }
+
+        var countByDate = _stats.ReadingCalendar.ToDictionary(d => d.Date, d => d.Count);
+        var maxCount = countByDate.Count > 0 ? countByDate.Values.Max() : 0;
+
+        var today = DateTime.UtcNow.Date;
+        var mondayOffset = ((int)today.AddDays(-364).DayOfWeek + 6) % 7;
+        var start = today.AddDays(-364).AddDays(-mondayOffset);
+
+        var weeks = new List<List<CalendarCell>>();
+        for (var current = start; current <= today; current = current.AddDays(7))
+        {
+            var week = new List<CalendarCell>();
+            for (var offset = 0; offset < 7; offset++)
+            {
+                var date = current.AddDays(offset);
+                if (date > today)
+                {
+                    week.Add(new CalendarCell(date, 0, 0, true));
+                    continue;
+                }
+
+                var dateKey = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                var count = countByDate.GetValueOrDefault(dateKey, 0);
+                var level = count == 0 ? 0 : Math.Clamp((int)Math.Ceiling(count * 4.0 / Math.Max(1, maxCount)), 1, 4);
+                week.Add(new CalendarCell(date, count, level, false));
+            }
+            weeks.Add(week);
+        }
+        _calendarWeeks = weeks;
+    }
+
+    private async Task SaveGoalAsync()
+    {
+        if (_goalInput is not { } target || target <= 0 || _stats is null) return;
+
+        var response = await ApiClient.PutAsync<SetReadingGoalRequest, ReadingGoal>("/api/statistics/goal", new SetReadingGoalRequest { TargetBooks = target });
+        if (response is { Success: true, Data: { } goal })
+        {
+            _stats.Goal = goal;
+        }
+    }
+
+    private async Task ClearGoalAsync()
+    {
+        if (_stats is null) return;
+
+        var response = await ApiClient.PutAsync<SetReadingGoalRequest, ReadingGoal>("/api/statistics/goal", new SetReadingGoalRequest { TargetBooks = null });
+        if (response is { Success: true, Data: { } goal })
+        {
+            _stats.Goal = goal;
+            _goalInput = null;
+        }
+    }
+
+    private record CalendarCell(DateTime Date, int Count, int Level, bool IsFuture)
+    {
+        public string Tooltip => IsFuture ? "" : $"{Date:dd.MM.yyyy}: {Count} Aktivität(en)";
     }
 }

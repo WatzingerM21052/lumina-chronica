@@ -92,4 +92,125 @@ public class StatisticsPageTests : BunitContext
         Assert.Contains("Der Herr der Ringe", cut.Markup);
         Assert.Contains("href=\"library/books/7/read\"", cut.Markup);
     }
+
+    [Fact]
+    public void Statistics_ShowsStreaks_FromStatisticsEndpoint()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":3,"booksInProgress":1,"pagesRead":500,"genreBreakdown":[],
+             "recentActivity":[],"streaks":{"currentStreak":4,"longestStreak":9},
+             "goal":{"targetBooks":null,"booksFinishedThisYear":3}}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Contains("🔥 4", cut.Markup);
+        Assert.Contains("🏆 9", cut.Markup);
+    }
+
+    [Fact]
+    public void Statistics_ShowsGoalPrompt_WhenNoTargetSet()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":50,"genreBreakdown":[],
+             "recentActivity":[],"goal":{"targetBooks":null,"booksFinishedThisYear":1}}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Contains("Setz dir ein Leseziel", cut.Markup);
+        Assert.DoesNotContain("goal-ring", cut.Markup);
+    }
+
+    [Fact]
+    public void Statistics_ShowsGoalRing_WhenTargetSet()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":4,"booksInProgress":0,"pagesRead":50,"genreBreakdown":[],
+             "recentActivity":[],"goal":{"targetBooks":10,"booksFinishedThisYear":4}}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Contains("goal-ring", cut.Markup);
+        Assert.Contains("--goal-pct: 40", cut.Markup);
+        Assert.Contains("von 10", cut.Markup);
+        Assert.Contains("Noch 6 Bücher bis zum Ziel.", cut.Markup);
+    }
+
+    [Fact]
+    public void Statistics_ShowsGoalReachedMessage_WhenTargetMet()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":10,"booksInProgress":0,"pagesRead":50,"genreBreakdown":[],
+             "recentActivity":[],"goal":{"targetBooks":10,"booksFinishedThisYear":10}}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Contains("Ziel erreicht", cut.Markup);
+    }
+
+    [Fact]
+    public void Statistics_ShowsYearlyOverview_WhenPresent()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":2,"booksInProgress":0,"pagesRead":300,"genreBreakdown":[],
+             "recentActivity":[],
+             "yearlyOverview":[{"year":"2026","booksFinished":2,"activeDays":15,"pagesRead":300}]}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Contains("Jahresübersicht", cut.Markup);
+        Assert.Contains("2026", cut.Markup);
+        Assert.Contains("2 Bücher · 300 Seiten · 15 aktive Tage", cut.Markup);
+    }
+
+    [Fact]
+    public void Statistics_RendersCalendarHeatmap_WithTodayAsAFullIntensityCell()
+    {
+        const string template = """
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":10,"genreBreakdown":[],
+             "recentActivity":[],"readingCalendar":[{"date":"__DATE__","count":3}]}}
+            """;
+        var json = template.Replace("__DATE__", DateTime.UtcNow.ToString("yyyy-MM-dd"));
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Contains("calendar-heatmap", cut.Markup);
+        Assert.Contains("calendar-cell--level-4", cut.Markup);
+    }
+
+    [Fact]
+    public void Statistics_SavingGoal_PutsToGoalEndpoint_AndShowsUpdatedRing()
+    {
+        const string initialJson = """
+            {"success":true,"data":{"booksRead":2,"booksInProgress":0,"pagesRead":50,"genreBreakdown":[],
+             "recentActivity":[],"goal":{"targetBooks":null,"booksFinishedThisYear":2}}}
+            """;
+        const string savedGoalJson = """{"success":true,"data":{"targetBooks":5,"booksFinishedThisYear":2}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/statistics/goal", savedGoalJson)
+            .WhenPathEndsWith("/api/statistics", initialJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Statistics>();
+        Assert.Contains("Setz dir ein Leseziel", cut.Markup);
+
+        cut.Find("input[type=number]").Input("5");
+        cut.Find("form.goal-form").Submit();
+
+        Assert.Contains("goal-ring", cut.Markup);
+        Assert.Contains("von 5", cut.Markup);
+    }
 }
