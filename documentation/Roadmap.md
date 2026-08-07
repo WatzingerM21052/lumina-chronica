@@ -13,6 +13,7 @@ The Master Project Bible's own parts disagree on one milestone: the Implementati
 | v1.0 | Reader Release | Auth, personal library, book upload (EPUB/PDF/TXT/Markdown), reader, reading progress, shelves, tags |
 | v1.5 | Personalisierung | Extended themes, bookmarks, better reader, extended statistics |
 | v2.0 | Worldbuilding | Projects, worlds, characters, locations, maps, timelines |
+| v2.1 | Sicherheit | Not part of the original §100–§112 version sequence — an unplanned security release triggered by Dependabot alerts after v2.0; Dependabot vulnerability remediation + a general security hardening pass |
 | v3.0 | Community | Public profiles/library, following, ratings, comments |
 | v4.0 | KI (AI) | Reader AI (summaries, word explanations, Q&A), Creator AI (character ideas, lore, consistency checks) |
 | v5.0 | Mobile | Native mobile apps, offline sync, push notifications |
@@ -592,3 +593,31 @@ Backend: 231/231 Vitest tests passing (23 new). Frontend: 187/187 bUnit tests pa
 This closes epic **#9** — all six v2.0 Worldbuilding Stories are now complete.
 
 **v2.0.0 tagged and released.** Backend: 231/231 Vitest tests passing. Frontend: 187/187 bUnit tests passing. Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend), including migrations `0008_projects.sql` through `0013_project_links.sql` applied to production D1. Epic #9 and the `v2.0` milestone are both closed on GitHub.
+
+## v2.1 — Sicherheit (2026-08-07)
+
+Triggered by GitHub flagging 11 open Dependabot alerts against `backend/` shortly after the v2.0 release, then broadened to a general security pass on request. Two Stories under milestone `v2.1`, no epic wrapper (same lighter two-Story shape as v1.5): the concrete Dependabot fixes, and everything else a security review turns up.
+
+### Dependency vulnerabilities (issue #276, PR #278)
+
+- [x] Remove the unused `vitest` devDependency + dead `"test": "vitest run"` script from `backend/package.json`
+- [x] Bump `hono` to `^4.12.34`
+- [x] Refresh `backend/package-lock.json` so `wrangler` resolves to a patched `undici`
+- [x] Add `.github/dependabot.yml` covering all four ecosystems in the repo
+
+`vitest` turned out to be entirely dead weight — the actual test suite runs from `tests/backend/`, not `backend/` itself (confirmed via this repo's own docs, the CI workflow, and the README) — so removing it deleted the whole `vitest`→`vite`→`esbuild` chain outright, closing 5 of the 11 alerts including the one critical one in a single change. `hono`'s declared range already permitted a patched version; it just needed the lockfile refreshed. `undici`'s 5 alerts all traced to `wrangler`'s bundled `miniflare`, fixed the same way. No `dependabot.yml` existed before this — only GitHub's default scanning had been catching anything, and it only covers what's tracked; the NuGet and github-actions ecosystems were invisible until now.
+
+Backend: 235/235 Vitest tests passing (unchanged suite, the fix is dependency-only). **Live-verified against production** (2026-08-07): `npm ci` clean, `wrangler deploy --dry-run` clean, deployed, CORS preflight confirmed working post-deploy (the underlying hono CVE was in the CORS middleware), and `gh api .../dependabot/alerts` confirmed 0 open alerts remaining.
+
+### Security hardening pass (issue #277, PR #294, fix PR #295)
+
+- [x] Rate-limit `POST /api/auth/login` and `/register`
+- [x] `X-Content-Type-Options: nosniff` on all file/image-streaming routes
+
+A full review of CORS, auth middleware, error handling, crypto, and ownership-scoping across every route file (the last via a dedicated Explore-agent audit) came back clean — nothing there needed changing. The one real, previously undocumented gap: no brute-force/credential-stuffing protection on login or registration. New `auth_rate_limits` table (migration `0014_auth_rate_limit.sql`), a D1-backed fixed-window counter — no new Cloudflare KV namespace needed, reusing the existing `DB` binding was enough. Login throttles on `(CF-Connecting-IP, identifier)` rather than identifier alone, specifically so an attacker spamming a victim's username from many IPs can't lock the victim out of their own account; register throttles per IP only, against mass automated account creation. Also added `X-Content-Type-Options: nosniff` to all 8 file/image-streaming routes (books, shelves, project covers/maps/character/location images, project files) via one shared `fileResponse()` helper, so a browser can never be tricked into executing a mislabeled upload. SVG was checked and confirmed already excluded from `ALLOWED_COVER_EXTENSIONS`, so no stored-XSS risk there. Vendored frontend libraries (pdf.js, epub.js/JSZip, GSAP, html2canvas, page-flip — invisible to Dependabot since they're committed bundles, not package-managed) were checked against their embedded version strings: all current, no open CVEs.
+
+**Two real bugs found only by live-testing against production, not the local test suite**: D1 serves reads from regional replicas by default, so the rate-limit check couldn't reliably see another request's very recent write — the counter was incrementing correctly on the primary the whole time, but the gate never tripped. Fixed via `db.withSession("first-primary")`. Separately, comparing an app-computed ISO timestamp against SQLite's differently-formatted `CURRENT_TIMESTAMP` as plain text made the window-expiry check always evaluate true, so a throttled window would never actually reset. Both are the same category of D1-vs-local-`node:sqlite` parity gap already documented for the OAuth migration's `PRAGMA foreign_keys` lesson — see `Architecture.md`'s row for the full detail.
+
+Backend: 235/235 Vitest tests passing (4 new: threshold, per-identifier isolation, reset-on-success, plus a header assertion on an existing file-serving test). **Live-verified against production** (2026-08-07): migration `0014_auth_rate_limit.sql` applied to real D1, backend redeployed twice (once for the feature, once for the D1-consistency fix). Confirmed via direct API calls against throwaway accounts: 8 failed logins against the same identifier correctly return `429 RATE_LIMITED` with a `Retry-After` header on the 9th; a different identifier from the same source is unaffected; 8 registrations from the same IP correctly throttle the 9th; `X-Content-Type-Options: nosniff` confirmed present on both `/api/books/:id/file` and `/api/books/:id/cover`. All throwaway accounts, books, and rate-limit rows created during verification were removed from production afterward.
+
+**v2.1.0 tagged and released.** Backend: 235/235 Vitest tests passing. Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend), including migration `0014_auth_rate_limit.sql` applied to production D1. Both v2.1 Stories and the `v2.1` milestone are closed on GitHub.
