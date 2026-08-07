@@ -4,6 +4,18 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-08-08
+
+### Added
+
+- Community: borrowed reading — a book's owner can set its visibility to `SHARED`, granting any logged-in user full read access to it (not just the cover+metadata teaser `PUBLIC` gives an anonymous visitor). Reading progress and bookmarks are saved per-user, independent of the owner's own, exactly like an owned book. Saves cloud storage: multiple users no longer each need their own copy of the same book (issue #316).
+- Home dashboard: a borrowed book in "Weiterlesen" is now tagged with a "Geliehen von {username}" badge instead of the (owner-only) favorite star.
+- Public profile: a `SHARED` book shows a "Lesen" button (logged in) or "Anmelden zum Lesen" prompt (logged out) instead of the rating widget.
+
+Mutations (edit/delete/favorite/cover-replace/rate/shelve) stay strictly owner-only — only reading the book, its progress, and its bookmarks relax for `SHARED`. No new migration; `SHARED` has existed in the schema since v1.0 but was unenforced until now.
+
+Backend: 289/289 Vitest tests passing (13 new). Frontend: 219/219 bUnit tests passing (5 new).
+
 ## [3.0.0] - 2026-08-07
 
 ### Added
