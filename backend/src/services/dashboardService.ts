@@ -11,6 +11,11 @@ export type ContinueReadingItem = {
     book: BookSummary;
     percentage: number;
     lastOpened: string;
+    // null for the caller's own books; the owner's username for a SHARED
+    // book being read via "borrowed reading" (see bookService.ts's
+    // findAccessibleBookRow) -- lets the frontend render a "Geliehen von
+    // {username}" badge instead of a whole separate list/page.
+    ownerUsername: string | null;
 };
 
 export type DashboardOverview = {
@@ -44,16 +49,38 @@ async function getContinueReading(db: D1Database, userId: number): Promise<Conti
 
     const ids = progress.results.map((row) => row.book_id);
     const placeholders = ids.map(() => "?").join(",");
+    // Owner's own books, or a SHARED book they're borrowing -- matches the
+    // read-access rule in bookService.ts's findAccessibleBookRow. owner_id
+    // is added on top of BOOK_ROW_COLUMNS (not part of it) purely so this
+    // function can tell the two cases apart below.
     const books = await db
-        .prepare(`SELECT ${BOOK_ROW_COLUMNS} FROM books WHERE id IN (${placeholders}) AND owner_id = ?`)
+        .prepare(`SELECT ${BOOK_ROW_COLUMNS}, owner_id FROM books WHERE id IN (${placeholders}) AND (owner_id = ? OR visibility = 'SHARED')`)
         .bind(...ids, userId)
-        .all<BookRow>();
-    const bookById = new Map(books.results.map((row) => [row.id, toSummary(row)]));
+        .all<BookRow & { owner_id: number }>();
+
+    const borrowedOwnerIds = [...new Set(books.results.filter((row) => row.owner_id !== userId).map((row) => row.owner_id))];
+    const ownerUsernameById = new Map<number, string>();
+    if (borrowedOwnerIds.length > 0) {
+        const ownerPlaceholders = borrowedOwnerIds.map(() => "?").join(",");
+        const owners = await db
+            .prepare(`SELECT id, username FROM users WHERE id IN (${ownerPlaceholders})`)
+            .bind(...borrowedOwnerIds)
+            .all<{ id: number; username: string }>();
+        for (const owner of owners.results) ownerUsernameById.set(owner.id, owner.username);
+    }
+
+    const bookById = new Map(books.results.map((row) => [row.id, row]));
 
     return progress.results
         .map((row): ContinueReadingItem | null => {
             const book = bookById.get(row.book_id);
-            return book ? { book, percentage: row.percentage, lastOpened: row.last_opened } : null;
+            if (!book) return null;
+            return {
+                book: toSummary(book),
+                percentage: row.percentage,
+                lastOpened: row.last_opened,
+                ownerUsername: book.owner_id === userId ? null : (ownerUsernameById.get(book.owner_id) ?? null),
+            };
         })
         .filter((item): item is ContinueReadingItem => item !== null);
 }

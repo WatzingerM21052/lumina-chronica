@@ -123,6 +123,73 @@ describe("POST /api/reading/update", () => {
     });
 });
 
+async function setVisibility(token: string, bookId: number, visibility: string) {
+    return app.request(
+        `/api/books/${bookId}`,
+        { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ visibility }) },
+        env
+    );
+}
+
+// "Borrowed reading" (follow-up to Community Phase 1/#300): a SHARED book's
+// owner grants any logged-in user full read access, with independently
+// saved progress -- see readingService.ts's isAccessibleByUser.
+describe("Borrowed reading: SHARED books", () => {
+    it("lets a non-owner read and save progress on a SHARED book, independent of the owner's own progress", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setVisibility(tokenA, bookId, "SHARED");
+
+        const initialGet = await app.request(`/api/reading/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(initialGet.status).toBe(200);
+        expect((await readJson(initialGet)).data).toBeNull();
+
+        await app.request(
+            "/api/reading/update",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenA}` },
+                body: JSON.stringify({ bookId, percentage: 90 }),
+            },
+            env
+        );
+        const saveRes = await app.request(
+            "/api/reading/update",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenB}` },
+                body: JSON.stringify({ bookId, chapter: 2, position: "0.1", percentage: 10 }),
+            },
+            env
+        );
+        expect(saveRes.status).toBe(200);
+
+        const ownerProgress = await app.request(`/api/reading/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect((await readJson(ownerProgress)).data).toMatchObject({ percentage: 90 });
+
+        const borrowerProgress = await app.request(`/api/reading/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect((await readJson(borrowerProgress)).data).toMatchObject({ chapter: 2, position: "0.1", percentage: 10 });
+    });
+
+    it("still returns 404 for a non-owner when the book is only PUBLIC, not SHARED", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setVisibility(tokenA, bookId, "PUBLIC");
+
+        const getRes = await app.request(`/api/reading/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(getRes.status).toBe(404);
+
+        const saveRes = await app.request(
+            "/api/reading/update",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenB}` },
+                body: JSON.stringify({ bookId, percentage: 10 }),
+            },
+            env
+        );
+        expect(saveRes.status).toBe(404);
+    });
+});
+
 describe("DELETE /api/books/:id with existing reading progress", () => {
     it("deletes the book even when a reading_progress row references it", async () => {
         const bookId = await uploadBook(tokenA);

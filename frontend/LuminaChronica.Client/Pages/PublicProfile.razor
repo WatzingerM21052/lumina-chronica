@@ -81,32 +81,49 @@ else
                             {
                                 <div class="book-card-author">@book.Author</div>
                             }
-                            <div class="book-card-rating">
-                                @if (book.RatingCount > 0)
-                                {
-                                    <span>★ @book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture) (@book.RatingCount)</span>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Noch keine Bewertungen</span>
-                                }
-                            </div>
-                            @if (!_profile.IsOwnProfile)
+                            @if (book.Visibility == "SHARED")
                             {
+                                <div class="book-card-rating">
+                                    <span class="text-muted">Geteiltes Buch</span>
+                                </div>
                                 <AuthorizeView>
                                     <Authorized>
-                                        <div class="book-card-rate-stars">
-                                            @for (var star = 1; star <= 5; star++)
-                                            {
-                                                var starValue = star;
-                                                <button type="button" class="star-button @(starValue <= (book.MyRating ?? 0) ? "is-filled" : "")"
-                                                        disabled="@_ratingInProgress.Contains(book.Id)"
-                                                        title="@($"Mit {starValue} Sternen bewerten")"
-                                                        @onclick="() => RateBookAsync(book, starValue)">★</button>
-                                            }
-                                        </div>
+                                        <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">Lesen</a>
                                     </Authorized>
+                                    <NotAuthorized>
+                                        <span class="text-muted">Anmelden zum Lesen</span>
+                                    </NotAuthorized>
                                 </AuthorizeView>
+                            }
+                            else
+                            {
+                                <div class="book-card-rating">
+                                    @if (book.RatingCount > 0)
+                                    {
+                                        <span>★ @book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture) (@book.RatingCount)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Noch keine Bewertungen</span>
+                                    }
+                                </div>
+                                @if (!_profile.IsOwnProfile)
+                                {
+                                    <AuthorizeView>
+                                        <Authorized>
+                                            <div class="book-card-rate-stars">
+                                                @for (var star = 1; star <= 5; star++)
+                                                {
+                                                    var starValue = star;
+                                                    <button type="button" class="star-button @(starValue <= (book.MyRating ?? 0) ? "is-filled" : "")"
+                                                            disabled="@_ratingInProgress.Contains(book.Id)"
+                                                            title="@($"Mit {starValue} Sternen bewerten")"
+                                                            @onclick="() => RateBookAsync(book, starValue)">★</button>
+                                                }
+                                            </div>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                }
                             }
                         </div>
                     </div>

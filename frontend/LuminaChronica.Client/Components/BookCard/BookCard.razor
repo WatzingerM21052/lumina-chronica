@@ -18,11 +18,18 @@
                 </svg>
             </div>
         }
-        <button type="button" class="book-card-favorite @(_isFavorite ? "is-favorite" : "")"
-                title="@(_isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
-                @onclick="ToggleFavoriteAsync" @onclick:stopPropagation="true" @onclick:preventDefault="true">
-            @(_isFavorite ? "★" : "☆")
-        </button>
+        @if (ShowFavorite)
+        {
+            <button type="button" class="book-card-favorite @(_isFavorite ? "is-favorite" : "")"
+                    title="@(_isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
+                    @onclick="ToggleFavoriteAsync" @onclick:stopPropagation="true" @onclick:preventDefault="true">
+                @(_isFavorite ? "★" : "☆")
+            </button>
+        }
+        @if (OwnerUsername is { } ownerUsername)
+        {
+            <span class="book-card-borrowed-badge" title="@($"Geteiltes Buch von {ownerUsername}")">Geliehen von @ownerUsername</span>
+        }
     </div>
     <div class="book-card-info">
         <div class="book-card-title">@Book.Title</div>

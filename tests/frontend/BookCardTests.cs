@@ -74,4 +74,24 @@ public class BookCardTests : BunitContext
         Assert.Equal("/api/books/1/favorite", capturedRequest?.RequestUri?.AbsolutePath);
         Assert.Contains("is-favorite", cut.Find("button.book-card-favorite").ClassList);
     }
+
+    [Fact]
+    public void BookCard_ShowFavoriteFalse_HidesFavoriteButton()
+    {
+        var cut = Render<BookCard>(parameters => parameters
+            .Add(p => p.Book, MakeBook())
+            .Add(p => p.ShowFavorite, false));
+
+        Assert.Empty(cut.FindAll("button.book-card-favorite"));
+    }
+
+    [Fact]
+    public void BookCard_OwnerUsername_RendersBorrowedBadge()
+    {
+        var cut = Render<BookCard>(parameters => parameters
+            .Add(p => p.Book, MakeBook())
+            .Add(p => p.OwnerUsername, "bob"));
+
+        Assert.Contains("Geliehen von bob", cut.Find(".book-card-borrowed-badge").TextContent);
+    }
 }

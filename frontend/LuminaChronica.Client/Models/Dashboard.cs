@@ -13,6 +13,11 @@ public class ContinueReadingItem
 
     [JsonPropertyName("lastOpened")]
     public string LastOpened { get; set; } = string.Empty;
+
+    // null for the caller's own books; set to the owner's username for a
+    // SHARED book being read via "borrowed reading".
+    [JsonPropertyName("ownerUsername")]
+    public string? OwnerUsername { get; set; }
 }
 
 public class DashboardOverview

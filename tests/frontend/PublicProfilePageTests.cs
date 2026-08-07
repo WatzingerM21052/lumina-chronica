@@ -40,6 +40,12 @@ public class PublicProfilePageTests : BunitContext
     private const string OwnRatedBookProfileJson =
         """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":true,"books":[{"id":9,"title":"My Own Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"averageRating":4.5,"ratingCount":2,"myRating":null}],"projects":[]}}""";
 
+    // "Borrowed reading" (follow-up to #300) -- a SHARED book skips the
+    // rating widget entirely (ratings stay PUBLIC-only) and shows a
+    // "Lesen"/"Anmelden zum Lesen" affordance instead.
+    private const string SharedBookProfileJson =
+        """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Shared Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","averageRating":null,"ratingCount":0,"myRating":null}],"projects":[]}}""";
+
     private const string EmptyProfileJson =
         """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[]}}""";
 
@@ -318,6 +324,34 @@ public class PublicProfilePageTests : BunitContext
 
         Assert.Equal(HttpMethod.Delete, unrateRequest?.Method);
         Assert.Equal("/api/books/9/rating", unrateRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void PublicProfile_SharedBook_ShowsLesenButton_WhenLoggedIn()
+    {
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/public", SharedBookProfileJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        SetAuthenticated(true, "alice");
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
+
+        var lesenLink = cut.FindAll("a").Single(a => a.TextContent.Trim() == "Lesen");
+        Assert.Equal("library/books/9/read", lesenLink.GetAttribute("href"));
+        Assert.Empty(cut.FindAll("button.star-button"));
+    }
+
+    [Fact]
+    public void PublicProfile_SharedBook_ShowsAnmeldenPrompt_WhenLoggedOut()
+    {
+        UseRoutes(SharedBookProfileJson);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
+
+        Assert.Contains("Anmelden zum Lesen", cut.Markup);
+        Assert.DoesNotContain(cut.FindAll("a"), a => a.TextContent.Trim() == "Lesen");
     }
 
     [Fact]
