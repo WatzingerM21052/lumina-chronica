@@ -4,13 +4,21 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-08-07
+
 ### Added
 
-- Community: public profile — `/u/{username}`, reachable while logged out, shows a user's PUBLIC books and projects (cover + metadata only, the book file itself stays auth-gated). `visibility` (PRIVATE/PUBLIC), stored since v1.0/v2.0 but never user-facing, is now settable via a selector on the Book/Project edit forms (issue #300, Phase 1 of v3.0 Community, epics #10/#11).
-- Community: follow — follow/unfollow any user by username, follower/following counts and a Folgen/Entfolgen button on the public profile (issue #304, Phase 2 of v3.0 Community).
-- Community: ratings — 1-5 star ratings on PUBLIC books (no self-rating), an inline rating widget with average + count on each public-profile book card (issue #307, Phase 3 of v3.0 Community). Completes v3.0's core Community pass (Profile/Follow/Ratings); Discovery epic's `/discover` page is next, now unblocked.
+- Community: public profile — `/u/{username}`, reachable while logged out, shows a user's PUBLIC books and projects (cover + metadata only, the book file itself stays auth-gated). `visibility` (PRIVATE/PUBLIC), stored since v1.0/v2.0 but never user-facing, is now settable via a selector on the Book/Project edit forms (issue #300, Phase 1, epic #11).
+- Community: follow — follow/unfollow any user by username, follower/following counts and a Folgen/Entfolgen button on the public profile (issue #304, Phase 2, epic #11).
+- Community: ratings — 1-5 star ratings on PUBLIC books (no self-rating), an inline rating widget with average + count on each public-profile book card (issue #307, Phase 3, epic #11).
+- Discovery: `/discover` page — replaces the placeholder scaffolded since v0.2. Browse PUBLIC books sorted by newest or highest-rated, and search for users directly by username (issue #310, Phase 4, epic #10).
 
-Backend: 265/265 Vitest tests passing. Frontend: 207/207 bUnit tests passing.
+### Fixed
+
+- `deleteBook` never cleaned up `ratings`, causing a real FOREIGN KEY constraint failure deleting a rated book against production D1.
+- `PublicProfile`/`Discover` book and project cards, and Discover's user-search avatars, had no CSS at all (rendered edge-to-edge unstyled) since those pages render card markup directly rather than through the `<BookCard>`/`<ProjectCard>` components that own the corresponding Blazor-scoped styles.
+
+Backend: 276/276 Vitest tests passing. Frontend: 214/214 bUnit tests passing. Migrations `0015_followers.sql` and `0016_ratings.sql` applied to production D1.
 
 ## [2.1.0] - 2026-08-07
 
