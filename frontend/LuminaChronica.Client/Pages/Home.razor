@@ -26,7 +26,7 @@
         @foreach (var item in _dashboard.ContinueReading)
         {
             <BookCard Book="item.Book" ProgressPercentage="item.Percentage" Href="@($"library/books/{item.Book.Id}/read")"
-                      ShowFavorite="item.OwnerUsername is null" OwnerUsername="item.OwnerUsername" />
+                      ShowFavorite="item.OwnerUsername is null" OwnerUsername="@item.OwnerUsername" />
         }
     </div>
 }
