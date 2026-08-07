@@ -539,8 +539,12 @@ Backend: 140/140 Vitest tests passing (12 new). Frontend: 144/144 bUnit tests pa
 
 ### Phase 2 — Characters (issue #255)
 
-- [ ] `characters` table, CRUD, character image upload
-- [ ] Characters tab + `CharacterDetail.razor`
+- [x] `characters` table, CRUD, character image upload
+- [x] Characters tab + `CharacterDetail.razor`
+
+Character management nested under a project — no `owner_id` of its own, access control walks up to the parent project (`characterService.ts`'s `assertOwnsProject`), same pattern as `shelf_books` inheriting the parent shelf's ownership. `ProjectDetail.razor` gained its first tab bar (Übersicht/Charaktere) now that there are two real sections to switch between, closing the speculative-navigation gap Phase 1 deliberately left open. Found and fixed a genuine bug during this phase, not a pre-existing one: `NotFoundError` extracted to a new shared `backend/src/services/errors.ts`, since `routes/projects.ts` is the first route file catching errors from two different service modules — each had its own same-named-but-distinct `NotFoundError` class, so cross-user 404 checks were silently 500ing until the new tests caught it. See `Architecture.md`'s row for the full story.
+
+Backend: 154/154 Vitest tests passing (14 new). Frontend: 152/152 bUnit tests passing (8 new).
 
 ### Phase 3 — Locations & map (issue #256)
 

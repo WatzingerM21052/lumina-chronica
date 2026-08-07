@@ -24,74 +24,134 @@ else if (_project is null)
 }
 else
 {
-    <div class="book-detail-cover">
-        @if (_coverObjectUrl is not null)
+    <div class="form-actions">
+        <button type="button" class="btn @(_activeTab == "overview" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "overview")">Übersicht</button>
+        <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "characters")">Charaktere</button>
+    </div>
+
+    @if (_activeTab == "overview")
+    {
+        <div class="book-detail-cover">
+            @if (_coverObjectUrl is not null)
+            {
+                <img src="@_coverObjectUrl" alt="@_project.Title" />
+            }
+            else
+            {
+                <div class="book-card-cover-placeholder">🌎</div>
+            }
+        </div>
+
+        @if (!_isEditing)
         {
-            <img src="@_coverObjectUrl" alt="@_project.Title" />
+            <h1>@_project.Title</h1>
+            <p class="text-muted">@ProjectTypeLabel.For(_project.Type)</p>
+            @if (!string.IsNullOrWhiteSpace(_project.Description))
+            {
+                <p>@_project.Description</p>
+            }
+            <div class="form-actions">
+                <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+            </div>
+            <ConfirmDialog IsOpen="_confirmingDelete" Message="Projekt wirklich löschen?"
+                           OnConfirm="DeleteProjectAsync" OnCancel="() => _confirmingDelete = false" />
         }
         else
         {
-            <div class="book-card-cover-placeholder">🌎</div>
+            <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+                @if (_saveErrorMessage is not null)
+                {
+                    <p class="form-error">@_saveErrorMessage</p>
+                }
+                <div class="form-group">
+                    <label for="project-edit-cover">Cover ersetzen</label>
+                    <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
+                         @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
+                         @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
+                        <InputFile id="project-edit-cover" OnChange="OnEditCoverSelected" />
+                        <span class="dropzone-label">Cover hierher ziehen oder klicken zum Auswählen</span>
+                    </div>
+                    @if (_coverSaveErrorMessage is not null)
+                    {
+                        <p class="form-error">@_coverSaveErrorMessage</p>
+                    }
+                </div>
+                <div class="form-group">
+                    <label for="project-edit-title">Titel</label>
+                    <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
+                </div>
+                <div class="form-group">
+                    <label for="project-edit-type">Art</label>
+                    <InputSelect id="project-edit-type" @bind-Value="_editForm.Type">
+                        @foreach (var type in ProjectTypeLabel.Options)
+                        {
+                            <option value="@type">@ProjectTypeLabel.For(type)</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="form-group">
+                    <label for="project-edit-description">Beschreibung</label>
+                    <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                    <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+                </div>
+            </EditForm>
         }
-    </div>
-
-    @if (!_isEditing)
-    {
-        <h1>@_project.Title</h1>
-        <p class="text-muted">@ProjectTypeLabel.For(_project.Type)</p>
-        @if (!string.IsNullOrWhiteSpace(_project.Description))
-        {
-            <p>@_project.Description</p>
-        }
-        <div class="form-actions">
-            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
-        </div>
-        <ConfirmDialog IsOpen="_confirmingDelete" Message="Projekt wirklich löschen?"
-                       OnConfirm="DeleteProjectAsync" OnCancel="() => _confirmingDelete = false" />
     }
     else
     {
-        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
-            @if (_saveErrorMessage is not null)
-            {
-                <p class="form-error">@_saveErrorMessage</p>
-            }
-            <div class="form-group">
-                <label for="project-edit-cover">Cover ersetzen</label>
-                <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
-                     @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
-                     @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
-                    <InputFile id="project-edit-cover" OnChange="OnEditCoverSelected" />
-                    <span class="dropzone-label">Cover hierher ziehen oder klicken zum Auswählen</span>
-                </div>
-                @if (_coverSaveErrorMessage is not null)
+        <div class="library-header">
+            <h2>Charaktere</h2>
+            <button type="button" class="btn btn-primary" @onclick="() => _showCreateCharacterForm = !_showCreateCharacterForm">
+                @(_showCreateCharacterForm ? "Abbrechen" : "Charakter hinzufügen")
+            </button>
+        </div>
+
+        @if (_showCreateCharacterForm)
+        {
+            <EditForm Model="_createCharacterForm" OnValidSubmit="CreateCharacterAsync" class="book-form-card">
+                @if (_createCharacterErrorMessage is not null)
                 {
-                    <p class="form-error">@_coverSaveErrorMessage</p>
+                    <p class="form-error">@_createCharacterErrorMessage</p>
+                }
+                <div class="form-group">
+                    <label for="character-name">Name</label>
+                    <InputText id="character-name" @bind-Value="_createCharacterForm.Name" />
+                </div>
+                <div class="form-group">
+                    <label for="character-image">Bild (optional)</label>
+                    <InputFile id="character-image" OnChange="OnCharacterImageSelected" />
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                </div>
+            </EditForm>
+        }
+
+        @if (_charactersErrorMessage is not null)
+        {
+            <p class="form-error">@_charactersErrorMessage</p>
+        }
+        else if (_characters is null)
+        {
+            <LoadingIndicator Text="Charaktere werden geladen..." />
+        }
+        else if (_characters.Count == 0)
+        {
+            <p class="text-muted">Dieses Projekt hat noch keine Charaktere.</p>
+        }
+        else
+        {
+            <div class="library-grid">
+                @foreach (var character in _characters)
+                {
+                    <CharacterCard Character="character" />
                 }
             </div>
-            <div class="form-group">
-                <label for="project-edit-title">Titel</label>
-                <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
-            </div>
-            <div class="form-group">
-                <label for="project-edit-type">Art</label>
-                <InputSelect id="project-edit-type" @bind-Value="_editForm.Type">
-                    @foreach (var type in ProjectTypeLabel.Options)
-                    {
-                        <option value="@type">@ProjectTypeLabel.For(type)</option>
-                    }
-                </InputSelect>
-            </div>
-            <div class="form-group">
-                <label for="project-edit-description">Beschreibung</label>
-                <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
-            </div>
-        </EditForm>
+        }
     }
 }
 
@@ -111,7 +171,15 @@ else
     private EditFormModel _editForm = new();
     private bool _confirmingDelete;
 
-    protected override Task OnParametersSetAsync() => LoadProjectAsync();
+    private string _activeTab = "overview";
+    private List<Character>? _characters;
+    private string? _charactersErrorMessage;
+    private bool _showCreateCharacterForm;
+    private string? _createCharacterErrorMessage;
+    private CreateCharacterFormModel _createCharacterForm = new();
+    private IBrowserFile? _selectedCharacterImage;
+
+    protected override Task OnParametersSetAsync() => Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync());
 
     private async Task LoadProjectAsync()
     {
@@ -215,6 +283,58 @@ else
         }
     }
 
+    private async Task LoadCharactersAsync()
+    {
+        _charactersErrorMessage = null;
+        var response = await ApiClient.GetAsync<List<Character>>($"/api/projects/{Id}/characters");
+        if (response is { Success: true, Data: not null })
+        {
+            _characters = response.Data;
+        }
+        else
+        {
+            _charactersErrorMessage = response?.Error?.Message ?? "Charaktere konnten nicht geladen werden.";
+        }
+    }
+
+    private void OnCharacterImageSelected(InputFileChangeEventArgs e) => _selectedCharacterImage = e.File;
+
+    private async Task CreateCharacterAsync()
+    {
+        _createCharacterErrorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_createCharacterForm.Name))
+        {
+            _createCharacterErrorMessage = "Bitte gib einen Namen ein.";
+            return;
+        }
+
+        const long maxImageBytes = 5 * 1024 * 1024;
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(_createCharacterForm.Name), "\"name\"" }
+        };
+        if (_selectedCharacterImage is not null)
+        {
+            var streamContent = new StreamContent(_selectedCharacterImage.OpenReadStream(maxImageBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedCharacterImage.ContentType) ? "application/octet-stream" : _selectedCharacterImage.ContentType);
+            content.Add(streamContent, "\"image\"", $"\"{_selectedCharacterImage.Name}\"");
+        }
+
+        var response = await ApiClient.PostMultipartAsync<Character>($"/api/projects/{Id}/characters", content);
+        if (response is { Success: true, Data: not null })
+        {
+            _showCreateCharacterForm = false;
+            _createCharacterForm = new CreateCharacterFormModel();
+            _selectedCharacterImage = null;
+            await LoadCharactersAsync();
+        }
+        else
+        {
+            _createCharacterErrorMessage = response?.Error?.Message ?? "Charakter konnte nicht erstellt werden.";
+        }
+    }
+
     public void Dispose()
     {
         if (_coverObjectUrl is not null)
@@ -228,5 +348,10 @@ else
         public string Title { get; set; } = string.Empty;
         public string Type { get; set; } = "WORLD";
         public string? Description { get; set; }
+    }
+
+    private class CreateCharacterFormModel
+    {
+        public string Name { get; set; } = string.Empty;
     }
 }
