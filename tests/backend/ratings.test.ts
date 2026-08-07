@@ -183,4 +183,16 @@ describe("PUT/DELETE /api/books/:id/rating", () => {
         const book = await getPublicBook("alice", bookId);
         expect(book).toMatchObject({ averageRating: null, ratingCount: 0, myRating: null });
     });
+
+    it("deleting a rated book succeeds and cleans up its ratings (real D1 enforces the FK)", async () => {
+        const bookId = await uploadPublicBook(tokenA);
+        await app.request(
+            `/api/books/${bookId}/rating`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ rating: 5 }) },
+            env
+        );
+
+        const res = await app.request(`/api/books/${bookId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(res.status).toBe(204);
+    });
 });
