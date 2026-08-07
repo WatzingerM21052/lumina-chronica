@@ -654,4 +654,17 @@ Backend: 252/252 Vitest tests passing (8 new). Frontend: 200/200 bUnit tests pas
 
 Live-verified end-to-end against production (2026-08-07): migration applied to real D1, backend redeployed, then two throwaway accounts exercised via direct API calls — self-follow rejected (400), follow succeeds and is idempotent (204 on repeat), counts update correctly on both sides, `isFollowing` correctly true only for the actual follower (false for a stranger and for an anonymous visitor), `isOwnProfile` correctly true only for the profile's own user, unfollow works and is idempotent, unknown username 404s. Frontend spot-checked live on the real account: `/u/watzingerm21052` correctly shows "0 Follower · 0 Folgt" and hides the Follow button on your own profile, zero console errors. Both throwaway accounts removed afterward (direct D1 delete).
 
-**Remaining for v3.0's core pass** (not yet filed as an issue): Ratings (Phase 3, also unblocks Discovery's "highest-rated" sort), then Discovery's own `/discover` browse page.
+### Phase 3 — Ratings (issue #307)
+
+- [x] Migration `0016_ratings.sql` — `ratings(id, user_id, book_id, rating, created_at)`, unique on `(user_id, book_id)`, `rating` constrained 1–5, no spec precedent beyond the bare field list (§50.2)
+- [x] `PUT`/`DELETE /api/books/:id/rating` (requireAuth, upsert on PUT — re-rating updates, doesn't duplicate)
+- [x] `listPublicBooksByUsername` gains `viewerId` (same pattern as Phase 2's follow state); public book listings now carry `averageRating`/`ratingCount`/`myRating`
+- [x] Frontend: inline 1–5 star widget on each public-profile book card
+
+Only PUBLIC books can be rated (a PRIVATE book is unreachable to a non-owner through any other endpoint), and only by someone other than the book's owner — self-rating is blocked for the same reason self-follow is blocked in Phase 2: an uncontroversial, near-universal platform convention that prevents inflating your own average. **No dedicated public book detail page yet** (Phase 1 explicitly deferred that) — the rating widget lives inline on the book card tile on `/u/{username}` itself; clicking a star you already gave removes your rating (toggle), clicking a different star changes it.
+
+Backend: 265/265 Vitest tests passing (13 new). Frontend: 207/207 bUnit tests passing (7 new).
+
+Live-verified end-to-end against production (2026-08-07): migration applied to real D1, backend redeployed, then two throwaway accounts + a real public book exercised via direct API calls — self-rating rejected (400), out-of-range rating rejected (400), rating succeeds and average/count update correctly, re-rating upserts (average changes, count stays 1, not a duplicate row), unrating removes it (average back to `null`, count back to 0), rating a book after its visibility is set back to PRIVATE is correctly rejected. Frontend spot-checked live on the real account (no public books existed to exercise the widget's interactive states without creating persistent test data, so this leaned on the already-comprehensive bUnit coverage of all 7 widget states): `/u/watzingerm21052` renders with no console errors, no visual regression from the new markup. Throwaway accounts, the test book, and rating/follower rows all removed afterward (direct D1 delete).
+
+**v3.0's core Community pass (Profile, Follow, Ratings) is now complete.** Epic #11 closed 2026-08-07. Discovery epic #10's `/discover` page is next — unblocked now that public content and ratings both exist to browse/sort by. Comments/Notifications/Activities stay deferred to backlog issue #299. v3.0 itself stays untagged/unreleased until Discovery also ships, unlike v2.0/v2.1 which were fully closed out before being tagged.

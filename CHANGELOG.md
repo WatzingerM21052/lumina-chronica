@@ -8,8 +8,9 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 - Community: public profile — `/u/{username}`, reachable while logged out, shows a user's PUBLIC books and projects (cover + metadata only, the book file itself stays auth-gated). `visibility` (PRIVATE/PUBLIC), stored since v1.0/v2.0 but never user-facing, is now settable via a selector on the Book/Project edit forms (issue #300, Phase 1 of v3.0 Community, epics #10/#11).
 - Community: follow — follow/unfollow any user by username, follower/following counts and a Folgen/Entfolgen button on the public profile (issue #304, Phase 2 of v3.0 Community).
+- Community: ratings — 1-5 star ratings on PUBLIC books (no self-rating), an inline rating widget with average + count on each public-profile book card (issue #307, Phase 3 of v3.0 Community). Completes v3.0's core Community pass (Profile/Follow/Ratings); Discovery epic's `/discover` page is next, now unblocked.
 
-Backend: 252/252 Vitest tests passing. Frontend: 200/200 bUnit tests passing.
+Backend: 265/265 Vitest tests passing. Frontend: 207/207 bUnit tests passing.
 
 ## [2.1.0] - 2026-08-07
 
