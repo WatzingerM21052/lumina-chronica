@@ -338,6 +338,12 @@ export async function getBook(db: D1Database, ownerId: number, bookId: number): 
     return row ? loadDetail(db, row) : null;
 }
 
+// SHARED is stored but has no enforcement semantics anywhere yet (same as
+// the day it was added in migration 0002) -- accepted here for forward
+// compatibility, but the frontend's own visibility selector only offers
+// PRIVATE/PUBLIC (see Community Phase 1, issue #300).
+const VISIBILITY_VALUES = ["PRIVATE", "SHARED", "PUBLIC"] as const;
+
 export type UpdateBookInput = {
     title?: string;
     author?: string;
@@ -349,11 +355,15 @@ export type UpdateBookInput = {
     releaseDate?: string;
     pages?: number;
     tags?: string[];
+    visibility?: string;
 };
 
 export async function updateBook(db: D1Database, ownerId: number, bookId: number, input: UpdateBookInput): Promise<BookDetail> {
     const row = await findOwnedBookRow(db, ownerId, bookId);
     if (!row) throw new NotFoundError();
+    if (input.visibility !== undefined && !VISIBILITY_VALUES.includes(input.visibility as (typeof VISIBILITY_VALUES)[number])) {
+        throw new ValidationError(`visibility must be one of ${VISIBILITY_VALUES.join(", ")}.`);
+    }
 
     const sets: string[] = [];
     const values: unknown[] = [];
@@ -363,6 +373,7 @@ export async function updateBook(db: D1Database, ownerId: number, bookId: number
         ["description", input.description],
         ["genre", input.genre],
         ["language", input.language],
+        ["visibility", input.visibility],
     ] as const) {
         if (value !== undefined) {
             sets.push(`${column} = ?`);
@@ -465,8 +476,52 @@ export async function getBookFileObject(db: D1Database, storage: R2Bucket, owner
     return object ? { object, format: fileRow.format } : null;
 }
 
-export async function getBookCoverObject(db: D1Database, storage: R2Bucket, ownerId: number, bookId: number): Promise<R2ObjectBody | null> {
-    const row = await findOwnedBookRow(db, ownerId, bookId);
+// ownerId is nullable here (unlike every other function in this file) --
+// this is the one route reachable while logged out (optionalAuth, not
+// requireAuth), since a PUBLIC book's cover has to render on its owner's
+// public profile (issue #300) for a visitor with no session at all.
+export async function getBookCoverObject(db: D1Database, storage: R2Bucket, ownerId: number | null, bookId: number): Promise<R2ObjectBody | null> {
+    const row = await db.prepare("SELECT cover_url, owner_id, visibility FROM books WHERE id = ?").bind(bookId).first<{
+        cover_url: string | null;
+        owner_id: number;
+        visibility: string;
+    }>();
     if (!row || !row.cover_url) return null;
+    if (row.visibility !== "PUBLIC" && row.owner_id !== ownerId) return null;
     return storage.get(row.cover_url);
+}
+
+export type PublicBookSummary = {
+    id: number;
+    title: string;
+    author: string | null;
+    description: string | null;
+    coverUrl: string | null;
+    genre: string | null;
+    language: string | null;
+};
+
+// Community Phase 1 (issue #300) -- deliberately excludes owner_id,
+// is_favorite, and every field only meaningful to the owner. No ownerId
+// param: visibility = 'PUBLIC' is the only access check, by design.
+export async function listPublicBooksByUsername(db: D1Database, username: string): Promise<PublicBookSummary[]> {
+    const rows = await db
+        .prepare(
+            `SELECT books.id, books.title, books.author, books.description, books.cover_url, books.genre, books.language
+             FROM books JOIN users ON users.id = books.owner_id
+             WHERE users.username = ? AND users.deleted_at IS NULL AND books.visibility = 'PUBLIC'
+             ORDER BY books.created_at DESC`
+        )
+        .bind(username)
+        .all<{ id: number; title: string; author: string | null; description: string | null; cover_url: string | null; genre: string | null; language: string | null }>();
+
+    return rows.results.map((row) => ({
+        id: row.id,
+        title: row.title,
+        author: row.author,
+        description: row.description,
+        coverUrl: row.cover_url ? `/api/books/${row.id}/cover` : null,
+        genre: row.genre,
+        language: row.language,
+    }));
 }

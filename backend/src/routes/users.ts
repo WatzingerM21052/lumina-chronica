@@ -9,10 +9,21 @@ import {
     getUserProfile,
     updateUserProfile,
 } from "../services/userService";
+import { getPublicProfile } from "../services/publicProfileService";
 
 export const usersRoute = new Hono<AppEnv>();
 
 const MIN_PASSWORD_LENGTH = 8;
+
+// Community Phase 1 (issue #300) -- no auth at all, not just optionalAuth:
+// this is meant to be reachable by a fully logged-out visitor. Registered as
+// /:username/public (not a bare /:username) so it can never shadow the
+// static /me routes below regardless of router matching order.
+usersRoute.get("/:username/public", async (c) => {
+    const profile = await getPublicProfile(c.env.DB, c.req.param("username"));
+    if (!profile) return c.json(failure("NOT_FOUND", "User not found."), 404);
+    return c.json(success(profile));
+});
 
 usersRoute.get("/me", requireAuth, async (c) => {
     const profile = await getUserProfile(c.env.DB, c.get("userId"));

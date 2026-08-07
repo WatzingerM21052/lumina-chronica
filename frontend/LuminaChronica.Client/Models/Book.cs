@@ -124,4 +124,7 @@ public class UpdateBookRequest
 
     [JsonPropertyName("tags")]
     public List<string>? Tags { get; set; }
+
+    [JsonPropertyName("visibility")]
+    public string? Visibility { get; set; }
 }

@@ -101,6 +101,16 @@ else
                     <label for="project-edit-description">Beschreibung</label>
                     <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
                 </div>
+                <div class="form-group">
+                    <label for="project-edit-visibility">Sichtbarkeit</label>
+                    <InputSelect id="project-edit-visibility" @bind-Value="_editForm.Visibility">
+                        @foreach (var option in VisibilityOption.Options)
+                        {
+                            <option value="@option">@VisibilityOption.For(option)</option>
+                        }
+                    </InputSelect>
+                    <p class="text-muted">Öffentliche Projekte sind mit Cover und Beschreibung auf deinem öffentlichen Profil sichtbar.</p>
+                </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Speichern</button>
                     <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
@@ -650,7 +660,7 @@ else
     private void StartEditing()
     {
         if (_project is null) return;
-        _editForm = new EditFormModel { Title = _project.Title, Type = _project.Type, Description = _project.Description };
+        _editForm = new EditFormModel { Title = _project.Title, Type = _project.Type, Description = _project.Description, Visibility = _project.Visibility };
         _saveErrorMessage = null;
         _coverSaveErrorMessage = null;
         _selectedEditCover = null;
@@ -669,6 +679,7 @@ else
             Title = _editForm.Title,
             Type = _editForm.Type,
             Description = _editForm.Description,
+            Visibility = _editForm.Visibility,
         });
 
         if (response is not { Success: true, Data: not null })
@@ -1201,6 +1212,7 @@ else
         public string Title { get; set; } = string.Empty;
         public string Type { get; set; } = "WORLD";
         public string? Description { get; set; }
+        public string Visibility { get; set; } = "PRIVATE";
     }
 
     private class CreateCharacterFormModel

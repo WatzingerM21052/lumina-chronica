@@ -107,6 +107,19 @@ public class ProjectDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void ProjectDetail_EditForm_VisibilitySelector_ShowsCurrentValue()
+    {
+        // Community Phase 1 (issue #300) -- visibility has existed in the DB
+        // and this model since v2.0 but was never actually settable until now.
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
+
+        Assert.Equal("PRIVATE", cut.Find("#project-edit-visibility").GetAttribute("value"));
+    }
+
+    [Fact]
     public void ProjectDetail_SaveEdit_SendsUpdatedTitleAndType()
     {
         HttpRequestMessage? putRequest = null;
