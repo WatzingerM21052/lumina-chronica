@@ -1,0 +1,241 @@
+@page "/projects/{ProjectId:int}/locations/{Id:int}"
+@attribute [Authorize]
+@implements IDisposable
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_location?.Name ?? "Ort") — Lumina Chronica</PageTitle>
+
+<a href="@($"projects/{ProjectId}")">← Zurück zum Projekt</a>
+
+@if (_loadErrorMessage is not null)
+{
+    <p class="form-error">@_loadErrorMessage</p>
+}
+else if (_location is null)
+{
+    <LoadingIndicator Text="Ort wird geladen..." />
+}
+else
+{
+    <div class="book-detail-cover">
+        @if (_imageObjectUrl is not null)
+        {
+            <img src="@_imageObjectUrl" alt="@_location.Name" />
+        }
+        else
+        {
+            <div class="book-card-cover-placeholder">📍</div>
+        }
+    </div>
+
+    @if (!_isEditing)
+    {
+        <h1>@_location.Name</h1>
+        <p class="text-muted">@(_location.X is not null ? "Auf der Karte platziert" : "Nicht auf der Karte platziert")</p>
+        @if (!string.IsNullOrWhiteSpace(_location.Description))
+        {
+            <p>@_location.Description</p>
+        }
+        <div class="form-actions">
+            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+            @if (_location.X is not null)
+            {
+                <button type="button" class="btn" @onclick="RemovePositionAsync">Von der Karte entfernen</button>
+            }
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+        </div>
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="Ort wirklich löschen?"
+                       OnConfirm="DeleteLocationAsync" OnCancel="() => _confirmingDelete = false" />
+    }
+    else
+    {
+        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+            @if (_saveErrorMessage is not null)
+            {
+                <p class="form-error">@_saveErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="location-edit-image">Bild ersetzen</label>
+                <div class="dropzone @(_isDraggingImage ? "dropzone--active" : "")"
+                     @ondragenter="() => _isDraggingImage = true" @ondragleave="() => _isDraggingImage = false"
+                     @ondragover:preventDefault @ondrop="() => _isDraggingImage = false">
+                    <InputFile id="location-edit-image" OnChange="OnEditImageSelected" />
+                    <span class="dropzone-label">Bild hierher ziehen oder klicken zum Auswählen</span>
+                </div>
+                @if (_imageSaveErrorMessage is not null)
+                {
+                    <p class="form-error">@_imageSaveErrorMessage</p>
+                }
+            </div>
+            <div class="form-group">
+                <label for="location-edit-name">Name</label>
+                <InputText id="location-edit-name" @bind-Value="_editForm.Name" />
+            </div>
+            <div class="form-group">
+                <label for="location-edit-description">Beschreibung</label>
+                <InputTextArea id="location-edit-description" @bind-Value="_editForm.Description" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+            </div>
+        </EditForm>
+    }
+}
+
+@code {
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private Location? _location;
+    private string? _loadErrorMessage;
+    private string? _imageObjectUrl;
+
+    private bool _isEditing;
+    private string? _saveErrorMessage;
+    private string? _imageSaveErrorMessage;
+    private IBrowserFile? _selectedEditImage;
+    private bool _isDraggingImage;
+    private EditFormModel _editForm = new();
+    private bool _confirmingDelete;
+
+    protected override Task OnParametersSetAsync() => LoadLocationAsync();
+
+    private async Task LoadLocationAsync()
+    {
+        _loadErrorMessage = null;
+        var response = await ApiClient.GetAsync<Location>($"/api/projects/{ProjectId}/locations/{Id}");
+        if (response is { Success: true, Data: not null })
+        {
+            _location = response.Data;
+            await LoadImageAsync();
+        }
+        else
+        {
+            _loadErrorMessage = response?.Error?.Message ?? "Ort konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadImageAsync()
+    {
+        if (_imageObjectUrl is not null)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(_imageObjectUrl);
+            _imageObjectUrl = null;
+        }
+
+        if (_location?.ImageUrl is null) return;
+
+        var result = await ApiClient.GetBytesAsync(_location.ImageUrl);
+        if (result is { } image)
+        {
+            _imageObjectUrl = await BlobUrlService.CreateObjectUrlAsync(image.Bytes, image.ContentType);
+        }
+    }
+
+    private void StartEditing()
+    {
+        if (_location is null) return;
+        _editForm = new EditFormModel { Name = _location.Name, Description = _location.Description };
+        _saveErrorMessage = null;
+        _imageSaveErrorMessage = null;
+        _selectedEditImage = null;
+        _isEditing = true;
+    }
+
+    private void OnEditImageSelected(InputFileChangeEventArgs e) => _selectedEditImage = e.File;
+
+    private async Task SaveAsync()
+    {
+        _saveErrorMessage = null;
+        _imageSaveErrorMessage = null;
+
+        var response = await ApiClient.PutAsync<UpdateLocationRequest, Location>($"/api/projects/{ProjectId}/locations/{Id}", new UpdateLocationRequest
+        {
+            Name = _editForm.Name,
+            Description = _editForm.Description,
+        });
+
+        if (response is not { Success: true, Data: not null })
+        {
+            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            return;
+        }
+
+        _location = response.Data;
+
+        if (_selectedEditImage is not null)
+        {
+            const long maxImageBytes = 5 * 1024 * 1024;
+            using var content = new MultipartFormDataContent();
+            var streamContent = new StreamContent(_selectedEditImage.OpenReadStream(maxImageBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedEditImage.ContentType) ? "application/octet-stream" : _selectedEditImage.ContentType);
+            content.Add(streamContent, "\"image\"", $"\"{_selectedEditImage.Name}\"");
+
+            var imageResponse = await ApiClient.PutMultipartAsync<Location>($"/api/projects/{ProjectId}/locations/{Id}/image", content);
+            if (imageResponse is { Success: true, Data: not null })
+            {
+                _location = imageResponse.Data;
+                await LoadImageAsync();
+            }
+            else
+            {
+                _imageSaveErrorMessage = imageResponse?.Error?.Message ?? "Bild konnte nicht ersetzt werden.";
+                return;
+            }
+        }
+
+        _isEditing = false;
+    }
+
+    private async Task RemovePositionAsync()
+    {
+        var response = await ApiClient.PutAsync<UpdateLocationPositionRequest, Location>($"/api/projects/{ProjectId}/locations/{Id}/position", new UpdateLocationPositionRequest
+        {
+            X = null,
+            Y = null,
+        });
+        if (response is { Success: true, Data: not null })
+        {
+            _location = response.Data;
+        }
+    }
+
+    private async Task DeleteLocationAsync()
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/locations/{Id}");
+        if (succeeded)
+        {
+            NavigationManager.NavigateTo($"projects/{ProjectId}");
+        }
+        else
+        {
+            _confirmingDelete = false;
+            _loadErrorMessage = "Löschen fehlgeschlagen.";
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_imageObjectUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_imageObjectUrl);
+        }
+    }
+
+    private class EditFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+}

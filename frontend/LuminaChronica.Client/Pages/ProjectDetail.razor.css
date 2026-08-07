@@ -1,0 +1,26 @@
+.map-wrapper {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.map-image {
+    max-width: 100%;
+    display: block;
+    border-radius: var(--radius, 4px);
+    border: 1px solid var(--color-border);
+}
+
+.map-pin {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    font-size: 1.5rem;
+    line-height: 1;
+    text-decoration: none;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    cursor: pointer;
+}
+
+.map-pin:hover {
+    transform: translate(-50%, -100%) scale(1.15);
+}
