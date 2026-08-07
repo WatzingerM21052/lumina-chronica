@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
 import { requireAuth } from "../middleware/auth";
+import { fileResponse } from "../utils/fileResponse";
 import {
     NotFoundError,
     ValidationError,
@@ -109,9 +110,7 @@ shelvesRoute.get("/:id/cover", requireAuth, async (c) => {
     const object = await getShelfCoverObject(c.env.DB, c.env.STORAGE, c.get("userId"), shelfId);
     if (!object) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
 
-    return c.body(object.body, 200, {
-        "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
-    });
+    return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
 });
 
 shelvesRoute.get("/:id/books", requireAuth, async (c) => {

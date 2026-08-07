@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
 import { requireAuth } from "../middleware/auth";
+import { fileResponse } from "../utils/fileResponse";
 import {
     NotFoundError,
     ValidationError,
@@ -164,9 +165,7 @@ projectsRoute.get("/:id/cover", requireAuth, async (c) => {
     const object = await getProjectCoverObject(c.env.DB, c.env.STORAGE, c.get("userId"), projectId);
     if (!object) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
 
-    return c.body(object.body, 200, {
-        "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
-    });
+    return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
 });
 
 // Map — v2.0, Phase 3 (issue #256). One map image per project, parallel to
@@ -193,9 +192,7 @@ projectsRoute.get("/:id/map", requireAuth, async (c) => {
     const object = await getProjectMapObject(c.env.DB, c.env.STORAGE, c.get("userId"), projectId);
     if (!object) return c.json(failure("NOT_FOUND", "Map not found."), 404);
 
-    return c.body(object.body, 200, {
-        "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
-    });
+    return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
 });
 
 // Characters — v2.0, Phase 2 (issue #255). Nested under a project; access
@@ -304,9 +301,7 @@ projectsRoute.get("/:id/characters/:characterId/image", requireAuth, async (c) =
     const object = await getCharacterImageObject(c.env.DB, c.env.STORAGE, c.get("userId"), projectId, characterId);
     if (!object) return c.json(failure("NOT_FOUND", "Image not found."), 404);
 
-    return c.body(object.body, 200, {
-        "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
-    });
+    return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
 });
 
 // Locations — v2.0, Phase 3 (issue #256). Same nested-under-a-project shape
@@ -428,9 +423,7 @@ projectsRoute.get("/:id/locations/:locationId/image", requireAuth, async (c) => 
     const object = await getLocationImageObject(c.env.DB, c.env.STORAGE, c.get("userId"), projectId, locationId);
     if (!object) return c.json(failure("NOT_FOUND", "Image not found."), 404);
 
-    return c.body(object.body, 200, {
-        "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
-    });
+    return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
 });
 
 // Timeline — v2.0, Phase 4 (issue #257). Chronological in-world events;
@@ -644,9 +637,7 @@ projectsRoute.get("/:id/files/:fileId/content", requireAuth, async (c) => {
     const result = await getProjectFileObject(c.env.DB, c.env.STORAGE, c.get("userId"), projectId, fileId);
     if (!result) return c.json(failure("NOT_FOUND", "File not found."), 404);
 
-    return c.body(result.object.body, 200, {
-        "Content-Type": result.object.httpMetadata?.contentType ?? "application/octet-stream",
-    });
+    return fileResponse(c, result.object.body, result.object.httpMetadata?.contentType ?? "application/octet-stream");
 });
 
 // Linked books — v2.0, Phase 6 (issue #259). project_books is a plain join
