@@ -9,6 +9,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Projects: foundation for v2.0 Worldbuilding — create/browse/edit/delete personal projects (World/Novel/RPG/Custom) with an optional cover image (issue #254, Phase 1 of 6, epic #9).
 - Projects: characters — add/browse/edit/delete characters within a project (name, age, origin, description, personality, biography, optional image), accessible via a new Übersicht/Charaktere tab on the project page (issue #255, Phase 2 of 6, epic #9).
 - Projects: locations & map — upload a map image per project, add locations and place them as clickable pins on the map (or leave unplaced), via a new Karte tab on the project page (issue #256, Phase 3 of 6, epic #9).
+- Projects: timeline — add chronological in-world events with a free-text date, description, and manual reordering, rendered as a visual timeline via a new Zeitleiste tab on the project page (issue #257, Phase 4 of 6, epic #9).
 
 ## [1.5.0] - 2026-08-07
 

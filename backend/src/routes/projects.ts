@@ -41,6 +41,17 @@ import {
     type UpdateLocationInput,
     type UpdateLocationPositionInput,
 } from "../services/locationService";
+import {
+    createTimelineEvent,
+    deleteTimelineEvent,
+    getTimelineEvent,
+    listTimelineEvents,
+    moveTimelineEvent,
+    updateTimelineEvent,
+    type CreateTimelineEventInput,
+    type MoveDirection,
+    type UpdateTimelineEventInput,
+} from "../services/timelineService";
 
 // Worldbuilding projects — v2.0, Phase 1 (issue #254). Later Worldbuilding
 // phases (Characters, Locations/Map, Timeline, Lore/Files, Linked
@@ -401,4 +412,91 @@ projectsRoute.get("/:id/locations/:locationId/image", requireAuth, async (c) => 
     return c.body(object.body, 200, {
         "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
     });
+});
+
+// Timeline — v2.0, Phase 4 (issue #257). Chronological in-world events;
+// `date` is free text (no real calendar), so ordering is a manual
+// order_index moved via /:eventId/move rather than sorted by date.
+
+projectsRoute.post("/:id/timeline", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const body = await c.req.json<CreateTimelineEventInput>().catch(() => null);
+    if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+
+    try {
+        const event = await createTimelineEvent(c.env.DB, c.get("userId"), projectId, body);
+        return c.json(success(event), 201);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+projectsRoute.get("/:id/timeline", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    try {
+        const events = await listTimelineEvents(c.env.DB, c.get("userId"), projectId);
+        return c.json(success(events));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.get("/:id/timeline/:eventId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const eventId = Number(c.req.param("eventId"));
+    try {
+        const event = await getTimelineEvent(c.env.DB, c.get("userId"), projectId, eventId);
+        return c.json(success(event));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Timeline event not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.put("/:id/timeline/:eventId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const eventId = Number(c.req.param("eventId"));
+    const body = await c.req.json<UpdateTimelineEventInput>().catch(() => null);
+    if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+
+    try {
+        const event = await updateTimelineEvent(c.env.DB, c.get("userId"), projectId, eventId, body);
+        return c.json(success(event));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Timeline event not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+projectsRoute.put("/:id/timeline/:eventId/move", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const eventId = Number(c.req.param("eventId"));
+    const body = await c.req.json<{ direction?: string }>().catch(() => null);
+    if (body?.direction !== "up" && body?.direction !== "down") {
+        return c.json(failure("VALIDATION_ERROR", "direction must be 'up' or 'down'."), 400);
+    }
+
+    try {
+        const events = await moveTimelineEvent(c.env.DB, c.get("userId"), projectId, eventId, body.direction as MoveDirection);
+        return c.json(success(events));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Timeline event not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.delete("/:id/timeline/:eventId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const eventId = Number(c.req.param("eventId"));
+    try {
+        await deleteTimelineEvent(c.env.DB, c.get("userId"), projectId, eventId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Timeline event not found."), 404);
+        throw err;
+    }
 });

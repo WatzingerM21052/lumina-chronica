@@ -19,12 +19,14 @@ public class ProjectDetailPageTests : BunitContext
     private const string ProjectJson = """{"success":true,"data":{"id":1,"title":"Aetherfall","description":"Ein sky-shattered Kontinent","type":"WORLD","coverUrl":null,"mapUrl":null,"visibility":"PRIVATE","createdAt":"2026-01-01"}}""";
     private const string EmptyCharactersJson = """{"success":true,"data":[]}""";
     private const string EmptyLocationsJson = """{"success":true,"data":[]}""";
+    private const string EmptyTimelineJson = """{"success":true,"data":[]}""";
 
     private RoutedFakeHttpMessageHandler UseDefaultRoutes()
     {
         var handler = new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -69,6 +71,7 @@ public class ProjectDetailPageTests : BunitContext
             })
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -107,6 +110,7 @@ public class ProjectDetailPageTests : BunitContext
             })
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -143,6 +147,7 @@ public class ProjectDetailPageTests : BunitContext
                 "/characters",
                 """{"success":true,"data":[{"id":5,"projectId":1,"name":"Elarion","description":null,"imageUrl":null,"age":null,"origin":"The Silver Vale","personality":null,"biography":null,"createdAt":"2026-01-01"}]}""")
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -171,6 +176,7 @@ public class ProjectDetailPageTests : BunitContext
             })
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -208,6 +214,7 @@ public class ProjectDetailPageTests : BunitContext
                 "/locations",
                 """{"success":true,"data":[{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":42.5,"y":17.25,"createdAt":"2026-01-01"}]}""")
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -235,6 +242,7 @@ public class ProjectDetailPageTests : BunitContext
             })
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -261,6 +269,7 @@ public class ProjectDetailPageTests : BunitContext
                 "/locations",
                 """{"success":true,"data":[{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":42.5,"y":17.25,"createdAt":"2026-01-01"}]}""")
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/map", "fake map bytes", "image/jpeg")
             .WhenPathEndsWith("/projects/1", projectWithMap);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -276,5 +285,122 @@ public class ProjectDetailPageTests : BunitContext
         var pin = cut.Find("a.map-pin");
         Assert.Contains("left:42.5%", pin.GetAttribute("style"));
         Assert.Contains("top:17.25%", pin.GetAttribute("style"));
+    }
+
+    [Fact]
+    public void ProjectDetail_TimelineTab_ShowsEmptyMessage_WhenNoEventsExist()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
+
+        Assert.Contains("Dieses Projekt hat noch keine Ereignisse auf der Zeitleiste", cut.Markup);
+    }
+
+    [Fact]
+    public void ProjectDetail_TimelineTab_RendersEventsInOrder()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith(
+                "/timeline",
+                """
+                {"success":true,"data":[
+                    {"id":1,"projectId":1,"title":"The Sundering","description":"The continent splits","date":"Jahr 1247","order":0,"createdAt":"2026-01-01"},
+                    {"id":2,"projectId":1,"title":"The Reckoning","description":null,"date":"Jahr 1300","order":1,"createdAt":"2026-01-02"}
+                ]}
+                """)
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
+
+        var titles = cut.FindAll(".timeline-event-title").Select(e => e.TextContent).ToList();
+        Assert.Equal(["The Sundering", "The Reckoning"], titles);
+        Assert.Contains("Jahr 1247", cut.Markup);
+
+        var moveButtons = cut.FindAll(".timeline-move-buttons button");
+        Assert.True(moveButtons[0].HasAttribute("disabled")); // first event can't move up
+        Assert.False(moveButtons[1].HasAttribute("disabled")); // first event can move down
+    }
+
+    [Fact]
+    public void ProjectDetail_CreateEventForm_SubmitsTitleAndReloadsTimeline()
+    {
+        HttpRequestMessage? createRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath == "/api/projects/1/timeline", r =>
+            {
+                createRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(
+                    """{"success":true,"data":{"id":1,"projectId":1,"title":"The Sundering","description":null,"date":null,"order":0,"createdAt":"2026-01-01"}}""");
+            })
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Ereignis hinzufügen").Click();
+        cut.Find("#event-title").Change("The Sundering");
+        cut.Find("form").Submit();
+
+        Assert.Equal(HttpMethod.Post, createRequest?.Method);
+        Assert.Equal("/api/projects/1/timeline", createRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void ProjectDetail_TimelineEvent_MoveUpButton_CallsMoveEndpoint()
+    {
+        HttpRequestMessage? moveRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Put && r.RequestUri!.AbsolutePath == "/api/projects/1/timeline/2/move", r =>
+            {
+                moveRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(
+                    """
+                    {"success":true,"data":[
+                        {"id":2,"projectId":1,"title":"The Reckoning","description":null,"date":null,"order":0,"createdAt":"2026-01-02"},
+                        {"id":1,"projectId":1,"title":"The Sundering","description":null,"date":null,"order":1,"createdAt":"2026-01-01"}
+                    ]}
+                    """);
+            })
+            .WhenPathEndsWith(
+                "/timeline",
+                """
+                {"success":true,"data":[
+                    {"id":1,"projectId":1,"title":"The Sundering","description":null,"date":null,"order":0,"createdAt":"2026-01-01"},
+                    {"id":2,"projectId":1,"title":"The Reckoning","description":null,"date":null,"order":1,"createdAt":"2026-01-02"}
+                ]}
+                """)
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
+        cut.FindAll(".timeline-move-buttons button")[2].Click(); // second event's "up" button
+
+        Assert.Equal(HttpMethod.Put, moveRequest?.Method);
+        var titlesAfterMove = cut.FindAll(".timeline-event-title").Select(e => e.TextContent).ToList();
+        Assert.Equal(["The Reckoning", "The Sundering"], titlesAfterMove);
     }
 }
