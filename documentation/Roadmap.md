@@ -641,4 +641,17 @@ Backend: 244/244 Vitest tests passing (9 new). Frontend: 194/194 bUnit tests pas
 
 Live-verified end-to-end against production (2026-08-07): backend deployed via `wrangler deploy`, then a throwaway account exercised the full flow via direct API calls against real D1/R2 — uploaded a book + created a project (both defaulting PRIVATE), set both PUBLIC and confirmed the public-profile endpoint (zero Authorization header) returned both with covers rendering unauthenticated, confirmed the book's own `/file` route stayed 401 with no token / 200 with the owner's token (file distribution unaffected), set the book back PRIVATE and confirmed both the cover (404) and the public listing correctly stopped exposing it (the enforcement actually gates, not just always-allows), confirmed an unknown username 404s. Frontend re-verified live in the real browser after the link hotfix: navigated `/profile` → clicked "Öffentliches Profil ansehen" → landed on `/u/watzingerm21052` showing the real account's avatar and correct empty-state copy for both sections (no public books/projects exist on the real account), zero console errors. Throwaway book/project/account all removed afterward (account via a direct D1 delete — no delete-account endpoint exists yet).
 
-**Remaining for v3.0's core pass** (not yet filed as issues): Follow (Phase 2), Ratings (Phase 3, also unblocks Discovery's "highest-rated" sort), then Discovery's own `/discover` browse page.
+### Phase 2 — Follow (issue #304)
+
+- [x] Migration `0015_followers.sql` — `followers(follower_id, following_id, created_at)`, no spec precedent beyond the bare field list (§50.1), designed fresh
+- [x] `POST`/`DELETE /api/users/:username/follow` (requireAuth, idempotent — following/unfollowing twice is a no-op, not an error); no self-follow (400)
+- [x] Phase 1's `GET /api/users/:username/public` switches from no-auth to `optionalAuth`, gaining `followerCount`, `followingCount`, `isFollowing`, `isOwnProfile`
+- [x] Frontend: Folgen/Entfolgen button + counts on `/u/{username}`, shown only when logged in and not viewing your own profile
+
+Following is a relationship between people, not gated by the target having any PUBLIC content — you can follow any existing user. **Out of scope this phase**: a dedicated followers/following list page — the spec's "Folgen" item is satisfied by follow/unfollow + counts; a list view is a natural but separate follow-up if wanted later.
+
+Backend: 252/252 Vitest tests passing (8 new). Frontend: 200/200 bUnit tests passing (6 new).
+
+Live-verified end-to-end against production (2026-08-07): migration applied to real D1, backend redeployed, then two throwaway accounts exercised via direct API calls — self-follow rejected (400), follow succeeds and is idempotent (204 on repeat), counts update correctly on both sides, `isFollowing` correctly true only for the actual follower (false for a stranger and for an anonymous visitor), `isOwnProfile` correctly true only for the profile's own user, unfollow works and is idempotent, unknown username 404s. Frontend spot-checked live on the real account: `/u/watzingerm21052` correctly shows "0 Follower · 0 Folgt" and hides the Follow button on your own profile, zero console errors. Both throwaway accounts removed afterward (direct D1 delete).
+
+**Remaining for v3.0's core pass** (not yet filed as an issue): Ratings (Phase 3, also unblocks Discovery's "highest-rated" sort), then Discovery's own `/discover` browse page.
