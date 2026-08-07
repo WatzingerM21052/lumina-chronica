@@ -52,6 +52,16 @@ import {
     type MoveDirection,
     type UpdateTimelineEventInput,
 } from "../services/timelineService";
+import {
+    createLoreEntry,
+    deleteLoreEntry,
+    getLoreEntry,
+    listLoreEntries,
+    updateLoreEntry,
+    type CreateLoreEntryInput,
+    type UpdateLoreEntryInput,
+} from "../services/loreService";
+import { createProjectFile, deleteProjectFile, getProjectFileObject, listProjectFiles, type CreateProjectFileInput } from "../services/projectFileService";
 
 // Worldbuilding projects — v2.0, Phase 1 (issue #254). Later Worldbuilding
 // phases (Characters, Locations/Map, Timeline, Lore/Files, Linked
@@ -499,4 +509,133 @@ projectsRoute.delete("/:id/timeline/:eventId", requireAuth, async (c) => {
         if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Timeline event not found."), 404);
         throw err;
     }
+});
+
+// Lore — v2.0, Phase 5 (issue #258). No spec precedent; content is Markdown
+// rendered client-side via the existing Markdig pipeline.
+
+projectsRoute.post("/:id/lore", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const body = await c.req.json<CreateLoreEntryInput>().catch(() => null);
+    if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+
+    try {
+        const entry = await createLoreEntry(c.env.DB, c.get("userId"), projectId, body);
+        return c.json(success(entry), 201);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+projectsRoute.get("/:id/lore", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    try {
+        const entries = await listLoreEntries(c.env.DB, c.get("userId"), projectId);
+        return c.json(success(entries));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.get("/:id/lore/:entryId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const entryId = Number(c.req.param("entryId"));
+    try {
+        const entry = await getLoreEntry(c.env.DB, c.get("userId"), projectId, entryId);
+        return c.json(success(entry));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Lore entry not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.put("/:id/lore/:entryId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const entryId = Number(c.req.param("entryId"));
+    const body = await c.req.json<UpdateLoreEntryInput>().catch(() => null);
+    if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+
+    try {
+        const entry = await updateLoreEntry(c.env.DB, c.get("userId"), projectId, entryId, body);
+        return c.json(success(entry));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Lore entry not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+projectsRoute.delete("/:id/lore/:entryId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const entryId = Number(c.req.param("entryId"));
+    try {
+        await deleteLoreEntry(c.env.DB, c.get("userId"), projectId, entryId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Lore entry not found."), 404);
+        throw err;
+    }
+});
+
+// Files — v2.0, Phase 5 (issue #258). Documents/images gallery, not tied to
+// a specific character/location.
+
+projectsRoute.post("/:id/files", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const body = await c.req.parseBody().catch(() => null);
+    if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid multipart request body."), 400);
+
+    const file = body.file instanceof File ? body.file : null;
+    if (!file) return c.json(failure("VALIDATION_ERROR", "file is required."), 400);
+
+    const input: CreateProjectFileInput = {
+        file,
+        category: typeof body.category === "string" ? body.category : undefined,
+    };
+
+    try {
+        const projectFile = await createProjectFile(c.env.DB, c.env.STORAGE, c.get("userId"), projectId, input);
+        return c.json(success(projectFile), 201);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+projectsRoute.get("/:id/files", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    try {
+        const files = await listProjectFiles(c.env.DB, c.get("userId"), projectId);
+        return c.json(success(files));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.delete("/:id/files/:fileId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const fileId = Number(c.req.param("fileId"));
+    try {
+        await deleteProjectFile(c.env.DB, c.env.STORAGE, c.get("userId"), projectId, fileId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "File not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.get("/:id/files/:fileId/content", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const fileId = Number(c.req.param("fileId"));
+    const result = await getProjectFileObject(c.env.DB, c.env.STORAGE, c.get("userId"), projectId, fileId);
+    if (!result) return c.json(failure("NOT_FOUND", "File not found."), 404);
+
+    return c.body(result.object.body, 200, {
+        "Content-Type": result.object.httpMetadata?.contentType ?? "application/octet-stream",
+    });
 });

@@ -1,0 +1,22 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+
+<a class="project-card" href="@($"projects/{Entry.ProjectId}/lore/{Entry.Id}")">
+    <div class="project-card-cover">
+        <div class="project-card-cover-placeholder" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M6 4h9a3 3 0 0 1 3 3v13H9a3 3 0 0 1-3-3V4z" />
+                <path d="M6 4a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3" />
+                <path d="M10 9h5M10 12.5h5" />
+            </svg>
+        </div>
+    </div>
+    <div class="project-card-info">
+        <div class="project-card-title">@Entry.Title</div>
+    </div>
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public LoreEntry Entry { get; set; } = null!;
+}

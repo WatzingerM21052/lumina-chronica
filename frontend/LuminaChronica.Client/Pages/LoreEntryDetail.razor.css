@@ -1,0 +1,26 @@
+.lore-content {
+    font-family: var(--font-family-reader);
+    line-height: 1.7;
+    max-width: 70ch;
+}
+
+/* MarkupString-injected HTML bypasses Blazor's scoped-CSS attribute (it's
+   raw innerHTML, not elements Blazor itself created) -- ::deep is required
+   here, not just for reaching child components. */
+.lore-content ::deep h1,
+.lore-content ::deep h2,
+.lore-content ::deep h3 {
+    font-family: var(--font-family-display);
+    margin-top: var(--space-3);
+}
+
+.lore-content ::deep p {
+    margin: var(--space-2) 0;
+}
+
+.lore-content ::deep blockquote {
+    border-left: 3px solid var(--color-gold-accent);
+    margin: var(--space-2) 0;
+    padding-left: var(--space-2);
+    color: var(--color-text-secondary);
+}

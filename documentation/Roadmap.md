@@ -566,10 +566,16 @@ Backend: 170/170 Vitest tests passing (16 new). Frontend: 163/163 bUnit tests pa
 
 Backend: 185/185 Vitest tests passing (15 new). Frontend: 167/167 bUnit tests passing (4 new). **Live-verified against production** (2026-08-07): migration `0011_timeline.sql` applied to real D1, backend redeployed, full flow exercised through the real deployed UI this time (not just the API) — logged into a throwaway account (verified via the profile page before touching anything, after the Phase 2 mishap), created a project, added two timeline events, confirmed reordering via the move buttons swaps them live, confirmed inline editing pre-fills correctly, then deleted the test project. The Karte/Charaktere tabs were spot-checked in the same pass. Throwaway account cleaned up afterward; the real user's own project (already live-created independently during this session) confirmed untouched throughout.
 
-### Phase 5 — Lore & documents/images gallery (issue #258)
+### Phase 5 — Lore & documents/images gallery (issue #258, PR #271)
 
-- [ ] `lore_entries` table (Markdown, no spec precedent) + `project_files` table (documents/images gallery, no field-level spec precedent)
-- [ ] Lore tab + Files/Images gallery tab
+- [x] `lore_entries` table (Markdown, no spec precedent) + `project_files` table (documents/images gallery, no field-level spec precedent)
+- [x] Lore tab + Files/Images gallery tab
+
+Lore rendering reuses the Reader's exact Markdig pipeline and pattern, with a dedicated `LoreEntryDetail.razor` view/edit page rather than inline-in-tab editing (unlike Timeline) — Markdown content can run long, and a cramped tab-list textarea would be a worse writing experience. The Dateien tab handles both documents and images through one upload form with a category picker, sharing `createProjectFile`'s logic but each category gets its own extension allowlist. Downloading a gallery file needed one small new capability, `BlobUrlService.TriggerDownloadAsync`, since the auth-gated file endpoint can't be a plain `<a href>` link.
+
+A genuinely flaky-looking test failure during this phase turned out to be a known project pattern, not a new bug: two files uploaded in the same test tied on `created_at`'s second resolution and fell back to SQLite's unspecified order — the same class of issue already documented for `dashboardService.ts`, fixed the same way (`ORDER BY created_at DESC, id DESC`).
+
+Backend: 208/208 Vitest tests passing (23 new). Frontend: 179/179 bUnit tests passing (12 new).
 
 ### Phase 6 — Linked books & character relationships (issue #259)
 

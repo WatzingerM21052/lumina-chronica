@@ -1,0 +1,135 @@
+@page "/projects/{ProjectId:int}/lore/{Id:int}"
+@attribute [Authorize]
+@using Markdig
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_entry?.Title ?? "Lore") — Lumina Chronica</PageTitle>
+
+<a href="@($"projects/{ProjectId}")">← Zurück zum Projekt</a>
+
+@if (_loadErrorMessage is not null)
+{
+    <p class="form-error">@_loadErrorMessage</p>
+}
+else if (_entry is null)
+{
+    <LoadingIndicator Text="Lore wird geladen..." />
+}
+else
+{
+    @if (!_isEditing)
+    {
+        <h1>@_entry.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(_entry.Content))
+        {
+            <div class="lore-content">@((MarkupString)Markdown.ToHtml(_entry.Content, MarkdownPipeline))</div>
+        }
+        <div class="form-actions">
+            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+        </div>
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="Lore-Eintrag wirklich löschen?"
+                       OnConfirm="DeleteEntryAsync" OnCancel="() => _confirmingDelete = false" />
+    }
+    else
+    {
+        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+            @if (_saveErrorMessage is not null)
+            {
+                <p class="form-error">@_saveErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="lore-edit-title">Titel</label>
+                <InputText id="lore-edit-title" @bind-Value="_editForm.Title" />
+            </div>
+            <div class="form-group">
+                <label for="lore-edit-content">Inhalt (Markdown)</label>
+                <InputTextArea id="lore-edit-content" @bind-Value="_editForm.Content" rows="16" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+            </div>
+        </EditForm>
+    }
+}
+
+@code {
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public int Id { get; set; }
+
+    // DisableHtml matches the reader's Markdown pipeline (Reader.razor) --
+    // keeps the "no untrusted user-generated HTML anywhere" premise that
+    // the localStorage JWT storage decision relies on, see Architecture.md.
+    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().Build();
+
+    private LoreEntry? _entry;
+    private string? _loadErrorMessage;
+
+    private bool _isEditing;
+    private string? _saveErrorMessage;
+    private UpdateLoreEntryRequest _editForm = new();
+    private bool _confirmingDelete;
+
+    protected override Task OnParametersSetAsync() => LoadEntryAsync();
+
+    private async Task LoadEntryAsync()
+    {
+        _loadErrorMessage = null;
+        var response = await ApiClient.GetAsync<LoreEntry>($"/api/projects/{ProjectId}/lore/{Id}");
+        if (response is { Success: true, Data: not null })
+        {
+            _entry = response.Data;
+        }
+        else
+        {
+            _loadErrorMessage = response?.Error?.Message ?? "Lore-Eintrag konnte nicht geladen werden.";
+        }
+    }
+
+    private void StartEditing()
+    {
+        if (_entry is null) return;
+        _editForm = new UpdateLoreEntryRequest { Title = _entry.Title, Content = _entry.Content };
+        _saveErrorMessage = null;
+        _isEditing = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saveErrorMessage = null;
+
+        var response = await ApiClient.PutAsync<UpdateLoreEntryRequest, LoreEntry>($"/api/projects/{ProjectId}/lore/{Id}", _editForm);
+        if (response is { Success: true, Data: not null })
+        {
+            _entry = response.Data;
+            _isEditing = false;
+        }
+        else
+        {
+            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+        }
+    }
+
+    private async Task DeleteEntryAsync()
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/lore/{Id}");
+        if (succeeded)
+        {
+            NavigationManager.NavigateTo($"projects/{ProjectId}");
+        }
+        else
+        {
+            _confirmingDelete = false;
+            _loadErrorMessage = "Löschen fehlgeschlagen.";
+        }
+    }
+}

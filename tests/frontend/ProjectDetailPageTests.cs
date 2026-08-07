@@ -20,6 +20,8 @@ public class ProjectDetailPageTests : BunitContext
     private const string EmptyCharactersJson = """{"success":true,"data":[]}""";
     private const string EmptyLocationsJson = """{"success":true,"data":[]}""";
     private const string EmptyTimelineJson = """{"success":true,"data":[]}""";
+    private const string EmptyLoreJson = """{"success":true,"data":[]}""";
+    private const string EmptyFilesJson = """{"success":true,"data":[]}""";
 
     private RoutedFakeHttpMessageHandler UseDefaultRoutes()
     {
@@ -27,6 +29,8 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -72,6 +76,8 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -111,6 +117,8 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -148,6 +156,8 @@ public class ProjectDetailPageTests : BunitContext
                 """{"success":true,"data":[{"id":5,"projectId":1,"name":"Elarion","description":null,"imageUrl":null,"age":null,"origin":"The Silver Vale","personality":null,"biography":null,"createdAt":"2026-01-01"}]}""")
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -177,6 +187,8 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -215,6 +227,8 @@ public class ProjectDetailPageTests : BunitContext
                 """{"success":true,"data":[{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":42.5,"y":17.25,"createdAt":"2026-01-01"}]}""")
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -243,6 +257,8 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -270,6 +286,8 @@ public class ProjectDetailPageTests : BunitContext
                 """{"success":true,"data":[{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":42.5,"y":17.25,"createdAt":"2026-01-01"}]}""")
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/map", "fake map bytes", "image/jpeg")
             .WhenPathEndsWith("/projects/1", projectWithMap);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -312,6 +330,8 @@ public class ProjectDetailPageTests : BunitContext
                 """)
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -345,6 +365,8 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -388,6 +410,8 @@ public class ProjectDetailPageTests : BunitContext
                 """)
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -402,5 +426,143 @@ public class ProjectDetailPageTests : BunitContext
         Assert.Equal(HttpMethod.Put, moveRequest?.Method);
         var titlesAfterMove = cut.FindAll(".timeline-event-title").Select(e => e.TextContent).ToList();
         Assert.Equal(["The Reckoning", "The Sundering"], titlesAfterMove);
+    }
+
+    [Fact]
+    public void ProjectDetail_LoreTab_ShowsEmptyMessage_WhenNoEntriesExist()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lore").Click();
+
+        Assert.Contains("Dieses Projekt hat noch keine Lore-Einträge", cut.Markup);
+    }
+
+    [Fact]
+    public void ProjectDetail_LoreTab_RendersEntryCardsFromApiResponse()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith(
+                "/lore",
+                """{"success":true,"data":[{"id":3,"projectId":1,"title":"The Silver Vale","content":"Old magic.","createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lore").Click();
+
+        Assert.Contains("The Silver Vale", cut.Markup);
+        Assert.Single(cut.FindAll("a.project-card"));
+    }
+
+    [Fact]
+    public void ProjectDetail_CreateLoreForm_SubmitsTitleAndReloadsList()
+    {
+        HttpRequestMessage? createRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath == "/api/projects/1/lore", r =>
+            {
+                createRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(
+                    """{"success":true,"data":{"id":3,"projectId":1,"title":"The Silver Vale","content":null,"createdAt":"2026-01-01"}}""");
+            })
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lore").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lore-Eintrag hinzufügen").Click();
+        cut.Find("#lore-title").Change("The Silver Vale");
+        cut.Find("form").Submit();
+
+        Assert.Equal(HttpMethod.Post, createRequest?.Method);
+        Assert.Equal("/api/projects/1/lore", createRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void ProjectDetail_FilesTab_ShowsEmptyMessage_WhenNoFilesExist()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
+
+        Assert.Contains("Dieses Projekt hat noch keine Dateien", cut.Markup);
+    }
+
+    [Fact]
+    public void ProjectDetail_FilesTab_RendersFileCardsFromApiResponse()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith(
+                "/files",
+                """{"success":true,"data":[{"id":7,"projectId":1,"name":"concept-art.jpg","category":"IMAGE","size":204800,"url":"/api/projects/1/files/7/content","createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/files/7/content", "fake image bytes", "image/jpeg")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
+
+        Assert.Contains("concept-art.jpg", cut.Markup);
+        Assert.Contains("200 KB", cut.Markup);
+    }
+
+    [Fact]
+    public void ProjectDetail_DeleteFileButton_CallsDeleteEndpoint()
+    {
+        HttpRequestMessage? deleteRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Delete, r =>
+            {
+                deleteRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse("{}");
+            })
+            .WhenPathEndsWith(
+                "/files",
+                """{"success":true,"data":[{"id":7,"projectId":1,"name":"notes.txt","category":"DOCUMENT","size":1024,"url":"/api/projects/1/files/7/content","createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
+
+        Assert.Equal(HttpMethod.Delete, deleteRequest?.Method);
+        Assert.Equal("/api/projects/1/files/7", deleteRequest?.RequestUri?.AbsolutePath);
     }
 }

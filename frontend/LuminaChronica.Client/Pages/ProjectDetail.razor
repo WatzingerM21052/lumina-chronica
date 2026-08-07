@@ -31,6 +31,8 @@ else
         <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "characters")">Charaktere</button>
         <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "map")">Karte</button>
         <button type="button" class="btn @(_activeTab == "timeline" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "timeline")">Zeitleiste</button>
+        <button type="button" class="btn @(_activeTab == "lore" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "lore")">Lore</button>
+        <button type="button" class="btn @(_activeTab == "files" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "files")">Dateien</button>
     </div>
 
     @if (_activeTab == "overview")
@@ -260,7 +262,7 @@ else
             </div>
         }
     }
-    else
+    else if (_activeTab == "timeline")
     {
         <div class="library-header">
             <h2>Zeitleiste</h2>
@@ -364,6 +366,126 @@ else
             </ol>
         }
     }
+    else if (_activeTab == "lore")
+    {
+        <div class="library-header">
+            <h2>Lore</h2>
+            <button type="button" class="btn btn-primary" @onclick="() => _showCreateLoreForm = !_showCreateLoreForm">
+                @(_showCreateLoreForm ? "Abbrechen" : "Lore-Eintrag hinzufügen")
+            </button>
+        </div>
+
+        @if (_showCreateLoreForm)
+        {
+            <EditForm Model="_createLoreForm" OnValidSubmit="CreateLoreEntryAsync" class="book-form-card">
+                @if (_createLoreErrorMessage is not null)
+                {
+                    <p class="form-error">@_createLoreErrorMessage</p>
+                }
+                <div class="form-group">
+                    <label for="lore-title">Titel</label>
+                    <InputText id="lore-title" @bind-Value="_createLoreForm.Title" />
+                </div>
+                <div class="form-group">
+                    <label for="lore-content">Inhalt (Markdown)</label>
+                    <InputTextArea id="lore-content" @bind-Value="_createLoreForm.Content" rows="8" />
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                </div>
+            </EditForm>
+        }
+
+        @if (_loreErrorMessage is not null)
+        {
+            <p class="form-error">@_loreErrorMessage</p>
+        }
+        else if (_loreEntries is null)
+        {
+            <LoadingIndicator Text="Lore wird geladen..." />
+        }
+        else if (_loreEntries.Count == 0)
+        {
+            <p class="text-muted">Dieses Projekt hat noch keine Lore-Einträge.</p>
+        }
+        else
+        {
+            <div class="library-grid">
+                @foreach (var entry in _loreEntries)
+                {
+                    <LoreEntryCard Entry="entry" />
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="library-header">
+            <h2>Dateien</h2>
+        </div>
+
+        <EditForm Model="_createFileForm" OnValidSubmit="CreateProjectFileAsync" class="book-form-card">
+            @if (_createFileErrorMessage is not null)
+            {
+                <p class="form-error">@_createFileErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="file-category">Art</label>
+                <InputSelect id="file-category" @bind-Value="_createFileForm.Category">
+                    <option value="IMAGE">Bild</option>
+                    <option value="DOCUMENT">Dokument</option>
+                </InputSelect>
+            </div>
+            <div class="form-group">
+                <label for="file-upload">Datei</label>
+                <InputFile id="file-upload" OnChange="OnProjectFileSelected" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Hochladen</button>
+            </div>
+        </EditForm>
+
+        @if (_filesErrorMessage is not null)
+        {
+            <p class="form-error">@_filesErrorMessage</p>
+        }
+        else if (_files is null)
+        {
+            <LoadingIndicator Text="Dateien werden geladen..." />
+        }
+        else if (_files.Count == 0)
+        {
+            <p class="text-muted">Dieses Projekt hat noch keine Dateien.</p>
+        }
+        else
+        {
+            <div class="library-grid">
+                @foreach (var file in _files)
+                {
+                    <div class="project-card file-gallery-item">
+                        <div class="project-card-cover">
+                            @if (file.Category == "IMAGE" && _fileThumbnails.TryGetValue(file.Id, out var thumbnailUrl))
+                            {
+                                <img src="@thumbnailUrl" alt="@file.Name" />
+                            }
+                            else
+                            {
+                                <div class="project-card-cover-placeholder" aria-hidden="true">@(file.Category == "IMAGE" ? "🖼" : "📄")</div>
+                            }
+                        </div>
+                        <div class="project-card-info">
+                            <div class="project-card-title">@file.Name</div>
+                            <div class="project-card-type">@FormatFileSize(file.Size)</div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn" @onclick="() => DownloadProjectFileAsync(file)">Herunterladen</button>
+                            <button type="button" class="btn" @onclick="() => DeleteProjectFileAsync(file.Id)">Löschen</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
 }
 
 @code {
@@ -412,7 +534,21 @@ else
     private string? _editEventErrorMessage;
     private UpdateTimelineEventRequest _editEventForm = new();
 
-    protected override Task OnParametersSetAsync() => Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync(), LoadTimelineEventsAsync());
+    private List<LoreEntry>? _loreEntries;
+    private string? _loreErrorMessage;
+    private bool _showCreateLoreForm;
+    private string? _createLoreErrorMessage;
+    private CreateLoreEntryRequest _createLoreForm = new();
+
+    private List<ProjectFile>? _files;
+    private string? _filesErrorMessage;
+    private string? _createFileErrorMessage;
+    private CreateProjectFileFormModel _createFileForm = new();
+    private IBrowserFile? _selectedProjectFile;
+    private readonly Dictionary<int, string> _fileThumbnails = new();
+
+    protected override Task OnParametersSetAsync() =>
+        Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync(), LoadTimelineEventsAsync(), LoadLoreEntriesAsync(), LoadProjectFilesAsync());
 
     private async Task LoadProjectAsync()
     {
@@ -776,6 +912,139 @@ else
         }
     }
 
+    private async Task LoadLoreEntriesAsync()
+    {
+        _loreErrorMessage = null;
+        var response = await ApiClient.GetAsync<List<LoreEntry>>($"/api/projects/{Id}/lore");
+        if (response is { Success: true, Data: not null })
+        {
+            _loreEntries = response.Data;
+        }
+        else
+        {
+            _loreErrorMessage = response?.Error?.Message ?? "Lore konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task CreateLoreEntryAsync()
+    {
+        _createLoreErrorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_createLoreForm.Title))
+        {
+            _createLoreErrorMessage = "Bitte gib einen Titel ein.";
+            return;
+        }
+
+        var response = await ApiClient.PostAsync<CreateLoreEntryRequest, LoreEntry>($"/api/projects/{Id}/lore", _createLoreForm);
+        if (response is { Success: true, Data: not null })
+        {
+            _showCreateLoreForm = false;
+            _createLoreForm = new CreateLoreEntryRequest();
+            await LoadLoreEntriesAsync();
+        }
+        else
+        {
+            _createLoreErrorMessage = response?.Error?.Message ?? "Lore-Eintrag konnte nicht erstellt werden.";
+        }
+    }
+
+    private async Task LoadProjectFilesAsync()
+    {
+        _filesErrorMessage = null;
+        var response = await ApiClient.GetAsync<List<ProjectFile>>($"/api/projects/{Id}/files");
+        if (response is { Success: true, Data: not null })
+        {
+            _files = response.Data;
+            await LoadFileThumbnailsAsync();
+        }
+        else
+        {
+            _filesErrorMessage = response?.Error?.Message ?? "Dateien konnten nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadFileThumbnailsAsync()
+    {
+        if (_files is null) return;
+
+        foreach (var url in _fileThumbnails.Values)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(url);
+        }
+        _fileThumbnails.Clear();
+
+        foreach (var file in _files.Where(f => f.Category == "IMAGE"))
+        {
+            var result = await ApiClient.GetBytesAsync(file.Url);
+            if (result is { } image)
+            {
+                _fileThumbnails[file.Id] = await BlobUrlService.CreateObjectUrlAsync(image.Bytes, image.ContentType);
+            }
+        }
+    }
+
+    private void OnProjectFileSelected(InputFileChangeEventArgs e) => _selectedProjectFile = e.File;
+
+    private async Task CreateProjectFileAsync()
+    {
+        _createFileErrorMessage = null;
+
+        if (_selectedProjectFile is null)
+        {
+            _createFileErrorMessage = "Bitte wähle eine Datei aus.";
+            return;
+        }
+
+        const long maxFileBytes = 20 * 1024 * 1024;
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(_createFileForm.Category), "\"category\"" }
+        };
+        var streamContent = new StreamContent(_selectedProjectFile.OpenReadStream(maxFileBytes));
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedProjectFile.ContentType) ? "application/octet-stream" : _selectedProjectFile.ContentType);
+        content.Add(streamContent, "\"file\"", $"\"{_selectedProjectFile.Name}\"");
+
+        var response = await ApiClient.PostMultipartAsync<ProjectFile>($"/api/projects/{Id}/files", content);
+        if (response is { Success: true, Data: not null })
+        {
+            _createFileForm = new CreateProjectFileFormModel();
+            _selectedProjectFile = null;
+            await LoadProjectFilesAsync();
+        }
+        else
+        {
+            _createFileErrorMessage = response?.Error?.Message ?? "Datei konnte nicht hochgeladen werden.";
+        }
+    }
+
+    private async Task DownloadProjectFileAsync(ProjectFile file)
+    {
+        var result = await ApiClient.GetBytesAsync(file.Url);
+        if (result is not { } bytes) return;
+
+        var objectUrl = await BlobUrlService.CreateObjectUrlAsync(bytes.Bytes, bytes.ContentType);
+        await BlobUrlService.TriggerDownloadAsync(objectUrl, file.Name);
+        await BlobUrlService.RevokeObjectUrlAsync(objectUrl);
+    }
+
+    private async Task DeleteProjectFileAsync(int fileId)
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/projects/{Id}/files/{fileId}");
+        if (succeeded)
+        {
+            await LoadProjectFilesAsync();
+        }
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        var mb = bytes / 1024.0 / 1024.0;
+        return mb >= 1
+            ? mb.ToString("F1", CultureInfo.InvariantCulture) + " MB"
+            : (bytes / 1024.0).ToString("F0", CultureInfo.InvariantCulture) + " KB";
+    }
+
     public void Dispose()
     {
         if (_coverObjectUrl is not null)
@@ -785,6 +1054,10 @@ else
         if (_mapObjectUrl is not null)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(_mapObjectUrl);
+        }
+        foreach (var url in _fileThumbnails.Values)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(url);
         }
     }
 
@@ -803,5 +1076,10 @@ else
     private class CreateLocationFormModel
     {
         public string Name { get; set; } = string.Empty;
+    }
+
+    private class CreateProjectFileFormModel
+    {
+        public string Category { get; set; } = "IMAGE";
     }
 }
