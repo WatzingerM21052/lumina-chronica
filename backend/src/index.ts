@@ -14,6 +14,7 @@ import { usersRoute } from "./routes/users";
 import { projectsRoute } from "./routes/projects";
 import { statisticsRoute } from "./routes/statistics";
 import { bibleRoute } from "./routes/bible";
+import { discoverRoute } from "./routes/discover";
 
 const app = new Hono<AppEnv>();
 
@@ -31,6 +32,7 @@ app.route("/api/users", usersRoute);
 app.route("/api/projects", projectsRoute);
 app.route("/api/statistics", statisticsRoute);
 app.route("/api/bible", bibleRoute);
+app.route("/api/discover", discoverRoute);
 
 app.onError(handleError);
 app.notFound(handleNotFound);

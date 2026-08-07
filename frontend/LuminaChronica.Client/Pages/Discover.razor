@@ -1,8 +1,177 @@
 @page "/discover"
-@using LuminaChronica.Client.Components
+@using System.Globalization
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
 
 <PageTitle>Entdecken — Lumina Chronica</PageTitle>
 
 <h1>Entdecken</h1>
 
-<EmptyState Message="Öffentliche Bücher und Projekte erscheinen hier, sobald die Community-Funktionen live sind." />
+<section>
+    <h2>Nutzer suchen</h2>
+    <input placeholder="Benutzername..." @oninput="OnUserSearchInput" />
+
+    @if (_userSearchResults is { Count: > 0 })
+    {
+        <ul class="discover-user-results">
+            @foreach (var user in _userSearchResults)
+            {
+                <li>
+                    <a href="@($"u/{user.Username}")">
+                        @if (user.AvatarUrl is { } avatarUrl)
+                        {
+                            <img src="@avatarUrl" alt="" class="discover-user-avatar" />
+                        }
+                        else
+                        {
+                            <span class="discover-user-avatar discover-user-avatar-placeholder" aria-hidden="true">👤</span>
+                        }
+                        @user.Username
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+    else if (!string.IsNullOrWhiteSpace(_userSearchTerm))
+    {
+        <p class="text-muted">Keine Nutzer gefunden.</p>
+    }
+</section>
+
+<section>
+    <div class="library-header">
+        <h2>Öffentliche Bücher</h2>
+        <select @bind="_sort" @bind:after="LoadBooksAsync">
+            <option value="newest">Neueste</option>
+            <option value="rating">Beste Bewertung</option>
+        </select>
+    </div>
+
+    @if (_books is null)
+    {
+        <p>Lädt…</p>
+    }
+    else if (_books.Count == 0)
+    {
+        <p class="text-muted">Noch keine öffentlichen Bücher vorhanden.</p>
+    }
+    else
+    {
+        <div class="library-grid">
+            @foreach (var book in _books)
+            {
+                <a class="book-card book-card-normal" href="@($"u/{book.OwnerUsername}")">
+                    <div class="book-card-cover">
+                        @if (_coverObjectUrls.TryGetValue(book.Id, out var coverUrl))
+                        {
+                            <img src="@coverUrl" alt="@book.Title" />
+                        }
+                        else
+                        {
+                            <div class="book-card-cover-placeholder" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                    <path d="M4 5.5c2.2-1 5-1 8 0v13c-3-1-5.8-1-8 0z" />
+                                    <path d="M20 5.5c-2.2-1-5-1-8 0v13c3-1 5.8-1 8 0z" />
+                                </svg>
+                            </div>
+                        }
+                    </div>
+                    <div class="book-card-info">
+                        <div class="book-card-title">@book.Title</div>
+                        @if (!string.IsNullOrWhiteSpace(book.Author))
+                        {
+                            <div class="book-card-author">@book.Author</div>
+                        }
+                        <div class="book-card-author">von @book.OwnerUsername</div>
+                        <div class="book-card-rating">
+                            @if (book.RatingCount > 0)
+                            {
+                                <span>★ @book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture) (@book.RatingCount)</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Noch keine Bewertungen</span>
+                            }
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private List<DiscoverBook>? _books;
+    private string _sort = "newest";
+    private readonly Dictionary<int, string> _coverObjectUrls = [];
+
+    private string _userSearchTerm = string.Empty;
+    private List<DiscoverUser>? _userSearchResults;
+    private System.Threading.Timer? _userSearchDebounceTimer;
+
+    protected override async Task OnInitializedAsync() => await LoadBooksAsync();
+
+    private async Task LoadBooksAsync()
+    {
+        foreach (var url in _coverObjectUrls.Values)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(url);
+        }
+        _coverObjectUrls.Clear();
+
+        var response = await ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?sort={_sort}");
+        _books = response is { Success: true, Data: not null } ? response.Data.Items : [];
+
+        foreach (var book in _books)
+        {
+            if (book.CoverUrl is null) continue;
+            var result = await ApiClient.GetBytesAsync(book.CoverUrl);
+            if (result is { } cover)
+            {
+                _coverObjectUrls[book.Id] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+            }
+        }
+    }
+
+    private void OnUserSearchInput(ChangeEventArgs e)
+    {
+        _userSearchTerm = e.Value?.ToString() ?? string.Empty;
+
+        _userSearchDebounceTimer?.Dispose();
+        _userSearchDebounceTimer = new System.Threading.Timer(
+            _ => InvokeAsync(async () =>
+            {
+                await SearchUsersAsync();
+                // Same gap as Library.razor's search-as-you-type: a Timer
+                // callback reached via InvokeAsync doesn't auto-render.
+                StateHasChanged();
+            }),
+            null,
+            400,
+            Timeout.Infinite);
+    }
+
+    private async Task SearchUsersAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_userSearchTerm))
+        {
+            _userSearchResults = null;
+            return;
+        }
+
+        var response = await ApiClient.GetAsync<DiscoverUserListResponse>($"/api/discover/users?search={Uri.EscapeDataString(_userSearchTerm)}");
+        _userSearchResults = response is { Success: true, Data: not null } ? response.Data.Items : [];
+    }
+
+    public void Dispose()
+    {
+        _userSearchDebounceTimer?.Dispose();
+        foreach (var url in _coverObjectUrls.Values)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(url);
+        }
+    }
+}
