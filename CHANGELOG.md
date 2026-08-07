@@ -4,7 +4,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-08-07
+## [1.0.0] - 2026-08-05
 
 ### Added
 
@@ -57,4 +57,4 @@ v1.0's Authentication phase is complete and verified end-to-end against producti
 
 v1.0's Library, Reader, Organization, Dashboard, Offline, and Statistics phases are complete and live-verified against production.
 
-**v1.0.0 released 2026-08-07.** All five Definition-of-Done groups from the source spec (§100) are met: Benutzer (Account/Login/Profil), Bibliothek (hinzufügen/verwalten/Suchen/Sortieren), Reader (lesen/Fortschritt speichern/Themes), Organisation (Regale/Tags), Deployment (GitHub Pages/Cloudflare Backend). Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing. See `documentation/Roadmap.md` for the full phase-by-phase detail and everything that shipped beyond the strict DoD scope (OAuth, Bible Dark Academia theme, Realistic View, TXT/MD pagination, and other Reader polish) as an early start on v1.5.
+**v1.0.0 tagged and released on GitHub 2026-08-05** (https://github.com/WatzingerM21052/lumina-chronica/releases/tag/v1.0.0). All five Definition-of-Done groups from the source spec (§100) are met: Benutzer (Account/Login/Profil), Bibliothek (hinzufügen/verwalten/Suchen/Sortieren), Reader (lesen/Fortschritt speichern/Themes), Organisation (Regale/Tags), Deployment (GitHub Pages/Cloudflare Backend). Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing. See `documentation/Roadmap.md` for the full phase-by-phase detail and everything that shipped beyond the strict DoD scope (OAuth, Bible Dark Academia theme, Realistic View, TXT/MD pagination, and other Reader polish) as an early start on v1.5.

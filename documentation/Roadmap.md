@@ -488,7 +488,7 @@ Two related indefinite-hang bugs, both traced to the same root cause (no timeout
 
 Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing (fully green, no known failures) as of this point.
 
-## V1.0 — Release (2026-08-07)
+## V1.0 — Release (2026-08-05)
 
 Per the spec's §100 Definition of Done, "Lumina Chronica V1.0 ist fertig wenn" all five groups are satisfied. All five are met, verified end-to-end against production throughout the phase write-ups above:
 
@@ -500,7 +500,7 @@ Per the spec's §100 Definition of Done, "Lumina Chronica V1.0 ist fertig wenn" 
 
 Everything else shipped during v1.0 development — Dashboard, Offline, Statistics (re-scoped in from an initial v1.5 placement, issue #156), the visual design passes, metadata enrichment, the Bible easter egg, favicon/hero banner, OAuth, Realistic View, and the Reader/Bible polish immediately above — goes beyond this strict DoD boundary. Per §101, most of it (extended themes, a much-improved reader, OAuth) is v1.5-shaped work that landed organically through direct user requests rather than being phase-gated — a head start on v1.5, not scope creep against v1.0.
 
-**Tagged `v1.0.0`.** Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing. Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend).
+**Tagged `v1.0.0` and published as a GitHub Release** (https://github.com/WatzingerM21052/lumina-chronica/releases/tag/v1.0.0). Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing. Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend). This doc backfill itself landed two days later (2026-08-07, PR #245) — Roadmap/CHANGELOG hadn't been updated to match the already-tagged release.
 
 ## v1.5 — Personalisierung (in progress)
 
