@@ -33,22 +33,27 @@ function toProfile(row: UserProfileRow): UserProfile {
     };
 }
 
+// id is included for callers that need it internally (e.g.
+// publicProfileService.ts computing follow state) -- publicProfileService is
+// responsible for NOT putting it in the actual API response, same as
+// email/role/createdAt.
 export type PublicUserProfile = {
+    id: number;
     username: string;
     avatarUrl: string | null;
 };
 
 // Community Phase 1 (issue #300) -- deliberately a much narrower projection
-// than UserProfile: no id/email/role/createdAt, nothing an anonymous visitor
+// than UserProfile: no email/role/createdAt, nothing an anonymous visitor
 // shouldn't see. Looked up by username (the public-facing identifier, e.g.
 // /u/{username}) rather than id.
 export async function getUserByUsername(db: D1Database, username: string): Promise<PublicUserProfile | null> {
     const row = await db
-        .prepare("SELECT username, avatar_url FROM users WHERE username = ? AND deleted_at IS NULL")
+        .prepare("SELECT id, username, avatar_url FROM users WHERE username = ? AND deleted_at IS NULL")
         .bind(username)
-        .first<{ username: string; avatar_url: string | null }>();
+        .first<{ id: number; username: string; avatar_url: string | null }>();
 
-    return row ? { username: row.username, avatarUrl: row.avatar_url } : null;
+    return row ? { id: row.id, username: row.username, avatarUrl: row.avatar_url } : null;
 }
 
 export async function getUserProfile(db: D1Database, userId: number): Promise<UserProfile | null> {

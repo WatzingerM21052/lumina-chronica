@@ -1,6 +1,7 @@
 @page "/u/{Username}"
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
+@using Microsoft.AspNetCore.Authorization
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
@@ -28,7 +29,22 @@ else
         {
             <div class="public-profile-avatar public-profile-avatar-placeholder" aria-hidden="true">👤</div>
         }
-        <h1>@_profile.Username</h1>
+        <div>
+            <h1>@_profile.Username</h1>
+            <p class="text-muted">
+                <strong>@_profile.FollowerCount</strong> Follower · <strong>@_profile.FollowingCount</strong> Folgt
+            </p>
+            @if (!_profile.IsOwnProfile)
+            {
+                <AuthorizeView>
+                    <Authorized>
+                        <button type="button" class="btn @(_profile.IsFollowing ? "" : "btn-primary")" disabled="@_isTogglingFollow" @onclick="ToggleFollowAsync">
+                            @(_profile.IsFollowing ? "Entfolgen" : "Folgen")
+                        </button>
+                    </Authorized>
+                </AuthorizeView>
+            }
+        </div>
     </div>
 
     <section>
@@ -116,6 +132,7 @@ else
 
     private PublicProfileResponse? _profile;
     private bool _notFound;
+    private bool _isTogglingFollow;
     private readonly Dictionary<string, string> _coverObjectUrls = [];
 
     protected override async Task OnParametersSetAsync()
@@ -152,6 +169,25 @@ else
                 _coverObjectUrls[$"project-{project.Id}"] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
             }
         }
+    }
+
+    private async Task ToggleFollowAsync()
+    {
+        if (_profile is null || _isTogglingFollow) return;
+        _isTogglingFollow = true;
+
+        var wasFollowing = _profile.IsFollowing;
+        var succeeded = wasFollowing
+            ? await ApiClient.DeleteAsync($"/api/users/{Username}/follow")
+            : await ApiClient.PostAsync($"/api/users/{Username}/follow");
+
+        if (succeeded)
+        {
+            _profile.IsFollowing = !wasFollowing;
+            _profile.FollowerCount += wasFollowing ? -1 : 1;
+        }
+
+        _isTogglingFollow = false;
     }
 
     private async Task ClearCoversAsync()
