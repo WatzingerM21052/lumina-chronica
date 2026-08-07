@@ -13,6 +13,8 @@ import { deleteLocationsForProject } from "./locationService";
 import { deleteTimelineEventsForProject } from "./timelineService";
 import { deleteLoreEntriesForProject } from "./loreService";
 import { deleteProjectFilesForProject } from "./projectFileService";
+import { deleteProjectBooksForProject } from "./projectBookService";
+import { deleteCharacterRelationshipsForProject } from "./characterRelationshipService";
 import { NotFoundError } from "./errors";
 
 export { NotFoundError, ValidationError };
@@ -187,14 +189,17 @@ export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: 
     const row = await findOwnedProjectRow(db, ownerId, projectId);
     if (!row) throw new NotFoundError();
 
-    // Later phases (project_books, character_relationships) must add their
-    // own cleanup call here too, before the DELETE below -- real D1
+    // Every sub-resource's cleanup runs before the DELETE below -- real D1
     // enforces foreign keys, same lesson as deleteBook/deleteShelf.
+    // deleteCharacterRelationshipsForProject must run before
+    // deleteCharactersForProject removes the characters it points at.
+    await deleteCharacterRelationshipsForProject(db, projectId);
     await deleteCharactersForProject(db, storage, projectId);
     await deleteLocationsForProject(db, storage, projectId);
     await deleteTimelineEventsForProject(db, projectId);
     await deleteLoreEntriesForProject(db, projectId);
     await deleteProjectFilesForProject(db, storage, projectId);
+    await deleteProjectBooksForProject(db, projectId);
     await db.prepare("DELETE FROM projects WHERE id = ?").bind(projectId).run();
 
     for (const key of [row.cover_url, row.map_url]) {

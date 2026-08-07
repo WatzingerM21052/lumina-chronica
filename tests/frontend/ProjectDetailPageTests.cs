@@ -21,6 +21,7 @@ public class ProjectDetailPageTests : BunitContext
     private const string EmptyLocationsJson = """{"success":true,"data":[]}""";
     private const string EmptyTimelineJson = """{"success":true,"data":[]}""";
     private const string EmptyLoreJson = """{"success":true,"data":[]}""";
+    private const string EmptyBooksJson = """{"success":true,"data":[]}""";
     private const string EmptyFilesJson = """{"success":true,"data":[]}""";
 
     private RoutedFakeHttpMessageHandler UseDefaultRoutes()
@@ -31,6 +32,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -78,6 +80,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -119,6 +122,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -158,6 +162,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -189,6 +194,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -229,6 +235,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -259,6 +266,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -289,6 +297,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
             .WhenPathEndsWith("/map", "fake map bytes", "image/jpeg")
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", projectWithMap);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -332,6 +341,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -367,6 +377,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -412,6 +423,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -450,6 +462,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -480,6 +493,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
             .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -520,6 +534,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -551,6 +566,7 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
             .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -564,5 +580,110 @@ public class ProjectDetailPageTests : BunitContext
 
         Assert.Equal(HttpMethod.Delete, deleteRequest?.Method);
         Assert.Equal("/api/projects/1/files/7", deleteRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void ProjectDetail_BooksTab_ShowsEmptyMessage_WhenNoBooksLinked()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bücher").Click();
+
+        Assert.Contains("Diesem Projekt sind noch keine Bücher zugeordnet", cut.Markup);
+    }
+
+    [Fact]
+    public void ProjectDetail_BooksTab_RendersLinkedBookCardsFromApiResponse()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith(
+                "/books",
+                """{"success":true,"data":[{"id":5,"title":"The Silver Vale","author":"J.R.R. Tolkien","coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bücher").Click();
+
+        Assert.Contains("The Silver Vale", cut.Markup);
+        Assert.Single(cut.FindAll("a.book-card"));
+    }
+
+    [Fact]
+    public void ProjectDetail_BooksTab_RemoveButton_CallsRemoveEndpoint()
+    {
+        HttpRequestMessage? deleteRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Delete && r.RequestUri!.AbsolutePath == "/api/projects/1/books/5", r =>
+            {
+                deleteRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse("{}");
+            })
+            .WhenPathEndsWith(
+                "/books",
+                """{"success":true,"data":[{"id":5,"title":"The Silver Vale","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bücher").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Vom Projekt entfernen").Click();
+
+        Assert.NotNull(deleteRequest);
+    }
+
+    [Fact]
+    public void ProjectDetail_BooksTab_SearchInput_AfterDebounce_ShowsSuggestionAndAddButtonCallsAddEndpoint()
+    {
+        HttpRequestMessage? addRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath == "/api/projects/1/books/9", r =>
+            {
+                addRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse("{}");
+            })
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books" && r.RequestUri.Query.Contains("pageSize=8"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse(
+                    """{"success":true,"data":{"items":[{"id":9,"title":"Killimooin","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}],"total":1,"page":1,"pageSize":8}}"""))
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bücher").Click();
+        cut.Find("input[type=search]").Input("Killi");
+
+        cut.WaitForAssertion(() => Assert.Contains("Killimooin", cut.Markup), TimeSpan.FromSeconds(2));
+        cut.Find(".library-search-suggestions button").Click();
+
+        Assert.NotNull(addRequest);
     }
 }

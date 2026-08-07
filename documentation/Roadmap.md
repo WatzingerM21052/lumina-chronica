@@ -577,8 +577,14 @@ A genuinely flaky-looking test failure during this phase turned out to be a know
 
 Backend: 208/208 Vitest tests passing (23 new). Frontend: 179/179 bUnit tests passing (12 new). **Live-verified against production** (2026-08-07): migration `0012_lore_and_files.sql` applied to real D1, backend redeployed. Backend layer verified via direct API calls (image + document upload, content streaming, cross-user 404s, project-delete cascade). Lore fully verified through the real deployed UI: created a Markdown entry with headings/bold/blockquote/list, confirmed it renders correctly (gold-accent blockquote border, Fraunces headings) on the detail page. The Dateien upload form itself was confirmed to render correctly in the UI, but a real file couldn't be pushed through the browser tool's file input in this pass (its file-upload capability is sandboxed to session-shared paths, not arbitrary local files) — the exact same upload code path is already proven end-to-end via the direct API test, so this isn't a functional gap, just an automation-tooling limitation worth noting. Throwaway test account cleaned up afterward; the real user's own project confirmed untouched throughout.
 
-### Phase 6 — Linked books & character relationships (issue #259)
+### Phase 6 — Linked books & character relationships (issue #259, PR #TBD)
 
-- [ ] `project_books` join table (no spec precedent) + a new "search and pick a book" UI pattern (doesn't exist anywhere else in the codebase yet)
-- [ ] `character_relationships` table (no spec precedent, directional)
-- [ ] Closes out epic #9
+- [x] `project_books` join table (no spec precedent) + a new "search and pick a book" UI pattern (doesn't exist anywhere else in the codebase yet)
+- [x] `character_relationships` table (no spec precedent, directional)
+- [x] Closes out epic #9
+
+`project_books` mirrors `shelf_books` exactly (a plain join table, no surrogate id) — only books the caller owns can be linked. The Bücher tab on `ProjectDetail.razor` is the first "search and pick from a list" picker anywhere in the codebase, reusing `GET /api/books?search=` and the exact same 400ms-debounce pattern already proven in `Library.razor`'s own search box. `character_relationships` is directional by convention (`relationship_type` phrased from A to B, e.g. "Mentor von") rather than symmetric — simpler, and matches how relationships are naturally described. The Beziehungen UI lives on `CharacterDetail.razor` per the issue's DoD: the character being viewed is always `characterAId`, so the create form only needs a dropdown for the other character, no direction toggle.
+
+A real gap was found and fixed before shipping: both new tables reference rows *outside* the `projects` subtree (`books.id`, `characters.id`), so cleanup has to run in two directions — when the project is deleted (the established pattern) *and* when the referenced book/character is deleted from its own side. The book-side half (`deleteBook` needing to also clear `project_books`) was missed on the first pass; a deliberately reversed cascade test (link a book, delete the book, assert 204) caught it immediately with a real `SQLITE_CONSTRAINT` 500, since the test DB runs with `PRAGMA foreign_keys = ON`.
+
+Backend: 231/231 Vitest tests passing (23 new). Frontend: 187/187 bUnit tests passing (8 new).
