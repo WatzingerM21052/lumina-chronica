@@ -169,7 +169,7 @@ public class BiblePageTests : BunitContext
     }
 
     [Fact]
-    public void Bible_Search_ShowsResults_AndSelectingOneLoadsThatChapter()
+    public async Task Bible_Search_ShowsResults_AndSelectingOneLoadsThatChapter()
     {
         const string searchJson = """
             {"success":true,"data":{
@@ -191,12 +191,20 @@ public class BiblePageTests : BunitContext
         UseHandler(handler);
 
         var cut = Render<Bible>();
-        cut.Find("input[type=search]").Input("Rejoice");
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Suchen").Click();
+
+        // Bible.razor's OnInitializedAsync chains five awaited API calls;
+        // each one's continuation is posted (not run inline) to the
+        // renderer's synchronization context, so a plain cut.Find(...).X()
+        // right after Render() can race a still-in-flight continuation and
+        // grab an element whose event handler ID is about to be replaced
+        // (issue #247). cut.InvokeAsync runs the find+trigger as one unit
+        // on that same context, per bUnit's own guidance.
+        await cut.InvokeAsync(() => cut.Find("input[type=search]").Input("Rejoice"));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "Suchen").Click());
 
         Assert.Contains("Phil. 4:4", cut.Markup);
 
-        cut.Find("button.bible-search-result").Click();
+        await cut.InvokeAsync(() => cut.Find("button.bible-search-result").Click());
 
         Assert.Contains("Phil. 4", cut.Markup);
         Assert.Contains("Rejoice in the Lord always", cut.Markup);
