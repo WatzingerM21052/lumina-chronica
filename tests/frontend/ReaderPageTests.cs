@@ -703,4 +703,114 @@ public class ReaderPageTests : BunitContext
 
         Assert.Contains("Buch nicht gefunden.", cut.Markup);
     }
+
+    [Fact]
+    public void Reader_BookmarksButton_LazyLoadsAndShowsExistingBookmarks()
+    {
+        // Bookmarks are deliberately lazy-loaded (only fetched once the
+        // popover is first opened, not on every page load) -- see
+        // Reader.razor's ToggleBookmarksMenuAsync. This also means every
+        // *other* test in this file, which never opens the popover, doesn't
+        // need a /api/bookmarks/1 mock at all.
+        const string bookmarksJson = """
+            {"success":true,"data":[
+                {"id":5,"bookId":1,"chapter":null,"position":"2","percentage":50.0,"note":"Cool part","createdAt":"2026-01-01"}
+            ]}
+            """;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Hello from a plain text book.", "text/plain")
+            .WhenPathEndsWith("/api/bookmarks/1", bookmarksJson);
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        Assert.DoesNotContain("Cool part", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent == "🔖 Lesezeichen").Click();
+
+        Assert.Contains("Cool part", cut.Markup);
+        Assert.Contains("50%", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_AddBookmark_AppendsReturnedBookmarkToList()
+    {
+        const string emptyBookmarksJson = """{"success":true,"data":[]}""";
+        const string createdBookmarkJson = """
+            {"success":true,"data":
+                {"id":9,"bookId":1,"chapter":null,"position":"1","percentage":100.0,"note":"Ending","createdAt":"2026-01-01"}
+            }
+            """;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Hello from a plain text book.", "text/plain")
+            .WhenPathEndsWith("/api/bookmarks/1", emptyBookmarksJson)
+            .WhenPathEndsWith("/api/bookmarks", createdBookmarkJson);
+        UseHandler(handler);
+        JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
+        JSInterop.SetupModule("./js/textPaginator.js").Setup<int>("init", _ => true).SetResult(1);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "🔖 Lesezeichen").Click();
+        Assert.Contains("Noch keine Lesezeichen.", cut.Markup);
+
+        cut.Find(".reader-bookmark-note-input").Input("Ending");
+        cut.FindAll("button").Single(b => b.TextContent == "+ Aktuelle Seite merken").Click();
+
+        Assert.DoesNotContain("Noch keine Lesezeichen.", cut.Markup);
+        Assert.Contains("Ending", cut.Markup);
+        Assert.Contains("100%", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_DeleteBookmark_RemovesItFromList()
+    {
+        const string bookmarksJson = """
+            {"success":true,"data":[
+                {"id":5,"bookId":1,"chapter":null,"position":"2","percentage":50.0,"note":"Cool part","createdAt":"2026-01-01"}
+            ]}
+            """;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("TXT"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "Hello from a plain text book.", "text/plain")
+            .WhenPathEndsWith("/api/bookmarks/1", bookmarksJson)
+            .WhenPathEndsWith("/api/bookmarks/5", """{"success":true,"data":null}""");
+        UseHandler(handler);
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "🔖 Lesezeichen").Click();
+        Assert.Contains("Cool part", cut.Markup);
+
+        cut.Find(".reader-bookmark-delete").Click();
+
+        Assert.DoesNotContain("Cool part", cut.Markup);
+    }
+
+    [Fact]
+    public void Reader_EpubFormat_ClickingBookmark_JumpsToItsSavedCfi()
+    {
+        const string bookmarksJson = """
+            {"success":true,"data":[
+                {"id":5,"bookId":1,"chapter":2,"position":"epubcfi(/6/8!/4/2/1:0)","percentage":25.0,"note":"Twist","createdAt":"2026-01-01"}
+            ]}
+            """;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/books/1", BookJson("EPUB"))
+            .WhenPathEndsWith("/api/reading/1", NoProgressJson)
+            .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip")
+            .WhenPathEndsWith("/api/bookmarks/1", bookmarksJson);
+        UseHandler(handler);
+
+        var epubModule = JSInterop.SetupModule("./js/epubReader.js");
+        epubModule.SetupVoid("goTo", _ => true).SetVoidResult();
+
+        var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent == "🔖 Lesezeichen").Click();
+        cut.FindAll("button.reader-bookmark-jump").Single(b => b.TextContent.Contains("Twist")).Click();
+
+        Assert.Single(JSInterop.Invocations["goTo"], inv => inv.Arguments.Contains("epubcfi(/6/8!/4/2/1:0)"));
+    }
 }

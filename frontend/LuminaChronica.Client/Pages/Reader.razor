@@ -123,6 +123,38 @@ else
                     </div>
                 }
             </div>
+            <div class="reader-settings-menu">
+                <button type="button" class="btn" @onclick="ToggleBookmarksMenuAsync">🔖 Lesezeichen</button>
+                @if (_bookmarksMenuOpen)
+                {
+                    <div class="reader-settings-popover reader-bookmarks-popover">
+                        <div class="reader-setting-row">
+                            <input type="text" class="reader-bookmark-note-input" placeholder="Notiz (optional)" value="@_newBookmarkNote" @oninput="e => _newBookmarkNote = e.Value?.ToString() ?? string.Empty" />
+                        </div>
+                        <button type="button" class="btn btn-primary" @onclick="AddBookmarkAsync">+ Aktuelle Seite merken</button>
+                        @if (_bookmarks is { Count: 0 })
+                        {
+                            <p class="text-muted">Noch keine Lesezeichen.</p>
+                        }
+                        else if (_bookmarks is not null)
+                        {
+                            <ul class="reader-bookmarks-list">
+                                @foreach (var bookmark in _bookmarks)
+                                {
+                                    <li class="reader-bookmark-item">
+                                        <button type="button" class="reader-bookmark-jump" @onclick="() => GoToBookmarkAsync(bookmark)">
+                                            <span class="reader-bookmark-percentage">@bookmark.Percentage.ToString("F0", CultureInfo.InvariantCulture)%</span>
+                                            <span class="reader-bookmark-note">@(string.IsNullOrWhiteSpace(bookmark.Note) ? "Lesezeichen" : bookmark.Note)</span>
+                                        </button>
+                                        <button type="button" class="btn reader-bookmark-delete" @onclick="() => DeleteBookmarkAsync(bookmark.Id)" aria-label="Lesezeichen löschen">✕</button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        <button type="button" class="btn reader-settings-done" @onclick="ToggleBookmarksMenuAsync">Fertig</button>
+                    </div>
+                }
+            </div>
         </div>
     }
 
@@ -170,11 +202,11 @@ else
     }
     else if (_book.File.Format == "EPUB" && _epubBytes is not null)
     {
-        <EpubReader Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" FontFamily="@_fontFamily" LineHeight="@_lineHeight" PageWidth="@_pageWidth" ReaderMode="@_readerMode" HideScrollbars="@_hideScrollbars" OnProgress="HandleEpubProgress" />
+        <EpubReader @ref="_epubReaderRef" Bytes="@_epubBytes" InitialCfi="@_initialCfi" FontSize="@_fontSize" FontFamily="@_fontFamily" LineHeight="@_lineHeight" PageWidth="@_pageWidth" ReaderMode="@_readerMode" HideScrollbars="@_hideScrollbars" OnProgress="HandleEpubProgress" />
     }
     else if (_book.File.Format == "PDF" && _pdfBytes is not null)
     {
-        <PdfReader Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" PageWidth="@_pageWidth" HideScrollbars="@_hideScrollbars" OnProgress="HandlePdfProgress" OnRealisticUnavailable="HandleRealisticUnavailable" />
+        <PdfReader @ref="_pdfReaderRef" Bytes="@_pdfBytes" InitialPage="@_initialPage" ReaderMode="@_readerMode" PageWidth="@_pageWidth" HideScrollbars="@_hideScrollbars" OnProgress="HandlePdfProgress" OnRealisticUnavailable="HandleRealisticUnavailable" />
     }
     else
     {
@@ -232,6 +264,17 @@ else
     private bool _pagePerChapter;
     private bool _settingsMenuOpen;
     private Timer? _saveTimer;
+
+    // Bookmarks (v1.5) -- distinct from _saveTimer's auto-saved resume
+    // position: a user can have any number of these per book. _bookmarks
+    // stays null until the popover is opened once (lazy-loaded, not fetched
+    // on every page load) and is kept in sync locally after add/delete so
+    // reopening the popover doesn't need a second round trip.
+    private EpubReader? _epubReaderRef;
+    private PdfReader? _pdfReaderRef;
+    private List<Bookmark>? _bookmarks;
+    private bool _bookmarksMenuOpen;
+    private string _newBookmarkNote = "";
 
     // TXT/MD Book View pagination (issue #155) -- textPaginator.js state.
     private const string ContentViewportId = "reader-content";
@@ -631,54 +674,128 @@ else
         StateHasChanged();
     }
 
+    // Shared by SaveProgressAsync (auto-save) and AddBookmarkAsync (a
+    // user-created marker at the same current position) -- both need the
+    // exact same per-format location. Returns null only for EPUB/PDF before
+    // their first OnProgress callback has fired; TXT/MD always has a
+    // position (current page or scroll fraction) as soon as content exists.
+    private async Task<(int? Chapter, string? Position, double Percentage)?> BuildCurrentLocationAsync()
+    {
+        if (_book?.File is null) return null;
+
+        if (_book.File.Format == "EPUB")
+        {
+            if (_latestEpubProgress is not { } epubProgress) return null;
+            return (epubProgress.ChapterIndex, epubProgress.Cfi, epubProgress.Percentage);
+        }
+
+        if (_book.File.Format == "PDF")
+        {
+            if (_latestPdfProgress is not { } pdfProgress) return null;
+            return (
+                pdfProgress.Page,
+                pdfProgress.Page.ToString(CultureInfo.InvariantCulture),
+                pdfProgress.PageCount > 0 ? Math.Round(pdfProgress.Page * 100.0 / pdfProgress.PageCount, 1) : 0
+            );
+        }
+
+        if (_readerMode == "book")
+        {
+            return (
+                null,
+                _txtMdCurrentPage.ToString(CultureInfo.InvariantCulture),
+                _txtMdPageCount > 0 ? Math.Round(_txtMdCurrentPage * 100.0 / _txtMdPageCount, 1) : 0
+            );
+        }
+
+        var fraction = await ScrollTracker.GetScrollFractionAsync(ContentViewportId);
+        return (null, fraction.ToString("F4", CultureInfo.InvariantCulture), Math.Round(fraction * 100, 1));
+    }
+
     private async Task SaveProgressAsync()
     {
         if (_book?.File is null) return;
+        if (await BuildCurrentLocationAsync() is not { } location) return;
 
-        SaveProgressRequest request;
+        var request = new SaveProgressRequest { BookId = Id, Chapter = location.Chapter, Position = location.Position, Percentage = location.Percentage };
+        await ApiClient.PostAsync<SaveProgressRequest, ReadingProgress>("/api/reading/update", request);
+    }
+
+    private async Task ToggleBookmarksMenuAsync()
+    {
+        _bookmarksMenuOpen = !_bookmarksMenuOpen;
+        if (_bookmarksMenuOpen && _bookmarks is null)
+        {
+            var response = await ApiClient.GetAsync<List<Bookmark>>($"/api/bookmarks/{Id}");
+            _bookmarks = response is { Success: true, Data: { } data } ? data : [];
+        }
+    }
+
+    private async Task AddBookmarkAsync()
+    {
+        if (await BuildCurrentLocationAsync() is not { } location) return;
+
+        var request = new CreateBookmarkRequest
+        {
+            BookId = Id,
+            Chapter = location.Chapter,
+            Position = location.Position,
+            Percentage = location.Percentage,
+            Note = string.IsNullOrWhiteSpace(_newBookmarkNote) ? null : _newBookmarkNote.Trim(),
+        };
+
+        var response = await ApiClient.PostAsync<CreateBookmarkRequest, Bookmark>("/api/bookmarks", request);
+        if (response is { Success: true, Data: { } bookmark })
+        {
+            _bookmarks = (_bookmarks ?? []).Append(bookmark).OrderBy(b => b.Percentage).ThenBy(b => b.CreatedAt).ToList();
+            _newBookmarkNote = "";
+        }
+    }
+
+    private async Task DeleteBookmarkAsync(int bookmarkId)
+    {
+        if (await ApiClient.DeleteAsync($"/api/bookmarks/{bookmarkId}"))
+        {
+            _bookmarks = _bookmarks?.Where(b => b.Id != bookmarkId).ToList();
+        }
+    }
+
+    // Dispatches to whichever child reader/pagination mechanism owns
+    // navigation for the current format -- mirrors the exact per-format
+    // resume logic in OnParametersSetAsync/OnAfterRenderAsync, just
+    // triggered by a bookmark click instead of the initial load.
+    private async Task GoToBookmarkAsync(Bookmark bookmark)
+    {
+        _bookmarksMenuOpen = false;
+        if (_book?.File is null || bookmark.Position is not { } position) return;
+
         if (_book.File.Format == "EPUB")
         {
-            if (_latestEpubProgress is not { } epubProgress) return;
-            request = new SaveProgressRequest
-            {
-                BookId = Id,
-                Chapter = epubProgress.ChapterIndex,
-                Position = epubProgress.Cfi,
-                Percentage = epubProgress.Percentage,
-            };
-        }
-        else if (_book.File.Format == "PDF")
-        {
-            if (_latestPdfProgress is not { } pdfProgress) return;
-            request = new SaveProgressRequest
-            {
-                BookId = Id,
-                Chapter = pdfProgress.Page,
-                Position = pdfProgress.Page.ToString(CultureInfo.InvariantCulture),
-                Percentage = pdfProgress.PageCount > 0 ? Math.Round(pdfProgress.Page * 100.0 / pdfProgress.PageCount, 1) : 0,
-            };
-        }
-        else if (_readerMode == "book")
-        {
-            request = new SaveProgressRequest
-            {
-                BookId = Id,
-                Position = _txtMdCurrentPage.ToString(CultureInfo.InvariantCulture),
-                Percentage = _txtMdPageCount > 0 ? Math.Round(_txtMdCurrentPage * 100.0 / _txtMdPageCount, 1) : 0,
-            };
-        }
-        else
-        {
-            var fraction = await ScrollTracker.GetScrollFractionAsync(ContentViewportId);
-            request = new SaveProgressRequest
-            {
-                BookId = Id,
-                Position = fraction.ToString("F4", CultureInfo.InvariantCulture),
-                Percentage = Math.Round(fraction * 100, 1),
-            };
+            if (_epubReaderRef is not null) await _epubReaderRef.GoToLocationAsync(position);
+            return;
         }
 
-        await ApiClient.PostAsync<SaveProgressRequest, ReadingProgress>("/api/reading/update", request);
+        if (_book.File.Format == "PDF")
+        {
+            if (_pdfReaderRef is not null && int.TryParse(position, NumberStyles.Integer, CultureInfo.InvariantCulture, out var page))
+            {
+                await _pdfReaderRef.GoToPageAsync(page);
+            }
+            return;
+        }
+
+        if (_readerMode == "book")
+        {
+            var targetPage = ConvertSavedPositionToPage(position, _txtMdPageCount);
+            _txtMdCurrentPage = _pagePerChapter
+                ? Math.Clamp(targetPage, 1, _txtMdPageCount)
+                : await TextPaginator.GoToPageAsync(ContentInnerId, targetPage);
+            StateHasChanged();
+        }
+        else if (double.TryParse(position, NumberStyles.Float, CultureInfo.InvariantCulture, out var fraction))
+        {
+            await ScrollTracker.SetScrollFractionAsync(ContentViewportId, fraction);
+        }
     }
 
     private bool IsTxtMd => _book?.File?.Format is "TXT" or "MD";

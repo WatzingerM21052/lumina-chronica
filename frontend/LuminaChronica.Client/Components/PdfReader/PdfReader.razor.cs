@@ -220,10 +220,18 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
 
     private async Task OnPageInputChangedAsync(ChangeEventArgs e)
     {
-        if (_module is null) return;
         if (!int.TryParse(e.Value?.ToString(), out var requestedPage)) return;
+        await GoToPageAsync(requestedPage);
+    }
 
-        _currentPage = await _module.InvokeAsync<int>("goToPage", _elementId, requestedPage);
+    // Public so Reader.razor can jump to a bookmark's saved page via @ref --
+    // same underlying JS call as the page-number input above, just reachable
+    // from the parent.
+    public async Task GoToPageAsync(int page)
+    {
+        if (_module is null) return;
+        _currentPage = await _module.InvokeAsync<int>("goToPage", _elementId, page);
+        StateHasChanged();
         await OnProgress.InvokeAsync(new PdfProgress(_currentPage, _pageCount));
     }
 
