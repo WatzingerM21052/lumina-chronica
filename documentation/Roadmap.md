@@ -521,3 +521,40 @@ Full rework of the Statistics page beyond v1.0's books/pages/genres/recent-activ
 Backend: 128/128 Vitest tests passing (8 new). Frontend: 135/135 bUnit tests passing (7 new).
 
 **v1.5.0 tagged and released.** Backend: 128/128 Vitest tests passing. Frontend: 135/135 bUnit tests passing (excludes the pre-existing, unrelated issue #247). Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend), including the `0006_bookmarks.sql`/`0007_extended_statistics.sql` migrations applied to production D1.
+
+Issue #247 (the flaky `BiblePageTests` search test noted above) was fixed the same day (PR #253) — a bUnit stale-render-tree race, not a product bug. Frontend: 136/136 bUnit tests passing as of that fix.
+
+## v2.0 — Worldbuilding (in progress)
+
+Per §102 (Version 2.0 — Worldbuilding System): Lumina Chronica becomes a creative tool, new main page `/projects` (nav link already scaffolded since v0.2). Source spec (Teil 4 §43–§58) gives a real but thin schema for `projects`/`characters`/`locations`/`timeline_events`; it has genuine gaps against the World-structure diagram it also shows (`World → Map, Characters, Locations, Timeline, Lore, Books`) — no `lore` table, no project↔book link table, no character-relationship table, and "maps" is nothing but an unused `coordinates` field. Scoped and phased 2026-08-07 (epic #9), following the same phase-gating discipline as v1.0 — each phase its own migration/PR/tests/docs, fully live-verified before the next begins. Explicitly **not** in scope for v2.0: multi-user collaboration (`project_members`, VIEW/EDIT/OWNER permissions) — filed as a v3.0 Community concern; `visibility` (PRIVATE/SHARED/PUBLIC) is stored on `projects` but unenforced, same precedent as `books.visibility`.
+
+### Phase 1 — Projects foundation (issue #254)
+
+- [ ] `projects` table, CRUD, cover upload
+- [ ] `Pages/Projects.razor` (real implementation, replacing the `EmptyState` placeholder) + `Pages/ProjectDetail.razor` as the tabbed hub for every later phase
+
+### Phase 2 — Characters (issue #255)
+
+- [ ] `characters` table, CRUD, character image upload
+- [ ] Characters tab + `CharacterDetail.razor`
+
+### Phase 3 — Locations & map (issue #256)
+
+- [ ] `locations` table (with `x`/`y` pin coordinates) + `projects.map_url`
+- [ ] Map tab: upload a map image, click-to-place location pins (percentage-based, no existing UI pattern in the codebase to copy), pin click-through to the location
+
+### Phase 4 — Timeline (issue #257)
+
+- [ ] `timeline_events` table (`date` as free-text, not a real `DATE` — a fictional world's calendar isn't real dates)
+- [ ] Timeline tab
+
+### Phase 5 — Lore & documents/images gallery (issue #258)
+
+- [ ] `lore_entries` table (Markdown, no spec precedent) + `project_files` table (documents/images gallery, no field-level spec precedent)
+- [ ] Lore tab + Files/Images gallery tab
+
+### Phase 6 — Linked books & character relationships (issue #259)
+
+- [ ] `project_books` join table (no spec precedent) + a new "search and pick a book" UI pattern (doesn't exist anywhere else in the codebase yet)
+- [ ] `character_relationships` table (no spec precedent, directional)
+- [ ] Closes out epic #9
