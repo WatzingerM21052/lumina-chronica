@@ -564,7 +564,7 @@ Backend: 170/170 Vitest tests passing (16 new). Frontend: 163/163 bUnit tests pa
 
 `ProjectDetail.razor`'s fourth tab renders a real vertical timeline — a gilt line with dot markers per event, reusing the existing brass/oxblood theme tokens — rather than a plain list, since the open question flagged when this phase was scoped ("does `timeline_events` need a manual order?") turned out to matter for more than sorting: it's also what makes reordering via move-up/move-down buttons possible. `moveTimelineEvent` swaps the adjacent event's `order_index` server-side in one atomic `db.batch()`. Editing happens inline in the timeline card itself, not a separate detail page — the lightest-weight Worldbuilding sub-resource so far (three text fields, no image).
 
-Backend: 185/185 Vitest tests passing (15 new). Frontend: 167/167 bUnit tests passing (4 new).
+Backend: 185/185 Vitest tests passing (15 new). Frontend: 167/167 bUnit tests passing (4 new). **Live-verified against production** (2026-08-07): migration `0011_timeline.sql` applied to real D1, backend redeployed, full flow exercised through the real deployed UI this time (not just the API) — logged into a throwaway account (verified via the profile page before touching anything, after the Phase 2 mishap), created a project, added two timeline events, confirmed reordering via the move buttons swaps them live, confirmed inline editing pre-fills correctly, then deleted the test project. The Karte/Charaktere tabs were spot-checked in the same pass. Throwaway account cleaned up afterward; the real user's own project (already live-created independently during this session) confirmed untouched throughout.
 
 ### Phase 5 — Lore & documents/images gallery (issue #258)
 
