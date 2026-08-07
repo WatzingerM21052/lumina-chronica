@@ -1,0 +1,173 @@
+@page "/u/{Username}"
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+
+<PageTitle>@(_profile?.Username ?? Username) — Lumina Chronica</PageTitle>
+
+@if (_notFound)
+{
+    <div class="empty-state">
+        <p>Dieses Profil existiert nicht.</p>
+    </div>
+}
+else if (_profile is null)
+{
+    <p>Lädt…</p>
+}
+else
+{
+    <div class="public-profile-header">
+        @if (_profile.AvatarUrl is { } avatarUrl)
+        {
+            <img src="@avatarUrl" alt="@_profile.Username" class="public-profile-avatar" />
+        }
+        else
+        {
+            <div class="public-profile-avatar public-profile-avatar-placeholder" aria-hidden="true">👤</div>
+        }
+        <h1>@_profile.Username</h1>
+    </div>
+
+    <section>
+        <h2>Bibliothek</h2>
+        @if (_profile.Books.Count == 0)
+        {
+            <p class="text-muted">@_profile.Username hat noch keine öffentlichen Bücher.</p>
+        }
+        else
+        {
+            <div class="library-grid">
+                @foreach (var book in _profile.Books)
+                {
+                    <div class="book-card book-card-normal">
+                        <div class="book-card-cover">
+                            @if (_coverObjectUrls.TryGetValue($"book-{book.Id}", out var coverUrl))
+                            {
+                                <img src="@coverUrl" alt="@book.Title" />
+                            }
+                            else
+                            {
+                                <div class="book-card-cover-placeholder" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                        <path d="M4 5.5c2.2-1 5-1 8 0v13c-3-1-5.8-1-8 0z" />
+                                        <path d="M20 5.5c-2.2-1-5-1-8 0v13c3-1 5.8-1 8 0z" />
+                                    </svg>
+                                </div>
+                            }
+                        </div>
+                        <div class="book-card-info">
+                            <div class="book-card-title">@book.Title</div>
+                            @if (!string.IsNullOrWhiteSpace(book.Author))
+                            {
+                                <div class="book-card-author">@book.Author</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section>
+        <h2>Projekte</h2>
+        @if (_profile.Projects.Count == 0)
+        {
+            <p class="text-muted">@_profile.Username hat noch keine öffentlichen Projekte.</p>
+        }
+        else
+        {
+            <div class="library-grid">
+                @foreach (var project in _profile.Projects)
+                {
+                    <div class="project-card">
+                        <div class="project-card-cover">
+                            @if (_coverObjectUrls.TryGetValue($"project-{project.Id}", out var coverUrl))
+                            {
+                                <img src="@coverUrl" alt="@project.Title" />
+                            }
+                            else
+                            {
+                                <div class="project-card-cover-placeholder" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                        <circle cx="12" cy="12" r="9" />
+                                        <path d="M3 12h18" />
+                                        <path d="M12 3c2.8 2.6 4.2 5.8 4.2 9s-1.4 6.4-4.2 9c-2.8-2.6-4.2-5.8-4.2-9s1.4-6.4 4.2-9z" />
+                                    </svg>
+                                </div>
+                            }
+                        </div>
+                        <div class="project-card-info">
+                            <div class="project-card-title">@project.Title</div>
+                            <div class="project-card-type">@ProjectTypeLabel.For(project.Type)</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter]
+    public string Username { get; set; } = string.Empty;
+
+    private PublicProfileResponse? _profile;
+    private bool _notFound;
+    private readonly Dictionary<string, string> _coverObjectUrls = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ClearCoversAsync();
+        _profile = null;
+        _notFound = false;
+
+        var response = await ApiClient.GetAsync<PublicProfileResponse>($"/api/users/{Username}/public");
+        if (response is not { Success: true, Data: not null })
+        {
+            _notFound = true;
+            return;
+        }
+
+        _profile = response.Data;
+
+        foreach (var book in _profile.Books)
+        {
+            if (book.CoverUrl is null) continue;
+            var result = await ApiClient.GetBytesAsync(book.CoverUrl);
+            if (result is { } cover)
+            {
+                _coverObjectUrls[$"book-{book.Id}"] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+            }
+        }
+
+        foreach (var project in _profile.Projects)
+        {
+            if (project.CoverUrl is null) continue;
+            var result = await ApiClient.GetBytesAsync(project.CoverUrl);
+            if (result is { } cover)
+            {
+                _coverObjectUrls[$"project-{project.Id}"] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+            }
+        }
+    }
+
+    private async Task ClearCoversAsync()
+    {
+        foreach (var url in _coverObjectUrls.Values)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(url);
+        }
+        _coverObjectUrls.Clear();
+    }
+
+    public void Dispose()
+    {
+        foreach (var url in _coverObjectUrls.Values)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(url);
+        }
+    }
+}

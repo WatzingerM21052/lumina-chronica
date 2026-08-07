@@ -33,6 +33,24 @@ function toProfile(row: UserProfileRow): UserProfile {
     };
 }
 
+export type PublicUserProfile = {
+    username: string;
+    avatarUrl: string | null;
+};
+
+// Community Phase 1 (issue #300) -- deliberately a much narrower projection
+// than UserProfile: no id/email/role/createdAt, nothing an anonymous visitor
+// shouldn't see. Looked up by username (the public-facing identifier, e.g.
+// /u/{username}) rather than id.
+export async function getUserByUsername(db: D1Database, username: string): Promise<PublicUserProfile | null> {
+    const row = await db
+        .prepare("SELECT username, avatar_url FROM users WHERE username = ? AND deleted_at IS NULL")
+        .bind(username)
+        .first<{ username: string; avatar_url: string | null }>();
+
+    return row ? { username: row.username, avatarUrl: row.avatar_url } : null;
+}
+
 export async function getUserProfile(db: D1Database, userId: number): Promise<UserProfile | null> {
     const row = await db
         .prepare(

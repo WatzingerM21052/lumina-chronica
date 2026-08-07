@@ -119,21 +119,36 @@ export async function getProject(db: D1Database, ownerId: number, projectId: num
     return toSummary(row);
 }
 
+// SHARED is stored but has no enforcement semantics anywhere yet, same
+// caveat as bookService.ts's identical constant -- the frontend's visibility
+// selector only offers PRIVATE/PUBLIC (Community Phase 1, issue #300).
+const VISIBILITY_VALUES = ["PRIVATE", "SHARED", "PUBLIC"] as const;
+
 export type UpdateProjectInput = {
     title?: string;
     description?: string | null;
     type?: string;
+    visibility?: string;
 };
 
 export async function updateProject(db: D1Database, ownerId: number, projectId: number, input: UpdateProjectInput): Promise<ProjectSummary> {
     const row = await findOwnedProjectRow(db, ownerId, projectId);
     if (!row) throw new NotFoundError();
     if (input.title !== undefined && !input.title.trim()) throw new ValidationError("title cannot be empty.");
+    if (input.visibility !== undefined && !VISIBILITY_VALUES.includes(input.visibility as (typeof VISIBILITY_VALUES)[number])) {
+        throw new ValidationError(`visibility must be one of ${VISIBILITY_VALUES.join(", ")}.`);
+    }
     const type = input.type !== undefined ? assertValidType(input.type) : row.type;
 
     await db
-        .prepare("UPDATE projects SET title = ?, description = ?, type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-        .bind(input.title ?? row.title, input.description !== undefined ? input.description : row.description, type, projectId)
+        .prepare("UPDATE projects SET title = ?, description = ?, type = ?, visibility = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(
+            input.title ?? row.title,
+            input.description !== undefined ? input.description : row.description,
+            type,
+            input.visibility ?? row.visibility,
+            projectId
+        )
         .run();
 
     return getProject(db, ownerId, projectId);
@@ -210,10 +225,51 @@ export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: 
     }
 }
 
-export async function getProjectCoverObject(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number): Promise<R2ObjectBody | null> {
-    const row = await findOwnedProjectRow(db, ownerId, projectId);
+// ownerId is nullable here (unlike every other function in this file) --
+// this is the one route reachable while logged out (optionalAuth, not
+// requireAuth), since a PUBLIC project's cover has to render on its owner's
+// public profile (issue #300) for a visitor with no session at all. The
+// project's map stays owner-only -- not part of the public "teaser", see #300.
+export async function getProjectCoverObject(db: D1Database, storage: R2Bucket, ownerId: number | null, projectId: number): Promise<R2ObjectBody | null> {
+    const row = await db.prepare("SELECT cover_url, owner_id, visibility FROM projects WHERE id = ?").bind(projectId).first<{
+        cover_url: string | null;
+        owner_id: number;
+        visibility: string;
+    }>();
     if (!row || !row.cover_url) return null;
+    if (row.visibility !== "PUBLIC" && row.owner_id !== ownerId) return null;
     return storage.get(row.cover_url);
+}
+
+export type PublicProjectSummary = {
+    id: number;
+    title: string;
+    description: string | null;
+    type: ProjectType;
+    coverUrl: string | null;
+};
+
+// Community Phase 1 (issue #300) -- deliberately excludes owner_id, mapUrl
+// (project maps stay owner-only), and every field only meaningful to the
+// owner. No ownerId param: visibility = 'PUBLIC' is the only access check.
+export async function listPublicProjectsByUsername(db: D1Database, username: string): Promise<PublicProjectSummary[]> {
+    const rows = await db
+        .prepare(
+            `SELECT projects.id, projects.title, projects.description, projects.type, projects.cover_url
+             FROM projects JOIN users ON users.id = projects.owner_id
+             WHERE users.username = ? AND users.deleted_at IS NULL AND projects.visibility = 'PUBLIC'
+             ORDER BY projects.created_at DESC`
+        )
+        .bind(username)
+        .all<{ id: number; title: string; description: string | null; type: string; cover_url: string | null }>();
+
+    return rows.results.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        type: row.type as ProjectType,
+        coverUrl: row.cover_url ? `/api/projects/${row.id}/cover` : null,
+    }));
 }
 
 export async function getProjectMapObject(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number): Promise<R2ObjectBody | null> {

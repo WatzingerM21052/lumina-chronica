@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
-import { requireAuth } from "../middleware/auth";
+import { optionalAuth, requireAuth } from "../middleware/auth";
 import { fileResponse } from "../utils/fileResponse";
 import {
     NotFoundError,
@@ -200,9 +200,9 @@ booksRoute.get("/:id/file", requireAuth, async (c) => {
     return fileResponse(c, result.object.body, CONTENT_TYPES[result.format] ?? "application/octet-stream");
 });
 
-booksRoute.get("/:id/cover", requireAuth, async (c) => {
+booksRoute.get("/:id/cover", optionalAuth, async (c) => {
     const bookId = Number(c.req.param("id"));
-    const object = await getBookCoverObject(c.env.DB, c.env.STORAGE, c.get("userId"), bookId);
+    const object = await getBookCoverObject(c.env.DB, c.env.STORAGE, c.get("userId") ?? null, bookId);
     if (!object) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
 
     return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");

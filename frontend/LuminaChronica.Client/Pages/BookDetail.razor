@@ -273,6 +273,16 @@ else
                         <label for="edit-pages">Seiten</label>
                         <InputNumber id="edit-pages" @bind-Value="_editForm.Pages" />
                     </div>
+                    <div class="form-group">
+                        <label for="edit-visibility">Sichtbarkeit</label>
+                        <InputSelect id="edit-visibility" @bind-Value="_editForm.Visibility">
+                            @foreach (var option in VisibilityOption.Options)
+                            {
+                                <option value="@option">@VisibilityOption.For(option)</option>
+                            }
+                        </InputSelect>
+                        <p class="text-muted">Öffentliche Bücher sind mit Cover und Beschreibung auf deinem öffentlichen Profil sichtbar — die Datei selbst bleibt privat.</p>
+                    </div>
 
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" disabled="@_isSaving">Speichern</button>
@@ -497,6 +507,7 @@ else
             Publisher = _book.Publisher,
             ReleaseDate = _book.ReleaseDate,
             Pages = _book.Pages,
+            Visibility = _book.Visibility,
         };
         _saveErrorMessage = null;
         _coverSaveErrorMessage = null;
@@ -729,6 +740,7 @@ else
             Publisher = _editForm.Publisher,
             ReleaseDate = _editForm.ReleaseDate,
             Pages = _editForm.Pages,
+            Visibility = _editForm.Visibility,
         };
 
         var response = await ApiClient.PutAsync<UpdateBookRequest, Book>($"/api/books/{Id}", request);
@@ -805,6 +817,7 @@ else
         public string? Publisher { get; set; }
         public string? ReleaseDate { get; set; }
         public int? Pages { get; set; }
+        public string Visibility { get; set; } = "PRIVATE";
 
         // InputDate needs a DateOnly?-typed property to bind to; ReleaseDate
         // itself stays a string since that's what crosses the wire.

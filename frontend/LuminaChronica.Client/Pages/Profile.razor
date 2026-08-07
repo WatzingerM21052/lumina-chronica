@@ -17,6 +17,8 @@
 }
 else
 {
+    <p><a href="@($"/u/{_profile.Username}")">Öffentliches Profil ansehen</a></p>
+
     <h2>Konto</h2>
     <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form">
         @if (_profileErrorMessage is not null)

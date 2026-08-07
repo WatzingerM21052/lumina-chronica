@@ -40,6 +40,24 @@ public class UpdateProjectRequest
 
     [JsonPropertyName("type")]
     public string? Type { get; set; }
+
+    [JsonPropertyName("visibility")]
+    public string? Visibility { get; set; }
+}
+
+// Community Phase 1 (issue #300) -- the frontend only ever offers these two;
+// SHARED is stored/accepted by the backend but has no enforcement semantics
+// yet, so it isn't a real choice for a user to make.
+public static class VisibilityOption
+{
+    public static readonly IReadOnlyList<string> Options = ["PRIVATE", "PUBLIC"];
+
+    public static string For(string visibility) => visibility switch
+    {
+        "PRIVATE" => "Privat",
+        "PUBLIC" => "Öffentlich",
+        _ => visibility,
+    };
 }
 
 // type is cosmetic/label only (backend/src/services/projectService.ts) --

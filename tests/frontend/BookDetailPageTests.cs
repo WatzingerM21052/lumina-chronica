@@ -56,6 +56,29 @@ public class BookDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void BookDetail_EditForm_VisibilitySelector_ShowsCurrentValueAndSendsChange()
+    {
+        // Community Phase 1 (issue #300) -- visibility has existed in the DB
+        // and this model since v1.0/v2.0 but was never actually settable
+        // until now.
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+
+        Assert.Equal("PUBLIC", cut.Find("#edit-visibility").GetAttribute("value"));
+
+        cut.Find("#edit-visibility").Change("PRIVATE");
+        Assert.Equal("PRIVATE", cut.Find("#edit-visibility").GetAttribute("value"));
+    }
+
+    [Fact]
     public void BookDetail_Tags_RenderAsLinksToFilteredLibrary()
     {
         UseApiResponse("""
