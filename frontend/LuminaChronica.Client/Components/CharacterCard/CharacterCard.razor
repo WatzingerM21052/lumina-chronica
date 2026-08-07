@@ -1,0 +1,29 @@
+@namespace LuminaChronica.Client.Components
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+
+<a class="project-card" href="@($"projects/{Character.ProjectId}/characters/{Character.Id}")">
+    <div class="project-card-cover">
+        @if (_imageObjectUrl is not null)
+        {
+            <img src="@_imageObjectUrl" alt="@Character.Name" />
+        }
+        else
+        {
+            <div class="project-card-cover-placeholder" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+                </svg>
+            </div>
+        }
+    </div>
+    <div class="project-card-info">
+        <div class="project-card-title">@Character.Name</div>
+        @if (!string.IsNullOrWhiteSpace(Character.Origin))
+        {
+            <div class="project-card-type">@Character.Origin</div>
+        }
+    </div>
+</a>

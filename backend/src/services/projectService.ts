@@ -9,9 +9,10 @@
 // Phase 3 (Locations & Map, issue #256) -- untouched here.
 
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
+import { deleteCharactersForProject } from "./characterService";
+import { NotFoundError } from "./errors";
 
-export class NotFoundError extends Error {}
-export { ValidationError };
+export { NotFoundError, ValidationError };
 
 export const PROJECT_TYPES = ["WORLD", "NOVEL", "RPG", "CUSTOM"] as const;
 export type ProjectType = (typeof PROJECT_TYPES)[number];
@@ -156,11 +157,11 @@ export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: 
     const row = await findOwnedProjectRow(db, ownerId, projectId);
     if (!row) throw new NotFoundError();
 
-    // No child tables reference projects yet (Phase 1). Later phases
-    // (characters, locations, timeline_events, lore_entries, project_files,
+    // Later phases (locations, timeline_events, lore_entries, project_files,
     // project_books, character_relationships) must add their own cleanup
-    // batch here before the DELETE below, same as deleteBook/deleteShelf --
-    // real D1 enforces foreign keys.
+    // call here too, before the DELETE below -- real D1 enforces foreign
+    // keys, same lesson as deleteBook/deleteShelf.
+    await deleteCharactersForProject(db, storage, projectId);
     await db.prepare("DELETE FROM projects WHERE id = ?").bind(projectId).run();
 
     for (const key of [row.cover_url, row.map_url]) {

@@ -1,0 +1,271 @@
+@page "/projects/{ProjectId:int}/characters/{Id:int}"
+@attribute [Authorize]
+@implements IDisposable
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_character?.Name ?? "Charakter") — Lumina Chronica</PageTitle>
+
+<a href="@($"projects/{ProjectId}")">← Zurück zum Projekt</a>
+
+@if (_loadErrorMessage is not null)
+{
+    <p class="form-error">@_loadErrorMessage</p>
+}
+else if (_character is null)
+{
+    <LoadingIndicator Text="Charakter wird geladen..." />
+}
+else
+{
+    <div class="book-detail-cover">
+        @if (_imageObjectUrl is not null)
+        {
+            <img src="@_imageObjectUrl" alt="@_character.Name" />
+        }
+        else
+        {
+            <div class="book-card-cover-placeholder">🧑</div>
+        }
+    </div>
+
+    @if (!_isEditing)
+    {
+        <h1>@_character.Name</h1>
+        @if (!string.IsNullOrWhiteSpace(_character.Origin))
+        {
+            <p class="text-muted">@_character.Origin</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(_character.Age))
+        {
+            <p><strong>Alter:</strong> @_character.Age</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(_character.Description))
+        {
+            <p>@_character.Description</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(_character.Personality))
+        {
+            <p><strong>Persönlichkeit:</strong> @_character.Personality</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(_character.Biography))
+        {
+            <p><strong>Geschichte:</strong> @_character.Biography</p>
+        }
+        <div class="form-actions">
+            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+        </div>
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="Charakter wirklich löschen?"
+                       OnConfirm="DeleteCharacterAsync" OnCancel="() => _confirmingDelete = false" />
+    }
+    else
+    {
+        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+            @if (_saveErrorMessage is not null)
+            {
+                <p class="form-error">@_saveErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="character-edit-image">Bild ersetzen</label>
+                <div class="dropzone @(_isDraggingImage ? "dropzone--active" : "")"
+                     @ondragenter="() => _isDraggingImage = true" @ondragleave="() => _isDraggingImage = false"
+                     @ondragover:preventDefault @ondrop="() => _isDraggingImage = false">
+                    <InputFile id="character-edit-image" OnChange="OnEditImageSelected" />
+                    <span class="dropzone-label">Bild hierher ziehen oder klicken zum Auswählen</span>
+                </div>
+                @if (_imageSaveErrorMessage is not null)
+                {
+                    <p class="form-error">@_imageSaveErrorMessage</p>
+                }
+            </div>
+            <div class="form-group">
+                <label for="character-edit-name">Name</label>
+                <InputText id="character-edit-name" @bind-Value="_editForm.Name" />
+            </div>
+            <div class="form-group">
+                <label for="character-edit-age">Alter</label>
+                <InputText id="character-edit-age" @bind-Value="_editForm.Age" />
+            </div>
+            <div class="form-group">
+                <label for="character-edit-origin">Herkunft</label>
+                <InputText id="character-edit-origin" @bind-Value="_editForm.Origin" />
+            </div>
+            <div class="form-group">
+                <label for="character-edit-description">Beschreibung</label>
+                <InputTextArea id="character-edit-description" @bind-Value="_editForm.Description" />
+            </div>
+            <div class="form-group">
+                <label for="character-edit-personality">Persönlichkeit</label>
+                <InputTextArea id="character-edit-personality" @bind-Value="_editForm.Personality" />
+            </div>
+            <div class="form-group">
+                <label for="character-edit-biography">Geschichte</label>
+                <InputTextArea id="character-edit-biography" @bind-Value="_editForm.Biography" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+            </div>
+        </EditForm>
+    }
+}
+
+@code {
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private Character? _character;
+    private string? _loadErrorMessage;
+    private string? _imageObjectUrl;
+
+    private bool _isEditing;
+    private string? _saveErrorMessage;
+    private string? _imageSaveErrorMessage;
+    private IBrowserFile? _selectedEditImage;
+    private bool _isDraggingImage;
+    private EditFormModel _editForm = new();
+    private bool _confirmingDelete;
+
+    protected override Task OnParametersSetAsync() => LoadCharacterAsync();
+
+    private async Task LoadCharacterAsync()
+    {
+        _loadErrorMessage = null;
+        var response = await ApiClient.GetAsync<Character>($"/api/projects/{ProjectId}/characters/{Id}");
+        if (response is { Success: true, Data: not null })
+        {
+            _character = response.Data;
+            await LoadImageAsync();
+        }
+        else
+        {
+            _loadErrorMessage = response?.Error?.Message ?? "Charakter konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadImageAsync()
+    {
+        if (_imageObjectUrl is not null)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(_imageObjectUrl);
+            _imageObjectUrl = null;
+        }
+
+        if (_character?.ImageUrl is null) return;
+
+        var result = await ApiClient.GetBytesAsync(_character.ImageUrl);
+        if (result is { } image)
+        {
+            _imageObjectUrl = await BlobUrlService.CreateObjectUrlAsync(image.Bytes, image.ContentType);
+        }
+    }
+
+    private void StartEditing()
+    {
+        if (_character is null) return;
+        _editForm = new EditFormModel
+        {
+            Name = _character.Name,
+            Age = _character.Age,
+            Origin = _character.Origin,
+            Description = _character.Description,
+            Personality = _character.Personality,
+            Biography = _character.Biography,
+        };
+        _saveErrorMessage = null;
+        _imageSaveErrorMessage = null;
+        _selectedEditImage = null;
+        _isEditing = true;
+    }
+
+    private void OnEditImageSelected(InputFileChangeEventArgs e) => _selectedEditImage = e.File;
+
+    private async Task SaveAsync()
+    {
+        _saveErrorMessage = null;
+        _imageSaveErrorMessage = null;
+
+        var response = await ApiClient.PutAsync<UpdateCharacterRequest, Character>($"/api/projects/{ProjectId}/characters/{Id}", new UpdateCharacterRequest
+        {
+            Name = _editForm.Name,
+            Age = _editForm.Age,
+            Origin = _editForm.Origin,
+            Description = _editForm.Description,
+            Personality = _editForm.Personality,
+            Biography = _editForm.Biography,
+        });
+
+        if (response is not { Success: true, Data: not null })
+        {
+            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            return;
+        }
+
+        _character = response.Data;
+
+        if (_selectedEditImage is not null)
+        {
+            const long maxImageBytes = 5 * 1024 * 1024;
+            using var content = new MultipartFormDataContent();
+            var streamContent = new StreamContent(_selectedEditImage.OpenReadStream(maxImageBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedEditImage.ContentType) ? "application/octet-stream" : _selectedEditImage.ContentType);
+            content.Add(streamContent, "\"image\"", $"\"{_selectedEditImage.Name}\"");
+
+            var imageResponse = await ApiClient.PutMultipartAsync<Character>($"/api/projects/{ProjectId}/characters/{Id}/image", content);
+            if (imageResponse is { Success: true, Data: not null })
+            {
+                _character = imageResponse.Data;
+                await LoadImageAsync();
+            }
+            else
+            {
+                _imageSaveErrorMessage = imageResponse?.Error?.Message ?? "Bild konnte nicht ersetzt werden.";
+                return;
+            }
+        }
+
+        _isEditing = false;
+    }
+
+    private async Task DeleteCharacterAsync()
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/characters/{Id}");
+        if (succeeded)
+        {
+            NavigationManager.NavigateTo($"projects/{ProjectId}");
+        }
+        else
+        {
+            _confirmingDelete = false;
+            _loadErrorMessage = "Löschen fehlgeschlagen.";
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_imageObjectUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_imageObjectUrl);
+        }
+    }
+
+    private class EditFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Age { get; set; }
+        public string? Origin { get; set; }
+        public string? Description { get; set; }
+        public string? Personality { get; set; }
+        public string? Biography { get; set; }
+    }
+}
