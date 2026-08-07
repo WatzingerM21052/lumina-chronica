@@ -555,7 +555,7 @@ Backend: 154/154 Vitest tests passing (14 new). Frontend: 152/152 bUnit tests pa
 
 **Real bug caught by the new tests, not a pre-existing one**: pin coordinates interpolated directly into the inline CSS `style` attribute rendered with a comma decimal separator under a German locale (`left:42,5%`) — invalid CSS, silently misplacing every pin with no visible error. Same class of bug as the documented reading-progress decimal-separator issue; fixed with `CultureInfo.InvariantCulture`, the project's established pattern for anything landing in markup. See `Architecture.md`'s row for detail.
 
-Backend: 170/170 Vitest tests passing (16 new). Frontend: 163/163 bUnit tests passing (11 new).
+Backend: 170/170 Vitest tests passing (16 new). Frontend: 163/163 bUnit tests passing (11 new). **Live-verified against production** (2026-08-07): migration `0010_locations.sql` applied to real D1, backend redeployed, full map-upload/location-create-with-image/pin-placement/position-validation/cross-user-404/unplace/delete cycle exercised via direct API calls, including confirming `deleteProject` cascade-deletes a project's locations (0 orphaned rows). Verified via API, not the deployed UI, per the same reasoning as Phase 2 — a shared-browser tab risk isn't worth it when the API surface proves the same logic. Throwaway test accounts cleaned up afterward.
 
 ### Phase 4 — Timeline (issue #257)
 
