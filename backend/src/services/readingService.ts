@@ -27,13 +27,19 @@ function toProgress(row: ReadingProgressRow): ReadingProgress {
     };
 }
 
-async function isOwnedByUser(db: D1Database, userId: number, bookId: number): Promise<boolean> {
-    const row = await db.prepare("SELECT id FROM books WHERE id = ? AND owner_id = ?").bind(bookId, userId).first();
+// Owner always qualifies; a SHARED book also qualifies for any other
+// logged-in user ("borrowed reading" -- see bookService.ts's
+// findAccessibleBookRow for the matching read-access rule on the book
+// itself). reading_progress/reading_activity are already keyed by user_id,
+// not owner_id, so a borrower's progress is naturally independent of both
+// the owner's and any other borrower's -- no schema change needed.
+async function isAccessibleByUser(db: D1Database, userId: number, bookId: number): Promise<boolean> {
+    const row = await db.prepare("SELECT id FROM books WHERE id = ? AND (owner_id = ? OR visibility = 'SHARED')").bind(bookId, userId).first();
     return row !== null;
 }
 
 export async function getProgress(db: D1Database, userId: number, bookId: number): Promise<ReadingProgress | null> {
-    if (!(await isOwnedByUser(db, userId, bookId))) throw new NotFoundError();
+    if (!(await isAccessibleByUser(db, userId, bookId))) throw new NotFoundError();
 
     const row = await db
         .prepare("SELECT chapter, position, percentage, last_opened FROM reading_progress WHERE user_id = ? AND book_id = ?")
@@ -51,7 +57,7 @@ export type SaveProgressInput = {
 };
 
 export async function saveProgress(db: D1Database, userId: number, input: SaveProgressInput): Promise<ReadingProgress> {
-    if (!(await isOwnedByUser(db, userId, input.bookId))) throw new NotFoundError();
+    if (!(await isAccessibleByUser(db, userId, input.bookId))) throw new NotFoundError();
 
     await db.batch([
         db

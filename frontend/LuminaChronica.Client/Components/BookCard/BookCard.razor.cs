@@ -31,6 +31,18 @@ public partial class BookCard : ComponentBase, IDisposable
     [Parameter]
     public string? Href { get; set; }
 
+    // Favoriting stays owner-only (see bookService.ts's addFavorite/removeFavorite);
+    // the Home dashboard's continue-reading cards set this to false for a
+    // borrowed (SHARED, not owned) book so the star button -- which would
+    // just 404 -- never renders.
+    [Parameter]
+    public bool ShowFavorite { get; set; } = true;
+
+    // Set for a borrowed book: the owner's username, rendered as a
+    // "Geliehen von {username}" badge instead of the favorite star.
+    [Parameter]
+    public string? OwnerUsername { get; set; }
+
     private string? _coverObjectUrl;
     private string? _loadedCoverUrl;
     private bool _isFavorite;

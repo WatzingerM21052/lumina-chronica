@@ -183,7 +183,11 @@ booksRoute.delete("/:id/favorite", requireAuth, async (c) => {
 });
 
 // Used by Book Detail's "add to shelf" picker to render each shelf's
-// checkbox state.
+// checkbox state. getBook now also succeeds for a SHARED book you don't
+// own (borrowed reading) -- harmless here since listShelfIdsForBook is
+// scoped to the caller's own shelves regardless, so a borrower just gets
+// back their own (always empty, since shelving stays owner-only) checkbox
+// state. No frontend UI ever calls this for a book that isn't the caller's own.
 booksRoute.get("/:id/shelves", requireAuth, async (c) => {
     const bookId = Number(c.req.param("id"));
     const book = await getBook(c.env.DB, c.get("userId"), bookId);

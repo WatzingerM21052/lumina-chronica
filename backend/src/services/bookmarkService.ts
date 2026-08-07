@@ -41,8 +41,14 @@ function toBookmark(row: BookmarkRow): Bookmark {
     };
 }
 
-async function isOwnedByUser(db: D1Database, userId: number, bookId: number): Promise<boolean> {
-    const row = await db.prepare("SELECT id FROM books WHERE id = ? AND owner_id = ?").bind(bookId, userId).first();
+// Owner always qualifies; a SHARED book also qualifies for any other
+// logged-in user ("borrowed reading" -- see readingService.ts's matching
+// isAccessibleByUser and bookService.ts's findAccessibleBookRow). Bookmark
+// rows themselves are already keyed by user_id (see findOwnedBookmarkRow
+// below), so a borrower's bookmarks are naturally independent of the
+// owner's -- no schema change needed.
+async function isAccessibleByUser(db: D1Database, userId: number, bookId: number): Promise<boolean> {
+    const row = await db.prepare("SELECT id FROM books WHERE id = ? AND (owner_id = ? OR visibility = 'SHARED')").bind(bookId, userId).first();
     return row !== null;
 }
 
@@ -51,7 +57,7 @@ async function findOwnedBookmarkRow(db: D1Database, userId: number, bookmarkId: 
 }
 
 export async function listBookmarks(db: D1Database, userId: number, bookId: number): Promise<Bookmark[]> {
-    if (!(await isOwnedByUser(db, userId, bookId))) throw new NotFoundError();
+    if (!(await isAccessibleByUser(db, userId, bookId))) throw new NotFoundError();
 
     const rows = await db
         .prepare("SELECT * FROM bookmarks WHERE user_id = ? AND book_id = ? ORDER BY percentage ASC, created_at ASC")
@@ -69,7 +75,7 @@ export type CreateBookmarkInput = {
 };
 
 export async function createBookmark(db: D1Database, userId: number, input: CreateBookmarkInput): Promise<Bookmark> {
-    if (!(await isOwnedByUser(db, userId, input.bookId))) throw new NotFoundError();
+    if (!(await isAccessibleByUser(db, userId, input.bookId))) throw new NotFoundError();
 
     const insert = await db
         .prepare(

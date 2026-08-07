@@ -1,3 +1,4 @@
+using System.Linq;
 using Bunit;
 using LuminaChronica.Client.Models;
 using LuminaChronica.Client.Pages;
@@ -76,6 +77,31 @@ public class BookDetailPageTests : BunitContext
 
         cut.Find("#edit-visibility").Change("PRIVATE");
         Assert.Equal("PRIVATE", cut.Find("#edit-visibility").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void BookDetail_EditForm_VisibilitySelector_OffersSharedAndExplainsBorrowedReading()
+    {
+        // "Borrowed reading" (follow-up to #300) -- SHARED is now a real,
+        // book-only choice (see Models/Book.cs's BookVisibilityOption),
+        // distinct from Project/Shelf's plain PRIVATE/PUBLIC VisibilityOption.
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+
+        var options = cut.FindAll("#edit-visibility option").Select(o => o.GetAttribute("value")).ToList();
+        Assert.Equal(["PRIVATE", "SHARED", "PUBLIC"], options);
+
+        cut.Find("#edit-visibility").Change("SHARED");
+        Assert.Equal("SHARED", cut.Find("#edit-visibility").GetAttribute("value"));
+        Assert.Contains("können von jedem angemeldeten Nutzer vollständig gelesen werden", cut.Markup);
     }
 
     [Fact]

@@ -99,6 +99,25 @@ describe("GET /api/users/:username/public", () => {
         expect(json.data.books[0]).not.toHaveProperty("isFavorite");
     });
 
+    // "Borrowed reading" (follow-up to #300): SHARED books show the same
+    // cover+metadata teaser as PUBLIC ones on the public profile, tagged
+    // with visibility so the frontend can offer a "Lesen" button to a
+    // logged-in, non-owner viewer instead of the rating widget.
+    it("includes a SHARED book in the public listing, tagged with its visibility", async () => {
+        const bookId = await uploadBook(tokenA, true);
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "SHARED" }) },
+            env
+        );
+
+        const res = await app.request("/api/users/alice/public", {}, env);
+        const json = await readJson(res);
+
+        expect(json.data.books).toHaveLength(1);
+        expect(json.data.books[0]).toMatchObject({ id: bookId, visibility: "SHARED" });
+    });
+
     it("rejects an invalid visibility value", async () => {
         const bookId = await uploadBook(tokenA);
         const res = await app.request(
@@ -146,6 +165,30 @@ describe("GET /api/books/:id/cover and /api/projects/:id/cover (PUBLIC bypass)",
         await app.request(
             `/api/books/${bookId}`,
             { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+
+        const res = await app.request(`/api/books/${bookId}/file`, {}, env);
+        expect(res.status).toBe(401);
+    });
+
+    it("serves a SHARED book's cover with no Authorization header, same teaser as PUBLIC", async () => {
+        const bookId = await uploadBook(tokenA, true);
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "SHARED" }) },
+            env
+        );
+
+        const res = await app.request(`/api/books/${bookId}/cover`, {}, env);
+        expect(res.status).toBe(200);
+    });
+
+    it("never serves a SHARED book's FILE without auth (borrowed reading requires being logged in)", async () => {
+        const bookId = await uploadBook(tokenA);
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "SHARED" }) },
             env
         );
 

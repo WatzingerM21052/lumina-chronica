@@ -276,12 +276,19 @@ else
                     <div class="form-group">
                         <label for="edit-visibility">Sichtbarkeit</label>
                         <InputSelect id="edit-visibility" @bind-Value="_editForm.Visibility">
-                            @foreach (var option in VisibilityOption.Options)
+                            @foreach (var option in BookVisibilityOption.Options)
                             {
-                                <option value="@option">@VisibilityOption.For(option)</option>
+                                <option value="@option">@BookVisibilityOption.For(option)</option>
                             }
                         </InputSelect>
-                        <p class="text-muted">Öffentliche Bücher sind mit Cover und Beschreibung auf deinem öffentlichen Profil sichtbar — die Datei selbst bleibt privat.</p>
+                        @if (_editForm.Visibility == "SHARED")
+                        {
+                            <p class="text-muted">Geteilte Bücher können von jedem angemeldeten Nutzer vollständig gelesen werden (eigener Lesefortschritt und eigene Lesezeichen) — spart Speicherplatz, da niemand eine eigene Kopie hochladen muss. Cover und Beschreibung sind wie bei Öffentlich sichtbar.</p>
+                        }
+                        else
+                        {
+                            <p class="text-muted">Öffentliche Bücher sind mit Cover und Beschreibung auf deinem öffentlichen Profil sichtbar — die Datei selbst bleibt privat.</p>
+                        }
                     </div>
 
                     <div class="form-actions">

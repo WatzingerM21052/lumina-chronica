@@ -65,6 +65,24 @@ public class Book
     public BookFile? File { get; set; }
 }
 
+// Books alone offer SHARED ("borrowed reading" -- any logged-in user can
+// read the full book, with their own reading progress/bookmarks; see
+// backend/src/services/bookService.ts's findAccessibleBookRow). Projects
+// and Shelves still use the plain PRIVATE/PUBLIC VisibilityOption in
+// Project.cs since SHARED has no meaning for them.
+public static class BookVisibilityOption
+{
+    public static readonly IReadOnlyList<string> Options = ["PRIVATE", "SHARED", "PUBLIC"];
+
+    public static string For(string visibility) => visibility switch
+    {
+        "PRIVATE" => "Privat",
+        "SHARED" => "Geteilt (angemeldete Nutzer können lesen)",
+        "PUBLIC" => "Öffentlich",
+        _ => visibility,
+    };
+}
+
 // Mirrors backend/src/services/bookService.ts's BookFacets -- powers the
 // Library page's multi-select tag/genre filter dropdowns.
 public class BookFacets

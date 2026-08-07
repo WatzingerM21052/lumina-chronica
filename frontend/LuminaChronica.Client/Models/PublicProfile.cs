@@ -30,6 +30,11 @@ public class PublicBook
     [JsonPropertyName("language")]
     public string? Language { get; set; }
 
+    // "PUBLIC" (teaser only) or "SHARED" ("borrowed reading" -- a logged-in,
+    // non-owner viewer gets a "Lesen" button). PRIVATE books never appear here.
+    [JsonPropertyName("visibility")]
+    public string Visibility { get; set; } = "PUBLIC";
+
     [JsonPropertyName("averageRating")]
     public double? AverageRating { get; set; }
 

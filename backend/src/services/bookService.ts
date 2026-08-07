@@ -323,6 +323,30 @@ async function findOwnedBookRow(db: D1Database, ownerId: number, bookId: number)
         .first<BookRow>();
 }
 
+// Community "borrowed reading" (issue TBD, follow-up to Phase 1/#300): a
+// logged-in caller can read (not edit/delete/favorite/shelve) a book they
+// don't own if its owner marked it SHARED. Only getBook and
+// getBookFileObject use this -- every mutating function keeps using
+// findOwnedBookRow above, strictly owner-only.
+//
+// Can't reuse BOOK_ROW_COLUMNS here: its is_favorite subquery is correlated
+// against books.owner_id, which is only correct when the caller IS the
+// owner (true for every other use of that constant). A borrower reading
+// someone else's SHARED book would otherwise see the *owner's* favorite
+// flag mislabeled as their own -- favoriting stays owner-only in this
+// phase, so a borrower must always see is_favorite computed against their
+// own (necessarily absent) row, not leak the owner's.
+async function findAccessibleBookRow(db: D1Database, callerId: number, bookId: number): Promise<BookRow | null> {
+    return db
+        .prepare(
+            `SELECT id, title, author, description, cover_url, genre, language, visibility, created_at,
+                EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = ?) AS is_favorite
+             FROM books WHERE id = ? AND (owner_id = ? OR visibility = 'SHARED')`
+        )
+        .bind(callerId, bookId, callerId)
+        .first<BookRow>();
+}
+
 export async function addFavorite(db: D1Database, ownerId: number, bookId: number): Promise<void> {
     if (!(await findOwnedBookRow(db, ownerId, bookId))) throw new NotFoundError();
     await db.prepare("INSERT OR IGNORE INTO favorites (user_id, book_id) VALUES (?, ?)").bind(ownerId, bookId).run();
@@ -333,8 +357,12 @@ export async function removeFavorite(db: D1Database, ownerId: number, bookId: nu
     await db.prepare("DELETE FROM favorites WHERE user_id = ? AND book_id = ?").bind(ownerId, bookId).run();
 }
 
-export async function getBook(db: D1Database, ownerId: number, bookId: number): Promise<BookDetail | null> {
-    const row = await findOwnedBookRow(db, ownerId, bookId);
+// callerId, not ownerId: this is also the read path for a SHARED book
+// belonging to someone else (see findAccessibleBookRow above). Callers that
+// need strict ownership (updateBook/deleteBook/etc.) verify that themselves
+// via findOwnedBookRow before ever reaching this function.
+export async function getBook(db: D1Database, callerId: number, bookId: number): Promise<BookDetail | null> {
+    const row = await findAccessibleBookRow(db, callerId, bookId);
     return row ? loadDetail(db, row) : null;
 }
 
@@ -468,8 +496,8 @@ export async function deleteBook(db: D1Database, storage: R2Bucket, ownerId: num
     );
 }
 
-export async function getBookFileObject(db: D1Database, storage: R2Bucket, ownerId: number, bookId: number): Promise<{ object: R2ObjectBody; format: string } | null> {
-    const row = await findOwnedBookRow(db, ownerId, bookId);
+export async function getBookFileObject(db: D1Database, storage: R2Bucket, callerId: number, bookId: number): Promise<{ object: R2ObjectBody; format: string } | null> {
+    const row = await findAccessibleBookRow(db, callerId, bookId);
     if (!row) return null;
     const fileRow = await db.prepare("SELECT file_url, format FROM book_files WHERE book_id = ?").bind(bookId).first<{ file_url: string; format: string }>();
     if (!fileRow) return null;
@@ -488,7 +516,7 @@ export async function getBookCoverObject(db: D1Database, storage: R2Bucket, owne
         visibility: string;
     }>();
     if (!row || !row.cover_url) return null;
-    if (row.visibility !== "PUBLIC" && row.owner_id !== ownerId) return null;
+    if (row.visibility !== "PUBLIC" && row.visibility !== "SHARED" && row.owner_id !== ownerId) return null;
     return storage.get(row.cover_url);
 }
 
@@ -500,6 +528,7 @@ export type PublicBookSummary = {
     coverUrl: string | null;
     genre: string | null;
     language: string | null;
+    visibility: string;
     averageRating: number | null;
     ratingCount: number;
     myRating: number | null;
@@ -507,21 +536,28 @@ export type PublicBookSummary = {
 
 // Community Phase 1 (issue #300) -- deliberately excludes owner_id,
 // is_favorite, and every field only meaningful to the owner. No ownerId
-// param: visibility = 'PUBLIC' is the only access check, by design.
+// param: visibility IN ('PUBLIC', 'SHARED') is the only access check, by
+// design -- PRIVATE books never appear here regardless of caller.
 // Community Phase 3 (issue #307) added viewerId (nullable, same pattern as
 // followService.getFollowState) and the rating aggregate/myRating columns --
 // binding a null viewerId into `ratings.user_id = ?` never matches any row,
 // so an anonymous visitor correctly always gets myRating: null with no
 // branching needed.
+// "Borrowed reading" follow-up (issue TBD, after #300) -- SHARED books now
+// also appear here (same cover+metadata teaser an anonymous visitor already
+// saw for PUBLIC books), with `visibility` exposed so the frontend can show
+// a "Lesen" button only for a logged-in, non-owner viewer of a SHARED book.
+// Ratings stay PUBLIC-only by design (see ratingService.ts's NotPublicError) --
+// a SHARED book always reports averageRating: null, ratingCount: 0, myRating: null.
 export async function listPublicBooksByUsername(db: D1Database, username: string, viewerId: number | null): Promise<PublicBookSummary[]> {
     const rows = await db
         .prepare(
-            `SELECT books.id, books.title, books.author, books.description, books.cover_url, books.genre, books.language,
+            `SELECT books.id, books.title, books.author, books.description, books.cover_url, books.genre, books.language, books.visibility,
                 (SELECT AVG(rating) FROM ratings WHERE book_id = books.id) AS average_rating,
                 (SELECT COUNT(*) FROM ratings WHERE book_id = books.id) AS rating_count,
                 (SELECT rating FROM ratings WHERE book_id = books.id AND user_id = ?) AS my_rating
              FROM books JOIN users ON users.id = books.owner_id
-             WHERE users.username = ? AND users.deleted_at IS NULL AND books.visibility = 'PUBLIC'
+             WHERE users.username = ? AND users.deleted_at IS NULL AND books.visibility IN ('PUBLIC', 'SHARED')
              ORDER BY books.created_at DESC`
         )
         .bind(viewerId, username)
@@ -533,6 +569,7 @@ export async function listPublicBooksByUsername(db: D1Database, username: string
             cover_url: string | null;
             genre: string | null;
             language: string | null;
+            visibility: string;
             average_rating: number | null;
             rating_count: number;
             my_rating: number | null;
@@ -546,6 +583,7 @@ export async function listPublicBooksByUsername(db: D1Database, username: string
         coverUrl: row.cover_url ? `/api/books/${row.id}/cover` : null,
         genre: row.genre,
         language: row.language,
+        visibility: row.visibility,
         averageRating: row.average_rating,
         ratingCount: row.rating_count,
         myRating: row.my_rating,
