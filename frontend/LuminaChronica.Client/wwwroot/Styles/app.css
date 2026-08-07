@@ -1532,3 +1532,219 @@ select:focus-visible,
 .impressum-name:hover {
     color: var(--color-primary);
 }
+
+/* Community (v3.0, issues #300/#307/#310) -- PublicProfile.razor and
+   Discover.razor render their own book-card/project-card markup directly
+   (BookCard/ProjectCard's real components carry owner-only interactive
+   behavior like the favorite toggle, wrong for a stranger's view), so they
+   never get BookCard.razor.css/ProjectCard.razor.css's Blazor-scoped rules.
+   These global equivalents cover the shared structural pieces those two
+   pages actually need -- found missing entirely via live verification,
+   not caught by bUnit (which asserts markup/classes, not applied CSS). */
+.book-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    text-decoration: none;
+    color: var(--color-text-primary);
+}
+
+.book-card-cover {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius, 4px);
+    overflow: hidden;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.book-card:hover .book-card-cover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+}
+
+.book-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.book-card-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-disabled);
+}
+
+.book-card-cover-placeholder svg {
+    width: 40%;
+    height: 40%;
+}
+
+.book-card-title {
+    font-family: var(--font-family-display);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.book-card-author {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.book-card-normal {
+    width: 10rem;
+}
+
+.book-card-rating {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+}
+
+.book-card-rate-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.star-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--color-border);
+}
+
+.star-button.is-filled {
+    color: var(--color-gold-accent);
+}
+
+.star-button:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.project-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    text-decoration: none;
+    color: var(--color-text-primary);
+    width: 10rem;
+}
+
+.project-card-cover {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius, 4px);
+    overflow: hidden;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.project-card:hover .project-card-cover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+}
+
+.project-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.project-card-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-disabled);
+}
+
+.project-card-cover-placeholder svg {
+    width: 40%;
+    height: 40%;
+}
+
+.project-card-title {
+    font-family: var(--font-family-display);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-card-type {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
+.public-profile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.public-profile-avatar {
+    width: 5rem;
+    height: 5rem;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.public-profile-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-card);
+    font-size: 2rem;
+}
+
+.discover-user-results {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-2) 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.discover-user-results a {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    text-decoration: none;
+    color: var(--color-text-primary);
+}
+
+.discover-user-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.discover-user-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-card);
+    font-size: 1.1rem;
+}
