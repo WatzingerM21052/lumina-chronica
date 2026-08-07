@@ -30,6 +30,7 @@ else
         <button type="button" class="btn @(_activeTab == "overview" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "overview")">Übersicht</button>
         <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "characters")">Charaktere</button>
         <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "map")">Karte</button>
+        <button type="button" class="btn @(_activeTab == "timeline" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "timeline")">Zeitleiste</button>
     </div>
 
     @if (_activeTab == "overview")
@@ -156,7 +157,7 @@ else
             </div>
         }
     }
-    else
+    else if (_activeTab == "map")
     {
         <h2>Karte</h2>
 
@@ -259,6 +260,110 @@ else
             </div>
         }
     }
+    else
+    {
+        <div class="library-header">
+            <h2>Zeitleiste</h2>
+            <button type="button" class="btn btn-primary" @onclick="() => _showCreateEventForm = !_showCreateEventForm">
+                @(_showCreateEventForm ? "Abbrechen" : "Ereignis hinzufügen")
+            </button>
+        </div>
+
+        @if (_showCreateEventForm)
+        {
+            <EditForm Model="_createEventForm" OnValidSubmit="CreateTimelineEventAsync" class="book-form-card">
+                @if (_createEventErrorMessage is not null)
+                {
+                    <p class="form-error">@_createEventErrorMessage</p>
+                }
+                <div class="form-group">
+                    <label for="event-title">Titel</label>
+                    <InputText id="event-title" @bind-Value="_createEventForm.Title" />
+                </div>
+                <div class="form-group">
+                    <label for="event-date">Datum (frei, z.B. "Jahr 1247 der Dritten Ära")</label>
+                    <InputText id="event-date" @bind-Value="_createEventForm.Date" />
+                </div>
+                <div class="form-group">
+                    <label for="event-description">Beschreibung</label>
+                    <InputTextArea id="event-description" @bind-Value="_createEventForm.Description" />
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                </div>
+            </EditForm>
+        }
+
+        @if (_eventsErrorMessage is not null)
+        {
+            <p class="form-error">@_eventsErrorMessage</p>
+        }
+        else if (_events is null)
+        {
+            <LoadingIndicator Text="Zeitleiste wird geladen..." />
+        }
+        else if (_events.Count == 0)
+        {
+            <p class="text-muted">Dieses Projekt hat noch keine Ereignisse auf der Zeitleiste.</p>
+        }
+        else
+        {
+            <ol class="timeline">
+                @foreach (var (timelineEvent, index) in _events.Select((e, i) => (e, i)))
+                {
+                    <li class="timeline-event">
+                        @if (_editingEventId == timelineEvent.Id)
+                        {
+                            <EditForm Model="_editEventForm" OnValidSubmit="SaveTimelineEventAsync" class="timeline-event-card">
+                                @if (_editEventErrorMessage is not null)
+                                {
+                                    <p class="form-error">@_editEventErrorMessage</p>
+                                }
+                                <div class="form-group">
+                                    <label for="@($"event-edit-title-{timelineEvent.Id}")">Titel</label>
+                                    <InputText id="@($"event-edit-title-{timelineEvent.Id}")" @bind-Value="_editEventForm.Title" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="@($"event-edit-date-{timelineEvent.Id}")">Datum</label>
+                                    <InputText id="@($"event-edit-date-{timelineEvent.Id}")" @bind-Value="_editEventForm.Date" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="@($"event-edit-description-{timelineEvent.Id}")">Beschreibung</label>
+                                    <InputTextArea id="@($"event-edit-description-{timelineEvent.Id}")" @bind-Value="_editEventForm.Description" />
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">Speichern</button>
+                                    <button type="button" class="btn" @onclick="() => _editingEventId = null">Abbrechen</button>
+                                </div>
+                            </EditForm>
+                        }
+                        else
+                        {
+                            <div class="timeline-event-card">
+                                @if (!string.IsNullOrWhiteSpace(timelineEvent.Date))
+                                {
+                                    <div class="timeline-event-date">@timelineEvent.Date</div>
+                                }
+                                <div class="timeline-event-title">@timelineEvent.Title</div>
+                                @if (!string.IsNullOrWhiteSpace(timelineEvent.Description))
+                                {
+                                    <p>@timelineEvent.Description</p>
+                                }
+                                <div class="timeline-event-controls">
+                                    <div class="timeline-move-buttons">
+                                        <button type="button" class="btn" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="Nach oben">▲</button>
+                                        <button type="button" class="btn" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="Nach unten">▼</button>
+                                    </div>
+                                    <button type="button" class="btn" @onclick="() => StartEditingEvent(timelineEvent)">Bearbeiten</button>
+                                    <button type="button" class="btn" @onclick="() => DeleteTimelineEventAsync(timelineEvent.Id)">Löschen</button>
+                                </div>
+                            </div>
+                        }
+                    </li>
+                }
+            </ol>
+        }
+    }
 }
 
 @code {
@@ -298,7 +403,16 @@ else
     private int? _placingLocationId;
     private string? _positionErrorMessage;
 
-    protected override Task OnParametersSetAsync() => Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync());
+    private List<TimelineEvent>? _events;
+    private string? _eventsErrorMessage;
+    private bool _showCreateEventForm;
+    private string? _createEventErrorMessage;
+    private CreateTimelineEventRequest _createEventForm = new();
+    private int? _editingEventId;
+    private string? _editEventErrorMessage;
+    private UpdateTimelineEventRequest _editEventForm = new();
+
+    protected override Task OnParametersSetAsync() => Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync(), LoadTimelineEventsAsync());
 
     private async Task LoadProjectAsync()
     {
@@ -580,6 +694,85 @@ else
         else
         {
             _createLocationErrorMessage = response?.Error?.Message ?? "Ort konnte nicht erstellt werden.";
+        }
+    }
+
+    private async Task LoadTimelineEventsAsync()
+    {
+        _eventsErrorMessage = null;
+        var response = await ApiClient.GetAsync<List<TimelineEvent>>($"/api/projects/{Id}/timeline");
+        if (response is { Success: true, Data: not null })
+        {
+            _events = response.Data;
+        }
+        else
+        {
+            _eventsErrorMessage = response?.Error?.Message ?? "Zeitleiste konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task CreateTimelineEventAsync()
+    {
+        _createEventErrorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_createEventForm.Title))
+        {
+            _createEventErrorMessage = "Bitte gib einen Titel ein.";
+            return;
+        }
+
+        var response = await ApiClient.PostAsync<CreateTimelineEventRequest, TimelineEvent>($"/api/projects/{Id}/timeline", _createEventForm);
+        if (response is { Success: true, Data: not null })
+        {
+            _showCreateEventForm = false;
+            _createEventForm = new CreateTimelineEventRequest();
+            await LoadTimelineEventsAsync();
+        }
+        else
+        {
+            _createEventErrorMessage = response?.Error?.Message ?? "Ereignis konnte nicht erstellt werden.";
+        }
+    }
+
+    private void StartEditingEvent(TimelineEvent timelineEvent)
+    {
+        _editEventForm = new UpdateTimelineEventRequest { Title = timelineEvent.Title, Date = timelineEvent.Date, Description = timelineEvent.Description };
+        _editEventErrorMessage = null;
+        _editingEventId = timelineEvent.Id;
+    }
+
+    private async Task SaveTimelineEventAsync()
+    {
+        if (_editingEventId is not { } eventId) return;
+        _editEventErrorMessage = null;
+
+        var response = await ApiClient.PutAsync<UpdateTimelineEventRequest, TimelineEvent>($"/api/projects/{Id}/timeline/{eventId}", _editEventForm);
+        if (response is { Success: true, Data: not null })
+        {
+            _editingEventId = null;
+            await LoadTimelineEventsAsync();
+        }
+        else
+        {
+            _editEventErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+        }
+    }
+
+    private async Task DeleteTimelineEventAsync(int eventId)
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/projects/{Id}/timeline/{eventId}");
+        if (succeeded)
+        {
+            await LoadTimelineEventsAsync();
+        }
+    }
+
+    private async Task MoveTimelineEventAsync(int eventId, string direction)
+    {
+        var response = await ApiClient.PutAsync<MoveTimelineEventRequest, List<TimelineEvent>>($"/api/projects/{Id}/timeline/{eventId}/move", new MoveTimelineEventRequest { Direction = direction });
+        if (response is { Success: true, Data: not null })
+        {
+            _events = response.Data;
         }
     }
 

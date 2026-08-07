@@ -557,10 +557,14 @@ Backend: 154/154 Vitest tests passing (14 new). Frontend: 152/152 bUnit tests pa
 
 Backend: 170/170 Vitest tests passing (16 new). Frontend: 163/163 bUnit tests passing (11 new). **Live-verified against production** (2026-08-07): migration `0010_locations.sql` applied to real D1, backend redeployed, full map-upload/location-create-with-image/pin-placement/position-validation/cross-user-404/unplace/delete cycle exercised via direct API calls, including confirming `deleteProject` cascade-deletes a project's locations (0 orphaned rows). Verified via API, not the deployed UI, per the same reasoning as Phase 2 — a shared-browser tab risk isn't worth it when the API surface proves the same logic. Throwaway test accounts cleaned up afterward.
 
-### Phase 4 — Timeline (issue #257)
+### Phase 4 — Timeline (issue #257, PR #267)
 
-- [ ] `timeline_events` table (`date` as free-text, not a real `DATE` — a fictional world's calendar isn't real dates)
-- [ ] Timeline tab
+- [x] `timeline_events` table (`date` as free-text, not a real `DATE` — a fictional world's calendar isn't real dates)
+- [x] Timeline tab
+
+`ProjectDetail.razor`'s fourth tab renders a real vertical timeline — a gilt line with dot markers per event, reusing the existing brass/oxblood theme tokens — rather than a plain list, since the open question flagged when this phase was scoped ("does `timeline_events` need a manual order?") turned out to matter for more than sorting: it's also what makes reordering via move-up/move-down buttons possible. `moveTimelineEvent` swaps the adjacent event's `order_index` server-side in one atomic `db.batch()`. Editing happens inline in the timeline card itself, not a separate detail page — the lightest-weight Worldbuilding sub-resource so far (three text fields, no image).
+
+Backend: 185/185 Vitest tests passing (15 new). Frontend: 167/167 bUnit tests passing (4 new).
 
 ### Phase 5 — Lore & documents/images gallery (issue #258)
 
