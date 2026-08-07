@@ -1,0 +1,232 @@
+@page "/projects/{Id:int}"
+@attribute [Authorize]
+@implements IDisposable
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_project?.Title ?? "Projekt") — Lumina Chronica</PageTitle>
+
+<a href="projects">← Zurück zu den Projekten</a>
+
+@if (_loadErrorMessage is not null)
+{
+    <p class="form-error">@_loadErrorMessage</p>
+}
+else if (_project is null)
+{
+    <LoadingIndicator Text="Projekt wird geladen..." />
+}
+else
+{
+    <div class="book-detail-cover">
+        @if (_coverObjectUrl is not null)
+        {
+            <img src="@_coverObjectUrl" alt="@_project.Title" />
+        }
+        else
+        {
+            <div class="book-card-cover-placeholder">🌎</div>
+        }
+    </div>
+
+    @if (!_isEditing)
+    {
+        <h1>@_project.Title</h1>
+        <p class="text-muted">@ProjectTypeLabel.For(_project.Type)</p>
+        @if (!string.IsNullOrWhiteSpace(_project.Description))
+        {
+            <p>@_project.Description</p>
+        }
+        <div class="form-actions">
+            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+        </div>
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="Projekt wirklich löschen?"
+                       OnConfirm="DeleteProjectAsync" OnCancel="() => _confirmingDelete = false" />
+    }
+    else
+    {
+        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+            @if (_saveErrorMessage is not null)
+            {
+                <p class="form-error">@_saveErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="project-edit-cover">Cover ersetzen</label>
+                <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
+                     @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
+                     @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
+                    <InputFile id="project-edit-cover" OnChange="OnEditCoverSelected" />
+                    <span class="dropzone-label">Cover hierher ziehen oder klicken zum Auswählen</span>
+                </div>
+                @if (_coverSaveErrorMessage is not null)
+                {
+                    <p class="form-error">@_coverSaveErrorMessage</p>
+                }
+            </div>
+            <div class="form-group">
+                <label for="project-edit-title">Titel</label>
+                <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
+            </div>
+            <div class="form-group">
+                <label for="project-edit-type">Art</label>
+                <InputSelect id="project-edit-type" @bind-Value="_editForm.Type">
+                    @foreach (var type in ProjectTypeLabel.Options)
+                    {
+                        <option value="@type">@ProjectTypeLabel.For(type)</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="form-group">
+                <label for="project-edit-description">Beschreibung</label>
+                <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+            </div>
+        </EditForm>
+    }
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Project? _project;
+    private string? _loadErrorMessage;
+    private string? _coverObjectUrl;
+
+    private bool _isEditing;
+    private string? _saveErrorMessage;
+    private string? _coverSaveErrorMessage;
+    private IBrowserFile? _selectedEditCover;
+    private bool _isDraggingCover;
+    private EditFormModel _editForm = new();
+    private bool _confirmingDelete;
+
+    protected override Task OnParametersSetAsync() => LoadProjectAsync();
+
+    private async Task LoadProjectAsync()
+    {
+        _loadErrorMessage = null;
+        var response = await ApiClient.GetAsync<Project>($"/api/projects/{Id}");
+        if (response is { Success: true, Data: not null })
+        {
+            _project = response.Data;
+            await LoadCoverAsync();
+        }
+        else
+        {
+            _loadErrorMessage = response?.Error?.Message ?? "Projekt konnte nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadCoverAsync()
+    {
+        if (_coverObjectUrl is not null)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
+            _coverObjectUrl = null;
+        }
+
+        if (_project?.CoverUrl is null) return;
+
+        var result = await ApiClient.GetBytesAsync(_project.CoverUrl);
+        if (result is { } cover)
+        {
+            _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+        }
+    }
+
+    private void StartEditing()
+    {
+        if (_project is null) return;
+        _editForm = new EditFormModel { Title = _project.Title, Type = _project.Type, Description = _project.Description };
+        _saveErrorMessage = null;
+        _coverSaveErrorMessage = null;
+        _selectedEditCover = null;
+        _isEditing = true;
+    }
+
+    private void OnEditCoverSelected(InputFileChangeEventArgs e) => _selectedEditCover = e.File;
+
+    private async Task SaveAsync()
+    {
+        _saveErrorMessage = null;
+        _coverSaveErrorMessage = null;
+
+        var response = await ApiClient.PutAsync<UpdateProjectRequest, Project>($"/api/projects/{Id}", new UpdateProjectRequest
+        {
+            Title = _editForm.Title,
+            Type = _editForm.Type,
+            Description = _editForm.Description,
+        });
+
+        if (response is not { Success: true, Data: not null })
+        {
+            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            return;
+        }
+
+        _project = response.Data;
+
+        if (_selectedEditCover is not null)
+        {
+            const long maxCoverBytes = 5 * 1024 * 1024;
+            using var content = new MultipartFormDataContent();
+            var streamContent = new StreamContent(_selectedEditCover.OpenReadStream(maxCoverBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedEditCover.ContentType) ? "application/octet-stream" : _selectedEditCover.ContentType);
+            content.Add(streamContent, "\"cover\"", $"\"{_selectedEditCover.Name}\"");
+
+            var coverResponse = await ApiClient.PutMultipartAsync<Project>($"/api/projects/{Id}/cover", content);
+            if (coverResponse is { Success: true, Data: not null })
+            {
+                _project = coverResponse.Data;
+                await LoadCoverAsync();
+            }
+            else
+            {
+                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? "Cover konnte nicht ersetzt werden.";
+                return;
+            }
+        }
+
+        _isEditing = false;
+    }
+
+    private async Task DeleteProjectAsync()
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/projects/{Id}");
+        if (succeeded)
+        {
+            NavigationManager.NavigateTo("projects");
+        }
+        else
+        {
+            _confirmingDelete = false;
+            _loadErrorMessage = "Löschen fehlgeschlagen.";
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_coverObjectUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
+        }
+    }
+
+    private class EditFormModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Type { get; set; } = "WORLD";
+        public string? Description { get; set; }
+    }
+}
