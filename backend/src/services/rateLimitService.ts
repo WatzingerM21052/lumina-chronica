@@ -23,10 +23,19 @@ function getClientIp(c: { req: { header(name: string): string | undefined } }): 
     return c.req.header("CF-Connecting-IP") ?? "unknown";
 }
 
+// Reads through a "first-primary" session, not the plain db handle -- D1
+// replicates reads to regional replicas by default, and a plain read here
+// could observe a replica that lags behind another request's very recent
+// write, letting the counter's own writes silently outrun its own checks.
+// Confirmed live against production: without this, attempt_count kept
+// incrementing correctly on the primary but checkLimit never saw it catch
+// up, so the 429 never fired.
 async function checkLimit(db: D1Database, route: string, ip: string, identifier: string, maxAttempts: number): Promise<void> {
+    const nowIso = new Date().toISOString();
     const row = await db
-        .prepare("SELECT attempt_count, expires_at FROM auth_rate_limits WHERE route = ? AND ip = ? AND identifier = ? AND expires_at > CURRENT_TIMESTAMP")
-        .bind(route, ip, identifier)
+        .withSession("first-primary")
+        .prepare("SELECT attempt_count, expires_at FROM auth_rate_limits WHERE route = ? AND ip = ? AND identifier = ? AND expires_at > ?")
+        .bind(route, ip, identifier, nowIso)
         .first<ThrottleRow>();
 
     if (!row || row.attempt_count < maxAttempts) return;
@@ -37,18 +46,26 @@ async function checkLimit(db: D1Database, route: string, ip: string, identifier:
 
 // Records one attempt against the window, starting a fresh window if the
 // previous one expired. A single atomic UPSERT rather than read-then-write.
+// The window-expiry check compares against a JS-computed ISO timestamp
+// (nowIso), not SQLite's CURRENT_TIMESTAMP -- CURRENT_TIMESTAMP renders as
+// "YYYY-MM-DD HH:MM:SS" (space-separated, no offset) while expires_at is
+// stored as toISOString()'s "YYYY-MM-DDTHH:MM:SS.sssZ"; comparing the two
+// as text is a silent bug ('T' > ' ' in ASCII, so expires_at > CURRENT_TIMESTAMP
+// was always true and the window never actually expired). Binding both
+// sides in the same format sidesteps the mismatch entirely.
 async function recordAttempt(db: D1Database, route: string, ip: string, identifier: string): Promise<void> {
+    const nowIso = new Date().toISOString();
     const freshExpiresAt = new Date(Date.now() + WINDOW_MS).toISOString();
     await db
         .prepare(
             `INSERT INTO auth_rate_limits (route, ip, identifier, attempt_count, expires_at)
-             VALUES (?, ?, ?, 1, ?)
+             VALUES (?1, ?2, ?3, 1, ?4)
              ON CONFLICT(route, ip, identifier) DO UPDATE SET
-                 attempt_count = CASE WHEN expires_at > CURRENT_TIMESTAMP THEN attempt_count + 1 ELSE 1 END,
-                 expires_at = CASE WHEN expires_at > CURRENT_TIMESTAMP THEN expires_at ELSE excluded.expires_at END,
+                 attempt_count = CASE WHEN expires_at > ?5 THEN attempt_count + 1 ELSE 1 END,
+                 expires_at = CASE WHEN expires_at > ?5 THEN expires_at ELSE ?4 END,
                  updated_at = CURRENT_TIMESTAMP`
         )
-        .bind(route, ip, identifier, freshExpiresAt)
+        .bind(route, ip, identifier, freshExpiresAt, nowIso)
         .run();
 }
 
