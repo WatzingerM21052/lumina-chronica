@@ -53,15 +53,28 @@ export type SaveProgressInput = {
 export async function saveProgress(db: D1Database, userId: number, input: SaveProgressInput): Promise<ReadingProgress> {
     if (!(await isOwnedByUser(db, userId, input.bookId))) throw new NotFoundError();
 
-    await db
-        .prepare(
-            `INSERT INTO reading_progress (user_id, book_id, chapter, position, percentage, last_opened)
-             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-             ON CONFLICT(user_id, book_id) DO UPDATE SET
-                chapter = excluded.chapter, position = excluded.position, percentage = excluded.percentage, last_opened = CURRENT_TIMESTAMP`
-        )
-        .bind(userId, input.bookId, input.chapter ?? null, input.position ?? null, input.percentage)
-        .run();
+    await db.batch([
+        db
+            .prepare(
+                `INSERT INTO reading_progress (user_id, book_id, chapter, position, percentage, last_opened)
+                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                 ON CONFLICT(user_id, book_id) DO UPDATE SET
+                    chapter = excluded.chapter, position = excluded.position, percentage = excluded.percentage, last_opened = CURRENT_TIMESTAMP`
+            )
+            .bind(userId, input.bookId, input.chapter ?? null, input.position ?? null, input.percentage),
+        // Records today as an active reading day -- see 0007_extended_statistics.sql.
+        // A plain INSERT here would race the UNIQUE(user_id, activity_date)
+        // constraint on the second save of the same day; upserting instead
+        // of ignoring also lets event_count track roughly how much activity
+        // happened that day, used for the Lesekalender heatmap's intensity.
+        db
+            .prepare(
+                `INSERT INTO reading_activity (user_id, activity_date, event_count)
+                 VALUES (?, date('now'), 1)
+                 ON CONFLICT(user_id, activity_date) DO UPDATE SET event_count = event_count + 1`
+            )
+            .bind(userId),
+    ]);
 
     const progress = await getProgress(db, userId, input.bookId);
     if (!progress) throw new Error("Reading progress disappeared right after saving.");
