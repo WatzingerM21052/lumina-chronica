@@ -8,18 +8,29 @@ namespace LuminaChronica.Client.Tests;
 
 public class ProjectDetailPageTests : BunitContext
 {
+    public ProjectDetailPageTests()
+    {
+        // Loose mode: only the map-with-content test actually exercises the
+        // blobUrl.js interop (a real mapUrl); every other test's mapUrl is
+        // null so LoadMapAsync short-circuits before touching JS.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     private const string ProjectJson = """{"success":true,"data":{"id":1,"title":"Aetherfall","description":"Ein sky-shattered Kontinent","type":"WORLD","coverUrl":null,"mapUrl":null,"visibility":"PRIVATE","createdAt":"2026-01-01"}}""";
     private const string EmptyCharactersJson = """{"success":true,"data":[]}""";
+    private const string EmptyLocationsJson = """{"success":true,"data":[]}""";
 
     private RoutedFakeHttpMessageHandler UseDefaultRoutes()
     {
         var handler = new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
         return handler;
     }
 
@@ -57,11 +68,13 @@ public class ProjectDetailPageTests : BunitContext
                 return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":true}""");
             })
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
@@ -93,11 +106,13 @@ public class ProjectDetailPageTests : BunitContext
                     """{"success":true,"data":{"id":1,"title":"Aetherfall Reborn","description":"Ein sky-shattered Kontinent","type":"RPG","coverUrl":null,"mapUrl":null,"visibility":"PRIVATE","createdAt":"2026-01-01"}}""");
             })
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
@@ -127,11 +142,13 @@ public class ProjectDetailPageTests : BunitContext
             .WhenPathEndsWith(
                 "/characters",
                 """{"success":true,"data":[{"id":5,"projectId":1,"name":"Elarion","description":null,"imageUrl":null,"age":null,"origin":"The Silver Vale","personality":null,"biography":null,"createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Charaktere").Click();
@@ -153,11 +170,13 @@ public class ProjectDetailPageTests : BunitContext
                     """{"success":true,"data":{"id":5,"projectId":1,"name":"Elarion","description":null,"imageUrl":null,"age":null,"origin":null,"personality":null,"biography":null,"createdAt":"2026-01-01"}}""");
             })
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/projects/1", ProjectJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Charaktere").Click();
@@ -167,5 +186,95 @@ public class ProjectDetailPageTests : BunitContext
 
         Assert.Equal(HttpMethod.Post, createRequest?.Method);
         Assert.Equal("/api/projects/1/characters", createRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void ProjectDetail_MapTab_ShowsUploadDropzone_WhenNoMapSet()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Karte").Click();
+
+        Assert.Contains("Kartenbild hochladen", cut.Markup);
+        Assert.Contains("Dieses Projekt hat noch keine Orte", cut.Markup);
+    }
+
+    [Fact]
+    public void ProjectDetail_MapTab_RendersLocationCardsFromApiResponse()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith(
+                "/locations",
+                """{"success":true,"data":[{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":42.5,"y":17.25,"createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Karte").Click();
+
+        Assert.Contains("Ashen Hollow", cut.Markup);
+        Assert.Single(cut.FindAll("a.project-card"));
+    }
+
+    [Fact]
+    public void ProjectDetail_CreateLocationForm_SubmitsNameAndReloadsList()
+    {
+        HttpRequestMessage? createRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post, r =>
+            {
+                createRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(
+                    """{"success":true,"data":{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":null,"y":null,"createdAt":"2026-01-01"}}""");
+            })
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Karte").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Ort hinzufügen").Click();
+        cut.Find("#location-name").Change("Ashen Hollow");
+        cut.Find("form").Submit();
+
+        Assert.Equal(HttpMethod.Post, createRequest?.Method);
+        Assert.Equal("/api/projects/1/locations", createRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void ProjectDetail_MapTab_RendersPinForPlacedLocation_WhenMapIsSet()
+    {
+        var projectWithMap = """{"success":true,"data":{"id":1,"title":"Aetherfall","description":"Ein sky-shattered Kontinent","type":"WORLD","coverUrl":null,"mapUrl":"/api/projects/1/map","visibility":"PRIVATE","createdAt":"2026-01-01"}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith(
+                "/locations",
+                """{"success":true,"data":[{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":42.5,"y":17.25,"createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/map", "fake map bytes", "image/jpeg")
+            .WhenPathEndsWith("/projects/1", projectWithMap);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+        JSInterop.SetupModule("./js/blobUrl.js").Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-map-url");
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Karte").Click();
+
+        var pin = cut.Find("a.map-pin");
+        Assert.Contains("left:42.5%", pin.GetAttribute("style"));
+        Assert.Contains("top:17.25%", pin.GetAttribute("style"));
     }
 }

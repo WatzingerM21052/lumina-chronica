@@ -25,6 +25,7 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<BlobUrlService>();
+builder.Services.AddScoped<ElementMetricsService>();
 builder.Services.AddScoped<ScrollTrackerService>();
 builder.Services.AddScoped<TextPaginatorService>();
 builder.Services.AddScoped<ReaderSettingsService>();

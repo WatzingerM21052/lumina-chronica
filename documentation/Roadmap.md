@@ -546,10 +546,16 @@ Character management nested under a project — no `owner_id` of its own, access
 
 Backend: 154/154 Vitest tests passing (14 new). Frontend: 152/152 bUnit tests passing (8 new). **Live-verified against production** (2026-08-07): migration `0009_characters.sql` applied to real D1, backend redeployed, full character create-with-image/list/image-fetch/update/cross-user-404/delete cycle exercised via direct API calls, including confirming `deleteProject` cascade-deletes a project's characters (0 orphaned rows after delete). Verified purely via API this time, not through the deployed UI — a browser-based check picked up an already-active real session in the shared browser instead of the intended throwaway account (no data was read beyond a project list/profile page, nothing was created/edited/deleted; the account's actual project was confirmed unchanged, `updated_at` still equal to `created_at`). Throwaway test accounts cleaned up afterward.
 
-### Phase 3 — Locations & map (issue #256)
+### Phase 3 — Locations & map (issue #256, PR #265)
 
-- [ ] `locations` table (with `x`/`y` pin coordinates) + `projects.map_url`
-- [ ] Map tab: upload a map image, click-to-place location pins (percentage-based, no existing UI pattern in the codebase to copy), pin click-through to the location
+- [x] `locations` table (with `x`/`y` pin coordinates) + `projects.map_url`
+- [x] Map tab: upload a map image, click-to-place location pins (percentage-based, no existing UI pattern in the codebase to copy), pin click-through to the location
+
+`ProjectDetail.razor` gained a third tab (Karte) covering both Locations and the Map together, since the spec bundles them as one phase — an upload dropzone when the project has no map yet, otherwise the map image with pin overlays plus a plain location list/create form below it. Pin placement needed no JS interop for the click itself (`MouseEventArgs.OffsetX`/`OffsetY` is native), only a small new `ElementMetricsService`/`elementMetrics.js` to read the map image's rendered pixel size — the one genuinely new interaction pattern this phase needed, exactly as flagged when Phase 3 was scoped.
+
+**Real bug caught by the new tests, not a pre-existing one**: pin coordinates interpolated directly into the inline CSS `style` attribute rendered with a comma decimal separator under a German locale (`left:42,5%`) — invalid CSS, silently misplacing every pin with no visible error. Same class of bug as the documented reading-progress decimal-separator issue; fixed with `CultureInfo.InvariantCulture`, the project's established pattern for anything landing in markup. See `Architecture.md`'s row for detail.
+
+Backend: 170/170 Vitest tests passing (16 new). Frontend: 163/163 bUnit tests passing (11 new).
 
 ### Phase 4 — Timeline (issue #257)
 

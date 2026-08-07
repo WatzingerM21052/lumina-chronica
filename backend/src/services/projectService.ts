@@ -1,15 +1,15 @@
 // Projects ("Worldbuilding") -- v2.0, Phase 1 (issue #254). See
 // documentation/Architecture.md and documentation/Database.md for the
-// schema. R2 key layout: projects/{project-id}/cover.{ext}, mirroring
-// books/{book-id}/cover.{ext} and shelves/{shelf-id}/cover.{ext}.
+// schema. R2 key layout: projects/{project-id}/cover.{ext} and
+// projects/{project-id}/map.{ext}, mirroring books/{book-id}/cover.{ext}
+// and shelves/{shelf-id}/cover.{ext}.
 //
 // Ownership-checked CRUD shape mirrors shelfService.ts, the closest existing
-// analog (owner-scoped resource with an optional cover image). `map_url` is
-// a real column from this migration on, but is only ever set starting in
-// Phase 3 (Locations & Map, issue #256) -- untouched here.
+// analog (owner-scoped resource with an optional cover image).
 
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 import { deleteCharactersForProject } from "./characterService";
+import { deleteLocationsForProject } from "./locationService";
 import { NotFoundError } from "./errors";
 
 export { NotFoundError, ValidationError };
@@ -42,6 +42,10 @@ type ProjectRow = {
 
 function r2ProjectCoverKey(projectId: number, ext: string): string {
     return `projects/${projectId}/cover.${ext}`;
+}
+
+function r2ProjectMapKey(projectId: number, ext: string): string {
+    return `projects/${projectId}/map.${ext}`;
 }
 
 async function findOwnedProjectRow(db: D1Database, ownerId: number, projectId: number): Promise<ProjectRow | null> {
@@ -153,15 +157,39 @@ export async function updateProjectCover(db: D1Database, storage: R2Bucket, owne
     return getProject(db, ownerId, projectId);
 }
 
+// Separate from updateProject (JSON metadata only) and updateProjectCover
+// (a different R2 slot) -- mirrors updateProjectCover exactly, including
+// best-effort cleanup of the old R2 object.
+export async function updateProjectMap(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number, map: File): Promise<ProjectSummary> {
+    const row = await findOwnedProjectRow(db, ownerId, projectId);
+    if (!row) throw new NotFoundError();
+
+    const mapExt = validateFile(map, ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, "Map image");
+    const mapKey = r2ProjectMapKey(projectId, mapExt);
+    const previousMapKey = row.map_url;
+
+    await storage.put(mapKey, await map.arrayBuffer(), { httpMetadata: { contentType: map.type || undefined } });
+    await db.prepare("UPDATE projects SET map_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(mapKey, projectId).run();
+
+    if (previousMapKey && previousMapKey !== mapKey) {
+        await storage.delete(previousMapKey).catch((err) => {
+            console.error(`Failed to delete old R2 map ${previousMapKey} after replacing project ${projectId}'s map:`, err);
+        });
+    }
+
+    return getProject(db, ownerId, projectId);
+}
+
 export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number): Promise<void> {
     const row = await findOwnedProjectRow(db, ownerId, projectId);
     if (!row) throw new NotFoundError();
 
-    // Later phases (locations, timeline_events, lore_entries, project_files,
+    // Later phases (timeline_events, lore_entries, project_files,
     // project_books, character_relationships) must add their own cleanup
     // call here too, before the DELETE below -- real D1 enforces foreign
     // keys, same lesson as deleteBook/deleteShelf.
     await deleteCharactersForProject(db, storage, projectId);
+    await deleteLocationsForProject(db, storage, projectId);
     await db.prepare("DELETE FROM projects WHERE id = ?").bind(projectId).run();
 
     for (const key of [row.cover_url, row.map_url]) {
@@ -176,4 +204,10 @@ export async function getProjectCoverObject(db: D1Database, storage: R2Bucket, o
     const row = await findOwnedProjectRow(db, ownerId, projectId);
     if (!row || !row.cover_url) return null;
     return storage.get(row.cover_url);
+}
+
+export async function getProjectMapObject(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number): Promise<R2ObjectBody | null> {
+    const row = await findOwnedProjectRow(db, ownerId, projectId);
+    if (!row || !row.map_url) return null;
+    return storage.get(row.map_url);
 }

@@ -1,6 +1,7 @@
 @page "/projects/{Id:int}"
 @attribute [Authorize]
 @implements IDisposable
+@using System.Globalization
 @using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
@@ -8,6 +9,7 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject ElementMetricsService ElementMetricsService
 @inject NavigationManager NavigationManager
 
 <PageTitle>@(_project?.Title ?? "Projekt") — Lumina Chronica</PageTitle>
@@ -27,6 +29,7 @@ else
     <div class="form-actions">
         <button type="button" class="btn @(_activeTab == "overview" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "overview")">Übersicht</button>
         <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "characters")">Charaktere</button>
+        <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "map")">Karte</button>
     </div>
 
     @if (_activeTab == "overview")
@@ -101,7 +104,7 @@ else
             </EditForm>
         }
     }
-    else
+    else if (_activeTab == "characters")
     {
         <div class="library-header">
             <h2>Charaktere</h2>
@@ -153,6 +156,109 @@ else
             </div>
         }
     }
+    else
+    {
+        <h2>Karte</h2>
+
+        @if (_mapObjectUrl is not null)
+        {
+            <div class="map-wrapper">
+                <img @ref="_mapImageRef" src="@_mapObjectUrl" alt="Karte von @_project.Title" class="map-image"
+                     @onclick="OnMapClickAsync" style="@(_placingLocationId is not null ? "cursor: crosshair;" : "")" />
+                @if (_locations is not null)
+                {
+                    @foreach (var location in _locations.Where(l => l.X is not null && l.Y is not null))
+                    {
+                        <a class="map-pin" style="@PinStyle(location)" href="@($"projects/{Id}/locations/{location.Id}")" title="@location.Name">📍</a>
+                    }
+                }
+            </div>
+            @if (_placingLocationId is not null)
+            {
+                <p class="text-muted">Klicke auf die Karte, um "@_locations?.FirstOrDefault(l => l.Id == _placingLocationId)?.Name" zu platzieren. <button type="button" class="btn" @onclick="() => _placingLocationId = null">Abbrechen</button></p>
+            }
+            @if (_positionErrorMessage is not null)
+            {
+                <p class="form-error">@_positionErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="map-replace">Karte ersetzen</label>
+                <InputFile id="map-replace" OnChange="OnMapSelected" />
+            </div>
+        }
+        else
+        {
+            <div class="form-group">
+                <label for="map-upload">Kartenbild hochladen</label>
+                <div class="dropzone @(_isDraggingMap ? "dropzone--active" : "")"
+                     @ondragenter="() => _isDraggingMap = true" @ondragleave="() => _isDraggingMap = false"
+                     @ondragover:preventDefault @ondrop="() => _isDraggingMap = false">
+                    <InputFile id="map-upload" OnChange="OnMapSelected" />
+                    <span class="dropzone-label">Kartenbild hierher ziehen oder klicken zum Auswählen</span>
+                </div>
+            </div>
+        }
+        @if (_mapSaveErrorMessage is not null)
+        {
+            <p class="form-error">@_mapSaveErrorMessage</p>
+        }
+
+        <div class="library-header">
+            <h2>Orte</h2>
+            <button type="button" class="btn btn-primary" @onclick="() => _showCreateLocationForm = !_showCreateLocationForm">
+                @(_showCreateLocationForm ? "Abbrechen" : "Ort hinzufügen")
+            </button>
+        </div>
+
+        @if (_showCreateLocationForm)
+        {
+            <EditForm Model="_createLocationForm" OnValidSubmit="CreateLocationAsync" class="book-form-card">
+                @if (_createLocationErrorMessage is not null)
+                {
+                    <p class="form-error">@_createLocationErrorMessage</p>
+                }
+                <div class="form-group">
+                    <label for="location-name">Name</label>
+                    <InputText id="location-name" @bind-Value="_createLocationForm.Name" />
+                </div>
+                <div class="form-group">
+                    <label for="location-image">Bild (optional)</label>
+                    <InputFile id="location-image" OnChange="OnLocationImageSelected" />
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                </div>
+            </EditForm>
+        }
+
+        @if (_locationsErrorMessage is not null)
+        {
+            <p class="form-error">@_locationsErrorMessage</p>
+        }
+        else if (_locations is null)
+        {
+            <LoadingIndicator Text="Orte werden geladen..." />
+        }
+        else if (_locations.Count == 0)
+        {
+            <p class="text-muted">Dieses Projekt hat noch keine Orte.</p>
+        }
+        else
+        {
+            <div class="library-grid">
+                @foreach (var location in _locations)
+                {
+                    <div class="shelf-book-entry">
+                        <LocationCard Location="location" />
+                        @if (location.X is null && _mapObjectUrl is not null)
+                        {
+                            <button type="button" class="btn shelf-book-remove" @onclick="() => _placingLocationId = location.Id">Auf Karte platzieren</button>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
 }
 
 @code {
@@ -179,7 +285,20 @@ else
     private CreateCharacterFormModel _createCharacterForm = new();
     private IBrowserFile? _selectedCharacterImage;
 
-    protected override Task OnParametersSetAsync() => Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync());
+    private string? _mapObjectUrl;
+    private bool _isDraggingMap;
+    private string? _mapSaveErrorMessage;
+    private ElementReference _mapImageRef;
+    private List<Location>? _locations;
+    private string? _locationsErrorMessage;
+    private bool _showCreateLocationForm;
+    private string? _createLocationErrorMessage;
+    private CreateLocationFormModel _createLocationForm = new();
+    private IBrowserFile? _selectedLocationImage;
+    private int? _placingLocationId;
+    private string? _positionErrorMessage;
+
+    protected override Task OnParametersSetAsync() => Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync());
 
     private async Task LoadProjectAsync()
     {
@@ -189,6 +308,7 @@ else
         {
             _project = response.Data;
             await LoadCoverAsync();
+            await LoadMapAsync();
         }
         else
         {
@@ -335,11 +455,143 @@ else
         }
     }
 
+    private async Task LoadMapAsync()
+    {
+        if (_mapObjectUrl is not null)
+        {
+            await BlobUrlService.RevokeObjectUrlAsync(_mapObjectUrl);
+            _mapObjectUrl = null;
+        }
+
+        if (_project?.MapUrl is null) return;
+
+        var result = await ApiClient.GetBytesAsync(_project.MapUrl);
+        if (result is { } map)
+        {
+            _mapObjectUrl = await BlobUrlService.CreateObjectUrlAsync(map.Bytes, map.ContentType);
+        }
+    }
+
+    private async Task OnMapSelected(InputFileChangeEventArgs e)
+    {
+        _mapSaveErrorMessage = null;
+
+        const long maxMapBytes = 5 * 1024 * 1024;
+        using var content = new MultipartFormDataContent();
+        var streamContent = new StreamContent(e.File.OpenReadStream(maxMapBytes));
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(e.File.ContentType) ? "application/octet-stream" : e.File.ContentType);
+        content.Add(streamContent, "\"map\"", $"\"{e.File.Name}\"");
+
+        var response = await ApiClient.PutMultipartAsync<Project>($"/api/projects/{Id}/map", content);
+        if (response is { Success: true, Data: not null })
+        {
+            _project = response.Data;
+            await LoadMapAsync();
+        }
+        else
+        {
+            _mapSaveErrorMessage = response?.Error?.Message ?? "Karte konnte nicht hochgeladen werden.";
+        }
+    }
+
+    private async Task OnMapClickAsync(MouseEventArgs e)
+    {
+        if (_placingLocationId is not { } locationId) return;
+        _positionErrorMessage = null;
+
+        var size = await ElementMetricsService.GetElementSizeAsync(_mapImageRef);
+        if (size.Width <= 0 || size.Height <= 0) return;
+
+        var x = Math.Clamp(e.OffsetX / size.Width * 100, 0, 100);
+        var y = Math.Clamp(e.OffsetY / size.Height * 100, 0, 100);
+
+        var response = await ApiClient.PutAsync<UpdateLocationPositionRequest, Location>($"/api/projects/{Id}/locations/{locationId}/position", new UpdateLocationPositionRequest
+        {
+            X = x,
+            Y = y,
+        });
+
+        if (response is { Success: true, Data: not null })
+        {
+            _placingLocationId = null;
+            await LoadLocationsAsync();
+        }
+        else
+        {
+            _positionErrorMessage = response?.Error?.Message ?? "Position konnte nicht gespeichert werden.";
+        }
+    }
+
+    // Interpolating a double directly into an @-block formats it with the
+    // current culture -- under a German locale that's a comma decimal
+    // separator ("42,5%"), which is invalid CSS and silently drops the pin
+    // to the wrong spot. Same class of bug as the reading-progress
+    // decimal-separator fix (see Architecture.md); always InvariantCulture
+    // for anything landing in markup/CSS/query strings.
+    private static string PinStyle(Location location) =>
+        $"left:{location.X?.ToString("0.##", CultureInfo.InvariantCulture)}%; top:{location.Y?.ToString("0.##", CultureInfo.InvariantCulture)}%;";
+
+    private async Task LoadLocationsAsync()
+    {
+        _locationsErrorMessage = null;
+        var response = await ApiClient.GetAsync<List<Location>>($"/api/projects/{Id}/locations");
+        if (response is { Success: true, Data: not null })
+        {
+            _locations = response.Data;
+        }
+        else
+        {
+            _locationsErrorMessage = response?.Error?.Message ?? "Orte konnten nicht geladen werden.";
+        }
+    }
+
+    private void OnLocationImageSelected(InputFileChangeEventArgs e) => _selectedLocationImage = e.File;
+
+    private async Task CreateLocationAsync()
+    {
+        _createLocationErrorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_createLocationForm.Name))
+        {
+            _createLocationErrorMessage = "Bitte gib einen Namen ein.";
+            return;
+        }
+
+        const long maxImageBytes = 5 * 1024 * 1024;
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(_createLocationForm.Name), "\"name\"" }
+        };
+        if (_selectedLocationImage is not null)
+        {
+            var streamContent = new StreamContent(_selectedLocationImage.OpenReadStream(maxImageBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedLocationImage.ContentType) ? "application/octet-stream" : _selectedLocationImage.ContentType);
+            content.Add(streamContent, "\"image\"", $"\"{_selectedLocationImage.Name}\"");
+        }
+
+        var response = await ApiClient.PostMultipartAsync<Location>($"/api/projects/{Id}/locations", content);
+        if (response is { Success: true, Data: not null })
+        {
+            _showCreateLocationForm = false;
+            _createLocationForm = new CreateLocationFormModel();
+            _selectedLocationImage = null;
+            await LoadLocationsAsync();
+        }
+        else
+        {
+            _createLocationErrorMessage = response?.Error?.Message ?? "Ort konnte nicht erstellt werden.";
+        }
+    }
+
     public void Dispose()
     {
         if (_coverObjectUrl is not null)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
+        }
+        if (_mapObjectUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_mapObjectUrl);
         }
     }
 
@@ -351,6 +603,11 @@ else
     }
 
     private class CreateCharacterFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private class CreateLocationFormModel
     {
         public string Name { get; set; } = string.Empty;
     }
