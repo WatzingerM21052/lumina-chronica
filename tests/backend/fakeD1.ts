@@ -77,7 +77,7 @@ export function createFakeD1(): D1Database {
         db.exec(readFileSync(path.join(migrationsDir, file), "utf8"));
     }
 
-    return {
+    const handle = {
         prepare(sql: string) {
             return new FakeD1PreparedStatement(db, sql);
         },
@@ -86,5 +86,12 @@ export function createFakeD1(): D1Database {
             for (const statement of statements) results.push(await statement.run());
             return results;
         },
-    } as unknown as D1Database;
+        // A single in-memory node:sqlite instance has no replicas to lag
+        // behind, so every session is trivially the same as the plain handle.
+        withSession() {
+            return handle;
+        },
+    };
+
+    return handle as unknown as D1Database;
 }
