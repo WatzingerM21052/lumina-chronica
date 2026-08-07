@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import app from "../../backend/src/index";
+import { LOGIN_MAX_ATTEMPTS, REGISTER_MAX_ATTEMPTS } from "../../backend/src/services/rateLimitService";
 import { createFakeD1 } from "./fakeD1";
 import { readJson } from "./testUtils";
 
@@ -113,6 +114,78 @@ describe("POST /api/auth/login", () => {
 
         expect(res.status).toBe(401);
         expect((await readJson(res)).error.code).toBe("INVALID_CREDENTIALS");
+    });
+});
+
+describe("POST /api/auth/login rate limiting", () => {
+    beforeEach(async () => {
+        await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "alice", email: "alice@example.com", password: "correct horse" }),
+            env
+        );
+    });
+
+    it("returns 429 after too many failed attempts against the same identifier", async () => {
+        for (let i = 0; i < LOGIN_MAX_ATTEMPTS; i++) {
+            const res = await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "wrong" }), env);
+            expect(res.status).toBe(401);
+        }
+
+        const res = await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "wrong" }), env);
+        const json = await readJson(res);
+
+        expect(res.status).toBe(429);
+        expect(json.error.code).toBe("RATE_LIMITED");
+        expect(res.headers.get("Retry-After")).not.toBeNull();
+    });
+
+    it("does not throttle a different identifier after another account's attempts are exhausted", async () => {
+        await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "bob", email: "bob@example.com", password: "correct horse" }),
+            env
+        );
+        for (let i = 0; i < LOGIN_MAX_ATTEMPTS; i++) {
+            await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "wrong" }), env);
+        }
+
+        const res = await app.request("/api/auth/login", jsonRequest({ identifier: "bob@example.com", password: "correct horse" }), env);
+        expect(res.status).toBe(200);
+    });
+
+    it("resets the counter after a successful login", async () => {
+        for (let i = 0; i < LOGIN_MAX_ATTEMPTS - 1; i++) {
+            await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "wrong" }), env);
+        }
+        const successRes = await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "correct horse" }), env);
+        expect(successRes.status).toBe(200);
+
+        const res = await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "wrong" }), env);
+        expect(res.status).toBe(401);
+    });
+});
+
+describe("POST /api/auth/register rate limiting", () => {
+    it("returns 429 after too many registration attempts from the same source", async () => {
+        for (let i = 0; i < REGISTER_MAX_ATTEMPTS; i++) {
+            await app.request(
+                "/api/auth/register",
+                jsonRequest({ username: `user${i}`, email: `user${i}@example.com`, password: "correct horse" }),
+                env
+            );
+        }
+
+        const res = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "onemore", email: "onemore@example.com", password: "correct horse" }),
+            env
+        );
+        const json = await readJson(res);
+
+        expect(res.status).toBe(429);
+        expect(json.error.code).toBe("RATE_LIMITED");
+        expect(res.headers.get("Retry-After")).not.toBeNull();
     });
 });
 

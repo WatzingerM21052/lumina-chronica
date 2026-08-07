@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
 import { requireAuth } from "../middleware/auth";
@@ -18,15 +19,36 @@ import {
     startOAuth,
     storeExchangeCode,
 } from "../services/oauthService";
+import { RateLimitedError, assertNotRateLimited, clearRateLimit, recordFailedAttempt } from "../services/rateLimitService";
 
 export const authRoute = new Hono<AppEnv>();
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
+function rateLimitedResponse(c: Context<AppEnv>, err: RateLimitedError) {
+    c.header("Retry-After", String(err.retryAfterSeconds));
+    return c.json(failure("RATE_LIMITED", `Too many attempts. Try again in ${err.retryAfterSeconds} seconds.`), 429);
+}
+
 authRoute.post("/register", async (c) => {
+    // Keyed by IP only (not per-email) -- the resource being protected is
+    // "how many accounts can this source create," not any one address.
+    let rateLimit;
+    try {
+        rateLimit = await assertNotRateLimited(c, "register", "");
+    } catch (err) {
+        if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
+        throw err;
+    }
+
     const body = await c.req.json<{ username?: string; email?: string; password?: string }>().catch(() => null);
     const { username, email, password } = body ?? {};
+
+    // Every POST counts toward the IP's window regardless of outcome --
+    // including validation failures, since a flood of malformed requests is
+    // the same resource-abuse shape as a flood of valid-but-duplicate ones.
+    await recordFailedAttempt(c.env.DB, "register", rateLimit.ip, "");
 
     if (!username || !email || !password) {
         return c.json(failure("VALIDATION_ERROR", "username, email, and password are required."), 400);
@@ -54,11 +76,24 @@ authRoute.post("/login", async (c) => {
         return c.json(failure("VALIDATION_ERROR", "identifier and password are required."), 400);
     }
 
+    // Keyed by (ip, identifier) rather than identifier alone -- an attacker
+    // spamming a victim's username from many IPs must not be able to lock
+    // the victim out of logging in from their own IP.
+    let rateLimit;
+    try {
+        rateLimit = await assertNotRateLimited(c, "login", body.identifier);
+    } catch (err) {
+        if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
+        throw err;
+    }
+
     try {
         const result = await loginUser(c.env.DB, c.env.JWT_SECRET, { identifier: body.identifier, password: body.password });
+        await clearRateLimit(c.env.DB, "login", rateLimit.ip, rateLimit.identifier);
         return c.json(success(result));
     } catch (err) {
         if (err instanceof InvalidCredentialsError) {
+            await recordFailedAttempt(c.env.DB, "login", rateLimit.ip, rateLimit.identifier);
             return c.json(failure("INVALID_CREDENTIALS", "Username/email or password is incorrect."), 401);
         }
         throw err;

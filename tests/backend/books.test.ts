@@ -326,6 +326,7 @@ describe("GET /api/books/:id/file and /cover (ownership check)", () => {
         const res = await app.request(`/api/books/${bookId}/file`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
         expect(res.status).toBe(200);
         expect(res.headers.get("Content-Type")).toBe("application/epub+zip");
+        expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
         expect(await res.text()).toBe("epub-bytes");
     });
 
