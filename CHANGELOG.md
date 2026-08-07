@@ -4,6 +4,15 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-07
+
+### Added
+
+- Bookmarks: mark and jump back to any number of positions within a book (distinct from the single auto-saved resume position), each with an optional note, across EPUB/PDF/TXT/MD (issue #248).
+- Statistics page rework: a settable yearly reading goal with a progress ring, a GitHub-style reading calendar heatmap, current/longest reading streaks, and a yearly overview (books finished/pages/active days per year), alongside the existing books-read/pages/genre/recent-activity stats (issue #250).
+
+Backend: 128/128 Vitest tests passing. Frontend: 135/135 bUnit tests passing (excludes one pre-existing, unrelated `BiblePageTests` failure — issue #247).
+
 ## [1.0.0] - 2026-08-05
 
 ### Added
