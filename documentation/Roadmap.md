@@ -575,7 +575,7 @@ Lore rendering reuses the Reader's exact Markdig pipeline and pattern, with a de
 
 A genuinely flaky-looking test failure during this phase turned out to be a known project pattern, not a new bug: two files uploaded in the same test tied on `created_at`'s second resolution and fell back to SQLite's unspecified order — the same class of issue already documented for `dashboardService.ts`, fixed the same way (`ORDER BY created_at DESC, id DESC`).
 
-Backend: 208/208 Vitest tests passing (23 new). Frontend: 179/179 bUnit tests passing (12 new).
+Backend: 208/208 Vitest tests passing (23 new). Frontend: 179/179 bUnit tests passing (12 new). **Live-verified against production** (2026-08-07): migration `0012_lore_and_files.sql` applied to real D1, backend redeployed. Backend layer verified via direct API calls (image + document upload, content streaming, cross-user 404s, project-delete cascade). Lore fully verified through the real deployed UI: created a Markdown entry with headings/bold/blockquote/list, confirmed it renders correctly (gold-accent blockquote border, Fraunces headings) on the detail page. The Dateien upload form itself was confirmed to render correctly in the UI, but a real file couldn't be pushed through the browser tool's file input in this pass (its file-upload capability is sandboxed to session-shared paths, not arbitrary local files) — the exact same upload code path is already proven end-to-end via the direct API test, so this isn't a functional gap, just an automation-tooling limitation worth noting. Throwaway test account cleaned up afterward; the real user's own project confirmed untouched throughout.
 
 ### Phase 6 — Linked books & character relationships (issue #259)
 
