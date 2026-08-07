@@ -502,6 +502,22 @@ Everything else shipped during v1.0 development — Dashboard, Offline, Statisti
 
 **Tagged `v1.0.0` and published as a GitHub Release** (https://github.com/WatzingerM21052/lumina-chronica/releases/tag/v1.0.0). Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing. Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend). This doc backfill itself landed two days later (2026-08-07, PR #245) — Roadmap/CHANGELOG hadn't been updated to match the already-tagged release.
 
-## v1.5 — Personalisierung (in progress)
+## v1.5 — Personalisierung (2026-08-07)
 
-Per §101, scoped to what's left after the v1.0-adjacent work above already covered "erweiterte Themes" and most of "verbesserter Reader": **Lesezeichen (bookmarks)** and **erweiterte Statistik** (Jahresübersicht/Lesekalender/Ziele, plus a full visual/functional rework of the Statistics page). Both picked up directly, no separate phase-gating pass needed — see the entries below as they land.
+Per §101, scoped to what's left after the v1.0-adjacent work above already covered "erweiterte Themes" and most of "verbesserter Reader": **Lesezeichen (bookmarks)** and **erweiterte Statistik** (Jahresübersicht/Lesekalender/Ziele, plus a full visual/functional rework of the Statistics page). Both picked up directly, no separate phase-gating pass needed.
+
+### Bookmarks (issue #248, PR #249)
+
+Users can mark and later jump back to any number of positions within a book, distinct from `reading_progress`'s single auto-saved resume position — each bookmark carries an optional note. Supported uniformly across EPUB/PDF/TXT/MD, via a "🔖 Lesezeichen" popover on the Reader page (add-at-current-position, list, jump-to, delete), lazy-loaded on first open rather than fetched on every page load. `bookmarks` (migration `0006_bookmarks.sql`) deliberately reuses `reading_progress`'s `chapter`/`position`/`percentage` shape instead of the source spec's untyped single `location` field (§48.2, itself marked "Spätere Version" with no types given) — see `Architecture.md`'s row for the technical detail, including the new `EpubReader.GoToLocationAsync`/`PdfReader.GoToPageAsync` methods and the `BuildCurrentLocationAsync` refactor shared with `SaveProgressAsync`.
+
+Backend: 120/120 Vitest tests passing (13 new). Frontend: 128/128 bUnit tests passing (4 new).
+
+**A pre-existing, unrelated test failure was found while running the full suite for this pass** (`BiblePageTests.Bible_Search_ShowsResults_AndSelectingOneLoadsThatChapter`, a bUnit stale-render-tree issue) — confirmed via `git stash` to already fail on `main` before this branch, so not investigated further here; filed separately as issue #247.
+
+### Extended statistics: Jahresübersicht, Lesekalender, Ziele (issue #250, PR #251)
+
+Full rework of the Statistics page beyond v1.0's books/pages/genres/recent-activity shape, per the source request for "modern and high-tech but ancient books design... lots of cool statistics and functions." `reading_activity` (migration `0007_extended_statistics.sql`) logs one row per user per day with at least one reading-progress save — a lightweight activity log, not real session-time tracking (deliberately still out of scope, same reasoning as "Lesedauer" always has had). Landed: a settable yearly reading goal with a conic-gradient progress ring, a GitHub-contribution-style calendar heatmap (52 weeks, client-built from the API's sparse day list, intensity scaled to the user's own busiest day), current/longest reading streaks, and a yearly overview (books finished/pages/active days per year) — all reusing the app's existing brass/oxblood theme tokens rather than a new palette. See `Architecture.md`'s row for the full technical detail.
+
+Backend: 128/128 Vitest tests passing (8 new). Frontend: 135/135 bUnit tests passing (7 new).
+
+**v1.5.0 tagged and released.** Backend: 128/128 Vitest tests passing. Frontend: 135/135 bUnit tests passing (excludes the pre-existing, unrelated issue #247). Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend), including the `0006_bookmarks.sql`/`0007_extended_statistics.sql` migrations applied to production D1.
