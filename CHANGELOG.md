@@ -16,6 +16,10 @@ Mutations (edit/delete/favorite/cover-replace/rate/shelve) stay strictly owner-o
 
 Backend: 289/289 Vitest tests passing (13 new). Frontend: 219/219 bUnit tests passing (5 new).
 
+### Fixed
+
+- The Home dashboard's "Geliehen von" badge literally rendered the text "Geliehen von item.OwnerUsername" for every borrowed book: `Home.razor` bound `BookCard`'s `OwnerUsername` (a `string?` parameter) without a leading `@`, so Razor treated the value as a literal string constant instead of evaluating the property — the same missing-`@`-prefix bug class already documented in this changelog's v1.0 entry. Found live by the user right after release, same day.
+
 ## [3.0.0] - 2026-08-07
 
 ### Added
