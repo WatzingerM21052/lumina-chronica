@@ -528,10 +528,14 @@ Issue #247 (the flaky `BiblePageTests` search test noted above) was fixed the sa
 
 Per §102 (Version 2.0 — Worldbuilding System): Lumina Chronica becomes a creative tool, new main page `/projects` (nav link already scaffolded since v0.2). Source spec (Teil 4 §43–§58) gives a real but thin schema for `projects`/`characters`/`locations`/`timeline_events`; it has genuine gaps against the World-structure diagram it also shows (`World → Map, Characters, Locations, Timeline, Lore, Books`) — no `lore` table, no project↔book link table, no character-relationship table, and "maps" is nothing but an unused `coordinates` field. Scoped and phased 2026-08-07 (epic #9), following the same phase-gating discipline as v1.0 — each phase its own migration/PR/tests/docs, fully live-verified before the next begins. Explicitly **not** in scope for v2.0: multi-user collaboration (`project_members`, VIEW/EDIT/OWNER permissions) — filed as a v3.0 Community concern; `visibility` (PRIVATE/SHARED/PUBLIC) is stored on `projects` but unenforced, same precedent as `books.visibility`.
 
-### Phase 1 — Projects foundation (issue #254)
+### Phase 1 — Projects foundation (issue #254, PR #261)
 
-- [ ] `projects` table, CRUD, cover upload
-- [ ] `Pages/Projects.razor` (real implementation, replacing the `EmptyState` placeholder) + `Pages/ProjectDetail.razor` as the tabbed hub for every later phase
+- [x] `projects` table, CRUD, cover upload
+- [x] `Pages/Projects.razor` (real implementation, replacing the `EmptyState` placeholder) + `Pages/ProjectDetail.razor`
+
+Ownership-checked CRUD for personal Worldbuilding projects (World/Novel/RPG/Custom), a direct structural mirror of `shelfService.ts`/`Shelves.razor` — the closest existing analog. `map_url` exists as a real column from this migration on but stays `NULL` until Phase 3 (Locations & Map, issue #256) sets it. No tabbed hub UI yet — `ProjectDetail.razor` is a plain view/edit/delete page for now; Phase 2 introduces the first tab once there are two sections (Overview, Characters) to switch between, rather than building speculative navigation for sections that don't exist yet. Project `type` is stored and editable but is cosmetic/label only, not a feature gate — see `Architecture.md`'s row for the reasoning.
+
+Backend: 140/140 Vitest tests passing (12 new). Frontend: 144/144 bUnit tests passing (8 new). **Live-verified end-to-end against production** (2026-08-07): migration `0008_projects.sql` applied to real D1, backend redeployed, full create/list/get/cover-upload/update/delete cycle exercised both via direct API calls and through the real deployed UI (login → create → detail → edit → delete, throwaway test accounts, cleaned up afterward).
 
 ### Phase 2 — Characters (issue #255)
 
