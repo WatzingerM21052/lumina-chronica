@@ -29,6 +29,15 @@ public class PublicBook
 
     [JsonPropertyName("language")]
     public string? Language { get; set; }
+
+    [JsonPropertyName("averageRating")]
+    public double? AverageRating { get; set; }
+
+    [JsonPropertyName("ratingCount")]
+    public int RatingCount { get; set; }
+
+    [JsonPropertyName("myRating")]
+    public int? MyRating { get; set; }
 }
 
 public class PublicProject

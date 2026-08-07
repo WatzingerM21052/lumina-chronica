@@ -1,4 +1,5 @@
 @page "/u/{Username}"
+@using System.Globalization
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @using Microsoft.AspNetCore.Authorization
@@ -80,6 +81,33 @@ else
                             {
                                 <div class="book-card-author">@book.Author</div>
                             }
+                            <div class="book-card-rating">
+                                @if (book.RatingCount > 0)
+                                {
+                                    <span>★ @book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture) (@book.RatingCount)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Noch keine Bewertungen</span>
+                                }
+                            </div>
+                            @if (!_profile.IsOwnProfile)
+                            {
+                                <AuthorizeView>
+                                    <Authorized>
+                                        <div class="book-card-rate-stars">
+                                            @for (var star = 1; star <= 5; star++)
+                                            {
+                                                var starValue = star;
+                                                <button type="button" class="star-button @(starValue <= (book.MyRating ?? 0) ? "is-filled" : "")"
+                                                        disabled="@_ratingInProgress.Contains(book.Id)"
+                                                        title="@($"Mit {starValue} Sternen bewerten")"
+                                                        @onclick="() => RateBookAsync(book, starValue)">★</button>
+                                            }
+                                        </div>
+                                    </Authorized>
+                                </AuthorizeView>
+                            }
                         </div>
                     </div>
                 }
@@ -133,6 +161,7 @@ else
     private PublicProfileResponse? _profile;
     private bool _notFound;
     private bool _isTogglingFollow;
+    private readonly HashSet<int> _ratingInProgress = [];
     private readonly Dictionary<string, string> _coverObjectUrls = [];
 
     protected override async Task OnParametersSetAsync()
@@ -140,7 +169,11 @@ else
         await ClearCoversAsync();
         _profile = null;
         _notFound = false;
+        await LoadProfileAsync();
+    }
 
+    private async Task LoadProfileAsync()
+    {
         var response = await ApiClient.GetAsync<PublicProfileResponse>($"/api/users/{Username}/public");
         if (response is not { Success: true, Data: not null })
         {
@@ -152,7 +185,7 @@ else
 
         foreach (var book in _profile.Books)
         {
-            if (book.CoverUrl is null) continue;
+            if (book.CoverUrl is null || _coverObjectUrls.ContainsKey($"book-{book.Id}")) continue;
             var result = await ApiClient.GetBytesAsync(book.CoverUrl);
             if (result is { } cover)
             {
@@ -162,13 +195,32 @@ else
 
         foreach (var project in _profile.Projects)
         {
-            if (project.CoverUrl is null) continue;
+            if (project.CoverUrl is null || _coverObjectUrls.ContainsKey($"project-{project.Id}")) continue;
             var result = await ApiClient.GetBytesAsync(project.CoverUrl);
             if (result is { } cover)
             {
                 _coverObjectUrls[$"project-{project.Id}"] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
             }
         }
+    }
+
+    private async Task RateBookAsync(PublicBook book, int star)
+    {
+        if (_ratingInProgress.Contains(book.Id)) return;
+        _ratingInProgress.Add(book.Id);
+
+        // Clicking the star that's already your own rating removes it
+        // instead of re-submitting the same value -- a toggle, not just a set.
+        var succeeded = book.MyRating == star
+            ? await ApiClient.DeleteAsync($"/api/books/{book.Id}/rating")
+            : await ApiClient.PutAsync($"/api/books/{book.Id}/rating", new { rating = star });
+
+        // Re-fetches rather than computing the new average locally -- the
+        // average depends on every other rater's value, which the client
+        // doesn't have.
+        if (succeeded) await LoadProfileAsync();
+
+        _ratingInProgress.Remove(book.Id);
     }
 
     private async Task ToggleFollowAsync()

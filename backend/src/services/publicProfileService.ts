@@ -28,7 +28,7 @@ export async function getPublicProfile(db: D1Database, username: string, viewerI
     if (!user) return null;
 
     const [books, projects, followState] = await Promise.all([
-        listPublicBooksByUsername(db, username),
+        listPublicBooksByUsername(db, username, viewerId),
         listPublicProjectsByUsername(db, username),
         getFollowState(db, user.id, viewerId),
     ]);

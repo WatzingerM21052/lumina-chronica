@@ -21,6 +21,14 @@ import {
     type UpdateBookInput,
 } from "../services/bookService";
 import { listShelfIdsForBook } from "../services/shelfService";
+import {
+    NotFoundError as RatingNotFoundError,
+    NotPublicError,
+    SelfRatingError,
+    ValidationError as RatingValidationError,
+    rateBook,
+    unrateBook,
+} from "../services/ratingService";
 
 export const booksRoute = new Hono<AppEnv>();
 
@@ -206,4 +214,35 @@ booksRoute.get("/:id/cover", optionalAuth, async (c) => {
     if (!object) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
 
     return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
+});
+
+// Community Phase 3 (issue #307). Upsert semantics (PUT, not POST) --
+// re-rating a book you already rated updates the existing row rather than
+// erroring, mirroring the idempotent shape of Phase 2's follow endpoints.
+booksRoute.put("/:id/rating", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    const body = await c.req.json<{ rating?: number }>().catch(() => null);
+    if (!body || typeof body.rating !== "number") return c.json(failure("VALIDATION_ERROR", "rating is required."), 400);
+
+    try {
+        await rateBook(c.env.DB, c.get("userId"), bookId, body.rating);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof RatingNotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        if (err instanceof SelfRatingError) return c.json(failure("VALIDATION_ERROR", "You cannot rate your own book."), 400);
+        if (err instanceof NotPublicError) return c.json(failure("VALIDATION_ERROR", "Only public books can be rated."), 400);
+        if (err instanceof RatingValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+booksRoute.delete("/:id/rating", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    try {
+        await unrateBook(c.env.DB, c.get("userId"), bookId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof RatingNotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        throw err;
+    }
 });
