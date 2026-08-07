@@ -193,6 +193,15 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
         if (_module is not null) await _module.InvokeVoidAsync("goTo", _elementId, href);
     }
 
+    // Public so Reader.razor can jump to a bookmark's saved CFI via @ref --
+    // epub.js's rendition.display() (what goTo ultimately calls) accepts a
+    // CFI string exactly like it accepts a TOC href, so this is the same JS
+    // call as GoToTocItemAsync above, just reachable from the parent.
+    public async Task GoToLocationAsync(string cfi)
+    {
+        if (_module is not null) await _module.InvokeVoidAsync("goTo", _elementId, cfi);
+    }
+
     [JSInvokable]
     public async Task OnRelocated(string cfi, int chapterIndex, double percentage)
     {

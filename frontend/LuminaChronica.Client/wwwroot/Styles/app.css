@@ -755,6 +755,72 @@ select:focus-visible,
     width: 100%;
 }
 
+/* Bookmarks popover (v1.5) -- same toggle-button + popover shell as
+   .reader-settings-popover, with a scrollable list borrowed from
+   .epub-toc-popover's pattern since the item count is unbounded. */
+.reader-bookmarks-popover {
+    min-width: 18rem;
+}
+
+.reader-bookmark-note-input {
+    width: 100%;
+}
+
+.reader-bookmarks-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-height: 16rem;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.reader-bookmark-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.reader-bookmark-jump {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-small);
+    padding: var(--space-1) var(--space-2);
+    cursor: pointer;
+}
+
+.reader-bookmark-jump:hover,
+.reader-bookmark-jump:focus-visible {
+    color: var(--color-primary);
+}
+
+.reader-bookmark-percentage {
+    flex-shrink: 0;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.reader-bookmark-note {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reader-bookmark-delete {
+    flex-shrink: 0;
+    padding: var(--space-1);
+    line-height: 1;
+}
+
 /* Scrollbar-hide preference (source request) for Scroll View -- purely
    cosmetic, the container stays scrollable via mouse wheel/touch/keyboard
    either way. A single on/off checkbox rather than a per-axis choice, so
