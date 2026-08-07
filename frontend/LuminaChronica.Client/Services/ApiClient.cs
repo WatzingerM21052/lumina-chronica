@@ -78,6 +78,22 @@ public class ApiClient(HttpClient httpClient)
         }
     }
 
+    // For endpoints with a JSON request body but no response envelope to
+    // parse (e.g. rating a book -- 204 No Content on success). Mirrors the
+    // bodyless PostAsync/DeleteAsync's bool-return shape, just with a body.
+    public async Task<bool> PutAsync<TRequest>(string relativeUrl, TRequest body, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PutAsJsonAsync(relativeUrl, body, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+    }
+
     // For book upload -- a multipart/form-data body (metadata fields + the
     // book file + an optional cover), not JSON.
     public async Task<ApiResponse<TResponse>?> PostMultipartAsync<TResponse>(

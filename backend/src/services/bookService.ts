@@ -499,21 +499,43 @@ export type PublicBookSummary = {
     coverUrl: string | null;
     genre: string | null;
     language: string | null;
+    averageRating: number | null;
+    ratingCount: number;
+    myRating: number | null;
 };
 
 // Community Phase 1 (issue #300) -- deliberately excludes owner_id,
 // is_favorite, and every field only meaningful to the owner. No ownerId
 // param: visibility = 'PUBLIC' is the only access check, by design.
-export async function listPublicBooksByUsername(db: D1Database, username: string): Promise<PublicBookSummary[]> {
+// Community Phase 3 (issue #307) added viewerId (nullable, same pattern as
+// followService.getFollowState) and the rating aggregate/myRating columns --
+// binding a null viewerId into `ratings.user_id = ?` never matches any row,
+// so an anonymous visitor correctly always gets myRating: null with no
+// branching needed.
+export async function listPublicBooksByUsername(db: D1Database, username: string, viewerId: number | null): Promise<PublicBookSummary[]> {
     const rows = await db
         .prepare(
-            `SELECT books.id, books.title, books.author, books.description, books.cover_url, books.genre, books.language
+            `SELECT books.id, books.title, books.author, books.description, books.cover_url, books.genre, books.language,
+                (SELECT AVG(rating) FROM ratings WHERE book_id = books.id) AS average_rating,
+                (SELECT COUNT(*) FROM ratings WHERE book_id = books.id) AS rating_count,
+                (SELECT rating FROM ratings WHERE book_id = books.id AND user_id = ?) AS my_rating
              FROM books JOIN users ON users.id = books.owner_id
              WHERE users.username = ? AND users.deleted_at IS NULL AND books.visibility = 'PUBLIC'
              ORDER BY books.created_at DESC`
         )
-        .bind(username)
-        .all<{ id: number; title: string; author: string | null; description: string | null; cover_url: string | null; genre: string | null; language: string | null }>();
+        .bind(viewerId, username)
+        .all<{
+            id: number;
+            title: string;
+            author: string | null;
+            description: string | null;
+            cover_url: string | null;
+            genre: string | null;
+            language: string | null;
+            average_rating: number | null;
+            rating_count: number;
+            my_rating: number | null;
+        }>();
 
     return rows.results.map((row) => ({
         id: row.id,
@@ -523,5 +545,8 @@ export async function listPublicBooksByUsername(db: D1Database, username: string
         coverUrl: row.cover_url ? `/api/books/${row.id}/cover` : null,
         genre: row.genre,
         language: row.language,
+        averageRating: row.average_rating,
+        ratingCount: row.rating_count,
+        myRating: row.my_rating,
     }));
 }
