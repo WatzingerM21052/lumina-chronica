@@ -10,7 +10,7 @@
     "hono": "^4.12.34"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260722.1",
+    "@cloudflare/workers-types": "^5.20260804.1",
     "@types/node": "^22.20.1",
     "typescript": "^5.7.0",
     "vitest": "^4.1.10"
