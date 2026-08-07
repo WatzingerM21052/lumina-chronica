@@ -21,4 +21,10 @@ public class BlobUrlService(IJSRuntime jsRuntime)
         var module = await _moduleTask.Value;
         await module.InvokeVoidAsync("revokeObjectUrl", url);
     }
+
+    public async Task TriggerDownloadAsync(string url, string filename)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("triggerDownload", url, filename);
+    }
 }

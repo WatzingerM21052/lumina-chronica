@@ -11,6 +11,8 @@ import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, Valid
 import { deleteCharactersForProject } from "./characterService";
 import { deleteLocationsForProject } from "./locationService";
 import { deleteTimelineEventsForProject } from "./timelineService";
+import { deleteLoreEntriesForProject } from "./loreService";
+import { deleteProjectFilesForProject } from "./projectFileService";
 import { NotFoundError } from "./errors";
 
 export { NotFoundError, ValidationError };
@@ -185,13 +187,14 @@ export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: 
     const row = await findOwnedProjectRow(db, ownerId, projectId);
     if (!row) throw new NotFoundError();
 
-    // Later phases (lore_entries, project_files, project_books,
-    // character_relationships) must add their own cleanup call here too,
-    // before the DELETE below -- real D1 enforces foreign keys, same lesson
-    // as deleteBook/deleteShelf.
+    // Later phases (project_books, character_relationships) must add their
+    // own cleanup call here too, before the DELETE below -- real D1
+    // enforces foreign keys, same lesson as deleteBook/deleteShelf.
     await deleteCharactersForProject(db, storage, projectId);
     await deleteLocationsForProject(db, storage, projectId);
     await deleteTimelineEventsForProject(db, projectId);
+    await deleteLoreEntriesForProject(db, projectId);
+    await deleteProjectFilesForProject(db, storage, projectId);
     await db.prepare("DELETE FROM projects WHERE id = ?").bind(projectId).run();
 
     for (const key of [row.cover_url, row.map_url]) {
