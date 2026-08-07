@@ -451,3 +451,57 @@ Backward navigation (`realisticPrev`/"Zurück") and crossing a real section boun
 Frontend: 107/108 bUnit tests passing (same 1 pre-existing failure, issue #180, unrelated) — includes two new tests covering the toggle's absence for EPUB and the persisted-mode coercion.
 
 **Canva's export API failed the same way it did for the favicon work**: `Not allowed to access design with id ...` on a design freshly created via `create-design-from-candidate`, on both a fresh attempt and a retry. Unlike the favicon (which needed a real vector trace since it's viewed sharp at 16px), a hero banner is a full-bleed `object-fit: cover` background sitting under a gradient scrim — a bicubic upscale of the 711×400 generation thumbnail to 1600px (matching `bible-hero.jpg`'s own resolution) was an acceptable tradeoff here, confirmed by inspecting the upscaled result directly before shipping it. Live-verified against production: hero renders with visible light rays, a genuinely subtle map, and the open book, "Willkommen zurück" reads clearly over the scrim, the image URL returns 200 via a cache-bypassing `fetch`, zero console errors.
+
+### Reader width/scrollbar polish + PDF Realistic View zoom (2026-08-04, issue #182/#189 follow-ups, PRs #210-220)
+
+A run of small, live-testing-driven fixes on top of the Realistic View work above, before it was gated back off: `Seitenbreite` (page width) had no visible effect in some reader states, PDF Book/Scroll View showed an unwanted horizontal scrollbar at 100% zoom, a Blazor `style`-attribute re-render was clobbering Realistic View's JS-set container size, and pdf.js's render call needed an explicit `null` (not `undefined`) for its `transform` param on some code paths. PDF's Realistic View also gained zoom, and Realistic View's toggle-desync/silent-fallback/cold-start gaps (portrait pages stretching to double height, never reaching a real two-page spread, a spurious focus outline on load) were fixed one real bug at a time, each found via live production testing — this is the same run that ultimately motivated gating EPUB's Realistic View back off, documented above.
+
+Frontend: unit-test count unchanged from the #189 write-up above (these were live-verification-only fixes to already-shipped surfaces); see `Architecture.md` for anything with lasting architectural relevance.
+
+### Scroll View: hide-scrollbars setting (2026-08-04, PRs #221-222)
+
+Source-requested setting to hide Scroll View's scrollbars for both EPUB and PDF, simplified same-day from an initial multi-option design down to a single checkbox after review.
+
+### TXT/Markdown: real pagination (Book View) + TOC anchors (2026-08-04–05, issue #155 remaining scope, PRs #223-228, #234)
+
+The last piece of issue #155 (real Book View pagination for TXT/MD, previously continuous-scroll-only): page breaks computed from chapter/marker positions, a "Seite pro Kapitel" (page-per-chapter) mode, and TOC anchor links mirroring EPUB's chapter navigation. Landed with two real bugs found via live testing and fixed same-day: pagination never actually initialized on a real page load (only worked after a client-side re-navigation), and Book View clipped the left edge of every line. A separate fix in the same run aliased pre-rename `readerSettings.js` exports so a deploy doesn't silently break on cache skew between an old cached JS file and new C# callers.
+
+Frontend: 106/107 bUnit tests passing at this point (1 pre-existing failure, issue #180, unrelated — see below).
+
+Also landed in this run: Upload/Edit forms' drag-and-drop dropzones now show the selected filename instead of staying visually empty after a drop.
+
+### Dashboard test fix (2026-08-05, issue #180, PR #235)
+
+The pre-existing `HomePageTests.Home_ShowsOverviewCounts_FromDashboardEndpoint` failure flagged (but not investigated) during the hero-banner pass above: the test asserted an unmatchable substring against the real rendered markup, not a behavioral regression. Fixed, restoring a fully green frontend suite.
+
+### Bible Dark Academia / Baroque immersive theme (2026-08-05, issue #143, PRs #236-238)
+
+The large opt-in theme spec deferred from the Impressum/Bible-page work: a selectable Dark Academia visual mode for the Bible reader (dedicated typography/color system, full-viewport atmosphere) plus, in same-day follow-ups, a cinematic entrance sequence. One real bug fixed same-day: chapter fade-in was stuck at `opacity: 0` on the live site. A further "Phase 2" (a fuller reinterpretation beyond the entrance sequence) is filed as issue #239, not yet started, priority-low.
+
+### OAuth login (2026-08-05, issue #40, PRs #240-242)
+
+Google/GitHub OAuth login alongside password auth, closing the item explicitly deferred back in Phase 2 (Authentication). Two real bugs found via live testing against production and fixed same-day: the OAuth migration was rejected by real D1 (`PRAGMA foreign_keys` isn't honored the way the local test double had assumed — the same class of local-double-vs-real-D1 gap documented earlier for book deletion), and the OAuth callback redirect dropped the GitHub Pages project path, causing a 404 on the deployed site specifically (not reproducible locally, where there's no subpath).
+
+### PDF reader hang fixes (2026-08-05, issue #213 and a same-root-cause follow-up, PRs #243-244)
+
+Two related indefinite-hang bugs, both traced to the same root cause (no timeout around a pdf.js call that can stall): PDF Book/Scroll View could hang forever on a pdf.js worker stall, and PDF cover extraction (used during upload metadata pre-fill) had the identical gap with no timeout at all.
+
+Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing (fully green, no known failures) as of this point.
+
+## V1.0 — Release (2026-08-07)
+
+Per the spec's §100 Definition of Done, "Lumina Chronica V1.0 ist fertig wenn" all five groups are satisfied. All five are met, verified end-to-end against production throughout the phase write-ups above:
+
+- [x] **Benutzer** — Account erstellen, Login, Profil (Phase 2 — Authentication)
+- [x] **Bibliothek** — Bücher hinzufügen, Bücher verwalten, Suchen, Sortieren (Phase 3 — Library, + Library UX polish)
+- [x] **Reader** — Bücher lesen, Fortschritt speichern, Themes (Phase 4 — Reader, + Reader Settings/typography/modes)
+- [x] **Organisation** — Regale, Tags (Phase 5 — Organization)
+- [x] **Deployment** — GitHub Pages, Cloudflare Backend (v0.2 scaffold, live throughout)
+
+Everything else shipped during v1.0 development — Dashboard, Offline, Statistics (re-scoped in from an initial v1.5 placement, issue #156), the visual design passes, metadata enrichment, the Bible easter egg, favicon/hero banner, OAuth, Realistic View, and the Reader/Bible polish immediately above — goes beyond this strict DoD boundary. Per §101, most of it (extended themes, a much-improved reader, OAuth) is v1.5-shaped work that landed organically through direct user requests rather than being phase-gated — a head start on v1.5, not scope creep against v1.0.
+
+**Tagged `v1.0.0`.** Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing. Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend).
+
+## v1.5 — Personalisierung (in progress)
+
+Per §101, scoped to what's left after the v1.0-adjacent work above already covered "erweiterte Themes" and most of "verbesserter Reader": **Lesezeichen (bookmarks)** and **erweiterte Statistik** (Jahresübersicht/Lesekalender/Ziele, plus a full visual/functional rework of the Statistics page). Both picked up directly, no separate phase-gating pass needed — see the entries below as they land.

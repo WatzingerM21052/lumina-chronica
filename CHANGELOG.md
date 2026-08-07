@@ -4,6 +4,8 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-07
+
 ### Added
 
 - Repository foundation: license, contribution guidelines, issue/PR templates, GitHub Project board (v0.1).
@@ -32,14 +34,27 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Reader mode toggle: a real Book View/Scroll View switch for EPUB and PDF, persisted per the existing client-local settings pattern.
 - Real favicon and header logo mark (flame + open book), replacing the Blazor template placeholder.
 - Home page hero banner (open book, subtle world map, light rays, old-library atmosphere).
-- Reader: a third "Realistische Ansicht" mode for PDF — a real StPageFlip page-turn animation (facing pages, page-edge stack, drag-to-turn or tap-a-corner) instead of a flat canvas swap. EPUB's realistic mode is deferred (issue #189) — the toggle only shows for PDF for now.
+- Reader: a third "Realistische Ansicht" mode for PDF — a real StPageFlip page-turn animation (facing pages, page-edge stack, drag-to-turn or tap-a-corner) instead of a flat canvas swap. EPUB's realistic mode was attempted twice (lazy-capture, then a section-capture architecture) but is gated back off (issue #189, reopened) — see `documentation/Roadmap.md`.
+- Reader: real pagination (Book View) for TXT/Markdown, with chapter/marker page breaks, a "Seite pro Kapitel" mode, and TOC anchor links (issue #155).
+- Reader: a setting to hide Scroll View's scrollbars (EPUB + PDF).
+- Reader: width/scrollbar/centering polish across EPUB and PDF, and a Realistic-View-quality PDF zoom pass.
+- Upload/Edit forms: the drag-and-drop dropzones now show the selected filename.
+- Authentication: OAuth login (Google/GitHub) alongside password auth (issue #40 — previously deferred at Phase 2).
+- Bible page: opt-in Dark Academia / Baroque immersive theme with a cinematic entrance sequence (issue #143).
 
 ### Fixed
 
 - Several real bugs found via live verification across the above phases: German-locale decimal separator breaking reading-progress saves, a D1 foreign-key constraint on book deletion, EPUB uploads rejected on generic browser MIME types, a missing `@` prefix silently binding a Razor parameter to a literal string, a stale-render bug in debounced search, OpenLibrary's `subjects` being plain strings, HTML markup leaking into enriched descriptions, and race conditions in both the PDF (canvas) and EPUB (rendition) readers under rapid clicking.
+- Numerous Realistic View bugs found and fixed via live production testing (container sizing, Blazor clobbering JS-set inline styles, spread/orientation detection, cold-start capture failures) before ultimately gating the EPUB half back off — see `documentation/Roadmap.md`'s issue #189 write-up for the full sequence.
+- PDF reader: fixed two classes of indefinite hang — Book/Scroll View on a pdf.js worker stall, and cover extraction with no timeout (issue #213 and follow-up).
+- OAuth: a migration rejected by real D1 (`PRAGMA foreign_keys` not honored the way the local test double assumed), and a callback redirect that dropped the GitHub Pages project path (404).
+- Bible Dark Academia theme: chapter fade-in stuck at `opacity: 0` on the live site.
+- Dashboard: a test asserted an unmatchable substring, masking the real overview-count behavior (issue #180).
 
 v0.2 (Technical Foundation) is complete: https://watzingerm21052.github.io/lumina-chronica/ is live and talking to https://lumina-chronica-api.svhofkirchen-api.workers.dev.
 
 v1.0's Authentication phase is complete and verified end-to-end against production (real JWT issued, real D1 row with a hashed password).
 
-v1.0's Library, Reader, Organization, Dashboard, Offline, and Statistics phases are complete and live-verified against production. Remaining before the v1.0 release milestone: none of the Master Development Flow's phases — see `documentation/Roadmap.md` for the full phase-by-phase detail.
+v1.0's Library, Reader, Organization, Dashboard, Offline, and Statistics phases are complete and live-verified against production.
+
+**v1.0.0 released 2026-08-07.** All five Definition-of-Done groups from the source spec (§100) are met: Benutzer (Account/Login/Profil), Bibliothek (hinzufügen/verwalten/Suchen/Sortieren), Reader (lesen/Fortschritt speichern/Themes), Organisation (Regale/Tags), Deployment (GitHub Pages/Cloudflare Backend). Backend: 107/107 Vitest tests passing. Frontend: 125/125 bUnit tests passing. See `documentation/Roadmap.md` for the full phase-by-phase detail and everything that shipped beyond the strict DoD scope (OAuth, Bible Dark Academia theme, Realistic View, TXT/MD pagination, and other Reader polish) as an early start on v1.5.
