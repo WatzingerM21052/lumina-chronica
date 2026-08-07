@@ -4,6 +4,17 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-08-07
+
+### Security
+
+- Removed the unused `vitest` devDependency from `backend/` and refreshed dependencies, resolving all 11 open Dependabot alerts (1 critical, 2 high, 8 moderate) — issue #276.
+- Added `.github/dependabot.yml`, extending automated vulnerability scanning to all four ecosystems in the repo (previously only GitHub's default scan existed).
+- Rate-limiting on `POST /api/auth/login` and `/register` against brute-force and mass account creation, D1-backed, keyed to avoid an attacker locking a victim out of their own account — issue #277.
+- `X-Content-Type-Options: nosniff` on all file/image-streaming routes (books, shelves, project covers/maps/character/location images, project files).
+
+Backend: 235/235 Vitest tests passing.
+
 ## [2.0.0] - 2026-08-07
 
 ### Added
