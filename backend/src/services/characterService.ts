@@ -8,6 +8,7 @@
 
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 import { NotFoundError } from "./errors";
+import { deleteCharacterRelationshipsForCharacter } from "./characterRelationshipService";
 
 export { NotFoundError, ValidationError };
 
@@ -173,6 +174,7 @@ export async function deleteCharacter(db: D1Database, storage: R2Bucket, ownerId
     const row = await findCharacterRow(db, projectId, characterId);
     if (!row) throw new NotFoundError();
 
+    await deleteCharacterRelationshipsForCharacter(db, characterId);
     await db.prepare("DELETE FROM characters WHERE id = ?").bind(characterId).run();
 
     if (row.image_url) {

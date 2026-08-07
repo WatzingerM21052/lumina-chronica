@@ -115,6 +115,101 @@ else
             </div>
         </EditForm>
     }
+
+    <div class="library-header">
+        <h2>Beziehungen</h2>
+        <button type="button" class="btn btn-primary" @onclick="() => _showCreateRelationshipForm = !_showCreateRelationshipForm">
+            @(_showCreateRelationshipForm ? "Abbrechen" : "Beziehung hinzufügen")
+        </button>
+    </div>
+
+    @if (_showCreateRelationshipForm)
+    {
+        <EditForm Model="_createRelationshipForm" OnValidSubmit="CreateRelationshipAsync" class="book-form-card">
+            @if (_createRelationshipErrorMessage is not null)
+            {
+                <p class="form-error">@_createRelationshipErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="relationship-other-character">Anderer Charakter</label>
+                <InputSelect id="relationship-other-character" @bind-Value="_createRelationshipForm.OtherCharacterId">
+                    <option value="0">-- auswählen --</option>
+                    @if (_otherCharacters is not null)
+                    {
+                        @foreach (var other in _otherCharacters)
+                        {
+                            <option value="@other.Id">@other.Name</option>
+                        }
+                    }
+                </InputSelect>
+            </div>
+            <div class="form-group">
+                <label for="relationship-type">Beziehung (z.B. "Mentor von")</label>
+                <InputText id="relationship-type" @bind-Value="_createRelationshipForm.RelationshipType" />
+            </div>
+            <div class="form-group">
+                <label for="relationship-description">Beschreibung (optional)</label>
+                <InputTextArea id="relationship-description" @bind-Value="_createRelationshipForm.Description" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Hinzufügen</button>
+            </div>
+        </EditForm>
+    }
+
+    @if (_relationshipsErrorMessage is not null)
+    {
+        <p class="form-error">@_relationshipsErrorMessage</p>
+    }
+    else if (_relationships is null)
+    {
+        <LoadingIndicator Text="Beziehungen werden geladen..." />
+    }
+    else if (_relationships.Count == 0)
+    {
+        <p class="text-muted">Dieser Charakter hat noch keine Beziehungen.</p>
+    }
+    else
+    {
+        @foreach (var relationship in _relationships)
+        {
+            <div class="book-form-card">
+                @if (_editingRelationshipId == relationship.Id)
+                {
+                    <EditForm Model="_editRelationshipForm" OnValidSubmit="SaveRelationshipAsync">
+                        @if (_editRelationshipErrorMessage is not null)
+                        {
+                            <p class="form-error">@_editRelationshipErrorMessage</p>
+                        }
+                        <div class="form-group">
+                            <label for="@($"relationship-edit-type-{relationship.Id}")">Beziehung</label>
+                            <InputText id="@($"relationship-edit-type-{relationship.Id}")" @bind-Value="_editRelationshipForm.RelationshipType" />
+                        </div>
+                        <div class="form-group">
+                            <label for="@($"relationship-edit-description-{relationship.Id}")">Beschreibung</label>
+                            <InputTextArea id="@($"relationship-edit-description-{relationship.Id}")" @bind-Value="_editRelationshipForm.Description" />
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Speichern</button>
+                            <button type="button" class="btn" @onclick="() => _editingRelationshipId = null">Abbrechen</button>
+                        </div>
+                    </EditForm>
+                }
+                else
+                {
+                    <p><strong>@relationship.CharacterAName</strong> — @relationship.RelationshipType — <strong>@relationship.CharacterBName</strong></p>
+                    @if (!string.IsNullOrWhiteSpace(relationship.Description))
+                    {
+                        <p>@relationship.Description</p>
+                    }
+                    <div class="form-actions">
+                        <button type="button" class="btn" @onclick="() => StartEditingRelationship(relationship)">Bearbeiten</button>
+                        <button type="button" class="btn" @onclick="() => DeleteRelationshipAsync(relationship.Id)">Löschen</button>
+                    </div>
+                }
+            </div>
+        }
+    }
 }
 
 @code {
@@ -136,7 +231,18 @@ else
     private EditFormModel _editForm = new();
     private bool _confirmingDelete;
 
-    protected override Task OnParametersSetAsync() => LoadCharacterAsync();
+    private List<CharacterRelationship>? _relationships;
+    private string? _relationshipsErrorMessage;
+    private List<Character>? _otherCharacters;
+    private bool _showCreateRelationshipForm;
+    private string? _createRelationshipErrorMessage;
+    private CreateRelationshipFormModel _createRelationshipForm = new();
+    private int? _editingRelationshipId;
+    private string? _editRelationshipErrorMessage;
+    private UpdateCharacterRelationshipRequest _editRelationshipForm = new();
+
+    protected override Task OnParametersSetAsync() =>
+        Task.WhenAll(LoadCharacterAsync(), LoadRelationshipsAsync(), LoadOtherCharactersAsync());
 
     private async Task LoadCharacterAsync()
     {
@@ -251,6 +357,97 @@ else
         }
     }
 
+    private async Task LoadRelationshipsAsync()
+    {
+        _relationshipsErrorMessage = null;
+        var response = await ApiClient.GetAsync<List<CharacterRelationship>>($"/api/projects/{ProjectId}/relationships");
+        if (response is { Success: true, Data: not null })
+        {
+            _relationships = [.. response.Data.Where(r => r.CharacterAId == Id || r.CharacterBId == Id)];
+        }
+        else
+        {
+            _relationshipsErrorMessage = response?.Error?.Message ?? "Beziehungen konnten nicht geladen werden.";
+        }
+    }
+
+    private async Task LoadOtherCharactersAsync()
+    {
+        var response = await ApiClient.GetAsync<List<Character>>($"/api/projects/{ProjectId}/characters");
+        if (response is { Success: true, Data: not null })
+        {
+            _otherCharacters = [.. response.Data.Where(c => c.Id != Id)];
+        }
+    }
+
+    private async Task CreateRelationshipAsync()
+    {
+        _createRelationshipErrorMessage = null;
+
+        if (_createRelationshipForm.OtherCharacterId == 0)
+        {
+            _createRelationshipErrorMessage = "Bitte wähle einen Charakter aus.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_createRelationshipForm.RelationshipType))
+        {
+            _createRelationshipErrorMessage = "Bitte gib eine Beziehung ein.";
+            return;
+        }
+
+        var response = await ApiClient.PostAsync<CreateCharacterRelationshipRequest, CharacterRelationship>($"/api/projects/{ProjectId}/relationships", new CreateCharacterRelationshipRequest
+        {
+            CharacterAId = Id,
+            CharacterBId = _createRelationshipForm.OtherCharacterId,
+            RelationshipType = _createRelationshipForm.RelationshipType,
+            Description = _createRelationshipForm.Description,
+        });
+
+        if (response is { Success: true, Data: not null })
+        {
+            _showCreateRelationshipForm = false;
+            _createRelationshipForm = new CreateRelationshipFormModel();
+            await LoadRelationshipsAsync();
+        }
+        else
+        {
+            _createRelationshipErrorMessage = response?.Error?.Message ?? "Beziehung konnte nicht erstellt werden.";
+        }
+    }
+
+    private void StartEditingRelationship(CharacterRelationship relationship)
+    {
+        _editRelationshipForm = new UpdateCharacterRelationshipRequest { RelationshipType = relationship.RelationshipType, Description = relationship.Description };
+        _editRelationshipErrorMessage = null;
+        _editingRelationshipId = relationship.Id;
+    }
+
+    private async Task SaveRelationshipAsync()
+    {
+        if (_editingRelationshipId is not { } relationshipId) return;
+        _editRelationshipErrorMessage = null;
+
+        var response = await ApiClient.PutAsync<UpdateCharacterRelationshipRequest, CharacterRelationship>($"/api/projects/{ProjectId}/relationships/{relationshipId}", _editRelationshipForm);
+        if (response is { Success: true, Data: not null })
+        {
+            _editingRelationshipId = null;
+            await LoadRelationshipsAsync();
+        }
+        else
+        {
+            _editRelationshipErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+        }
+    }
+
+    private async Task DeleteRelationshipAsync(int relationshipId)
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/relationships/{relationshipId}");
+        if (succeeded)
+        {
+            await LoadRelationshipsAsync();
+        }
+    }
+
     public void Dispose()
     {
         if (_imageObjectUrl is not null)
@@ -267,5 +464,12 @@ else
         public string? Description { get; set; }
         public string? Personality { get; set; }
         public string? Biography { get; set; }
+    }
+
+    private class CreateRelationshipFormModel
+    {
+        public int OtherCharacterId { get; set; }
+        public string RelationshipType { get; set; } = string.Empty;
+        public string? Description { get; set; }
     }
 }

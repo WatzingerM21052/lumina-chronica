@@ -11,6 +11,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Projects: locations & map — upload a map image per project, add locations and place them as clickable pins on the map (or leave unplaced), via a new Karte tab on the project page (issue #256, Phase 3 of 6, epic #9).
 - Projects: timeline — add chronological in-world events with a free-text date, description, and manual reordering, rendered as a visual timeline via a new Zeitleiste tab on the project page (issue #257, Phase 4 of 6, epic #9).
 - Projects: lore & files — write Markdown lore entries and upload a documents/images gallery per project, via new Lore and Dateien tabs on the project page (issue #258, Phase 5 of 6, epic #9).
+- Projects: linked books & character relationships — link books from your library to a project via a search/pick UI on a new Bücher tab, and record directional relationships between characters (e.g. "Mentor von") on a character's own page. Closes out v2.0 Worldbuilding (issue #259, Phase 6 of 6, epic #9).
 
 ## [1.5.0] - 2026-08-07
 

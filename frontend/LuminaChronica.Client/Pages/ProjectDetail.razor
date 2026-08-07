@@ -32,6 +32,7 @@ else
         <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "map")">Karte</button>
         <button type="button" class="btn @(_activeTab == "timeline" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "timeline")">Zeitleiste</button>
         <button type="button" class="btn @(_activeTab == "lore" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "lore")">Lore</button>
+        <button type="button" class="btn @(_activeTab == "books" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "books")">Bücher</button>
         <button type="button" class="btn @(_activeTab == "files" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "files")">Dateien</button>
     </div>
 
@@ -418,6 +419,62 @@ else
             </div>
         }
     }
+    else if (_activeTab == "books")
+    {
+        <div class="library-header">
+            <h2>Verknüpfte Bücher</h2>
+        </div>
+
+        <div class="library-search-wrapper">
+            <input type="search" placeholder="Buch aus deiner Bibliothek suchen..." value="@_bookSearchTerm" @oninput="OnBookSearchInput" />
+            @if (_bookSuggestions is { Count: > 0 })
+            {
+                <ul class="library-search-suggestions">
+                    @foreach (var book in _bookSuggestions)
+                    {
+                        <li>
+                            <button type="button" @onclick="() => AddBookAsync(book.Id)">
+                                @book.Title
+                                @if (!string.IsNullOrWhiteSpace(book.Author))
+                                {
+                                    <span class="text-muted"> — @book.Author</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+        @if (_addBookErrorMessage is not null)
+        {
+            <p class="form-error">@_addBookErrorMessage</p>
+        }
+
+        @if (_linkedBooksErrorMessage is not null)
+        {
+            <p class="form-error">@_linkedBooksErrorMessage</p>
+        }
+        else if (_linkedBooks is null)
+        {
+            <LoadingIndicator Text="Bücher werden geladen..." />
+        }
+        else if (_linkedBooks.Count == 0)
+        {
+            <p class="text-muted">Diesem Projekt sind noch keine Bücher zugeordnet.</p>
+        }
+        else
+        {
+            <div class="library-grid">
+                @foreach (var book in _linkedBooks)
+                {
+                    <div class="shelf-book-entry">
+                        <BookCard Book="book" />
+                        <button type="button" class="btn shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)">Vom Projekt entfernen</button>
+                    </div>
+                }
+            </div>
+        }
+    }
     else
     {
         <div class="library-header">
@@ -547,8 +604,15 @@ else
     private IBrowserFile? _selectedProjectFile;
     private readonly Dictionary<int, string> _fileThumbnails = new();
 
+    private List<Book>? _linkedBooks;
+    private string? _linkedBooksErrorMessage;
+    private string _bookSearchTerm = string.Empty;
+    private List<Book>? _bookSuggestions;
+    private System.Threading.Timer? _bookSearchDebounceTimer;
+    private string? _addBookErrorMessage;
+
     protected override Task OnParametersSetAsync() =>
-        Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync(), LoadTimelineEventsAsync(), LoadLoreEntriesAsync(), LoadProjectFilesAsync());
+        Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync(), LoadTimelineEventsAsync(), LoadLoreEntriesAsync(), LoadLinkedBooksAsync(), LoadProjectFilesAsync());
 
     private async Task LoadProjectAsync()
     {
@@ -949,6 +1013,76 @@ else
         }
     }
 
+    private async Task LoadLinkedBooksAsync()
+    {
+        _linkedBooksErrorMessage = null;
+        var response = await ApiClient.GetAsync<List<Book>>($"/api/projects/{Id}/books");
+        if (response is { Success: true, Data: not null })
+        {
+            _linkedBooks = response.Data;
+        }
+        else
+        {
+            _linkedBooksErrorMessage = response?.Error?.Message ?? "Bücher konnten nicht geladen werden.";
+        }
+    }
+
+    private void OnBookSearchInput(ChangeEventArgs e)
+    {
+        _bookSearchTerm = e.Value?.ToString() ?? string.Empty;
+
+        _bookSearchDebounceTimer?.Dispose();
+        _bookSearchDebounceTimer = new System.Threading.Timer(
+            _ => InvokeAsync(async () =>
+            {
+                await LoadBookSuggestionsAsync();
+                // Same real-browser-only re-render gap as Library.razor's
+                // search debounce -- a Timer callback reached via InvokeAsync
+                // doesn't automatically trigger a re-render afterwards.
+                StateHasChanged();
+            }),
+            null,
+            400,
+            Timeout.Infinite);
+    }
+
+    private async Task LoadBookSuggestionsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_bookSearchTerm))
+        {
+            _bookSuggestions = null;
+            return;
+        }
+
+        var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?search={Uri.EscapeDataString(_bookSearchTerm)}&pageSize=8");
+        _bookSuggestions = response is { Success: true, Data: not null } ? response.Data.Items : null;
+    }
+
+    private async Task AddBookAsync(int bookId)
+    {
+        _addBookErrorMessage = null;
+        var succeeded = await ApiClient.PostAsync($"/api/projects/{Id}/books/{bookId}");
+        if (succeeded)
+        {
+            _bookSearchTerm = string.Empty;
+            _bookSuggestions = null;
+            await LoadLinkedBooksAsync();
+        }
+        else
+        {
+            _addBookErrorMessage = "Buch konnte nicht hinzugefügt werden.";
+        }
+    }
+
+    private async Task RemoveBookAsync(int bookId)
+    {
+        var succeeded = await ApiClient.DeleteAsync($"/api/projects/{Id}/books/{bookId}");
+        if (succeeded)
+        {
+            await LoadLinkedBooksAsync();
+        }
+    }
+
     private async Task LoadProjectFilesAsync()
     {
         _filesErrorMessage = null;
@@ -1059,6 +1193,7 @@ else
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(url);
         }
+        _bookSearchDebounceTimer?.Dispose();
     }
 
     private class EditFormModel

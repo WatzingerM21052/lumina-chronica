@@ -62,6 +62,15 @@ import {
     type UpdateLoreEntryInput,
 } from "../services/loreService";
 import { createProjectFile, deleteProjectFile, getProjectFileObject, listProjectFiles, type CreateProjectFileInput } from "../services/projectFileService";
+import { addBookToProject, listProjectBooks, removeBookFromProject } from "../services/projectBookService";
+import {
+    createCharacterRelationship,
+    deleteCharacterRelationship,
+    listCharacterRelationships,
+    updateCharacterRelationship,
+    type CreateCharacterRelationshipInput,
+    type UpdateCharacterRelationshipInput,
+} from "../services/characterRelationshipService";
 
 // Worldbuilding projects — v2.0, Phase 1 (issue #254). Later Worldbuilding
 // phases (Characters, Locations/Map, Timeline, Lore/Files, Linked
@@ -638,4 +647,99 @@ projectsRoute.get("/:id/files/:fileId/content", requireAuth, async (c) => {
     return c.body(result.object.body, 200, {
         "Content-Type": result.object.httpMetadata?.contentType ?? "application/octet-stream",
     });
+});
+
+// Linked books — v2.0, Phase 6 (issue #259). project_books is a plain join
+// table, same shape as shelves.ts's shelf_books routes.
+
+projectsRoute.post("/:id/books/:bookId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const bookId = Number(c.req.param("bookId"));
+    try {
+        await addBookToProject(c.env.DB, c.get("userId"), projectId, bookId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project or book not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.get("/:id/books", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    try {
+        const books = await listProjectBooks(c.env.DB, c.get("userId"), projectId);
+        return c.json(success(books));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.delete("/:id/books/:bookId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const bookId = Number(c.req.param("bookId"));
+    try {
+        await removeBookFromProject(c.env.DB, c.get("userId"), projectId, bookId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        throw err;
+    }
+});
+
+// Character relationships — v2.0, Phase 6 (issue #259). No spec precedent;
+// directional by convention (relationship_type is phrased from A to B).
+
+projectsRoute.post("/:id/relationships", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const body = await c.req.json<CreateCharacterRelationshipInput>().catch(() => null);
+    if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+
+    try {
+        const relationship = await createCharacterRelationship(c.env.DB, c.get("userId"), projectId, body);
+        return c.json(success(relationship), 201);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+projectsRoute.get("/:id/relationships", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    try {
+        const relationships = await listCharacterRelationships(c.env.DB, c.get("userId"), projectId);
+        return c.json(success(relationships));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.put("/:id/relationships/:relationshipId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const relationshipId = Number(c.req.param("relationshipId"));
+    const body = await c.req.json<UpdateCharacterRelationshipInput>().catch(() => null);
+    if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+
+    try {
+        const relationship = await updateCharacterRelationship(c.env.DB, c.get("userId"), projectId, relationshipId, body);
+        return c.json(success(relationship));
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Relationship not found."), 404);
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
+});
+
+projectsRoute.delete("/:id/relationships/:relationshipId", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const relationshipId = Number(c.req.param("relationshipId"));
+    try {
+        await deleteCharacterRelationship(c.env.DB, c.get("userId"), projectId, relationshipId);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Relationship not found."), 404);
+        throw err;
+    }
 });

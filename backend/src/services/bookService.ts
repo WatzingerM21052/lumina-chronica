@@ -440,6 +440,7 @@ export async function deleteBook(db: D1Database, storage: R2Bucket, ownerId: num
         db.prepare("DELETE FROM book_files WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM favorites WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM shelf_books WHERE book_id = ?").bind(bookId),
+        db.prepare("DELETE FROM project_books WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM books WHERE id = ?").bind(bookId),
     ]);
 
