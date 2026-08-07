@@ -4,6 +4,12 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+### Added
+
+- Community: public profile — `/u/{username}`, reachable while logged out, shows a user's PUBLIC books and projects (cover + metadata only, the book file itself stays auth-gated). `visibility` (PRIVATE/PUBLIC), stored since v1.0/v2.0 but never user-facing, is now settable via a selector on the Book/Project edit forms (issue #300, Phase 1 of v3.0 Community, epics #10/#11).
+
+Backend: 244/244 Vitest tests passing. Frontend: 194/194 bUnit tests passing.
+
 ## [2.1.0] - 2026-08-07
 
 ### Security
