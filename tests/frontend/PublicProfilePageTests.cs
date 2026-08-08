@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Bunit;
 using Bunit.TestDoubles;
 using LuminaChronica.Client.Pages;
@@ -64,7 +65,7 @@ public class PublicProfilePageTests : BunitContext
     // format outright. Caught live in the browser against the real API,
     // not by the test suite -- this fixture exists so it would be next time.
     private const string ProfileWithActivitiesJson =
-        """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[],"activities":[{"id":1,"type":"RATING_GIVEN","targetType":"BOOK","targetId":9,"targetTitle":"Dune","rating":4,"createdAt":"2026-08-01 00:00:00"},{"id":2,"type":"BOOK_PUBLIC","targetType":"BOOK","targetId":10,"targetTitle":"Mittelerde","rating":null,"createdAt":"2026-07-28 00:00:00"},{"id":3,"type":"PROJECT_PUBLIC","targetType":"PROJECT","targetId":11,"targetTitle":"Aetherfall","rating":null,"createdAt":"2026-07-20 00:00:00"}]}}""";
+        """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[],"activities":[{"id":1,"type":"RATING_GIVEN","targetType":"BOOK","targetId":9,"targetTitle":"Dune","rating":4,"createdAt":"2026-08-01 12:00:00"},{"id":2,"type":"BOOK_PUBLIC","targetType":"BOOK","targetId":10,"targetTitle":"Mittelerde","rating":null,"createdAt":"2026-07-28 12:00:00"},{"id":3,"type":"PROJECT_PUBLIC","targetType":"PROJECT","targetId":11,"targetTitle":"Aetherfall","rating":null,"createdAt":"2026-07-20 12:00:00"}]}}""";
 
     private const string NotFollowingProfileJson =
         """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":3,"followingCount":1,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[]}}""";
@@ -129,6 +130,14 @@ public class PublicProfilePageTests : BunitContext
         Assert.Contains("Mittelerde", items[1].TextContent);
         Assert.Contains("veröffentlicht", items[1].TextContent);
         Assert.Contains("Aetherfall", items[2].TextContent);
+
+        // Guards the actual bug found live: ProfileActivity.CreatedAt is D1's
+        // raw "yyyy-MM-dd HH:mm:ss" (no 'T', no offset) -- if FormatActivityDate's
+        // parse silently fails, it falls back to the unparsed raw string, which
+        // this would catch (the timezone-dependent day/hour aren't asserted,
+        // only that the raw D1 shape never reaches the rendered markup).
+        Assert.DoesNotContain("2026-08-01 12:00:00", items[0].TextContent);
+        Assert.Matches(new Regex(@"\d{2}\.\d{2}\.2026"), items[0].TextContent);
         Assert.Contains("veröffentlicht", items[2].TextContent);
     }
 
