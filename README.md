@@ -6,7 +6,7 @@ Lumina Chronica is a personal digital library and creative knowledge platform �
 
 ## Status
 
-✅ **v3.1.0 released** (2026-08-08) — personal library + reader (v1.0/v1.5: auth, EPUB/PDF/TXT/Markdown reader, shelves/tags/favorites, bookmarks, statistics), worldbuilding (v2.0: projects, characters, locations/maps, timelines, lore, linked books), a security hardening pass (v2.1), and Community (v3.0: public profiles, following, ratings, discovery) plus v3.1's borrowed reading — a book's owner can share it so any logged-in user can fully read it (own progress/bookmarks, no separate upload needed). Next up: v4.0 (KI). See [`documentation/Roadmap.md`](documentation/Roadmap.md) for the full version plan and [GitHub Projects](../../projects) for live progress.
+✅ **v3.2.0 released** (2026-08-08) — personal library + reader (v1.0/v1.5: auth, EPUB/PDF/TXT/Markdown reader, shelves/tags/favorites, bookmarks, statistics), worldbuilding (v2.0: projects, characters, locations/maps, timelines, lore, linked books), a security hardening pass (v2.1), and Community (v3.0: public profiles, following, ratings, discovery). v3.1/v3.2 layered borrowed reading on top: a `PUBLIC` book is fully readable by any logged-in user, a `SHARED` book only by people its owner explicitly picked — either way with the reader's own progress/bookmarks, no separate upload needed. Next up: v4.0 (KI). See [`documentation/Roadmap.md`](documentation/Roadmap.md) for the full version plan and [GitHub Projects](../../projects) for live progress.
 
 - Frontend: https://watzingerm21052.github.io/lumina-chronica/
 - Backend: https://lumina-chronica-api.svhofkirchen-api.workers.dev/api/status
