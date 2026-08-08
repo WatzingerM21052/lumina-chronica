@@ -19,34 +19,46 @@
         <input placeholder="Benutzername…" aria-label="Nutzer nach Benutzername durchsuchen" @oninput="OnUserSearchInput" />
     </div>
 
-    @if (_userSearchResults is { Count: > 0 })
-    {
-        <ul class="discover-author-results">
-            @foreach (var user in _userSearchResults)
-            {
-                <li>
-                    <a class="discover-author-card" href="@($"u/{user.Username}")">
-                        @if (user.AvatarUrl is { } avatarUrl)
-                        {
-                            <img src="@avatarUrl" alt="" class="discover-author-avatar" />
-                        }
-                        else
-                        {
-                            <span class="discover-author-avatar discover-author-avatar-placeholder" aria-hidden="true"><Icon Name="person" /></span>
-                        }
-                        <span class="discover-author-info">
-                            <span class="discover-author-name">@user.Username</span>
-                            <span class="discover-author-role">Autor / Worldbuilder</span>
-                        </span>
-                    </a>
-                </li>
-            }
-        </ul>
-    }
-    else if (!string.IsNullOrWhiteSpace(_userSearchTerm))
-    {
-        <p class="text-muted">Keine Nutzer gefunden.</p>
-    }
+    @* aria-live="polite" -- announces the debounced search's outcome
+       (result count via the list itself, or the empty/loading message)
+       without interrupting whatever the user is currently doing, which
+       aria-live="assertive" would. aria-busy reflects the in-flight state
+       explicitly rather than leaving a silent gap during the 400ms
+       debounce + request. *@
+    <div aria-live="polite" aria-busy="@(_isSearchingUsers ? "true" : "false")">
+        @if (_isSearchingUsers)
+        {
+            <p class="text-muted">Suche läuft…</p>
+        }
+        else if (_userSearchResults is { Count: > 0 })
+        {
+            <ul class="discover-author-results">
+                @foreach (var user in _userSearchResults)
+                {
+                    <li>
+                        <a class="discover-author-card" href="@($"u/{user.Username}")">
+                            @if (user.AvatarUrl is { } avatarUrl)
+                            {
+                                <img src="@avatarUrl" alt="" class="discover-author-avatar" />
+                            }
+                            else
+                            {
+                                <span class="discover-author-avatar discover-author-avatar-placeholder" aria-hidden="true"><Icon Name="person" /></span>
+                            }
+                            <span class="discover-author-info">
+                                <span class="discover-author-name">@user.Username</span>
+                                <span class="discover-author-role">Autor / Worldbuilder</span>
+                            </span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+        else if (!string.IsNullOrWhiteSpace(_userSearchTerm))
+        {
+            <p class="text-muted">Keine Nutzer gefunden.</p>
+        }
+    </div>
 </section>
 
 <section class="discover-section" data-reveal style="--reveal-delay: 120ms">
@@ -63,7 +75,8 @@
 
     @if (_books is null)
     {
-        <div class="catalog-grid" aria-hidden="true">
+        <span class="visually-hidden" role="status">Bücher werden geladen…</span>
+        <div class="catalog-grid" aria-hidden="true" aria-busy="true">
             @for (var i = 0; i < 6; i++)
             {
                 <div class="discover-skeleton-card">
@@ -111,6 +124,7 @@
     private string _userSearchTerm = string.Empty;
     private List<DiscoverUser>? _userSearchResults;
     private System.Threading.Timer? _userSearchDebounceTimer;
+    private bool _isSearchingUsers;
     private IJSObjectReference? _motionModule;
 
     protected override async Task OnInitializedAsync() => await LoadBooksAsync();
@@ -158,6 +172,10 @@
     private void OnUserSearchInput(ChangeEventArgs e)
     {
         _userSearchTerm = e.Value?.ToString() ?? string.Empty;
+        // Set as soon as typing happens, not just once the debounce fires
+        // below -- covers the full "nothing's happened yet" gap (issue
+        // #341's search-accessibility requirement) with a single flag.
+        _isSearchingUsers = !string.IsNullOrWhiteSpace(_userSearchTerm);
 
         _userSearchDebounceTimer?.Dispose();
         _userSearchDebounceTimer = new System.Threading.Timer(
@@ -178,11 +196,13 @@
         if (string.IsNullOrWhiteSpace(_userSearchTerm))
         {
             _userSearchResults = null;
+            _isSearchingUsers = false;
             return;
         }
 
         var response = await ApiClient.GetAsync<DiscoverUserListResponse>($"/api/discover/users?search={Uri.EscapeDataString(_userSearchTerm)}");
         _userSearchResults = response is { Success: true, Data: not null } ? response.Data.Items : [];
+        _isSearchingUsers = false;
     }
 
     public void Dispose()

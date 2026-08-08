@@ -19,6 +19,12 @@
     --color-secondary-hover: #5c262b;
 
     --color-gold-accent: #b08d2b;
+    /* Accessible-contrast variant of the gold accent, for text/icons that
+       need to actually be read (rating stars, focus ring) rather than just
+       decorate -- --color-gold-accent itself is ~2.6:1 against
+       --color-bg-paper/-card, well under WCAG's 3:1 floor for UI
+       components. Same value as --color-primary (issue #341 a11y audit). */
+    --color-accent-text: var(--color-primary);
     --color-info: #3e7a93;
     --color-success: #4f7942;
     --color-warning: #b8862b;

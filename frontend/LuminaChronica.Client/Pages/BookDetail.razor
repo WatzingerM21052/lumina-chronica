@@ -74,7 +74,10 @@ else
                     <div class="book-detail-rating">
                         @if (_book.RatingCount > 0)
                         {
-                            <span>★ @_book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture) (@_book.RatingCount)</span>
+                            var average = _book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture);
+                            <span aria-label="@($"Durchschnittliche Bewertung: {average} von 5 Sternen, {_book.RatingCount} {(_book.RatingCount == 1 ? "Bewertung" : "Bewertungen")}")">
+                                <span aria-hidden="true">★ @average (@_book.RatingCount)</span>
+                            </span>
                         }
                         else
                         {
@@ -82,13 +85,19 @@ else
                         }
                         @if (!_book.IsOwner)
                         {
-                            <div class="book-detail-rate-stars">
+                            <div class="book-detail-rate-stars" role="group" aria-label="Eigene Bewertung abgeben">
                                 @for (var star = 1; star <= 5; star++)
                                 {
                                     var starValue = star;
+                                    var isCurrentRating = starValue == _book.MyRating;
+                                    // aria-pressed is a tri-state ARIA attribute expecting the literal
+                                    // string "true"/"false" -- binding a raw bool here would make Blazor
+                                    // apply its native-boolean-attribute rendering (presence/absence)
+                                    // instead, which isn't what a screen reader expects from aria-pressed.
                                     <button type="button" class="star-button @(starValue <= (_book.MyRating ?? 0) ? "is-filled" : "")"
                                             disabled="@_isRatingInProgress"
-                                            title="@($"Mit {starValue} Sternen bewerten")"
+                                            aria-pressed="@(starValue <= (_book.MyRating ?? 0) ? "true" : "false")"
+                                            aria-label="@(isCurrentRating ? $"Eigene Bewertung von {starValue} Sternen entfernen" : $"Mit {starValue} Sternen bewerten")"
                                             @onclick="() => RateBookAsync(starValue)">★</button>
                                 }
                             </div>

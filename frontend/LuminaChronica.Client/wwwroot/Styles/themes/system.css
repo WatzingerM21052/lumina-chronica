@@ -12,6 +12,7 @@
         --color-secondary: #6b7280;
         --color-secondary-hover: #565c69;
         --color-gold-accent: #c9a227;
+        --color-accent-text: #8c6a24;
         --color-info: #3b82c4;
         --color-success: #2f8f4e;
         --color-warning: #c48a1f;
@@ -38,6 +39,7 @@
         --color-secondary: #b24b54;
         --color-secondary-hover: #9c3e46;
         --color-gold-accent: #d9b04c;
+        --color-accent-text: #d9b04c;
         --color-info: #6fa8c9;
         --color-success: #6fae6f;
         --color-warning: #d9a441;

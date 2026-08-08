@@ -85,6 +85,11 @@ public class DiscoverPageTests : BunitContext
         var cut = Render<Discover>();
 
         Assert.NotEmpty(cut.FindAll(".discover-skeleton-card"));
+        // Issue #341 a11y audit -- the skeleton itself stays aria-hidden
+        // (it's not real content), but the loading state must still reach
+        // a screen reader some other way, and the region should say it's busy.
+        Assert.Equal("true", cut.Find(".catalog-grid").GetAttribute("aria-busy"));
+        Assert.Contains("Bücher werden geladen", cut.Markup);
     }
 
     private sealed class NeverRespondingHttpMessageHandler : HttpMessageHandler
@@ -102,6 +107,24 @@ public class DiscoverPageTests : BunitContext
 
         Assert.NotEmpty(cut.FindAll(".discover-search-icon"));
         Assert.Equal("Nutzer nach Benutzername durchsuchen", cut.Find("input").GetAttribute("aria-label"));
+    }
+
+    // Issue #341 a11y audit -- the 400ms debounce plus the request itself
+    // used to leave a silent gap with no visible or announced loading
+    // state at all. _isSearchingUsers is set synchronously as soon as
+    // typing happens (OnUserSearchInput), before the debounce timer even
+    // fires, so this is observable immediately after Input() with no wait.
+    [Fact]
+    public void Discover_TypingAUsername_ShowsSearchingState()
+    {
+        UseRoutes(EmptyBooksJson);
+
+        var cut = Render<Discover>();
+        cut.Find("input").Input("ali");
+
+        var liveRegion = cut.Find("[aria-live='polite']");
+        Assert.Equal("true", liveRegion.GetAttribute("aria-busy"));
+        Assert.Contains("Suche läuft", liveRegion.TextContent);
     }
 
     [Fact]

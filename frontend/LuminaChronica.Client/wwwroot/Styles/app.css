@@ -62,6 +62,23 @@ h3 {
     color: var(--color-text-secondary);
 }
 
+/* Standard visually-hidden pattern -- content that should reach a screen
+   reader (a loading announcement alongside an aria-hidden skeleton, a
+   label with no room for visible text) without taking up layout space or
+   being visible on screen. Global from its first use since it's a generic
+   utility, not page-specific content (issue #341 a11y audit). */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* Shared line-icon set (Components/Icon/Icon.razor) -- base sizing only;
    context-specific sizes are set via an additional class where needed. */
 .icon {
@@ -327,7 +344,12 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 [tabindex]:focus-visible {
-    outline: 2px solid var(--color-gold-accent);
+    /* --color-accent-text, not --color-gold-accent: the plain gold accent
+       measures ~2.2-2.6:1 against light-theme paper/card backgrounds,
+       under WCAG's 3:1 floor for a focus indicator (issue #341 a11y
+       audit). --color-accent-text is a per-theme variant tuned for
+       real contrast instead of pure decoration. */
+    outline: 2px solid var(--color-accent-text);
     outline-offset: 2px;
 }
 
@@ -1092,7 +1114,11 @@ select:focus-visible,
 }
 
 .book-detail-favorite.is-favorite {
-    color: var(--color-gold-accent);
+    /* --color-accent-text, not --color-gold-accent -- see the
+       focus-visible rule's comment (issue #341 a11y audit). This glyph is
+       large (font-size-h2), so it only needs 3:1, but the plain gold
+       accent still falls short of that on light themes. */
+    color: var(--color-accent-text);
 }
 
 .book-detail-borrowed-badge {
@@ -1897,7 +1923,10 @@ select:focus-visible,
 }
 
 .star-button.is-filled {
-    color: var(--color-gold-accent);
+    /* --color-accent-text, not --color-gold-accent -- this text-size glyph
+       needs real contrast to convey rating state, not just decoration
+       (issue #341 a11y audit; see the focus-visible rule's comment). */
+    color: var(--color-accent-text);
 }
 
 .star-button:disabled {

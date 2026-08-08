@@ -12,6 +12,14 @@
     --color-secondary-hover: #565c69;
 
     --color-gold-accent: #c9a227;
+    /* #c9a227 is ~2.2:1 against --color-bg-paper/-card here, well under
+       WCAG's 3:1 floor for UI components -- see classic-library.css's
+       comment. This theme's --color-primary is blue, so it can't just
+       reuse that token the way classic-library/dark-library do; a
+       darkened gold (~4.6-5:1 against this theme's paper/card) keeps the
+       "gold accent" identity for ratings/focus while actually being
+       legible (issue #341 a11y audit). */
+    --color-accent-text: #8c6a24;
     --color-info: #3b82c4;
     --color-success: #2f8f4e;
     --color-warning: #c48a1f;
