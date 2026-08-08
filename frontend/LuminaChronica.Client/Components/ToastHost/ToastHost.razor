@@ -1,0 +1,15 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@implements IDisposable
+@inject ToastService ToastService
+
+<div class="toast-host" aria-live="polite" role="status">
+    @foreach (var toast in _toasts)
+    {
+        <div class="toast toast-@toast.Kind.ToString().ToLowerInvariant()" @key="toast.Id">
+            <Icon Name="@IconFor(toast.Kind)" Class="toast-icon" />
+            <span class="toast-text">@toast.Text</span>
+            <button type="button" class="toast-dismiss" aria-label="Meldung schließen" @onclick="() => Dismiss(toast.Id)">✕</button>
+        </div>
+    }
+</div>

@@ -32,6 +32,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
     }
@@ -176,6 +177,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -213,6 +215,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -246,6 +249,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -324,6 +328,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -367,6 +372,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -423,6 +429,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -457,6 +464,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -495,6 +503,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -523,6 +532,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
@@ -572,6 +582,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
@@ -604,6 +615,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
@@ -634,6 +646,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
         var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
@@ -677,6 +690,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
         var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
@@ -752,6 +766,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -817,6 +832,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -839,6 +855,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -864,6 +881,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser(userId: 1);
 
@@ -885,6 +903,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser(userId: 1);
 
@@ -909,6 +928,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser(userId: 1);
 
@@ -942,6 +962,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
@@ -964,6 +985,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
         Services.AddSingleton<OfflineStorageService>();
         UseAuthenticatedUser();
 
