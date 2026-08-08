@@ -1,0 +1,210 @@
+/* Discover -- "the Great Library Catalog" (issue #315/#340). Page-scoped
+   since #339's <CatalogCard> already carries the shared card styling;
+   what's left here is specific to this page's own chrome (search field,
+   author-card results, the books toolbar). */
+
+.discover-heading-caption {
+    font-family: var(--font-family-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: var(--font-size-h3);
+    color: var(--color-text-muted);
+}
+
+.discover-section {
+    margin-bottom: var(--space-6);
+}
+
+.discover-subheading {
+    font-size: var(--font-size-h3);
+    margin-bottom: var(--space-2);
+}
+
+/* "Antikpapier, dünner Goldrand, dezenter Schatten, Material Focus State" */
+.discover-search-field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    max-width: 24rem;
+    padding: 0.55rem var(--space-2);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.discover-search-field:focus-within {
+    border-color: var(--color-gold-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold-accent) 25%, transparent);
+}
+
+.discover-search-icon {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.discover-search-field input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    outline: none;
+    font-family: var(--font-family-reader);
+    font-style: italic;
+    font-size: var(--font-size-body);
+    color: var(--color-text-primary);
+}
+
+.discover-search-field input::placeholder {
+    color: var(--color-text-muted);
+}
+
+/* Author-card search results -- a small, restrained "author card" per
+   result, not a plain link list. */
+.discover-author-results {
+    list-style: none;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-width: 24rem;
+}
+
+.discover-author-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--color-text-primary);
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.discover-author-card:hover,
+.discover-author-card:focus-visible {
+    background: var(--color-bg-card);
+    border-color: var(--color-gold-accent);
+}
+
+.discover-author-avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+}
+
+.discover-author-card:hover .discover-author-avatar,
+.discover-author-card:focus-visible .discover-author-avatar {
+    transform: translateY(-1px);
+}
+
+.discover-author-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-paper);
+    color: var(--color-text-disabled);
+}
+
+.discover-author-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.discover-author-name {
+    font-family: var(--font-family-display);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.discover-author-role {
+    font-size: var(--font-size-caption);
+    font-style: italic;
+    color: var(--color-text-muted);
+}
+
+/* Books toolbar -- heading + the restyled sort control, "ein hochwertiger
+   Bibliotheksfilter" rather than a plain <select>. */
+.discover-books-toolbar {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+}
+
+.discover-sort-field {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+}
+
+.discover-sort-label {
+    font-size: var(--font-size-caption);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.discover-sort-field select {
+    font-family: inherit;
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.discover-sort-field select:hover,
+.discover-sort-field select:focus-visible {
+    border-color: var(--color-gold-accent);
+}
+
+/* Skeleton loading grid -- card-shaped placeholders instead of "Lädt…",
+   same shimmer as PublicProfile's hero (.skeleton-shape, shared in
+   app.css). */
+.discover-skeleton-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.discover-skeleton-cover {
+    aspect-ratio: 2 / 3;
+}
+
+.discover-skeleton-line {
+    height: 0.8rem;
+    width: 80%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .discover-search-field,
+    .discover-author-card,
+    .discover-author-avatar,
+    .discover-sort-field select {
+        transition: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .discover-books-toolbar {
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-1);
+    }
+}

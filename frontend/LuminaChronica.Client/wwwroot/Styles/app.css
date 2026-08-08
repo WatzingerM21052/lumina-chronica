@@ -82,6 +82,79 @@ h3 {
     gap: var(--space-3);
 }
 
+/* Shared skeleton-loading shimmer (PublicProfile's hero, Discover's book
+   grid) -- a plain shape; a page's own scoped CSS sizes/positions it. */
+.skeleton-shape {
+    background: linear-gradient(90deg, var(--color-bg-card) 25%, var(--color-border) 50%, var(--color-bg-card) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+    border-radius: var(--radius);
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Shared "chapter" heading device (PublicProfile's Bibliothek/Projekte/
+   Aktivität, Discover's Bibliotheksregal) -- the same double-gold-rule
+   signature already used under every page's <h1> (see the h1 rule above),
+   reapplied at h2 scale with an italic caption, since the global h1 rule
+   only targets h1. */
+.chapter-title {
+    font-family: var(--font-family-display);
+    font-weight: 600;
+    font-size: var(--font-size-h2);
+    text-align: center;
+    width: fit-content;
+    margin: 0 auto var(--space-3);
+    padding-bottom: var(--space-1);
+    border-bottom: 3px double var(--color-gold-accent);
+}
+
+.chapter-caption {
+    font-weight: 400;
+    font-style: italic;
+    font-size: var(--font-size-small);
+    color: var(--color-text-muted);
+}
+
+/* Shared literary empty-state (PublicProfile's Bibliothek/Projekte/
+   Aktivität chapters, Discover's book grid) -- an ornament + flavor text
+   instead of a bare "no items" line. */
+.empty-state-literary {
+    text-align: center;
+    padding: var(--space-5) var(--space-3);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-card);
+}
+
+.empty-state-ornament {
+    display: block;
+    color: var(--color-gold-accent);
+    font-size: 1.3rem;
+    margin-bottom: var(--space-1);
+}
+
+.empty-state-literary p {
+    font-family: var(--font-family-reader);
+    font-style: italic;
+    color: var(--color-text-secondary);
+    max-width: 26rem;
+    margin: 0 auto var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-shape {
+        animation: none;
+    }
+}
+
 button,
 .btn {
     font-family: inherit;
@@ -1827,36 +1900,3 @@ select:focus-visible,
     cursor: pointer;
 }
 
-.discover-user-results {
-    list-style: none;
-    padding: 0;
-    margin: var(--space-2) 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-}
-
-.discover-user-results a {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    text-decoration: none;
-    color: var(--color-text-primary);
-}
-
-.discover-user-avatar {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid var(--color-border);
-    flex-shrink: 0;
-}
-
-.discover-user-avatar-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--color-bg-card);
-    font-size: 1.1rem;
-}
