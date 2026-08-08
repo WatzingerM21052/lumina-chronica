@@ -9,28 +9,34 @@
 
 <PageTitle>Entdecken — Lumina Chronica</PageTitle>
 
-<h1>Entdecken</h1>
+<h1>Entdecken <span class="discover-heading-caption">— Werke und Welten aus aller Welt</span></h1>
 
-<section>
-    <h2>Nutzer suchen</h2>
-    <input placeholder="Benutzername..." @oninput="OnUserSearchInput" />
+<section class="discover-section">
+    <h2 class="discover-subheading">Nutzer suchen</h2>
+    <div class="discover-search-field">
+        <Icon Name="search" Class="discover-search-icon" />
+        <input placeholder="Benutzername…" aria-label="Nutzer nach Benutzername durchsuchen" @oninput="OnUserSearchInput" />
+    </div>
 
     @if (_userSearchResults is { Count: > 0 })
     {
-        <ul class="discover-user-results">
+        <ul class="discover-author-results">
             @foreach (var user in _userSearchResults)
             {
                 <li>
-                    <a href="@($"u/{user.Username}")">
+                    <a class="discover-author-card" href="@($"u/{user.Username}")">
                         @if (user.AvatarUrl is { } avatarUrl)
                         {
-                            <img src="@avatarUrl" alt="" class="discover-user-avatar" />
+                            <img src="@avatarUrl" alt="" class="discover-author-avatar" />
                         }
                         else
                         {
-                            <span class="discover-user-avatar discover-user-avatar-placeholder" aria-hidden="true"><Icon Name="person" /></span>
+                            <span class="discover-author-avatar discover-author-avatar-placeholder" aria-hidden="true"><Icon Name="person" /></span>
                         }
-                        @user.Username
+                        <span class="discover-author-info">
+                            <span class="discover-author-name">@user.Username</span>
+                            <span class="discover-author-role">Autor / Worldbuilder</span>
+                        </span>
                     </a>
                 </li>
             }
@@ -42,22 +48,36 @@
     }
 </section>
 
-<section>
-    <div class="library-header">
-        <h2>Öffentliche Bücher</h2>
-        <select @bind="_sort" @bind:after="LoadBooksAsync">
-            <option value="newest">Neueste</option>
-            <option value="rating">Beste Bewertung</option>
-        </select>
+<section class="discover-section">
+    <div class="discover-books-toolbar">
+        <h2 class="chapter-title">Bibliotheksregal <span class="chapter-caption">— öffentliche Bücher</span></h2>
+        <div class="discover-sort-field">
+            <label class="discover-sort-label" for="discover-sort">Sortieren</label>
+            <select id="discover-sort" @bind="_sort" @bind:after="LoadBooksAsync">
+                <option value="newest">Neueste</option>
+                <option value="rating">Beste Bewertung</option>
+            </select>
+        </div>
     </div>
 
     @if (_books is null)
     {
-        <p>Lädt…</p>
+        <div class="catalog-grid" aria-hidden="true">
+            @for (var i = 0; i < 6; i++)
+            {
+                <div class="discover-skeleton-card">
+                    <div class="skeleton-shape discover-skeleton-cover"></div>
+                    <div class="skeleton-shape discover-skeleton-line"></div>
+                </div>
+            }
+        </div>
     }
     else if (_books.Count == 0)
     {
-        <p class="text-muted">Noch keine öffentlichen Bücher vorhanden.</p>
+        <div class="empty-state-literary">
+            <span class="empty-state-ornament" aria-hidden="true">❦</span>
+            <p>Dieses Regal wartet noch auf seinen ersten Eintrag.</p>
+        </div>
     }
     else
     {

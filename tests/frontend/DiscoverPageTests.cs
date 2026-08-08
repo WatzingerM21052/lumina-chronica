@@ -65,7 +65,60 @@ public class DiscoverPageTests : BunitContext
 
         var cut = Render<Discover>();
 
-        Assert.Contains("Noch keine öffentlichen Bücher", cut.Markup);
+        Assert.Contains("Dieses Regal wartet noch auf seinen ersten Eintrag.", cut.Markup);
+    }
+
+    [Fact]
+    public void Discover_ShowsSkeletonGrid_WhileBooksLoading()
+    {
+        // A handler whose response Task never completes keeps the page in
+        // its initial "_books is null" (loading) state through the first
+        // render -- a synchronously-completing fake response (like every
+        // other test's) resolves before Render<T>() returns at all, so the
+        // loading branch is never actually observable that way.
+        var handler = new NeverRespondingHttpMessageHandler();
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Discover>();
+
+        Assert.NotEmpty(cut.FindAll(".discover-skeleton-card"));
+    }
+
+    private sealed class NeverRespondingHttpMessageHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            new TaskCompletionSource<HttpResponseMessage>().Task;
+    }
+
+    [Fact]
+    public void Discover_SearchField_HasIconAndAccessibleLabel()
+    {
+        UseRoutes(EmptyBooksJson);
+
+        var cut = Render<Discover>();
+
+        Assert.NotEmpty(cut.FindAll(".discover-search-icon"));
+        Assert.Equal("Nutzer nach Benutzername durchsuchen", cut.Find("input").GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void Discover_AuthorCard_ShowsRoleCaption()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/discover/books", EmptyBooksJson)
+            .WhenPathEndsWith("/discover/users", UserResultsJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Discover>();
+        cut.Find("input").Input("ali");
+
+        cut.WaitForAssertion(() => Assert.Contains("Autor / Worldbuilder", cut.Find(".discover-author-role").TextContent), TimeSpan.FromSeconds(2));
     }
 
     [Fact]

@@ -137,12 +137,9 @@
     align-items: center;
 }
 
-.skeleton-shape {
-    background: linear-gradient(90deg, var(--color-bg-card) 25%, var(--color-border) 50%, var(--color-bg-card) 75%);
-    background-size: 200% 100%;
-    animation: skeleton-shimmer 1.6s ease-in-out infinite;
-    border-radius: var(--radius);
-}
+/* .skeleton-shape / @keyframes skeleton-shimmer are shared utilities in
+   app.css (issue #340 gave them a second consumer -- Discover's loading
+   grid -- so they moved out of this page-scoped file). */
 
 .profile-hero-skeleton .skeleton-shape.profile-hero-portrait {
     border-radius: 50%;
@@ -168,15 +165,6 @@
 
 .skeleton-line-meta {
     width: 9rem;
-}
-
-@keyframes skeleton-shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: -200% 0;
-    }
 }
 
 /* Chapters ("Bibliothek" / "Projekte" / "Aktivität") -- a sparse Roman
@@ -208,48 +196,13 @@
     background: var(--color-border);
 }
 
-.profile-chapter-title {
-    font-family: var(--font-family-display);
-    font-weight: 600;
-    font-size: var(--font-size-h2);
-    text-align: center;
-    width: fit-content;
-    margin: 0 auto var(--space-3);
-    padding-bottom: var(--space-1);
-    border-bottom: 3px double var(--color-gold-accent);
-}
+/* .chapter-title / .chapter-caption are shared utilities in app.css
+   (issue #340 gave them a second consumer -- Discover's "Bibliotheksregal"
+   heading -- so they moved out of this page-scoped file). */
 
-.profile-chapter-caption {
-    font-weight: 400;
-    font-style: italic;
-    font-size: var(--font-size-small);
-    color: var(--color-text-muted);
-}
-
-/* Empty states -- literary flavor text instead of a bare "no items" line. */
-.empty-state-literary {
-    text-align: center;
-    padding: var(--space-5) var(--space-3);
-    border: 1px dashed var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-bg-card);
-}
-
-.empty-state-ornament {
-    display: block;
-    color: var(--color-gold-accent);
-    font-size: 1.3rem;
-    margin-bottom: var(--space-1);
-}
-
-.empty-state-literary p {
-    font-family: var(--font-family-reader);
-    font-style: italic;
-    color: var(--color-text-secondary);
-    max-width: 26rem;
-    margin: 0 auto var(--space-2);
-}
-
+/* .empty-state-literary / .empty-state-ornament are shared utilities in
+   app.css (issue #340 gave them a second consumer -- Discover's empty
+   states -- so they moved out of this page-scoped file). */
 .empty-state-literary .btn {
     margin-top: var(--space-1);
 }
@@ -298,10 +251,6 @@
 @media (prefers-reduced-motion: reduce) {
     .btn-follow {
         transition: none;
-    }
-
-    .skeleton-shape {
-        animation: none;
     }
 }
 
