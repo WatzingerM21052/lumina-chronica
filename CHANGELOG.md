@@ -16,6 +16,8 @@ Backend: 339/339 Vitest tests passing (34 new). Frontend: 241/241 bUnit tests pa
 
 - Profile activity log crashing `/u/{username}` for any profile with an activity: `ProfileActivity.CreatedAt` was typed `DateTime`, which `System.Text.Json` rejects for D1's actual timestamp format. See the v3.3 Phase 1 Roadmap entry for the full story.
 - Notification deep-links 404ing under the GitHub Pages `/lumina-chronica/` subpath: `NotificationBell.BuildLink` used leading-slash hrefs, which resolve from the domain root instead of going through Blazor's `<base href>` rewrite. See the v3.3 Phase 3 Roadmap entry for the full story.
+- Discover's book cards linked to the owner's public profile instead of the book itself; a public profile's book cards linked straight into the reader via a "Lesen" button instead of the book overview. Both now link (the whole card, for the profile page) to the book's own overview page.
+- `BookDetail.razor` showed Bearbeiten/Löschen/the favorite star/the shelf picker to anyone who could view a book, including a SHARED-book borrower who isn't the owner — every one of those actions is owner-only server-side (`findOwnedBookRow`) and just 404'd. The API never told the frontend who owns a book at all; added a server-computed `BookSummary.isOwner` field and gated all four behind it.
 
 ## [3.2.0] - 2026-08-08
 
