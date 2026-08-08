@@ -185,7 +185,7 @@ else
                 {
                     <li class="profile-activity-item">
                         <span class="profile-activity-text">@ActivityText(activity)</span>
-                        <span class="profile-activity-date text-muted">@activity.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)</span>
+                        <span class="profile-activity-date text-muted">@FormatActivityDate(activity.CreatedAt)</span>
                     </li>
                 }
             </ul>
@@ -279,6 +279,19 @@ else
         }
 
         _isTogglingFollow = false;
+    }
+
+    // activity.CreatedAt is D1's raw "yyyy-MM-dd HH:mm:ss" (UTC, no offset)
+    // -- parsed explicitly here rather than via System.Text.Json (which
+    // rejects that format outright), same reasoning as ProfileActivity's
+    // CreatedAt being string, not DateTime.
+    private static string FormatActivityDate(string createdAt)
+    {
+        if (!DateTime.TryParse(createdAt, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsed))
+        {
+            return createdAt;
+        }
+        return parsed.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
     }
 
     // No deep link for now -- the linked book/project may have gone

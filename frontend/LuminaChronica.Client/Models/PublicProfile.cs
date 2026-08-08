@@ -96,8 +96,14 @@ public class ProfileActivity
     [JsonPropertyName("rating")]
     public int? Rating { get; set; }
 
+    // string, not DateTime -- D1's DATETIME columns serialize as
+    // "yyyy-MM-dd HH:mm:ss" (SQLite's CURRENT_TIMESTAMP format, no 'T', no
+    // offset), which System.Text.Json's default DateTime converter rejects
+    // outright (strict ISO-8601 only). Same reason Book.CreatedAt/
+    // Project.CreatedAt are string, not DateTime -- parse explicitly at the
+    // point of use instead.
     [JsonPropertyName("createdAt")]
-    public DateTime CreatedAt { get; set; }
+    public string CreatedAt { get; set; } = string.Empty;
 }
 
 public class PublicProfileResponse

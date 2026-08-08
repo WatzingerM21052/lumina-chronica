@@ -752,7 +752,9 @@ Picks up backlog issue #299 (deferred from v3.0's Phase 8/§123 list — comment
 
 **Scope confirmed via `AskUserQuestion` (2026-08-08):** first version is only a log of the *viewing profile's own* actions, shown on their own `/u/{username}` page — not an aggregated Twitter-style feed of everyone you follow. A "Home Feed" aggregation is explicitly deferred to a possible later story.
 
-Backend: 305/305 Vitest tests passing (5 new). Frontend: 224/224 bUnit tests passing (2 new).
+**One real bug found live, after merge — same class as v3.0's/v3.1's/v3.2's "bUnit passes, only a real browser catches it" lesson:** `ProfileActivity.CreatedAt` was typed `DateTime`, but D1's `DATETIME` columns serialize as `"yyyy-MM-dd HH:mm:ss"` (SQLite's `CURRENT_TIMESTAMP` format — no `T`, no offset), which `System.Text.Json`'s default `DateTime` converter rejects outright. Every existing model (`Book.CreatedAt`, `Project.CreatedAt`) already avoids this by being `string`; `ProfileActivity` missed that precedent, and it crashed `/u/{username}` entirely for any profile with at least one activity. The bUnit fixture had used ISO-8601 dates, which happened to parse fine and masked it — caught instead by loading the real deployed page against real production data. Fixed to `string`, parsed explicitly at render time (`FormatActivityDate`); the test fixture now uses D1's real timestamp shape, and a new assertion checks the raw D1 string never reaches the rendered markup, so a silent fallback-to-unparsed-string regression would be caught too. Shipped same-day as a hotfix (PR #328).
+
+Backend: 305/305 Vitest tests passing (5 new). Frontend: 224/224 bUnit tests passing (2 new, one of them strengthened by the hotfix to also guard the date-parsing bug).
 
 ### Phase 2 — Comments (issue #325) — not started
 
