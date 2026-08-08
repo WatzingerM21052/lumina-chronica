@@ -36,6 +36,12 @@ import {
     shareBookWithUser,
     unshareBookWithUser,
 } from "../services/bookSharingService";
+import {
+    NotFoundError as CommentNotFoundError,
+    ValidationError as CommentValidationError,
+    createComment,
+    listComments,
+} from "../services/commentService";
 
 export const booksRoute = new Hono<AppEnv>();
 
@@ -294,6 +300,36 @@ booksRoute.delete("/:id/shares/:username", requireAuth, async (c) => {
         return c.body(null, 204);
     } catch (err) {
         if (err instanceof ShareNotFoundError) return c.json(failure("NOT_FOUND", "Book or user not found."), 404);
+        throw err;
+    }
+});
+
+// Comments (v3.3, issue #325) -- commentable by anyone who can actually
+// read the book (owner OR PUBLIC-logged-in OR SHARED-listed), NOT the
+// PUBLIC-only rule ratings use. Same 404-for-both-"doesn't exist"-and-
+// "not accessible" reasoning as every other book route in this file.
+booksRoute.get("/:id/comments", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    try {
+        const comments = await listComments(c.env.DB, c.get("userId"), "BOOK", bookId);
+        return c.json(success(comments));
+    } catch (err) {
+        if (err instanceof CommentNotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        throw err;
+    }
+});
+
+booksRoute.post("/:id/comments", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    const body = await c.req.json<{ content?: string }>().catch(() => null);
+    if (!body || typeof body.content !== "string") return c.json(failure("VALIDATION_ERROR", "content is required."), 400);
+
+    try {
+        await createComment(c.env.DB, c.get("userId"), "BOOK", bookId, body.content);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof CommentNotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        if (err instanceof CommentValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
         throw err;
     }
 });

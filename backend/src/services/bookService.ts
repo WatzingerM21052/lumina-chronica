@@ -335,30 +335,57 @@ async function findOwnedBookRow(db: D1Database, ownerId: number, bookId: number)
 // issue #321/v3.2): a logged-in caller can read (not edit/delete/favorite/
 // shelve) a book they don't own if it's PUBLIC (any logged-in user), or if
 // it's SHARED and they're on that book's explicit share list (book_shares,
-// migration 0017). Only getBook and getBookFileObject use this -- every
-// mutating function keeps using findOwnedBookRow above, strictly owner-only.
-//
+// migration 0017). This is the single source of truth for that rule --
+// findAccessibleBookRow, isAccessibleByUser (readingService.ts/
+// bookmarkService.ts each have their own copy today, unfortunately) and
+// isBookAccessibleTo (commentService.ts) all need to agree on it, and it
+// has already changed twice in two days (v3.1 then v3.2's swap). Every
+// consumer binds bookId first, then callerId (owner check), then callerId
+// again (share-list check).
+const BOOK_ACCESS_WHERE = `id = ? AND (
+    owner_id = ?
+    OR visibility = 'PUBLIC'
+    OR (visibility = 'SHARED' AND EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?))
+)`;
+
 // Can't reuse BOOK_ROW_COLUMNS here: its is_favorite subquery is correlated
 // against books.owner_id, which is only correct when the caller IS the
 // owner (true for every other use of that constant). A borrower reading
 // someone else's book would otherwise see the *owner's* favorite flag
 // mislabeled as their own -- favoriting stays owner-only, so a borrower
 // must always see is_favorite computed against their own (necessarily
-// absent) row, not leak the owner's.
+// absent) row, not leak the owner's. Only getBook and getBookFileObject use
+// this -- every mutating function keeps using findOwnedBookRow above,
+// strictly owner-only.
 async function findAccessibleBookRow(db: D1Database, callerId: number, bookId: number): Promise<BookRow | null> {
     return db
         .prepare(
             `SELECT id, title, author, description, cover_url, genre, language, visibility, shared_teaser_visible, created_at,
                 EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = ?) AS is_favorite
              FROM books
-             WHERE id = ? AND (
-                owner_id = ?
-                OR visibility = 'PUBLIC'
-                OR (visibility = 'SHARED' AND EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?))
-             )`
+             WHERE ${BOOK_ACCESS_WHERE}`
         )
         .bind(callerId, bookId, callerId, callerId)
         .first<BookRow>();
+}
+
+// Same access rule as findAccessibleBookRow, exposed as a boolean check for
+// commentService.ts -- deliberately not exporting findAccessibleBookRow
+// itself, since its BookRow return type carries is_favorite and other
+// fields a comment gate has no business seeing.
+export async function isBookAccessibleTo(db: D1Database, callerId: number, bookId: number): Promise<boolean> {
+    const row = await db
+        .prepare(`SELECT 1 FROM books WHERE ${BOOK_ACCESS_WHERE}`)
+        .bind(bookId, callerId, callerId)
+        .first();
+    return row !== null;
+}
+
+// For commentService.ts's delete authorization (comment author OR the
+// commented-on book's owner). Null means the book no longer exists.
+export async function getBookOwnerId(db: D1Database, bookId: number): Promise<number | null> {
+    const row = await db.prepare("SELECT owner_id FROM books WHERE id = ?").bind(bookId).first<{ owner_id: number }>();
+    return row?.owner_id ?? null;
 }
 
 export async function addFavorite(db: D1Database, ownerId: number, bookId: number): Promise<void> {
@@ -503,6 +530,7 @@ export async function deleteBook(db: D1Database, storage: R2Bucket, ownerId: num
         db.prepare("DELETE FROM ratings WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM book_shares WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM profile_activities WHERE target_type = 'BOOK' AND target_id = ?").bind(bookId),
+        db.prepare("DELETE FROM comments WHERE target_type = 'BOOK' AND target_id = ?").bind(bookId),
         db.prepare("DELETE FROM books WHERE id = ?").bind(bookId),
     ]);
 

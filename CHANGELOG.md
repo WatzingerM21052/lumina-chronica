@@ -7,8 +7,13 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 ### Added
 
 - Community: profile activity log (v3.3 Phase 1, issue #324) — `/u/{username}` now has an "Aktivitäten" section listing the profile owner's own public actions: a book or project's transition into `PUBLIC` visibility, and each rating given to a book (one entry per re-rate, since ratings are upsert but each rating is still a distinct event). First version only logs the viewing profile's own actions — an aggregated feed across everyone you follow is a possible later story, not in scope here. New `profile_activities` table (migration `0018_profile_activities.sql`), deliberately not named `activities` to avoid colliding with the unrelated `reading_activity` table (per-day reading counts for the Lesekalender heatmap).
+- Community: comments on books and projects (v3.3 Phase 2, issue #325). A book is commentable by anyone who can actually read it — owner, any logged-in user on a `PUBLIC` book, or a listed user on a `SHARED` book's share list — the same rule reading itself uses, not the `PUBLIC`-only rule ratings use. A project is commentable by its owner or, if `PUBLIC`, any logged-in user (projects have no share-list equivalent to books). Create + delete only for this first version (no edit); delete is allowed by the comment's own author or the commented-on book/project's owner. New `comments` table (migration `0019_comments.sql`).
 
 Backend: 305/305 Vitest tests passing (5 new). Frontend: 224/224 bUnit tests passing (2 new).
+
+### Fixed
+
+- Profile activity log crashing `/u/{username}` for any profile with an activity: `ProfileActivity.CreatedAt` was typed `DateTime`, which `System.Text.Json` rejects for D1's actual timestamp format. See the v3.3 Phase 1 Roadmap entry for the full story.
 
 ## [3.2.0] - 2026-08-08
 

@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using Bunit;
+using Bunit.TestDoubles;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +10,13 @@ namespace LuminaChronica.Client.Tests;
 
 public class ProjectDetailPageTests : BunitContext
 {
+    // Comments (v3.3, issue #325) injects AuthenticationStateProvider to read
+    // the current user's id via ClaimTypes.NameIdentifier (same claim
+    // LuminaAuthStateProvider populates from the real JWT's `sub`).
+    // SetClaims (not SetAuthorized, which only sets a Name claim) is what
+    // lets a test control _currentUserId.
+    private void UseAuthenticatedUser(int userId = 1) => AddAuthorization().SetClaims(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
+
     public ProjectDetailPageTests()
     {
         // Loose mode: only the map-with-content test actually exercises the
@@ -23,10 +32,11 @@ public class ProjectDetailPageTests : BunitContext
     private const string EmptyLoreJson = """{"success":true,"data":[]}""";
     private const string EmptyBooksJson = """{"success":true,"data":[]}""";
     private const string EmptyFilesJson = """{"success":true,"data":[]}""";
+    private const string EmptyCommentsJson = """{"success":true,"data":[]}""";
 
     private RoutedFakeHttpMessageHandler UseDefaultRoutes()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith("/characters", EmptyCharactersJson)
             .WhenPathEndsWith("/locations", EmptyLocationsJson)
             .WhenPathEndsWith("/timeline", EmptyTimelineJson)
@@ -39,6 +49,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
         return handler;
     }
 
@@ -69,7 +80,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_ConfirmDialog_Confirm_DeletesTheProject()
     {
         HttpRequestMessage? deleteRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Delete && r.RequestUri!.AbsolutePath == "/api/projects/1", r =>
             {
                 deleteRequest = r;
@@ -87,6 +98,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
@@ -123,7 +135,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_SaveEdit_SendsUpdatedTitleAndType()
     {
         HttpRequestMessage? putRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Put, r =>
             {
                 putRequest = r;
@@ -142,6 +154,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
@@ -167,7 +180,7 @@ public class ProjectDetailPageTests : BunitContext
     [Fact]
     public void ProjectDetail_CharactersTab_RendersCharacterCardsFromApiResponse()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith(
                 "/characters",
                 """{"success":true,"data":[{"id":5,"projectId":1,"name":"Elarion","description":null,"imageUrl":null,"age":null,"origin":"The Silver Vale","personality":null,"biography":null,"createdAt":"2026-01-01"}]}""")
@@ -182,6 +195,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Charaktere").Click();
@@ -195,7 +209,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_CreateCharacterForm_SubmitsNameAndReloadsList()
     {
         HttpRequestMessage? createRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Post, r =>
             {
                 createRequest = r;
@@ -214,6 +228,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Charaktere").Click();
@@ -240,7 +255,7 @@ public class ProjectDetailPageTests : BunitContext
     [Fact]
     public void ProjectDetail_MapTab_RendersLocationCardsFromApiResponse()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith(
                 "/locations",
                 """{"success":true,"data":[{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":42.5,"y":17.25,"createdAt":"2026-01-01"}]}""")
@@ -255,6 +270,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Karte").Click();
@@ -267,7 +283,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_CreateLocationForm_SubmitsNameAndReloadsList()
     {
         HttpRequestMessage? createRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Post, r =>
             {
                 createRequest = r;
@@ -286,6 +302,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Karte").Click();
@@ -301,7 +318,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_MapTab_RendersPinForPlacedLocation_WhenMapIsSet()
     {
         var projectWithMap = """{"success":true,"data":{"id":1,"title":"Aetherfall","description":"Ein sky-shattered Kontinent","type":"WORLD","coverUrl":null,"mapUrl":"/api/projects/1/map","visibility":"PRIVATE","createdAt":"2026-01-01"}}""";
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith(
                 "/locations",
                 """{"success":true,"data":[{"id":9,"projectId":1,"name":"Ashen Hollow","description":null,"imageUrl":null,"x":42.5,"y":17.25,"createdAt":"2026-01-01"}]}""")
@@ -317,6 +334,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
         JSInterop.SetupModule("./js/blobUrl.js").Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-map-url");
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
@@ -341,7 +359,7 @@ public class ProjectDetailPageTests : BunitContext
     [Fact]
     public void ProjectDetail_TimelineTab_RendersEventsInOrder()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith(
                 "/timeline",
                 """
@@ -361,6 +379,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
@@ -378,7 +397,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_CreateEventForm_SubmitsTitleAndReloadsTimeline()
     {
         HttpRequestMessage? createRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath == "/api/projects/1/timeline", r =>
             {
                 createRequest = r;
@@ -397,6 +416,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
@@ -412,7 +432,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_TimelineEvent_MoveUpButton_CallsMoveEndpoint()
     {
         HttpRequestMessage? moveRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Put && r.RequestUri!.AbsolutePath == "/api/projects/1/timeline/2/move", r =>
             {
                 moveRequest = r;
@@ -443,6 +463,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
@@ -467,7 +488,7 @@ public class ProjectDetailPageTests : BunitContext
     [Fact]
     public void ProjectDetail_LoreTab_RendersEntryCardsFromApiResponse()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith(
                 "/lore",
                 """{"success":true,"data":[{"id":3,"projectId":1,"title":"The Silver Vale","content":"Old magic.","createdAt":"2026-01-01"}]}""")
@@ -482,6 +503,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lore").Click();
@@ -494,7 +516,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_CreateLoreForm_SubmitsTitleAndReloadsList()
     {
         HttpRequestMessage? createRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath == "/api/projects/1/lore", r =>
             {
                 createRequest = r;
@@ -513,6 +535,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lore").Click();
@@ -538,7 +561,7 @@ public class ProjectDetailPageTests : BunitContext
     [Fact]
     public void ProjectDetail_FilesTab_RendersFileCardsFromApiResponse()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith(
                 "/files",
                 """{"success":true,"data":[{"id":7,"projectId":1,"name":"concept-art.jpg","category":"IMAGE","size":204800,"url":"/api/projects/1/files/7/content","createdAt":"2026-01-01"}]}""")
@@ -554,6 +577,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
@@ -566,7 +590,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_DeleteFileButton_CallsDeleteEndpoint()
     {
         HttpRequestMessage? deleteRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Delete, r =>
             {
                 deleteRequest = r;
@@ -586,6 +610,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
@@ -609,7 +634,7 @@ public class ProjectDetailPageTests : BunitContext
     [Fact]
     public void ProjectDetail_BooksTab_RendersLinkedBookCardsFromApiResponse()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith(
                 "/books",
                 """{"success":true,"data":[{"id":5,"title":"The Silver Vale","author":"J.R.R. Tolkien","coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}]}""")
@@ -624,6 +649,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bücher").Click();
@@ -636,7 +662,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_BooksTab_RemoveButton_CallsRemoveEndpoint()
     {
         HttpRequestMessage? deleteRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Delete && r.RequestUri!.AbsolutePath == "/api/projects/1/books/5", r =>
             {
                 deleteRequest = r;
@@ -656,6 +682,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bücher").Click();
@@ -668,7 +695,7 @@ public class ProjectDetailPageTests : BunitContext
     public void ProjectDetail_BooksTab_SearchInput_AfterDebounce_ShowsSuggestionAndAddButtonCallsAddEndpoint()
     {
         HttpRequestMessage? addRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath == "/api/projects/1/books/9", r =>
             {
                 addRequest = r;
@@ -689,6 +716,7 @@ public class ProjectDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bücher").Click();
@@ -698,5 +726,81 @@ public class ProjectDetailPageTests : BunitContext
         cut.Find(".library-search-suggestions button").Click();
 
         Assert.NotNull(addRequest);
+    }
+
+    // Comments (v3.3, issue #325). GET /api/projects/:id is strictly
+    // owner-only, so in practice this page (and thus these comments) is
+    // only ever reached by the project's own owner -- see the code comment
+    // on ProjectDetail.razor's _comments field for why non-owner PUBLIC
+    // project commenting has no frontend surface yet.
+    private const string ProjectCommentsJson =
+        """{"success":true,"data":[{"id":5,"userId":1,"username":"alice","content":"Planning notes","createdAt":"2026-01-04"}]}""";
+
+    [Fact]
+    public void ProjectDetail_RendersComments_WithUsernameAndContent()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/comments", ProjectCommentsJson)
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser(userId: 1);
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        var items = cut.FindAll("li.book-comment-item");
+        Assert.Single(items);
+        Assert.Contains("alice", items[0].TextContent);
+        Assert.Contains("Planning notes", items[0].TextContent);
+        // Own comment (userId 1 == current user) -- delete button present.
+        Assert.Single(items[0].QuerySelectorAll("button"));
+    }
+
+    [Fact]
+    public void ProjectDetail_SubmittingCommentForm_SendsPostWithContent()
+    {
+        HttpRequestMessage? postRequest = null;
+        string? postBody = null;
+        // POST-specific route registered before the generic
+        // WhenPathEndsWith("/comments", ...) stub -- see BookDetailPageTests'
+        // identical comment for why insertion order matters here.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath.EndsWith("/comments"), r =>
+            {
+                postRequest = r;
+                postBody = r.Content?.ReadAsStringAsync().Result;
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":true}""");
+            })
+            .WhenPathEndsWith("/comments", """{"success":true,"data":[]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find(".comment-form textarea").Change("Love this world!");
+        cut.Find("form.comment-form").Submit();
+
+        Assert.Equal(HttpMethod.Post, postRequest?.Method);
+        Assert.Equal("/api/projects/1/comments", postRequest?.RequestUri?.AbsolutePath);
+        Assert.Contains("\"content\":\"Love this world!\"", postBody);
     }
 }

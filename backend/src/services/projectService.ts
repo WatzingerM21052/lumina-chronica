@@ -223,6 +223,7 @@ export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: 
     await deleteProjectFilesForProject(db, storage, projectId);
     await deleteProjectBooksForProject(db, projectId);
     await db.prepare("DELETE FROM profile_activities WHERE target_type = 'PROJECT' AND target_id = ?").bind(projectId).run();
+    await db.prepare("DELETE FROM comments WHERE target_type = 'PROJECT' AND target_id = ?").bind(projectId).run();
     await db.prepare("DELETE FROM projects WHERE id = ?").bind(projectId).run();
 
     for (const key of [row.cover_url, row.map_url]) {
@@ -247,6 +248,22 @@ export async function getProjectCoverObject(db: D1Database, storage: R2Bucket, o
     if (!row || !row.cover_url) return null;
     if (row.visibility !== "PUBLIC" && row.owner_id !== ownerId) return null;
     return storage.get(row.cover_url);
+}
+
+// Owner OR PUBLIC check used by commentService.ts -- projects have no
+// SHARED-list equivalent to books' book_shares, so this is simpler than
+// isBookAccessibleTo, but still needs the owner branch: self-commenting on
+// your own (PRIVATE by default) project is allowed, same as books.
+export async function isProjectCommentableBy(db: D1Database, callerId: number, projectId: number): Promise<boolean> {
+    const row = await db.prepare("SELECT 1 FROM projects WHERE id = ? AND (owner_id = ? OR visibility = 'PUBLIC')").bind(projectId, callerId).first();
+    return row !== null;
+}
+
+// For commentService.ts's delete authorization (comment author OR the
+// commented-on project's owner). Null means the project no longer exists.
+export async function getProjectOwnerId(db: D1Database, projectId: number): Promise<number | null> {
+    const row = await db.prepare("SELECT owner_id FROM projects WHERE id = ?").bind(projectId).first<{ owner_id: number }>();
+    return row?.owner_id ?? null;
 }
 
 export type PublicProjectSummary = {

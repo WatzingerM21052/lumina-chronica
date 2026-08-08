@@ -3,7 +3,9 @@
 @implements IDisposable
 @using System.Globalization
 @using System.Net.Http.Headers
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
@@ -11,6 +13,7 @@
 @inject BlobUrlService BlobUrlService
 @inject ElementMetricsService ElementMetricsService
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>@(_project?.Title ?? "Projekt") — Lumina Chronica</PageTitle>
 
@@ -63,6 +66,49 @@ else
             </div>
             <ConfirmDialog IsOpen="_confirmingDelete" Message="Projekt wirklich löschen?"
                            OnConfirm="DeleteProjectAsync" OnCancel="() => _confirmingDelete = false" />
+
+            <section class="book-comments">
+                <h2>Kommentare</h2>
+                @if (_comments is null)
+                {
+                    <p class="text-muted">Kommentare werden geladen...</p>
+                }
+                else
+                {
+                    @if (_comments.Count == 0)
+                    {
+                        <p class="text-muted">Noch keine Kommentare.</p>
+                    }
+                    else
+                    {
+                        <ul class="book-comment-list">
+                            @foreach (var comment in _comments)
+                            {
+                                <li class="book-comment-item">
+                                    <div class="book-comment-header">
+                                        <strong>@comment.Username</strong>
+                                        <span class="text-muted">@comment.CreatedAt</span>
+                                    </div>
+                                    <p>@comment.Content</p>
+                                    @if (comment.UserId == _currentUserId)
+                                    {
+                                        <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">Löschen</button>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    <EditForm Model="_commentForm" OnValidSubmit="SubmitCommentAsync" class="comment-form">
+                        @if (_commentErrorMessage is not null)
+                        {
+                            <p class="form-error">@_commentErrorMessage</p>
+                        }
+                        <InputTextArea @bind-Value="_commentForm.Content" placeholder="Kommentar schreiben..." />
+                        <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">Kommentieren</button>
+                    </EditForm>
+                }
+            </section>
         }
         else
         {
@@ -621,8 +667,78 @@ else
     private System.Threading.Timer? _bookSearchDebounceTimer;
     private string? _addBookErrorMessage;
 
+    // Comments (v3.3, issue #325). GET /api/projects/:id is strictly
+    // owner-only (findOwnedProjectRow, unlike books' findAccessibleBookRow),
+    // so this page is currently only ever reachable by the project's own
+    // owner -- non-owner commenting on a PUBLIC project is a real backend
+    // capability (routes/projects.ts's :id/comments), exercised via the API
+    // and live-verified, but has no frontend surface yet since there's no
+    // public-facing project detail page for a non-owner to load. Deferred
+    // until one exists (possibly as part of #315's premium design rework).
+    private List<Comment>? _comments;
+    private int? _currentUserId;
+    private CommentFormModel _commentForm = new();
+    private bool _isSubmittingComment;
+    private string? _commentErrorMessage;
+    private readonly HashSet<int> _commentActionInProgress = [];
+
     protected override Task OnParametersSetAsync() =>
-        Task.WhenAll(LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync(), LoadTimelineEventsAsync(), LoadLoreEntriesAsync(), LoadLinkedBooksAsync(), LoadProjectFilesAsync());
+        Task.WhenAll(
+            LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync(), LoadTimelineEventsAsync(),
+            LoadLoreEntriesAsync(), LoadLinkedBooksAsync(), LoadProjectFilesAsync(), LoadCurrentUserIdAsync(), LoadCommentsAsync());
+
+    private async Task LoadCurrentUserIdAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var idClaim = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        _currentUserId = int.TryParse(idClaim, out var id) ? id : null;
+    }
+
+    private async Task LoadCommentsAsync()
+    {
+        // Best-effort, same reasoning as BookDetail.razor's LoadCommentsAsync
+        // -- a response shape mismatch shouldn't take down the rest of the page.
+        try
+        {
+            var response = await ApiClient.GetAsync<List<Comment>>($"/api/projects/{Id}/comments");
+            _comments = response is { Success: true, Data: not null } ? response.Data : [];
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            _comments = [];
+        }
+    }
+
+    private async Task SubmitCommentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_commentForm.Content)) return;
+
+        _isSubmittingComment = true;
+        _commentErrorMessage = null;
+
+        var succeeded = await ApiClient.PostAsync($"/api/projects/{Id}/comments", new { content = _commentForm.Content });
+        if (succeeded)
+        {
+            _commentForm = new CommentFormModel();
+            await LoadCommentsAsync();
+        }
+        else
+        {
+            _commentErrorMessage = "Kommentar konnte nicht gespeichert werden.";
+        }
+
+        _isSubmittingComment = false;
+    }
+
+    private async Task DeleteCommentAsync(int commentId)
+    {
+        if (!_commentActionInProgress.Add(commentId)) return;
+
+        var succeeded = await ApiClient.DeleteAsync($"/api/comments/{commentId}");
+        if (succeeded) await LoadCommentsAsync();
+
+        _commentActionInProgress.Remove(commentId);
+    }
 
     private async Task LoadProjectAsync()
     {
@@ -1228,5 +1344,10 @@ else
     private class CreateProjectFileFormModel
     {
         public string Category { get; set; } = "IMAGE";
+    }
+
+    private class CommentFormModel
+    {
+        public string Content { get; set; } = string.Empty;
     }
 }
