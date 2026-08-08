@@ -1,5 +1,7 @@
 using System.Linq;
+using System.Security.Claims;
 using Bunit;
+using Bunit.TestDoubles;
 using LuminaChronica.Client.Models;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
@@ -11,6 +13,18 @@ namespace LuminaChronica.Client.Tests;
 
 public class BookDetailPageTests : BunitContext
 {
+    // Comments (v3.3, issue #325) injects AuthenticationStateProvider to read
+    // the current user's id via the ClaimTypes.NameIdentifier claim (same
+    // claim LuminaAuthStateProvider populates from the real JWT's `sub`).
+    // AddAuthorization() registers bUnit's test double for it; SetClaims
+    // (not SetAuthorized, which only sets a Name claim) is what lets a test
+    // control _currentUserId, needed for the "delete your own comment"
+    // button-visibility tests. Called by every test's DI setup below, since
+    // BookDetail now injects AuthenticationStateProvider unconditionally.
+    private void UseAuthenticatedUser(int userId = 1) => AddAuthorization().SetClaims(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
+
+    private const string EmptyCommentsJson = """{"success":true,"data":[]}""";
+
     private void UseApiResponse(string responseJson)
     {
         var handler = new FakeHttpMessageHandler(responseJson);
@@ -19,6 +33,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
     }
 
     [Fact]
@@ -96,7 +111,7 @@ public class BookDetailPageTests : BunitContext
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith("/shares", """{"success":true,"data":[]}""")
             .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -104,6 +119,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.Find("#edit-button").Click();
@@ -133,7 +149,7 @@ public class BookDetailPageTests : BunitContext
         const string sharesJson = """{"success":true,"data":[{"username":"carol","avatarUrl":null}]}""";
 
         HttpRequestMessage? deleteRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Delete, r =>
             {
                 deleteRequest = r;
@@ -146,6 +162,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.Find("#edit-button").Click();
@@ -189,7 +206,7 @@ public class BookDetailPageTests : BunitContext
             """;
 
         string? capturedBody = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson))
             .When(r => r.Method == HttpMethod.Put, r =>
             {
@@ -201,6 +218,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.Find("#edit-button").Click();
@@ -222,7 +240,7 @@ public class BookDetailPageTests : BunitContext
             """;
 
         HttpRequestMessage? capturedRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson))
             .When(r =>
             {
@@ -234,6 +252,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
 
@@ -258,7 +277,7 @@ public class BookDetailPageTests : BunitContext
             """;
 
         HttpRequestMessage? coverRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson))
             .When(r => r.Method == HttpMethod.Put && r.RequestUri!.AbsolutePath.EndsWith("/cover"), r =>
             {
@@ -271,6 +290,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.Find("#edit-button").Click();
@@ -292,12 +312,13 @@ public class BookDetailPageTests : BunitContext
             }}
             """;
 
-        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson).When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
             .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
             .SetResult(new EnrichedMetadata
@@ -340,12 +361,13 @@ public class BookDetailPageTests : BunitContext
             }}
             """;
 
-        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson).When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
             .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
             .SetResult(new EnrichedMetadata { Found = true, Publisher = "Enriched Publisher", HasCover = false });
@@ -371,12 +393,13 @@ public class BookDetailPageTests : BunitContext
             }}
             """;
 
-        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson).When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
         JSInterop.SetupModule("./js/metadataEnrichment.js")
             .Setup<EnrichedMetadata>("lookupByIsbn", _ => true)
             .SetResult(new EnrichedMetadata { Found = false });
@@ -400,12 +423,13 @@ public class BookDetailPageTests : BunitContext
             }}
             """;
 
-        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson).When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
         var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
         module.Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true).SetResult(
         [
@@ -442,12 +466,13 @@ public class BookDetailPageTests : BunitContext
             }}
             """;
 
-        var handler = new RoutedFakeHttpMessageHandler().When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson).When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
         var module = JSInterop.SetupModule("./js/metadataEnrichment.js");
         module.Setup<List<EnrichmentSearchResult>>("searchByQuery", _ => true).SetResult(
         [
@@ -512,7 +537,7 @@ public class BookDetailPageTests : BunitContext
     [Fact]
     public void BookDetail_OfflineButton_SaveOffline_DownloadsFileAndCallsSaveBook()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .WhenPathEndsWith("/api/books/1/shelves", """{"success":true,"data":[]}""")
             .WhenPathEndsWith("/api/shelves", """{"success":true,"data":[]}""")
             .WhenPathEndsWith("/api/books/1/file", "fake epub bytes", "application/epub+zip")
@@ -522,6 +547,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
 
         var offlineModule = JSInterop.SetupModule("./js/offlineStorage.js");
         offlineModule.Setup<OfflineStatus>("getStatus", _ => true).SetResult(new OfflineStatus { Saved = false, SizeBytes = 0 });
@@ -578,7 +604,7 @@ public class BookDetailPageTests : BunitContext
     public void BookDetail_ConfirmDialog_Cancel_ClosesWithoutSendingDeleteRequest()
     {
         HttpRequestMessage? deleteRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Delete, r => { deleteRequest = r; return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":true}"""); })
             .When(_ => true, _ => RoutedFakeHttpMessageHandler.JsonResponse(SimpleBookJson));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -586,6 +612,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
@@ -599,7 +626,7 @@ public class BookDetailPageTests : BunitContext
     public void BookDetail_ConfirmDialog_Confirm_SendsDeleteRequest()
     {
         HttpRequestMessage? deleteRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
             .When(r => r.Method == HttpMethod.Delete, r => { deleteRequest = r; return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":true}"""); })
             .When(_ => true, _ => RoutedFakeHttpMessageHandler.JsonResponse(SimpleBookJson));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -607,6 +634,7 @@ public class BookDetailPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
@@ -614,5 +642,127 @@ public class BookDetailPageTests : BunitContext
 
         Assert.NotNull(deleteRequest);
         Assert.Equal("/api/books/1", deleteRequest!.RequestUri!.AbsolutePath);
+    }
+
+    // Comments (v3.3, issue #325).
+    private const string CommentsJson =
+        """{"success":true,"data":[{"id":1,"userId":2,"username":"bob","content":"Great book!","createdAt":"2026-01-02"},{"id":2,"userId":1,"username":"testuser","content":"My own comment","createdAt":"2026-01-03"}]}""";
+
+    [Fact]
+    public void BookDetail_RendersComments_WithUsernameAndContent()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/comments", CommentsJson)
+            .When(_ => true, _ => RoutedFakeHttpMessageHandler.JsonResponse(SimpleBookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser(userId: 1);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        var items = cut.FindAll("li.book-comment-item");
+        Assert.Equal(2, items.Count);
+        Assert.Contains("bob", items[0].TextContent);
+        Assert.Contains("Great book!", items[0].TextContent);
+    }
+
+    [Fact]
+    public void BookDetail_ShowsDeleteButton_OnlyForOwnComment()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/comments", CommentsJson)
+            .When(_ => true, _ => RoutedFakeHttpMessageHandler.JsonResponse(SimpleBookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser(userId: 1);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        var items = cut.FindAll("li.book-comment-item");
+        // items[0] is bob's (userId 2) -- no delete button for someone else's comment.
+        Assert.Empty(items[0].QuerySelectorAll("button"));
+        // items[1] is testuser's own (userId 1) -- delete button present.
+        Assert.Single(items[1].QuerySelectorAll("button"));
+    }
+
+    [Fact]
+    public void BookDetail_ClickingDeleteOnOwnComment_SendsDeleteToCommentsEndpoint()
+    {
+        HttpRequestMessage? deleteRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/comments", CommentsJson)
+            .When(r => r.Method == HttpMethod.Delete, r => { deleteRequest = r; return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":true}"""); })
+            .When(_ => true, _ => RoutedFakeHttpMessageHandler.JsonResponse(SimpleBookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser(userId: 1);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("li.book-comment-item")[1].QuerySelector("button")!.Click();
+
+        Assert.Equal(HttpMethod.Delete, deleteRequest?.Method);
+        Assert.Equal("/api/comments/2", deleteRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void BookDetail_SubmittingCommentForm_SendsPostWithContentAndReloadsList()
+    {
+        HttpRequestMessage? postRequest = null;
+        string? postBody = null;
+        // POST-specific route must be registered before the generic
+        // WhenPathEndsWith("/comments", ...) stub -- RoutedFakeHttpMessageHandler
+        // matches in insertion order via FirstOrDefault, and WhenPathEndsWith
+        // doesn't filter by HTTP method, so it would otherwise swallow the
+        // POST too.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post, r =>
+            {
+                postRequest = r;
+                postBody = r.Content?.ReadAsStringAsync().Result;
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":true}""");
+            })
+            .WhenPathEndsWith("/comments", """{"success":true,"data":[]}""")
+            .When(_ => true, _ => RoutedFakeHttpMessageHandler.JsonResponse(SimpleBookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find(".comment-form textarea").Change("Nice read!");
+        cut.Find("form.comment-form").Submit();
+
+        Assert.Equal(HttpMethod.Post, postRequest?.Method);
+        Assert.Equal("/api/books/1/comments", postRequest?.RequestUri?.AbsolutePath);
+        Assert.Contains("\"content\":\"Nice read!\"", postBody);
+    }
+
+    [Fact]
+    public void BookDetail_ShowsEmptyCommentsMessage_WhenNoComments()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/comments", """{"success":true,"data":[]}""")
+            .When(_ => true, _ => RoutedFakeHttpMessageHandler.JsonResponse(SimpleBookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("Noch keine Kommentare", cut.Markup);
     }
 }

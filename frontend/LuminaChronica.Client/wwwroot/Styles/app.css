@@ -293,6 +293,53 @@ select:focus-visible,
     gap: var(--space-1);
 }
 
+/* Comments (v3.3, issue #325) -- BookDetail.razor and the project detail
+   page's comment list + submit form. */
+.book-comments {
+    margin-top: var(--space-3);
+}
+
+.book-comment-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: 0;
+    margin: var(--space-1) 0;
+}
+
+.book-comment-item {
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+}
+
+.book-comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-bottom: var(--space-1);
+}
+
+.comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+}
+
+.comment-form textarea {
+    font-family: inherit;
+    font-size: var(--font-size-body);
+    padding: var(--space-1) calc(var(--space-1) * 1.25);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-card);
+    color: var(--color-text-primary);
+    min-height: 4rem;
+}
+
 /* File inputs sized to fill the dropzone (opacity 0, positioned over the
    label) so a real HTML5 file drag-and-drop lands directly on the native
    <input type="file"> -- no custom drop-target JS needed, OnChange fires

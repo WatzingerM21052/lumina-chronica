@@ -72,6 +72,12 @@ import {
     type CreateCharacterRelationshipInput,
     type UpdateCharacterRelationshipInput,
 } from "../services/characterRelationshipService";
+import {
+    NotFoundError as CommentNotFoundError,
+    ValidationError as CommentValidationError,
+    createComment,
+    listComments,
+} from "../services/commentService";
 
 // Worldbuilding projects — v2.0, Phase 1 (issue #254). Later Worldbuilding
 // phases (Characters, Locations/Map, Timeline, Lore/Files, Linked
@@ -731,6 +737,35 @@ projectsRoute.delete("/:id/relationships/:relationshipId", requireAuth, async (c
         return c.body(null, 204);
     } catch (err) {
         if (err instanceof NotFoundError) return c.json(failure("NOT_FOUND", "Relationship not found."), 404);
+        throw err;
+    }
+});
+
+// Comments (v3.3, issue #325) -- PUBLIC-only, unlike books' comments.
+// Projects have no share-list equivalent to books' book_shares, so there's
+// no "commentable but not public" tier here.
+projectsRoute.get("/:id/comments", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    try {
+        const comments = await listComments(c.env.DB, c.get("userId"), "PROJECT", projectId);
+        return c.json(success(comments));
+    } catch (err) {
+        if (err instanceof CommentNotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        throw err;
+    }
+});
+
+projectsRoute.post("/:id/comments", requireAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const body = await c.req.json<{ content?: string }>().catch(() => null);
+    if (!body || typeof body.content !== "string") return c.json(failure("VALIDATION_ERROR", "content is required."), 400);
+
+    try {
+        await createComment(c.env.DB, c.get("userId"), "PROJECT", projectId, body.content);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof CommentNotFoundError) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+        if (err instanceof CommentValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
         throw err;
     }
 });

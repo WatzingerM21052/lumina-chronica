@@ -3,7 +3,9 @@
 @implements IDisposable
 @using System.Globalization
 @using System.Net.Http.Headers
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
@@ -12,6 +14,7 @@
 @inject OfflineStorageService OfflineStorage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>@(_book?.Title ?? "Buch") — Lumina Chronica</PageTitle>
 
@@ -344,6 +347,49 @@ else
             }
         </div>
     </div>
+
+    <section class="book-comments">
+        <h2>Kommentare</h2>
+        @if (_comments is null)
+        {
+            <p class="text-muted">Kommentare werden geladen...</p>
+        }
+        else
+        {
+            @if (_comments.Count == 0)
+            {
+                <p class="text-muted">Noch keine Kommentare.</p>
+            }
+            else
+            {
+                <ul class="book-comment-list">
+                    @foreach (var comment in _comments)
+                    {
+                        <li class="book-comment-item">
+                            <div class="book-comment-header">
+                                <strong>@comment.Username</strong>
+                                <span class="text-muted">@comment.CreatedAt</span>
+                            </div>
+                            <p>@comment.Content</p>
+                            @if (comment.UserId == _currentUserId)
+                            {
+                                <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">Löschen</button>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+
+            <EditForm Model="_commentForm" OnValidSubmit="SubmitCommentAsync" class="comment-form">
+                @if (_commentErrorMessage is not null)
+                {
+                    <p class="form-error">@_commentErrorMessage</p>
+                }
+                <InputTextArea @bind-Value="_commentForm.Content" placeholder="Kommentar schreiben..." />
+                <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">Kommentieren</button>
+            </EditForm>
+        }
+    </section>
 }
 
 @code {
@@ -387,11 +433,85 @@ else
     private bool _isSavingOffline;
     private string? _offlineErrorMessage;
 
+    // Comments (v3.3, issue #325). _currentUserId gates the delete button on
+    // a comment's own author only -- the backend also lets the book's owner
+    // moderate (delete) anyone's comment, but Book.cs doesn't carry an
+    // ownerId/isOwner field for this page to key an equivalent button off
+    // of, so that capability isn't exposed in this MVP UI.
+    private List<Comment>? _comments;
+    private int? _currentUserId;
+    private CommentFormModel _commentForm = new();
+    private bool _isSubmittingComment;
+    private string? _commentErrorMessage;
+    private readonly HashSet<int> _commentActionInProgress = [];
+
     protected override async Task OnParametersSetAsync()
     {
         await LoadBookAsync();
         await LoadShelvesAsync();
         await LoadOfflineStatusAsync();
+        await LoadCurrentUserIdAsync();
+        await LoadCommentsAsync();
+    }
+
+    private async Task LoadCurrentUserIdAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var idClaim = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        _currentUserId = int.TryParse(idClaim, out var id) ? id : null;
+    }
+
+    private async Task LoadCommentsAsync()
+    {
+        if (_book is null)
+        {
+            _comments = [];
+            return;
+        }
+
+        // Best-effort like LoadShelvesAsync -- comments are supplementary to
+        // the book's own data, a failure here (including a response shape
+        // mismatch) shouldn't take down the rest of the page.
+        try
+        {
+            var response = await ApiClient.GetAsync<List<Comment>>($"/api/books/{Id}/comments");
+            _comments = response is { Success: true, Data: not null } ? response.Data : [];
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            _comments = [];
+        }
+    }
+
+    private async Task SubmitCommentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_commentForm.Content)) return;
+
+        _isSubmittingComment = true;
+        _commentErrorMessage = null;
+
+        var succeeded = await ApiClient.PostAsync($"/api/books/{Id}/comments", new { content = _commentForm.Content });
+        if (succeeded)
+        {
+            _commentForm = new CommentFormModel();
+            await LoadCommentsAsync();
+        }
+        else
+        {
+            _commentErrorMessage = "Kommentar konnte nicht gespeichert werden.";
+        }
+
+        _isSubmittingComment = false;
+    }
+
+    private async Task DeleteCommentAsync(int commentId)
+    {
+        if (!_commentActionInProgress.Add(commentId)) return;
+
+        var succeeded = await ApiClient.DeleteAsync($"/api/comments/{commentId}");
+        if (succeeded) await LoadCommentsAsync();
+
+        _commentActionInProgress.Remove(commentId);
     }
 
     // Best-effort like LoadShelvesAsync -- a device with no IndexedDB support
@@ -959,5 +1079,10 @@ else
             get => DateOnly.TryParse(ReleaseDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : null;
             set => ReleaseDate = value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
+    }
+
+    private class CommentFormModel
+    {
+        public string Content { get; set; } = string.Empty;
     }
 }
