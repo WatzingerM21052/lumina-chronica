@@ -5,6 +5,7 @@
 // scoped to a book instead of a user.
 
 import { NotFoundError } from "./errors";
+import { buildNotificationInsert } from "./notificationService";
 
 export { NotFoundError };
 export class SelfShareError extends Error {}
@@ -24,7 +25,12 @@ export async function shareBookWithUser(db: D1Database, ownerId: number, bookId:
     await requireOwnedBook(db, ownerId, bookId);
     const targetId = await resolveUserIdByUsername(db, targetUsername);
     if (targetId === ownerId) throw new SelfShareError();
-    await db.prepare("INSERT OR IGNORE INTO book_shares (book_id, user_id) VALUES (?, ?)").bind(bookId, targetId).run();
+    const result = await db.prepare("INSERT OR IGNORE INTO book_shares (book_id, user_id) VALUES (?, ?)").bind(bookId, targetId).run();
+    // Same idempotency reasoning as followUser -- only notify when the
+    // share is actually new.
+    if (result.meta.changes > 0) {
+        await buildNotificationInsert(db, targetId, "SHARE", ownerId, "BOOK", bookId).run();
+    }
 }
 
 export async function unshareBookWithUser(db: D1Database, ownerId: number, bookId: number, targetUsername: string): Promise<void> {

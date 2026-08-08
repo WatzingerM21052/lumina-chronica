@@ -1836,6 +1836,23 @@ select:focus-visible,
     font-size: var(--font-size-small);
 }
 
+/* Notification preferences (v3.3 Phase 3, issue #326) -- Settings.razor's
+   per-type enable/disable toggles. */
+.notification-preferences {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: var(--space-2) 0;
+}
+
+.notification-preference-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
+    padding: var(--space-1) 0;
+    cursor: pointer;
+}
+
 .discover-user-results {
     list-style: none;
     padding: 0;

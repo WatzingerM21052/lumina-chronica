@@ -4,6 +4,7 @@
 
 import { NotFoundError } from "./errors";
 import { recordRatingActivity } from "./activityService";
+import { buildNotificationInsert } from "./notificationService";
 
 export { NotFoundError };
 export class SelfRatingError extends Error {}
@@ -27,13 +28,16 @@ export async function rateBook(db: D1Database, userId: number, bookId: number, r
     // new visibility rule.
     if (row.visibility !== "PUBLIC") throw new NotPublicError();
 
-    await db
+    const upsertRating = db
         .prepare(
             `INSERT INTO ratings (user_id, book_id, rating) VALUES (?, ?, ?)
              ON CONFLICT(user_id, book_id) DO UPDATE SET rating = excluded.rating`
         )
-        .bind(userId, bookId, rating)
-        .run();
+        .bind(userId, bookId, rating);
+    // SelfRatingError above already guarantees userId != row.owner_id, but
+    // buildNotificationInsert's own guard is kept for defense in depth.
+    const notifyOwner = buildNotificationInsert(db, row.owner_id, "RATING", userId, "BOOK", bookId);
+    await db.batch([upsertRating, notifyOwner]);
 
     // A re-rate is logged as a new activity too -- ratings are upsert, but
     // each PUT is still a distinct, chronologically real event.

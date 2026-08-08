@@ -9,6 +9,8 @@
 // possible later story, out of scope for this first version (confirmed via
 // AskUserQuestion, 2026-08-08).
 
+import { isPreferenceEnabled } from "./notificationService";
+
 export type ActivityType = "BOOK_PUBLIC" | "PROJECT_PUBLIC" | "RATING_GIVEN";
 export type ActivityTargetType = "BOOK" | "PROJECT";
 
@@ -42,7 +44,13 @@ export async function recordProjectPublicActivity(db: D1Database, userId: number
         .run();
 }
 
+// Gated by the ACTIVITY_RATING preference (v3.3 Phase 3, issue #326) --
+// rating activity is the first profile_activities entry that reveals a
+// specific action (who rated what), unlike BOOK_PUBLIC/PROJECT_PUBLIC which
+// just restate something already public. Users can opt out of this one
+// specifically without disabling the whole activity log.
 export async function recordRatingActivity(db: D1Database, userId: number, bookId: number, rating: number): Promise<void> {
+    if (!(await isPreferenceEnabled(db, userId, "ACTIVITY_RATING"))) return;
     await db
         .prepare(`INSERT INTO profile_activities (user_id, type, target_type, target_id, rating) VALUES (?, 'RATING_GIVEN', 'BOOK', ?, ?)`)
         .bind(userId, bookId, rating)
