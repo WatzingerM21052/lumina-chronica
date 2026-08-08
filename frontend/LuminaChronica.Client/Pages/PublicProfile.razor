@@ -21,11 +21,13 @@ else if (_profile is null)
 {
     <span class="visually-hidden" role="status">Profil wird geladen…</span>
     <div class="profile-hero profile-hero-skeleton" aria-hidden="true" aria-busy="true">
-        <div class="profile-hero-portrait skeleton-shape"></div>
-        <div class="profile-hero-body">
-            <div class="skeleton-shape skeleton-line skeleton-line-eyebrow"></div>
-            <div class="skeleton-shape skeleton-line skeleton-line-name"></div>
-            <div class="skeleton-shape skeleton-line skeleton-line-meta"></div>
+        <div class="profile-hero-portrait-wrap">
+            <SkeletonBlock Width="7rem" Height="7rem" Circle="true" />
+        </div>
+        <div class="profile-hero-body profile-hero-body-skeleton">
+            <SkeletonBlock Width="6rem" Height="0.6rem" />
+            <SkeletonBlock Width="12rem" Height="1.8rem" />
+            <SkeletonBlock Width="9rem" Height="0.9rem" />
         </div>
     </div>
 }

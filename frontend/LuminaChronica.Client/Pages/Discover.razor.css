@@ -174,23 +174,8 @@
     border-color: var(--color-gold-accent);
 }
 
-/* Skeleton loading grid -- card-shaped placeholders instead of "Lädt…",
-   same shimmer as PublicProfile's hero (.skeleton-shape, shared in
-   app.css). */
-.discover-skeleton-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.discover-skeleton-cover {
-    aspect-ratio: 2 / 3;
-}
-
-.discover-skeleton-line {
-    height: 0.8rem;
-    width: 80%;
-}
+/* Skeleton loading grid -- now SkeletonCatalogCard (issue #349 Phase B),
+   matching CatalogCard's real shape instead of a page-local approximation. */
 
 @media (prefers-reduced-motion: reduce) {
     .discover-search-field,

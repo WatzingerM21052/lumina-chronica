@@ -154,39 +154,18 @@
 }
 
 /* Hero skeleton (loading state) -- same shape as the real hero so nothing
-   jumps once data arrives. */
+   jumps once data arrives. Individual shapes are now SkeletonBlock
+   (issue #349 Phase B) sized to match .profile-hero-portrait/-eyebrow/
+   -name/-meta exactly; only the stacking gap between the three text lines
+   is page-specific layout, kept here. */
 .profile-hero-skeleton {
     align-items: center;
 }
 
-/* .skeleton-shape / @keyframes skeleton-shimmer are shared utilities in
-   app.css (issue #340 gave them a second consumer -- Discover's loading
-   grid -- so they moved out of this page-scoped file). */
-
-.profile-hero-skeleton .skeleton-shape.profile-hero-portrait {
-    border-radius: 50%;
-    border: none;
-    outline: none;
-    box-shadow: none;
-}
-
-.skeleton-line {
-    height: 0.9rem;
-    margin-bottom: 0.6rem;
-}
-
-.skeleton-line-eyebrow {
-    width: 6rem;
-    height: 0.6rem;
-}
-
-.skeleton-line-name {
-    width: 12rem;
-    height: 1.8rem;
-}
-
-.skeleton-line-meta {
-    width: 9rem;
+.profile-hero-body-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 /* Chapters ("Bibliothek" / "Projekte" / "Aktivität") -- a sparse Roman
