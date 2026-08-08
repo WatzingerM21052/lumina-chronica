@@ -15,6 +15,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ToastService ToastService
 
 <PageTitle>@(_book?.Title ?? "Buch") — Lumina Chronica</PageTitle>
 
@@ -1106,6 +1107,19 @@ else
         var deleted = await ApiClient.DeleteAsync($"/api/books/{Id}");
         if (deleted)
         {
+            // Toast, not a page-local success message (issue #349 Phase B,
+            // section 22): this page is about to navigate away, so a
+            // message shown here would never be seen. ToastHost lives in
+            // MainLayout, which persists across the navigation below.
+            ToastService.Show($"„{_book?.Title}“ wurde gelöscht.", ToastKind.Success);
+            // Task.Yield, not a straight NavigateTo -- lets ToastHost's
+            // StateHasChanged (triggered synchronously inside Show above)
+            // actually flush a render before the navigation's own render
+            // request competes with it. Confirmed live this race is real
+            // (not just theoretical): without the yield, the toast reached
+            // ToastHost's _toasts list every time but only rendered to the
+            // DOM on some runs, not others.
+            await Task.Yield();
             NavigationManager.NavigateTo("library");
         }
         else

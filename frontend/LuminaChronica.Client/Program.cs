@@ -32,5 +32,6 @@ builder.Services.AddScoped<ReaderSettingsService>();
 builder.Services.AddScoped<OfflineStorageService>();
 builder.Services.AddScoped<BibleClientService>();
 builder.Services.AddScoped<BibleAtmosphereService>();
+builder.Services.AddScoped<ToastService>();
 
 await builder.Build().RunAsync();
