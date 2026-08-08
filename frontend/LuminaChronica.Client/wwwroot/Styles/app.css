@@ -275,6 +275,25 @@ button:hover,
     border-color: var(--color-primary);
 }
 
+/* Real press feedback (issue #349 Phase B, section 15) -- the transform
+   transition was already declared above but nothing set a different
+   transform on :active, so every plain button had none. scale(0.98),
+   the same restrained intensity as the pre-existing Follow-button press
+   effect (PublicProfile.razor.css's .btn-follow:active) -- not a
+   :disabled button, since a disabled control shouldn't visually react to
+   a click it isn't actually receiving. */
+button:not(:disabled):active,
+.btn:not(:disabled):active {
+    transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active,
+    .btn:not(:disabled):active {
+        transform: none;
+    }
+}
+
 .btn-primary {
     background-color: var(--color-primary);
     border-color: var(--color-primary);

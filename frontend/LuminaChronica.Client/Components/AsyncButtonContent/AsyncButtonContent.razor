@@ -1,0 +1,11 @@
+@namespace LuminaChronica.Client.Components
+
+@if (State == ButtonBusyState.Loading)
+{
+    <LoadingIndicator Mode="LoadingIndicatorMode.Button" />
+}
+else if (State == ButtonBusyState.Success)
+{
+    <span class="async-button-check" aria-hidden="true">✓</span>
+}
+@DisplayText
