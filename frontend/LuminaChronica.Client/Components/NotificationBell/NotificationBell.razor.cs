@@ -66,12 +66,17 @@ public partial class NotificationBell : ComponentBase
         await ApiClient.PostAsync("/api/notifications/read-all");
     }
 
+    // No leading slash -- Blazor's <base href> handles the GitHub Pages
+    // "/lumina-chronica/" subpath prefix for relative links only. A leading
+    // slash resolves from the domain root and 404s (same bug class as the
+    // v3.1 hotfix, PR #302). See BookCard.razor/Discover.razor for the same
+    // pattern used everywhere else.
     private static string BuildLink(NotificationItem n) => n.Type switch
     {
-        "FOLLOW" => $"/u/{n.ActorUsername}",
-        "COMMENT" when n.TargetType == "PROJECT" => $"/projects/{n.TargetId}",
-        _ when n.TargetType == "BOOK" => $"/library/books/{n.TargetId}",
-        _ => $"/u/{n.ActorUsername}",
+        "FOLLOW" => $"u/{n.ActorUsername}",
+        "COMMENT" when n.TargetType == "PROJECT" => $"projects/{n.TargetId}",
+        _ when n.TargetType == "BOOK" => $"library/books/{n.TargetId}",
+        _ => $"u/{n.ActorUsername}",
     };
 
     private static string NotificationText(NotificationItem n) => n.Type switch
