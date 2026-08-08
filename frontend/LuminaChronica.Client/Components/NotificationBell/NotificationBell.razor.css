@@ -7,10 +7,24 @@
     position: relative;
     background: none;
     border: none;
+    /* Matches .app-profile: MainLayout's header sets no color of its own,
+       every child sets its own for the dark background. The icon swap
+       (was an emoji, colored regardless of CSS) made this load-bearing. */
+    color: var(--color-text-on-dark);
+    opacity: 0.85;
     font-size: 1.25rem;
     cursor: pointer;
     padding: var(--space-1);
     line-height: 1;
+}
+
+.notification-bell-toggle:hover {
+    opacity: 1;
+}
+
+.notification-bell-toggle .icon {
+    width: 1.05em;
+    height: 1.05em;
 }
 
 .notification-badge {

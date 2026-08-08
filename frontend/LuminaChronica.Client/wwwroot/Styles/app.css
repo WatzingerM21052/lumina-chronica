@@ -62,6 +62,26 @@ h3 {
     color: var(--color-text-secondary);
 }
 
+/* Shared line-icon set (Components/Icon/Icon.razor) -- base sizing only;
+   context-specific sizes are set via an additional class where needed. */
+.icon {
+    width: 1.15em;
+    height: 1.15em;
+    flex-shrink: 0;
+    vertical-align: -0.2em;
+}
+
+/* Shared "Bibliotheksregal" grid for CatalogCard collections (Discover,
+   PublicProfile) -- responsive by construction instead of the fixed-width
+   flex-wrap .library-grid uses, since CatalogCard itself has no fixed
+   width. Global on purpose: this is exactly the kind of shared primitive
+   issue #315 asks for instead of each page reinventing it. */
+.catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: var(--space-3);
+}
+
 button,
 .btn {
     font-family: inherit;
@@ -1646,14 +1666,14 @@ select:focus-visible,
     color: var(--color-primary);
 }
 
-/* Community (v3.0, issues #300/#307/#310) -- PublicProfile.razor and
-   Discover.razor render their own book-card/project-card markup directly
-   (BookCard/ProjectCard's real components carry owner-only interactive
-   behavior like the favorite toggle, wrong for a stranger's view), so they
-   never get BookCard.razor.css/ProjectCard.razor.css's Blazor-scoped rules.
-   These global equivalents cover the shared structural pieces those two
-   pages actually need -- found missing entirely via live verification,
-   not caught by bUnit (which asserts markup/classes, not applied CSS). */
+/* Shared cover-thumbnail structure, used by BookCard.razor (private
+   library) and by several detail pages' own single-cover markup
+   (BookDetail/CharacterDetail/LocationDetail/ProjectDetail/ShelfDetail).
+   PublicProfile.razor and Discover.razor used to hand-roll a duplicate of
+   this for their public book/project cards -- that duplicate is what went
+   missing entirely in PR #313; as of issue #339 those two pages use the
+   real CatalogCard component instead (Components/CatalogCard), so this
+   block no longer needs to cover them. */
 .book-card {
     display: flex;
     flex-direction: column;
@@ -1712,25 +1732,6 @@ select:focus-visible,
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.book-card-owner-link {
-    text-decoration: underline;
-    cursor: pointer;
-}
-
-.book-card-normal {
-    width: 10rem;
-}
-
-.book-card-rating {
-    font-size: var(--font-size-small);
-    color: var(--color-text-secondary);
-}
-
-.book-card-rate-stars {
-    display: flex;
-    gap: 2px;
 }
 
 .star-button {
@@ -1806,55 +1807,6 @@ select:focus-visible,
 
 .project-card-type {
     color: var(--color-text-secondary);
-    font-size: var(--font-size-small);
-}
-
-.public-profile-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-3);
-}
-
-.public-profile-avatar {
-    width: 5rem;
-    height: 5rem;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid var(--color-border);
-    flex-shrink: 0;
-}
-
-.public-profile-avatar-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--color-bg-card);
-    font-size: 2rem;
-}
-
-/* v3.3 Phase 1 (issue #324) -- profile activity log, PublicProfile.razor. */
-.profile-activity-list {
-    list-style: none;
-    padding: 0;
-    margin: var(--space-2) 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-}
-
-.profile-activity-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--space-2);
-    padding: var(--space-2);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-}
-
-.profile-activity-date {
-    flex-shrink: 0;
     font-size: var(--font-size-small);
 }
 

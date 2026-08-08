@@ -39,7 +39,7 @@ public class DiscoverPageTests : BunitContext
         Assert.Contains("Discoverable Book", cut.Markup);
         Assert.Contains("Jane Doe", cut.Markup);
         Assert.Contains("von", cut.Markup);
-        Assert.Equal("alice", cut.Find(".book-card-owner-link").TextContent.Trim());
+        Assert.Equal("alice", cut.Find(".catalog-card-owner-link").TextContent.Trim());
         Assert.Contains("4.5", cut.Markup);
     }
 
@@ -52,7 +52,7 @@ public class DiscoverPageTests : BunitContext
         UseRoutes(BooksJson);
 
         var cut = Render<Discover>();
-        cut.Find(".book-card-owner-link").Click();
+        cut.Find(".catalog-card-owner-link").Click();
 
         var navigation = Services.GetRequiredService<NavigationManager>();
         Assert.EndsWith("u/alice", navigation.Uri);
@@ -79,7 +79,7 @@ public class DiscoverPageTests : BunitContext
 
         var cut = Render<Discover>();
 
-        var link = cut.Find("a.book-card");
+        var link = cut.Find("a.catalog-card");
         Assert.Equal("library/books/1", link.GetAttribute("href"));
     }
 

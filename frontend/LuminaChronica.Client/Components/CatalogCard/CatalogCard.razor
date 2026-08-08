@@ -1,0 +1,111 @@
+@namespace LuminaChronica.Client.Components
+@using System.Globalization
+
+@* Shared "catalog entry" primitive for PUBLIC-facing book/project cards
+   (Discover.razor, PublicProfile.razor) -- deliberately carries NO
+   owner-only behavior (no favorite toggle, no edit/delete, no shelf
+   picker). That logic lives only in BookCard/ProjectCard, which stay
+   private-library-only. Splitting it out this way (issue #315/#339) is
+   the actual fix for PR #313's CSS-isolation bug: before this, Discover
+   and PublicProfile each hand-rolled their own copy of this markup
+   against global CSS in app.css, and one copy could silently go missing
+   its styles. Now there's one component with real Blazor-scoped CSS. *@
+
+<a class="catalog-card" href="@Href">
+    <div class="catalog-card-cover catalog-card-cover-@Kind">
+        @if (CoverUrl is not null)
+        {
+            <img src="@CoverUrl" alt="@Title" />
+        }
+        else
+        {
+            <div class="catalog-card-cover-placeholder" aria-hidden="true">
+                <Icon Name="@(Kind == "project" ? "project" : "book")" Class="catalog-card-placeholder-icon" />
+            </div>
+        }
+    </div>
+    <div class="catalog-card-info">
+        <div class="catalog-card-title">@Title</div>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <div class="catalog-card-subtitle">@Subtitle</div>
+        }
+        @if (OwnerUsername is { } ownerUsername)
+        {
+            <div class="catalog-card-owner">
+                von
+                @* A <span> + stopPropagation, not a nested <a> -- the card
+                   itself is already an <a href>, and a second anchor inside
+                   it is invalid HTML with unreliable click behavior. *@
+                <span class="catalog-card-owner-link" @onclick="() => OnOwnerClick.InvokeAsync(ownerUsername)" @onclick:stopPropagation="true" @onclick:preventDefault="true">@ownerUsername</span>
+            </div>
+        }
+        @if (Kind == "project")
+        {
+            @if (!string.IsNullOrWhiteSpace(TypeLabel))
+            {
+                <div class="catalog-card-type-tag">@TypeLabel</div>
+            }
+        }
+        else if (ShowRating)
+        {
+            <div class="catalog-card-rating">
+                @if (RatingCount > 0)
+                {
+                    <span><span class="catalog-card-rating-star">★</span> @RatingAverage?.ToString("0.0", CultureInfo.InvariantCulture) · @RatingCount</span>
+                }
+                else
+                {
+                    <span class="text-muted">Noch keine Bewertungen</span>
+                }
+            </div>
+        }
+        @if (FooterContent is not null)
+        {
+            @FooterContent
+        }
+    </div>
+</a>
+
+@code {
+    /// <summary>"book" or "project" -- controls cover aspect ratio and the placeholder icon/type row.</summary>
+    [Parameter, EditorRequired]
+    public string Kind { get; set; } = "book";
+
+    /// <summary>Null renders a non-interactive card (e.g. no read access yet), matching BookCard's existing Href-fallback convention.</summary>
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? CoverUrl { get; set; }
+
+    /// <summary>The book's own "author" metadata field -- not the owning user.</summary>
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    /// <summary>Null hides the "von {owner}" line entirely (e.g. on a user's own profile, where it would be redundant).</summary>
+    [Parameter]
+    public string? OwnerUsername { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnOwnerClick { get; set; }
+
+    [Parameter]
+    public bool ShowRating { get; set; } = true;
+
+    [Parameter]
+    public double? RatingAverage { get; set; }
+
+    [Parameter]
+    public int RatingCount { get; set; }
+
+    [Parameter]
+    public string? TypeLabel { get; set; }
+
+    /// <summary>Extra status line a caller can inject (e.g. "Anmelden zum Lesen", "Privat geteilt") without CatalogCard needing to know about those cases.</summary>
+    [Parameter]
+    public RenderFragment? FooterContent { get; set; }
+}

@@ -2,7 +2,7 @@
 
 <div class="notification-bell">
     <button type="button" class="notification-bell-toggle" @onclick="ToggleOpenAsync" aria-label="Benachrichtigungen">
-        🔔
+        <Icon Name="bell" />
         @if (UnreadCount > 0)
         {
             <span class="notification-badge">@(UnreadCount > 9 ? "9+" : UnreadCount.ToString())</span>
