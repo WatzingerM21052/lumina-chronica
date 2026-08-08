@@ -16,7 +16,7 @@
     box-shadow: var(--shadow-card);
     outline: 1px solid transparent;
     outline-offset: 2px;
-    transition: box-shadow 0.2s ease, transform 0.2s ease, outline-color 0.2s ease;
+    transition: box-shadow var(--motion-standard) var(--ease-standard), transform var(--motion-standard) var(--ease-standard), outline-color var(--motion-standard) var(--ease-standard);
 }
 
 .catalog-card-cover-project {
@@ -36,7 +36,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.25s ease;
+    transition: transform var(--motion-reveal) var(--ease-standard);
 }
 
 .catalog-card:hover .catalog-card-cover img,

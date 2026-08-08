@@ -101,6 +101,22 @@ public class PublicProfilePageTests : BunitContext
         Assert.Contains("Public World", cut.Markup);
     }
 
+    // Issue #341 -- the hero and each of the three chapters are wired to
+    // motion.js's scroll-reveal via [data-reveal] (see wwwroot/js/motion.js
+    // and app.css's [data-reveal] rules). Only guards the markup hook stays
+    // present; the actual reveal needs a real browser and was live-verified
+    // separately.
+    [Fact]
+    public void PublicProfile_HeroAndChapters_HaveDataRevealHook()
+    {
+        UseRoutes(ProfileWithContentJson);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
+
+        var revealed = cut.FindAll("[data-reveal]");
+        Assert.True(revealed.Count >= 4, $"expected at least 4 [data-reveal] sections (hero + 3 chapters), found {revealed.Count}");
+    }
+
     [Fact]
     public void PublicProfile_ShowsEmptyStateMessages_WhenNoPublicContent()
     {

@@ -15,7 +15,7 @@ body {
 
 a {
     color: var(--color-primary);
-    transition: color 0.15s ease;
+    transition: color var(--motion-micro) var(--ease-standard);
 }
 
 a:hover {
@@ -123,6 +123,85 @@ h3 {
     color: var(--color-text-muted);
 }
 
+/* Scroll-reveal utility (issue #341) -- shared by Discover's search/toolbar/
+   grid sections and PublicProfile's three chapters from the day it was
+   introduced (both pages need it at once), so it starts global rather than
+   page-scoped-then-promoted like the utilities above.
+
+   .reveal-init/.reveal-visible are added by wwwroot/js/motion.js
+   (initReveal), never by default markup -- a section with no [data-reveal]
+   JS wiring, or a page rendered before the module loads, stays in its
+   normal fully-visible state. See motion.js's own comment and
+   Architecture.md. */
+[data-reveal].reveal-init {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity var(--motion-reveal) var(--ease-standard), transform var(--motion-reveal) var(--ease-standard);
+    /* A page can offset its own top-level [data-reveal] groups (e.g.
+       Discover's heading/search/books sections) via an inline
+       `--reveal-delay` so they cascade in on initial load instead of all
+       fading in at once -- see Discover.razor/PublicProfile.razor. */
+    transition-delay: var(--reveal-delay, 0ms);
+}
+
+[data-reveal].reveal-init.reveal-visible {
+    opacity: 1;
+    transform: none;
+}
+
+/* Cards/results inside a just-revealed section get their own light
+   stagger -- capped at the first 8 children so a long grid doesn't queue a
+   slow cascade for items already visible at scroll-in. */
+[data-reveal].reveal-visible .catalog-grid > *,
+[data-reveal].reveal-visible .discover-author-results > * {
+    animation: reveal-item var(--motion-reveal) var(--ease-standard) backwards;
+}
+
+@keyframes reveal-item {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+[data-reveal].reveal-visible .catalog-grid > :nth-child(1),
+[data-reveal].reveal-visible .discover-author-results > :nth-child(1) { animation-delay: calc(var(--motion-micro) * 0); }
+[data-reveal].reveal-visible .catalog-grid > :nth-child(2),
+[data-reveal].reveal-visible .discover-author-results > :nth-child(2) { animation-delay: calc(var(--motion-micro) * 1); }
+[data-reveal].reveal-visible .catalog-grid > :nth-child(3),
+[data-reveal].reveal-visible .discover-author-results > :nth-child(3) { animation-delay: calc(var(--motion-micro) * 2); }
+[data-reveal].reveal-visible .catalog-grid > :nth-child(4),
+[data-reveal].reveal-visible .discover-author-results > :nth-child(4) { animation-delay: calc(var(--motion-micro) * 3); }
+[data-reveal].reveal-visible .catalog-grid > :nth-child(5),
+[data-reveal].reveal-visible .discover-author-results > :nth-child(5) { animation-delay: calc(var(--motion-micro) * 4); }
+[data-reveal].reveal-visible .catalog-grid > :nth-child(6),
+[data-reveal].reveal-visible .discover-author-results > :nth-child(6) { animation-delay: calc(var(--motion-micro) * 5); }
+[data-reveal].reveal-visible .catalog-grid > :nth-child(7),
+[data-reveal].reveal-visible .discover-author-results > :nth-child(7) { animation-delay: calc(var(--motion-micro) * 6); }
+[data-reveal].reveal-visible .catalog-grid > :nth-child(n+8),
+[data-reveal].reveal-visible .discover-author-results > :nth-child(n+8) { animation-delay: calc(var(--motion-micro) * 7); }
+
+@media (prefers-reduced-motion: reduce) {
+    /* Defense-in-depth alongside motion.js's own check -- this one also
+       covers the OS motion setting changing live, without a reload, which
+       matchMedia() in JS doesn't re-poll for on its own. */
+    [data-reveal].reveal-init,
+    [data-reveal].reveal-init.reveal-visible {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    [data-reveal] .catalog-grid > *,
+    [data-reveal] .discover-author-results > * {
+        animation: none;
+    }
+}
+
 /* Shared literary empty-state (PublicProfile's Bibliothek/Projekte/
    Aktivität chapters, Discover's book grid) -- an ornament + flavor text
    instead of a bare "no items" line. */
@@ -166,7 +245,7 @@ button,
     color: var(--color-text-primary);
     padding: var(--space-1) var(--space-2);
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    transition: background-color var(--motion-micro) var(--ease-standard), border-color var(--motion-micro) var(--ease-standard), transform var(--motion-micro) var(--ease-standard);
 }
 
 .btn:disabled {

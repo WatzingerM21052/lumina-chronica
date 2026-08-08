@@ -204,4 +204,21 @@ public class DiscoverPageTests : BunitContext
 
         Assert.DoesNotContain("Keine Nutzer gefunden", cut.Markup);
     }
+
+    // Issue #341 -- the heading, search section, and books section are each
+    // wired to motion.js's scroll-reveal via [data-reveal] (see
+    // wwwroot/js/motion.js and app.css's [data-reveal] rules). This only
+    // guards the markup hook stays present; the actual reveal animation
+    // needs a real browser (IntersectionObserver, prefers-reduced-motion)
+    // and was live-verified separately, not through bUnit.
+    [Fact]
+    public void Discover_TopLevelSections_HaveDataRevealHook()
+    {
+        UseRoutes(EmptyBooksJson);
+
+        var cut = Render<Discover>();
+
+        var revealed = cut.FindAll("[data-reveal]");
+        Assert.True(revealed.Count >= 3, $"expected at least 3 [data-reveal] sections, found {revealed.Count}");
+    }
 }

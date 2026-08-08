@@ -31,7 +31,7 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     box-shadow: var(--shadow-card);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color var(--motion-micro) var(--ease-standard), box-shadow var(--motion-micro) var(--ease-standard);
 }
 
 .discover-search-field:focus-within {
@@ -81,7 +81,7 @@
     text-decoration: none;
     color: var(--color-text-primary);
     border-bottom: 1px solid transparent;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition: background-color var(--motion-micro) var(--ease-standard), border-color var(--motion-micro) var(--ease-standard);
 }
 
 .discover-author-card:hover,
@@ -97,7 +97,7 @@
     object-fit: cover;
     border: 1px solid var(--color-border);
     flex-shrink: 0;
-    transition: transform 0.15s ease;
+    transition: transform var(--motion-micro) var(--ease-standard);
 }
 
 .discover-author-card:hover .discover-author-avatar,
@@ -166,7 +166,7 @@
     border-radius: var(--radius);
     padding: 0.3rem 0.5rem;
     cursor: pointer;
-    transition: border-color 0.15s ease;
+    transition: border-color var(--motion-micro) var(--ease-standard);
 }
 
 .discover-sort-field select:hover,

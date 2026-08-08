@@ -49,4 +49,18 @@
     --radius-lg: 10px;
     --shadow-card: 0 1px 3px rgba(30, 20, 10, 0.14), 0 1px 2px rgba(30, 20, 10, 0.08);
     --shadow-card-hover: 0 8px 20px rgba(30, 20, 10, 0.18), 0 2px 6px rgba(30, 20, 10, 0.1);
+
+    /* Motion (issue #341) — one small, consistent timing system instead of
+       each component picking its own duration. Three bands only:
+       micro (press/hover feedback), standard (everyday UI transitions),
+       reveal (content/page entrances). Reduced-motion handling stays
+       per-effect in the consuming file (disable a translate but keep an
+       opacity fade, skip a stagger entirely, etc.) rather than collapsing
+       these durations globally — a blanket near-zero override would hide
+       real per-effect judgment calls the app.css/motion.js reduced-motion
+       blocks make instead. */
+    --motion-micro: 130ms;
+    --motion-standard: 200ms;
+    --motion-reveal: 320ms;
+    --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
 }
