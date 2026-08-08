@@ -63,4 +63,11 @@
     --motion-standard: 200ms;
     --motion-reveal: 320ms;
     --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Loading-specific durations (issue #349 Phase B) -- separate band from
+       the three above since these loop indefinitely rather than running
+       once, so they're not "how fast" but "how slow it can spin/shimmer
+       without looking frantic." */
+    --motion-skeleton: 1.6s;
+    --motion-spinner: 1.1s;
 }
