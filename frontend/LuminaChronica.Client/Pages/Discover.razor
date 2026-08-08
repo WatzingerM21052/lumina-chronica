@@ -5,6 +5,7 @@
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Entdecken — Lumina Chronica</PageTitle>
 
@@ -85,7 +86,10 @@
                         {
                             <div class="book-card-author">@book.Author</div>
                         }
-                        <div class="book-card-author">von @book.OwnerUsername</div>
+                        <div class="book-card-author">
+                            von
+                            <span class="book-card-owner-link" @onclick="() => GoToProfile(book.OwnerUsername)" @onclick:stopPropagation="true" @onclick:preventDefault="true">@book.OwnerUsername</span>
+                        </div>
                         <div class="book-card-rating">
                             @if (book.RatingCount > 0)
                             {
@@ -107,6 +111,12 @@
     private List<DiscoverBook>? _books;
     private string _sort = "newest";
     private readonly Dictionary<int, string> _coverObjectUrls = [];
+
+    // A plain @onclick + stopPropagation on a <span>, not a nested <a> --
+    // the whole card is already an <a href> for the book itself, and a
+    // second anchor nested inside it is invalid HTML with unreliable click
+    // behavior across browsers.
+    private void GoToProfile(string username) => NavigationManager.NavigateTo($"u/{username}");
 
     private string _userSearchTerm = string.Empty;
     private List<DiscoverUser>? _userSearchResults;

@@ -38,9 +38,6 @@ public class PublicProfilePageTests : BunitContext
     private const string RatedBookProfileJson =
         """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Rated Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"averageRating":4.5,"ratingCount":2,"myRating":3}],"projects":[]}}""";
 
-    private const string OwnRatedBookProfileJson =
-        """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":true,"books":[{"id":9,"title":"My Own Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"averageRating":4.5,"ratingCount":2,"myRating":null}],"projects":[]}}""";
-
     // "Borrowed reading" (follow-up to #300) -- a SHARED book skips the
     // rating widget entirely (ratings stay PUBLIC-only) and shows a "Lesen"
     // button when canRead is true (v3.2, issue #321 -- share-list
@@ -275,33 +272,11 @@ public class PublicProfilePageTests : BunitContext
     }
 
     [Fact]
-    public void PublicProfile_HidesRatingStars_WhenLoggedOut()
+    public void PublicProfile_NeverShowsRatingStars_RatingIsDisplayOnlyHere()
     {
-        UseRoutes(RatedBookProfileJson);
-
-        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
-
-        Assert.Empty(cut.FindAll("button.star-button"));
-    }
-
-    [Fact]
-    public void PublicProfile_HidesRatingStars_OnOwnBook()
-    {
-        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/public", OwnRatedBookProfileJson);
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
-        Services.AddSingleton(httpClient);
-        Services.AddSingleton<ApiClient>();
-        Services.AddSingleton<BlobUrlService>();
-        SetAuthenticated(true, "alice");
-
-        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
-
-        Assert.Empty(cut.FindAll("button.star-button"));
-    }
-
-    [Fact]
-    public void PublicProfile_ShowsFiveStars_ReflectingMyRating_WhenLoggedInAndNotOwnBook()
-    {
+        // Rating capability moved to the book overview page (BookDetail.razor)
+        // only -- the profile page shows the average, never an interactive
+        // widget, regardless of login state or ownership.
         var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/public", RatedBookProfileJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -311,63 +286,8 @@ public class PublicProfilePageTests : BunitContext
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
-        var stars = cut.FindAll("button.star-button");
-        Assert.Equal(5, stars.Count);
-        // RatedBookProfileJson's myRating is 3 -- the first 3 stars carry is-filled.
-        Assert.True(stars.Take(3).All(s => s.ClassList.Contains("is-filled")));
-        Assert.True(stars.Skip(3).All(s => !s.ClassList.Contains("is-filled")));
-    }
-
-    [Fact]
-    public void PublicProfile_ClickingAStar_SendsPutWithThatRating()
-    {
-        HttpRequestMessage? rateRequest = null;
-        string? requestBody = null;
-        var handler = new RoutedFakeHttpMessageHandler()
-            .WhenPathEndsWith("/public", UnratedBookProfileJson)
-            .When(r => r.Method == HttpMethod.Put, r =>
-            {
-                rateRequest = r;
-                requestBody = r.Content?.ReadAsStringAsync().Result;
-                return new HttpResponseMessage(System.Net.HttpStatusCode.NoContent);
-            });
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
-        Services.AddSingleton(httpClient);
-        Services.AddSingleton<ApiClient>();
-        Services.AddSingleton<BlobUrlService>();
-        SetAuthenticated(true, "alice");
-
-        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
-        cut.FindAll("button.star-button")[3].Click(); // 4th star -> rating 4
-
-        Assert.Equal(HttpMethod.Put, rateRequest?.Method);
-        Assert.Equal("/api/books/9/rating", rateRequest?.RequestUri?.AbsolutePath);
-        Assert.Contains("\"rating\":4", requestBody);
-    }
-
-    [Fact]
-    public void PublicProfile_ClickingYourOwnRatingAgain_SendsDelete()
-    {
-        HttpRequestMessage? unrateRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler()
-            .WhenPathEndsWith("/public", RatedBookProfileJson)
-            .When(r => r.Method == HttpMethod.Delete, r =>
-            {
-                unrateRequest = r;
-                return new HttpResponseMessage(System.Net.HttpStatusCode.NoContent);
-            });
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
-        Services.AddSingleton(httpClient);
-        Services.AddSingleton<ApiClient>();
-        Services.AddSingleton<BlobUrlService>();
-        SetAuthenticated(true, "alice");
-
-        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
-        // RatedBookProfileJson's myRating is 3 -- clicking the 3rd star again removes it.
-        cut.FindAll("button.star-button")[2].Click();
-
-        Assert.Equal(HttpMethod.Delete, unrateRequest?.Method);
-        Assert.Equal("/api/books/9/rating", unrateRequest?.RequestUri?.AbsolutePath);
+        Assert.Empty(cut.FindAll("button.star-button"));
+        Assert.Contains("4.5", cut.Markup);
     }
 
     [Fact]

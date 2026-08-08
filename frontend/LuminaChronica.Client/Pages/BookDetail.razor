@@ -56,6 +56,10 @@ else
                         </button>
                     }
                 </div>
+                @if (!_book.IsOwner && _book.OwnerUsername is not null)
+                {
+                    <p class="book-detail-borrowed-badge">Geliehen von <a href="@($"u/{_book.OwnerUsername}")">@_book.OwnerUsername</a></p>
+                }
                 @if (!string.IsNullOrWhiteSpace(_book.Author))
                 {
                     <p class="text-muted">@_book.Author</p>
@@ -63,6 +67,33 @@ else
                 @if (!string.IsNullOrWhiteSpace(_book.Description))
                 {
                     <p>@_book.Description</p>
+                }
+
+                @if (_book.Visibility == "PUBLIC")
+                {
+                    <div class="book-detail-rating">
+                        @if (_book.RatingCount > 0)
+                        {
+                            <span>★ @_book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture) (@_book.RatingCount)</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Noch keine Bewertungen</span>
+                        }
+                        @if (!_book.IsOwner)
+                        {
+                            <div class="book-detail-rate-stars">
+                                @for (var star = 1; star <= 5; star++)
+                                {
+                                    var starValue = star;
+                                    <button type="button" class="star-button @(starValue <= (_book.MyRating ?? 0) ? "is-filled" : "")"
+                                            disabled="@_isRatingInProgress"
+                                            title="@($"Mit {starValue} Sternen bewerten")"
+                                            @onclick="() => RateBookAsync(starValue)">★</button>
+                                }
+                            </div>
+                        }
+                    </div>
                 }
 
                 <dl class="book-detail-meta">
@@ -408,6 +439,7 @@ else
     private Book? _book;
     private string? _loadErrorMessage;
     private string? _coverObjectUrl;
+    private bool _isRatingInProgress;
 
     private bool _isEditing;
     private bool _isSaving;
@@ -676,6 +708,27 @@ else
         {
             _book.IsFavorite = wasFavorite;
         }
+    }
+
+    private async Task RateBookAsync(int star)
+    {
+        if (_book is null || _isRatingInProgress) return;
+        _isRatingInProgress = true;
+
+        // Clicking the star that's already your own rating removes it
+        // instead of re-submitting the same value -- a toggle, not just a
+        // set. Same pattern as PublicProfile.razor's rate-stars widget used
+        // before rating capability moved here.
+        var succeeded = _book.MyRating == star
+            ? await ApiClient.DeleteAsync($"/api/books/{Id}/rating")
+            : await ApiClient.PutAsync($"/api/books/{Id}/rating", new { rating = star });
+
+        // Re-fetches rather than computing the new average locally -- the
+        // average depends on every other rater's value, which the client
+        // doesn't have.
+        if (succeeded) await LoadBookAsync();
+
+        _isRatingInProgress = false;
     }
 
     private async Task StartEditingAsync()

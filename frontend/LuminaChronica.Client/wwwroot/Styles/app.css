@@ -923,6 +923,23 @@ select:focus-visible,
     color: var(--color-gold-accent);
 }
 
+.book-detail-borrowed-badge {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
+.book-detail-rating {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-1) 0;
+}
+
+.book-detail-rate-stars {
+    display: flex;
+    gap: 2px;
+}
+
 .book-detail-shelves {
     display: flex;
     flex-wrap: wrap;
@@ -1695,6 +1712,11 @@ select:focus-visible,
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.book-card-owner-link {
+    text-decoration: underline;
+    cursor: pointer;
 }
 
 .book-card-normal {

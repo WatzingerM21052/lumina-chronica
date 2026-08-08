@@ -74,6 +74,24 @@ public class Book
 
     [JsonPropertyName("file")]
     public BookFile? File { get; set; }
+
+    // Null for the caller's own books; the owner's username for a borrowed
+    // (PUBLIC or SHARED) book -- powers a "Geliehen von {username}" link on
+    // the book overview page.
+    [JsonPropertyName("ownerUsername")]
+    public string? OwnerUsername { get; set; }
+
+    // Rating capability lives on the book overview page only -- these mirror
+    // PublicBook's rating fields (Models/PublicProfile.cs) but are only ever
+    // meaningful for a PUBLIC book, since rating is PUBLIC-only server-side.
+    [JsonPropertyName("averageRating")]
+    public double? AverageRating { get; set; }
+
+    [JsonPropertyName("ratingCount")]
+    public int RatingCount { get; set; }
+
+    [JsonPropertyName("myRating")]
+    public int? MyRating { get; set; }
 }
 
 // Books alone offer SHARED ("borrowed reading" -- see
