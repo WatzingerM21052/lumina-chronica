@@ -93,6 +93,8 @@
    quieter outline "✓ Gefolgt" -- the issue wants the post-follow state to
    read as calmer, not more prominent. */
 .btn-follow {
+    position: relative;
+    overflow: hidden;
     font-family: inherit;
     font-size: var(--font-size-small);
     font-weight: 500;
@@ -103,7 +105,7 @@
     padding: 0.5rem 1.2rem;
     cursor: pointer;
     letter-spacing: 0.02em;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    transition: background-color var(--motion-standard) var(--ease-standard), color var(--motion-standard) var(--ease-standard), border-color var(--motion-standard) var(--ease-standard), transform var(--motion-micro) var(--ease-standard);
 }
 
 .btn-follow:hover {
@@ -113,6 +115,26 @@
 
 .btn-follow:active {
     transform: scale(0.97);
+}
+
+/* Restrained press feedback -- a soft radial fade from the center, not a
+   literal Material ripple (issue #341 explicitly asks for something more
+   subdued than a ripple effect). ::after avoids fighting the button's own
+   background-color transition above. */
+.btn-follow::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.35), transparent 70%);
+    opacity: 0;
+    transition: opacity var(--motion-micro) var(--ease-standard);
+    pointer-events: none;
+}
+
+.btn-follow:active::after {
+    opacity: 1;
+    transition-duration: 60ms;
 }
 
 .btn-follow.is-following {
@@ -249,7 +271,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .btn-follow {
+    .btn-follow,
+    .btn-follow::after {
         transition: none;
     }
 }

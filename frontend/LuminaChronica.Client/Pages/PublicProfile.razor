@@ -29,7 +29,7 @@ else if (_profile is null)
 }
 else
 {
-    <div class="profile-hero">
+    <div class="profile-hero" data-reveal style="--reveal-delay: 0ms">
         <div class="profile-hero-portrait-wrap">
             @if (_profile.AvatarUrl is { } avatarUrl)
             {
@@ -64,7 +64,7 @@ else
         }
     </div>
 
-    <section class="profile-chapter">
+    <section class="profile-chapter" data-reveal>
         <div class="profile-chapter-numeral-row"><span>I</span></div>
         <h2 class="chapter-title">Bibliothek <span class="chapter-caption">— Werke dieser Sammlung</span></h2>
         @if (_profile.Books.Count == 0)
@@ -118,7 +118,7 @@ else
         }
     </section>
 
-    <section class="profile-chapter">
+    <section class="profile-chapter" data-reveal>
         <div class="profile-chapter-numeral-row"><span>II</span></div>
         <h2 class="chapter-title">Projekte <span class="chapter-caption">— Welten dieser Sammlung</span></h2>
         @if (_profile.Projects.Count == 0)
@@ -150,7 +150,7 @@ else
         }
     </section>
 
-    <section class="profile-chapter">
+    <section class="profile-chapter" data-reveal>
         <div class="profile-chapter-numeral-row"><span>III</span></div>
         <h2 class="chapter-title">Aktivität <span class="chapter-caption">— zuletzt geschehen</span></h2>
         @if (_profile.Activities.Count == 0)

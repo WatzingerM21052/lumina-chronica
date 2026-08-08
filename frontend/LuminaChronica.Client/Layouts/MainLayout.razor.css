@@ -4,6 +4,10 @@
     min-height: 100vh;
 }
 
+/* Sticky so the scroll-compaction below (issue #341) is ever visible --
+   a deliberate, app-wide layout change: the header now stays on screen
+   during scroll everywhere, not just on Profile. Harmless on short pages
+   (nothing to compact if there's nothing to scroll past). */
 .app-header {
     display: flex;
     align-items: center;
@@ -11,6 +15,27 @@
     padding: var(--space-2) var(--space-3);
     background-color: var(--color-bg-dark);
     border-bottom: 1px solid var(--color-gold-accent);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: padding var(--motion-standard) var(--ease-standard);
+}
+
+/* Toggled by motion.js's initHeaderCompact once .scroll-sentinel (right
+   below the header) scrolls out of view. Subtle on purpose -- smaller
+   logo mark and less vertical padding, not a size/layout jump. */
+.app-header.is-compact {
+    padding-top: calc(var(--space-2) * 0.5);
+    padding-bottom: calc(var(--space-2) * 0.5);
+}
+
+.app-header.is-compact .app-logo-mark {
+    width: 1.5em;
+    height: 1.5em;
+}
+
+.scroll-sentinel {
+    height: 1px;
 }
 
 .app-logo {
@@ -29,6 +54,7 @@
     width: 1.9em;
     height: 1.9em;
     flex-shrink: 0;
+    transition: width var(--motion-standard) var(--ease-standard), height var(--motion-standard) var(--ease-standard);
 }
 
 .app-header-actions {
@@ -81,4 +107,36 @@
 
 .app-footer-link:hover {
     color: var(--color-primary);
+}
+
+/* Page-enter fade (issue #341) -- replayed on every client-side navigation
+   via motion.js's replayPageEnter (MainLayout.razor's OnAfterRenderAsync).
+   Short and opacity-led on purpose: enough to feel like the page changed,
+   not a slide/showcase transition (see the issue's "kein Motion-Design
+   Showcase" note). */
+.page-enter {
+    animation: page-enter var(--motion-reveal) var(--ease-standard);
+}
+
+@keyframes page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-header,
+    .app-header.is-compact .app-logo-mark,
+    .app-logo-mark {
+        transition: none;
+    }
+
+    .page-enter {
+        animation: none;
+    }
 }

@@ -1,10 +1,11 @@
 @inherits LayoutComponentBase
-@implements IDisposable
+@implements IAsyncDisposable
 @using LuminaChronica.Client.Components
 @inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
 
 <div class="app-shell">
-    <header class="app-header">
+    <header class="app-header" @ref="_headerRef">
         <a class="app-logo" href="">
             <img src="branding/logo-mark.svg" alt="" class="app-logo-mark" />
             Lumina Chronica
@@ -22,11 +23,19 @@
             </NotAuthorized>
         </AuthorizeView>
     </header>
+    @* Sentinel for JS-side header scroll-compaction (motion.js
+       initHeaderCompact) -- observed instead of a scroll-event listener.
+       The header is `position: sticky` (MainLayout.razor.css) precisely so
+       this compaction is ever visible; that's a deliberate, app-wide layout
+       change, not a side effect -- see the issue #341 PR description. *@
+    <div class="scroll-sentinel" @ref="_sentinelRef" aria-hidden="true"></div>
 
     <main class="@ContentClass">
-        <ErrorPage>
-            @Body
-        </ErrorPage>
+        <div class="page-enter" @ref="_pageEnterRef">
+            <ErrorPage>
+                @Body
+            </ErrorPage>
+        </div>
     </main>
 
     <footer class="app-footer">
@@ -49,12 +58,83 @@
     // this component's own markup.
     private string ContentClass => Navigation.Uri.EndsWith("/read") ? "app-content app-content--reader" : "app-content";
 
+    private ElementReference _headerRef;
+    private ElementReference _sentinelRef;
+    private ElementReference _pageEnterRef;
+    private IJSObjectReference? _motionModule;
+    private string _lastPath = string.Empty;
+    private bool _pendingPageEnterReplay;
+
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
+        _lastPath = PathOf(Navigation.Uri);
     }
 
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => StateHasChanged();
+    // Only re-plays the page-enter fade when the path actually changed --
+    // LocationChanged also fires for same-page navigation (e.g. a deep link
+    // that resolves to the page already showing), where replaying would
+    // just read as an unwanted flicker rather than a page change.
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        var path = PathOf(e.Location);
+        _pendingPageEnterReplay = path != _lastPath;
+        _lastPath = path;
+        StateHasChanged();
+    }
 
-    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _motionModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
+                await _motionModule.InvokeVoidAsync("initHeaderCompact", _headerRef, _sentinelRef);
+                await _motionModule.InvokeVoidAsync("initReveal");
+            }
+            catch (JSException)
+            {
+                // Motion is a progressive enhancement -- see motion.js:
+                // a failed/blocked module load just leaves every
+                // [data-reveal] section in its normal, fully visible state.
+            }
+            return;
+        }
+
+        // StateHasChanged() above is the only thing that re-renders this
+        // layout, and it only runs from OnLocationChanged -- so a
+        // non-first render here always corresponds to a completed
+        // navigation, meaning @Body's new markup (and any of its own
+        // [data-reveal] sections) is already in the DOM by this point.
+        if (_pendingPageEnterReplay && _motionModule is not null)
+        {
+            _pendingPageEnterReplay = false;
+            try
+            {
+                await _motionModule.InvokeVoidAsync("replayPageEnter", _pageEnterRef);
+                await _motionModule.InvokeVoidAsync("initReveal");
+            }
+            catch (JSException)
+            {
+            }
+        }
+    }
+
+    private static string PathOf(string uri) => uri.Split('?')[0].Split('#')[0];
+
+    public async ValueTask DisposeAsync()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        if (_motionModule is not null)
+        {
+            try
+            {
+                await _motionModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
 }
