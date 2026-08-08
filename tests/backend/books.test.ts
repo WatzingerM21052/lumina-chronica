@@ -373,7 +373,7 @@ describe("GET /api/books/:id/cover Cache-Control (PUBLIC/PRIVATE/SHARED split)",
 
         const res = await app.request(`/api/books/${bookId}/cover`, {}, env);
         expect(res.status).toBe(200);
-        expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+        expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
     });
 
     it("never marks a PRIVATE book's cover cacheable, even for its own owner", async () => {

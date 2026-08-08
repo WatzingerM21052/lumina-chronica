@@ -209,7 +209,7 @@ describe("GET /api/projects/:id/cover Cache-Control (PUBLIC/PRIVATE split)", () 
 
         const res = await app.request(`/api/projects/${projectId}/cover`, {}, env);
         expect(res.status).toBe(200);
-        expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+        expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
     });
 
     it("never marks a PRIVATE project's cover cacheable, even for its own owner", async () => {
