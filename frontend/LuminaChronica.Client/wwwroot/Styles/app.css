@@ -104,7 +104,7 @@ h3 {
 .skeleton-shape {
     background: linear-gradient(90deg, var(--color-bg-card) 25%, var(--color-border) 50%, var(--color-bg-card) 75%);
     background-size: 200% 100%;
-    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+    animation: skeleton-shimmer var(--motion-skeleton) ease-in-out infinite;
     border-radius: var(--radius);
 }
 
@@ -316,6 +316,14 @@ button:hover,
     width: 8rem;
     height: 8rem;
     margin: 20vh auto 0;
+    /* Shared by index.html's pre-boot loader and LoadingIndicator (issue
+       #349 Phase B) -- previously a static 75%-filled ring with no
+       @keyframes anywhere, i.e. the unmodified Blazor WASM template
+       spinner reused as-is. Spinning the whole ring (rather than animating
+       stroke-dasharray) is cheap -- one GPU-friendly transform, no layout
+       recalculation -- and reads as "in progress" the instant it's visible,
+       including during the pre-boot phase before any Blazor/JS has run. */
+    animation: loading-progress-spin var(--motion-spinner) linear infinite;
 }
 
 .loading-progress circle {
@@ -329,6 +337,21 @@ button:hover,
 .loading-progress circle:last-child {
     stroke: var(--color-primary);
     stroke-dasharray: calc(3.141 * 8rem * 0.75), calc(3.141 * 8rem * 0.25);
+}
+
+@keyframes loading-progress-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-progress {
+        animation: none;
+    }
 }
 
 .loading-progress-text {

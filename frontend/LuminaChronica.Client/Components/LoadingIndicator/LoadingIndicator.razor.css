@@ -1,3 +1,7 @@
+/* Base + "section" mode (issue #349 Phase B) -- this is the pre-existing
+   look, kept as the default so every current `<LoadingIndicator Text="..."/>`
+   call site (page/detail views replacing their main content while loading)
+   renders unchanged. */
 .loading-indicator {
     display: flex;
     flex-direction: column;
@@ -15,4 +19,76 @@
     margin-top: var(--space-1);
     color: var(--color-text-secondary);
     font-size: var(--font-size-small);
+}
+
+/* Inline mode: sits next to text/a control, e.g. "Suche läuft…" beside a
+   search field. Row layout, no padding -- the surrounding content controls
+   spacing. */
+.loading-indicator-inline {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0;
+    display: inline-flex;
+}
+
+.loading-indicator-inline .loading-progress {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.loading-indicator-inline .loading-progress-text {
+    margin-top: 0;
+}
+
+/* Button mode: small enough to sit inside a button next to its label
+   (wired up in a later Phase B slice covering button states). No text --
+   the button keeps its own label. */
+.loading-indicator-button {
+    flex-direction: row;
+    padding: 0;
+    display: inline-flex;
+}
+
+.loading-indicator-button .loading-progress {
+    width: 1rem;
+    height: 1rem;
+}
+
+.loading-indicator-button .loading-progress-text {
+    display: none;
+}
+
+/* Page mode: a dedicated loading area taking up real space on an otherwise
+   empty page (e.g. a whole route still resolving), not just replacing one
+   card's worth of content. */
+.loading-indicator-page {
+    padding: var(--space-6) var(--space-4);
+    min-height: 40vh;
+    justify-content: center;
+}
+
+.loading-indicator-page .loading-progress {
+    width: 5rem;
+    height: 5rem;
+}
+
+/* Fullscreen mode: a scrim over the whole viewport, for a blocking
+   operation (e.g. a full-page transition). Not used by any call site yet --
+   defined now so later slices don't need another CSS pass. */
+.loading-indicator-fullscreen {
+    position: fixed;
+    inset: 0;
+    justify-content: center;
+    background: color-mix(in srgb, var(--color-bg-dark) 55%, transparent);
+    z-index: 500;
+}
+
+.loading-indicator-fullscreen .loading-progress {
+    width: 5rem;
+    height: 5rem;
+}
+
+.loading-indicator-fullscreen .loading-progress-text {
+    color: var(--color-bg-light);
 }
