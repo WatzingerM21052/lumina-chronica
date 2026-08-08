@@ -83,6 +83,17 @@
         StateHasChanged();
     }
 
+    // Handles only header-compaction (page-agnostic, wired once) and the
+    // page-enter replay (navigation-triggered). Scroll-reveal for
+    // [data-reveal] sections is deliberately NOT wired here even on
+    // firstRender: this fires once for MainLayout's own render, which for
+    // a page with async data (Discover/PublicProfile) happens while that
+    // page is still showing its loading skeleton -- the real chapters/grid
+    // don't exist in the DOM yet, so a call here would find nothing to
+    // observe and never run again. Each such page instead wires its own
+    // [data-reveal] sections from its own OnAfterRenderAsync (see
+    // PublicProfile.razor/Discover.razor), which fires after *that page's*
+    // content actually renders.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -91,13 +102,11 @@
             {
                 _motionModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
                 await _motionModule.InvokeVoidAsync("initHeaderCompact", _headerRef, _sentinelRef);
-                await _motionModule.InvokeVoidAsync("initReveal");
             }
             catch (JSException)
             {
-                // Motion is a progressive enhancement -- see motion.js:
-                // a failed/blocked module load just leaves every
-                // [data-reveal] section in its normal, fully visible state.
+                // Motion is a progressive enhancement -- a failed/blocked
+                // module load just leaves the header uncompacted.
             }
             return;
         }
@@ -105,15 +114,13 @@
         // StateHasChanged() above is the only thing that re-renders this
         // layout, and it only runs from OnLocationChanged -- so a
         // non-first render here always corresponds to a completed
-        // navigation, meaning @Body's new markup (and any of its own
-        // [data-reveal] sections) is already in the DOM by this point.
+        // navigation.
         if (_pendingPageEnterReplay && _motionModule is not null)
         {
             _pendingPageEnterReplay = false;
             try
             {
                 await _motionModule.InvokeVoidAsync("replayPageEnter", _pageEnterRef);
-                await _motionModule.InvokeVoidAsync("initReveal");
             }
             catch (JSException)
             {

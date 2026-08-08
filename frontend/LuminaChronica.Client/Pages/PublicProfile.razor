@@ -7,6 +7,7 @@
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject IJSRuntime JsRuntime
 
 <PageTitle>@(_profile?.Username ?? Username) — Lumina Chronica</PageTitle>
 
@@ -184,6 +185,7 @@ else
     private bool _notFound;
     private bool _isTogglingFollow;
     private readonly Dictionary<string, string> _coverObjectUrls = [];
+    private IJSObjectReference? _motionModule;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -191,6 +193,29 @@ else
         _profile = null;
         _notFound = false;
         await LoadProfileAsync();
+    }
+
+    // Wires the hero + chapters' [data-reveal] scroll animation (issue
+    // #341) on every render, not just the first -- MainLayout's own
+    // OnAfterRenderAsync only fires for *its* renders, not this page's, so
+    // it can't be the one to call initReveal after _profile finishes
+    // loading (the actual chapters don't exist in the DOM until then).
+    // initReveal itself is idempotent (skips sections it's already wired)
+    // and re-checks viewport intersection fresh each call, so repeat calls
+    // here are cheap and correct as layout settles (e.g. covers loading in).
+    // Best-effort like LoadOfflineStatusAsync: motion is a progressive
+    // enhancement, and this also swallows bUnit's unconfigured-JSInterop
+    // exception in tests that don't set up ./js/motion.js.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            _motionModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
+            await _motionModule.InvokeVoidAsync("initReveal");
+        }
+        catch (Exception)
+        {
+        }
     }
 
     private async Task LoadProfileAsync()
@@ -294,6 +319,10 @@ else
         foreach (var url in _coverObjectUrls.Values)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(url);
+        }
+        if (_motionModule is not null)
+        {
+            _ = _motionModule.DisposeAsync();
         }
     }
 }

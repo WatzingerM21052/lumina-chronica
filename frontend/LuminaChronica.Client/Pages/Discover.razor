@@ -6,6 +6,7 @@
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Entdecken — Lumina Chronica</PageTitle>
 
@@ -110,8 +111,27 @@
     private string _userSearchTerm = string.Empty;
     private List<DiscoverUser>? _userSearchResults;
     private System.Threading.Timer? _userSearchDebounceTimer;
+    private IJSObjectReference? _motionModule;
 
     protected override async Task OnInitializedAsync() => await LoadBooksAsync();
+
+    // See PublicProfile.razor's OnAfterRenderAsync for why this can't live
+    // in MainLayout: the book grid/skeleton only exist in the DOM once
+    // _books finishes loading, which happens after MainLayout's own first
+    // render. Called every render (idempotent, cheap) rather than gated on
+    // firstRender, since above-fold-vs-below-fold intersection can change
+    // as the skeleton grid resolves into real content.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            _motionModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
+            await _motionModule.InvokeVoidAsync("initReveal");
+        }
+        catch (Exception)
+        {
+        }
+    }
 
     private async Task LoadBooksAsync()
     {
@@ -168,6 +188,10 @@
     public void Dispose()
     {
         _userSearchDebounceTimer?.Dispose();
+        if (_motionModule is not null)
+        {
+            _ = _motionModule.DisposeAsync();
+        }
         foreach (var url in _coverObjectUrls.Values)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(url);
