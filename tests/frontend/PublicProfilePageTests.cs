@@ -109,8 +109,8 @@ public class PublicProfilePageTests : BunitContext
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
 
         Assert.Contains("noch keine öffentlichen Bücher", cut.Markup);
-        Assert.Contains("noch keine öffentlichen Projekte", cut.Markup);
-        Assert.Contains("noch keine öffentlichen Aktivitäten", cut.Markup);
+        Assert.Contains("Dieses Archiv wurde noch mit keiner Welt gefüllt.", cut.Markup);
+        Assert.Contains("Noch keine öffentlichen Aktivitäten.", cut.Markup);
     }
 
     [Fact]
@@ -205,8 +205,8 @@ public class PublicProfilePageTests : BunitContext
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
-        var button = cut.FindAll("button").Single(b => b.TextContent.Trim() is "Folgen" or "Entfolgen");
-        Assert.Equal("Folgen", button.TextContent.Trim());
+        var button = cut.FindAll("button.btn-follow").Single();
+        Assert.Equal("+ Folgen", button.TextContent.Trim());
     }
 
     [Fact]
@@ -221,8 +221,9 @@ public class PublicProfilePageTests : BunitContext
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
-        var button = cut.FindAll("button").Single(b => b.TextContent.Trim() is "Folgen" or "Entfolgen");
-        Assert.Equal("Entfolgen", button.TextContent.Trim());
+        var button = cut.FindAll("button.btn-follow").Single();
+        Assert.Equal("✓ Gefolgt", button.TextContent.Trim());
+        Assert.Contains("is-following", button.GetAttribute("class"));
     }
 
     [Fact]
@@ -243,11 +244,11 @@ public class PublicProfilePageTests : BunitContext
         SetAuthenticated(true, "alice");
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
-        cut.FindAll("button").Single(b => b.TextContent.Trim() is "Folgen" or "Entfolgen").Click();
+        cut.FindAll("button.btn-follow").Single().Click();
 
         Assert.Equal(HttpMethod.Post, followRequest?.Method);
         Assert.Equal("/api/users/bob/follow", followRequest?.RequestUri?.AbsolutePath);
-        Assert.Equal("Entfolgen", cut.FindAll("button").Single(b => b.TextContent.Trim() is "Folgen" or "Entfolgen").TextContent.Trim());
+        Assert.Equal("✓ Gefolgt", cut.FindAll("button.btn-follow").Single().TextContent.Trim());
     }
 
     [Fact]
@@ -267,8 +268,10 @@ public class PublicProfilePageTests : BunitContext
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
+        // CatalogCard's catalog-style rating notation: "★ 4.5 · 2", not the
+        // old "★ 4.5 (2)".
         Assert.Contains("4.5", cut.Markup);
-        Assert.Contains("(2)", cut.Markup);
+        Assert.Contains("· 2", cut.Markup);
     }
 
     [Fact]
@@ -306,7 +309,7 @@ public class PublicProfilePageTests : BunitContext
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
-        var cardLink = cut.Find("a.book-card");
+        var cardLink = cut.Find("a.catalog-card");
         Assert.Equal("library/books/9", cardLink.GetAttribute("href"));
         Assert.DoesNotContain(cut.FindAll("a"), a => a.TextContent.Trim() == "Lesen");
         Assert.Contains("Noch keine Bewertungen", cut.Markup);
@@ -321,7 +324,7 @@ public class PublicProfilePageTests : BunitContext
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
         Assert.Contains("Anmelden zum Lesen", cut.Markup);
-        Assert.False(cut.Find("a.book-card").HasAttribute("href"));
+        Assert.False(cut.Find("a.catalog-card").HasAttribute("href"));
     }
 
     [Fact]
@@ -336,7 +339,7 @@ public class PublicProfilePageTests : BunitContext
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
-        var cardLink = cut.Find("a.book-card");
+        var cardLink = cut.Find("a.catalog-card");
         Assert.Equal("library/books/9", cardLink.GetAttribute("href"));
         Assert.Empty(cut.FindAll("button.star-button"));
     }
@@ -353,7 +356,48 @@ public class PublicProfilePageTests : BunitContext
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
         Assert.Contains("Privat geteilt", cut.Markup);
-        Assert.False(cut.Find("a.book-card").HasAttribute("href"));
+        Assert.False(cut.Find("a.catalog-card").HasAttribute("href"));
+    }
+
+    [Fact]
+    public void PublicProfile_ProjectCard_HasNoHref()
+    {
+        // ProjectDetail.razor is still the owner's private editing
+        // workspace (characters/locations/timeline/lore, all owner-only
+        // controls) -- no public read-only view exists yet, so linking a
+        // profile's project card there would leak those controls to any
+        // visitor. Regression guard: the card must stay non-interactive
+        // until a public project view exists.
+        UseRoutes(ProfileWithContentJson);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
+
+        var projectCard = cut.FindAll("a.catalog-card").Single(a => a.TextContent.Contains("Public World"));
+        Assert.False(projectCard.HasAttribute("href"));
+    }
+
+    [Fact]
+    public void PublicProfile_CatalogCards_DoNotShowOwnerLink()
+    {
+        // "von {owner}" is Discover's device for pointing at a stranger's
+        // profile -- redundant (and a little odd) on someone's own profile,
+        // where every card obviously belongs to the page's own user.
+        UseRoutes(ProfileWithContentJson);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
+
+        Assert.Empty(cut.FindAll(".catalog-card-owner"));
+    }
+
+    [Fact]
+    public void PublicProfile_AvatarPlaceholder_UsesIconNotEmoji()
+    {
+        UseRoutes(EmptyProfileJson);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
+
+        Assert.DoesNotContain("👤", cut.Markup);
+        Assert.NotEmpty(cut.FindAll(".profile-hero-portrait-placeholder svg"));
     }
 
     [Fact]

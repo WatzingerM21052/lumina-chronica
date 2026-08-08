@@ -1,5 +1,5 @@
 @page "/discover"
-@using System.Globalization
+@using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @implements IDisposable
@@ -28,7 +28,7 @@
                         }
                         else
                         {
-                            <span class="discover-user-avatar discover-user-avatar-placeholder" aria-hidden="true">👤</span>
+                            <span class="discover-user-avatar discover-user-avatar-placeholder" aria-hidden="true"><Icon Name="person" /></span>
                         }
                         @user.Username
                     </a>
@@ -61,47 +61,18 @@
     }
     else
     {
-        <div class="library-grid">
+        <div class="catalog-grid">
             @foreach (var book in _books)
             {
-                <a class="book-card book-card-normal" href="@($"library/books/{book.Id}")">
-                    <div class="book-card-cover">
-                        @if (_coverObjectUrls.TryGetValue(book.Id, out var coverUrl))
-                        {
-                            <img src="@coverUrl" alt="@book.Title" />
-                        }
-                        else
-                        {
-                            <div class="book-card-cover-placeholder" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
-                                    <path d="M4 5.5c2.2-1 5-1 8 0v13c-3-1-5.8-1-8 0z" />
-                                    <path d="M20 5.5c-2.2-1-5-1-8 0v13c3-1 5.8-1 8 0z" />
-                                </svg>
-                            </div>
-                        }
-                    </div>
-                    <div class="book-card-info">
-                        <div class="book-card-title">@book.Title</div>
-                        @if (!string.IsNullOrWhiteSpace(book.Author))
-                        {
-                            <div class="book-card-author">@book.Author</div>
-                        }
-                        <div class="book-card-author">
-                            von
-                            <span class="book-card-owner-link" @onclick="() => GoToProfile(book.OwnerUsername)" @onclick:stopPropagation="true" @onclick:preventDefault="true">@book.OwnerUsername</span>
-                        </div>
-                        <div class="book-card-rating">
-                            @if (book.RatingCount > 0)
-                            {
-                                <span>★ @book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture) (@book.RatingCount)</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted">Noch keine Bewertungen</span>
-                            }
-                        </div>
-                    </div>
-                </a>
+                <CatalogCard Kind="book"
+                             Href="@($"library/books/{book.Id}")"
+                             Title="@book.Title"
+                             Subtitle="@book.Author"
+                             CoverUrl="@(_coverObjectUrls.TryGetValue(book.Id, out var coverUrl) ? coverUrl : null)"
+                             OwnerUsername="@book.OwnerUsername"
+                             OnOwnerClick="GoToProfile"
+                             RatingAverage="@book.AverageRating"
+                             RatingCount="@book.RatingCount" />
             }
         </div>
     }
@@ -112,10 +83,8 @@
     private string _sort = "newest";
     private readonly Dictionary<int, string> _coverObjectUrls = [];
 
-    // A plain @onclick + stopPropagation on a <span>, not a nested <a> --
-    // the whole card is already an <a href> for the book itself, and a
-    // second anchor nested inside it is invalid HTML with unreliable click
-    // behavior across browsers.
+    // Passed to CatalogCard's OnOwnerClick -- see CatalogCard.razor for why
+    // that's a stopPropagation span rather than a nested <a>.
     private void GoToProfile(string username) => NavigationManager.NavigateTo($"u/{username}");
 
     private string _userSearchTerm = string.Empty;

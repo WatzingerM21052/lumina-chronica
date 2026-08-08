@@ -1,5 +1,6 @@
 @page "/u/{Username}"
 @using System.Globalization
+@using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @using Microsoft.AspNetCore.Authorization
@@ -17,88 +18,84 @@
 }
 else if (_profile is null)
 {
-    <p>Lädt…</p>
+    <div class="profile-hero profile-hero-skeleton" aria-hidden="true">
+        <div class="profile-hero-portrait skeleton-shape"></div>
+        <div class="profile-hero-body">
+            <div class="skeleton-shape skeleton-line skeleton-line-eyebrow"></div>
+            <div class="skeleton-shape skeleton-line skeleton-line-name"></div>
+            <div class="skeleton-shape skeleton-line skeleton-line-meta"></div>
+        </div>
+    </div>
 }
 else
 {
-    <div class="public-profile-header">
-        @if (_profile.AvatarUrl is { } avatarUrl)
-        {
-            <img src="@avatarUrl" alt="@_profile.Username" class="public-profile-avatar" />
-        }
-        else
-        {
-            <div class="public-profile-avatar public-profile-avatar-placeholder" aria-hidden="true">👤</div>
-        }
-        <div>
-            <h1>@_profile.Username</h1>
-            <p class="text-muted">
-                <strong>@_profile.FollowerCount</strong> Follower · <strong>@_profile.FollowingCount</strong> Folgt
-            </p>
-            @if (!_profile.IsOwnProfile)
+    <div class="profile-hero">
+        <div class="profile-hero-portrait-wrap">
+            @if (_profile.AvatarUrl is { } avatarUrl)
             {
+                <img src="@avatarUrl" alt="@_profile.Username" class="profile-hero-portrait" />
+            }
+            else
+            {
+                <div class="profile-hero-portrait profile-hero-portrait-placeholder" aria-hidden="true">
+                    <Icon Name="person" Class="profile-hero-portrait-icon" />
+                </div>
+            }
+        </div>
+        <div class="profile-hero-body">
+            <p class="profile-hero-eyebrow">Öffentliches Archiv</p>
+            <h1 class="profile-hero-name">@_profile.Username</h1>
+            <p class="profile-hero-meta">
+                <span><strong>@_profile.FollowerCount</strong> Follower</span>
+                <span><strong>@_profile.FollowingCount</strong> Folgt</span>
+            </p>
+        </div>
+        @if (!_profile.IsOwnProfile)
+        {
+            <div class="profile-hero-actions">
                 <AuthorizeView>
                     <Authorized>
-                        <button type="button" class="btn @(_profile.IsFollowing ? "" : "btn-primary")" disabled="@_isTogglingFollow" @onclick="ToggleFollowAsync">
-                            @(_profile.IsFollowing ? "Entfolgen" : "Folgen")
+                        <button type="button" class="btn-follow @(_profile.IsFollowing ? "is-following" : "")" disabled="@_isTogglingFollow" @onclick="ToggleFollowAsync">
+                            @(_profile.IsFollowing ? "✓ Gefolgt" : "+ Folgen")
                         </button>
                     </Authorized>
                 </AuthorizeView>
-            }
-        </div>
+            </div>
+        }
     </div>
 
-    <section>
-        <h2>Bibliothek</h2>
+    <section class="profile-chapter">
+        <div class="profile-chapter-numeral-row"><span>I</span></div>
+        <h2 class="profile-chapter-title">Bibliothek <span class="profile-chapter-caption">— Werke dieser Sammlung</span></h2>
         @if (_profile.Books.Count == 0)
         {
-            <p class="text-muted">@_profile.Username hat noch keine öffentlichen Bücher.</p>
+            <div class="empty-state-literary">
+                <span class="empty-state-ornament" aria-hidden="true">❦</span>
+                @if (_profile.IsOwnProfile)
+                {
+                    <p>Beginne deine Sammlung.</p>
+                    <a class="btn btn-primary" href="library/upload">Buch hinzufügen</a>
+                }
+                else
+                {
+                    <p>@_profile.Username hat noch keine öffentlichen Bücher.</p>
+                }
+            </div>
         }
         else
         {
-            <div class="library-grid">
+            <div class="catalog-grid">
                 @foreach (var book in _profile.Books)
                 {
-                    // The whole card links to the book's own overview page
-                    // (not straight into the reader) when the viewer can
-                    // actually open it -- an <a> with no href renders as a
-                    // plain, non-interactive container for the CanRead-false
-                    // case, same idea as BookCard.razor's Href fallback.
-                    <a class="book-card book-card-normal" href="@(book.CanRead ? $"library/books/{book.Id}" : null)">
-                        <div class="book-card-cover">
-                            @if (_coverObjectUrls.TryGetValue($"book-{book.Id}", out var coverUrl))
-                            {
-                                <img src="@coverUrl" alt="@book.Title" />
-                            }
-                            else
-                            {
-                                <div class="book-card-cover-placeholder" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
-                                        <path d="M4 5.5c2.2-1 5-1 8 0v13c-3-1-5.8-1-8 0z" />
-                                        <path d="M20 5.5c-2.2-1-5-1-8 0v13c3-1 5.8-1 8 0z" />
-                                    </svg>
-                                </div>
-                            }
-                        </div>
-                        <div class="book-card-info">
-                            <div class="book-card-title">@book.Title</div>
-                            @if (!string.IsNullOrWhiteSpace(book.Author))
-                            {
-                                <div class="book-card-author">@book.Author</div>
-                            }
-                            @if (book.Visibility == "PUBLIC")
-                            {
-                                <div class="book-card-rating">
-                                    @if (book.RatingCount > 0)
-                                    {
-                                        <span>★ @book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture) (@book.RatingCount)</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Noch keine Bewertungen</span>
-                                    }
-                                </div>
-                            }
+                    <CatalogCard Kind="book"
+                                 Href="@(book.CanRead ? $"library/books/{book.Id}" : null)"
+                                 Title="@book.Title"
+                                 Subtitle="@book.Author"
+                                 CoverUrl="@(_coverObjectUrls.TryGetValue($"book-{book.Id}", out var coverUrl) ? coverUrl : null)"
+                                 ShowRating="@(book.Visibility == "PUBLIC")"
+                                 RatingAverage="@book.AverageRating"
+                                 RatingCount="@book.RatingCount">
+                        <FooterContent>
                             @if (!book.CanRead)
                             {
                                 @if (book.Visibility == "PUBLIC")
@@ -114,56 +111,54 @@ else
                                     <span class="text-muted">Privat geteilt</span>
                                 }
                             }
-                        </div>
-                    </a>
+                        </FooterContent>
+                    </CatalogCard>
                 }
             </div>
         }
     </section>
 
-    <section>
-        <h2>Projekte</h2>
+    <section class="profile-chapter">
+        <div class="profile-chapter-numeral-row"><span>II</span></div>
+        <h2 class="profile-chapter-title">Projekte <span class="profile-chapter-caption">— Welten dieser Sammlung</span></h2>
         @if (_profile.Projects.Count == 0)
         {
-            <p class="text-muted">@_profile.Username hat noch keine öffentlichen Projekte.</p>
+            <div class="empty-state-literary">
+                <span class="empty-state-ornament" aria-hidden="true">❦</span>
+                <p>Dieses Archiv wurde noch mit keiner Welt gefüllt.</p>
+            </div>
         }
         else
         {
-            <div class="library-grid">
+            <div class="catalog-grid">
                 @foreach (var project in _profile.Projects)
                 {
-                    <div class="project-card">
-                        <div class="project-card-cover">
-                            @if (_coverObjectUrls.TryGetValue($"project-{project.Id}", out var coverUrl))
-                            {
-                                <img src="@coverUrl" alt="@project.Title" />
-                            }
-                            else
-                            {
-                                <div class="project-card-cover-placeholder" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
-                                        <circle cx="12" cy="12" r="9" />
-                                        <path d="M3 12h18" />
-                                        <path d="M12 3c2.8 2.6 4.2 5.8 4.2 9s-1.4 6.4-4.2 9c-2.8-2.6-4.2-5.8-4.2-9s1.4-6.4 4.2-9z" />
-                                    </svg>
-                                </div>
-                            }
-                        </div>
-                        <div class="project-card-info">
-                            <div class="project-card-title">@project.Title</div>
-                            <div class="project-card-type">@ProjectTypeLabel.For(project.Type)</div>
-                        </div>
-                    </div>
+                    @* No Href: ProjectDetail.razor is still the owner's private
+                       editing workspace (characters/locations/timeline/lore,
+                       all owner-only) with no public read-only view yet --
+                       linking here would leak those controls to any visitor,
+                       the same permission gap fixed for books earlier this
+                       session. Matches the current (pre-redesign) behavior,
+                       which also doesn't link this card. Public project
+                       viewing is real scope, but a separate feature/story. *@
+                    <CatalogCard Kind="project"
+                                 Title="@project.Title"
+                                 CoverUrl="@(_coverObjectUrls.TryGetValue($"project-{project.Id}", out var coverUrl) ? coverUrl : null)"
+                                 TypeLabel="@ProjectTypeLabel.For(project.Type)" />
                 }
             </div>
         }
     </section>
 
-    <section>
-        <h2>Aktivitäten</h2>
+    <section class="profile-chapter">
+        <div class="profile-chapter-numeral-row"><span>III</span></div>
+        <h2 class="profile-chapter-title">Aktivität <span class="profile-chapter-caption">— zuletzt geschehen</span></h2>
         @if (_profile.Activities.Count == 0)
         {
-            <p class="text-muted">@_profile.Username hat noch keine öffentlichen Aktivitäten.</p>
+            <div class="empty-state-literary">
+                <span class="empty-state-ornament" aria-hidden="true">❦</span>
+                <p>Noch keine öffentlichen Aktivitäten.</p>
+            </div>
         }
         else
         {
@@ -171,8 +166,9 @@ else
                 @foreach (var activity in _profile.Activities)
                 {
                     <li class="profile-activity-item">
+                        <span class="profile-activity-dot" aria-hidden="true"></span>
                         <span class="profile-activity-text">@ActivityText(activity)</span>
-                        <span class="profile-activity-date text-muted">@FormatActivityDate(activity.CreatedAt)</span>
+                        <span class="profile-activity-date">@FormatActivityDate(activity.CreatedAt)</span>
                     </li>
                 }
             </ul>

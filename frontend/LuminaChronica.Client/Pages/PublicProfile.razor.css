@@ -1,0 +1,317 @@
+/* Public Profile -- "the title page of an author's public collection"
+   (issue #315/#339). Page-scoped now that book/project cards moved into
+   the real CatalogCard component: nothing else on the page reuses this
+   markup, so there's no CSS-isolation risk in keeping it local instead of
+   dumping it into the global app.css (the mistake PR #313 made). */
+
+.profile-hero {
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-5);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.profile-hero-portrait-wrap {
+    flex-shrink: 0;
+}
+
+.profile-hero-portrait {
+    width: 7rem;
+    height: 7rem;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--color-bg-card);
+    outline: 1px solid var(--color-gold-accent);
+    outline-offset: 3px;
+    box-shadow: var(--shadow-card);
+}
+
+.profile-hero-portrait-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-card);
+    color: var(--color-text-disabled);
+}
+
+.profile-hero-portrait-icon {
+    width: 40%;
+    height: 40%;
+}
+
+.profile-hero-body {
+    flex: 1;
+    min-width: 12rem;
+}
+
+.profile-hero-eyebrow {
+    font-size: var(--font-size-caption);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin: 0 0 0.2rem;
+}
+
+.profile-hero-name {
+    font-family: var(--font-family-display);
+    font-weight: 700;
+    font-size: var(--font-size-h1);
+    line-height: 1.1;
+    margin: 0 0 0.4rem;
+    /* No signature double-rule here -- the hero already has its own bottom
+       border for the whole block; a second rule under just the name would
+       compete with it. */
+    border-bottom: none;
+    padding-bottom: 0;
+    width: auto;
+}
+
+.profile-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.9rem;
+    font-size: var(--font-size-small);
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+.profile-hero-meta span:not(:last-child)::after {
+    content: "·";
+    margin-left: 0.9rem;
+    color: var(--color-border);
+}
+
+.profile-hero-actions {
+    flex-shrink: 0;
+    padding-bottom: 0.3rem;
+}
+
+/* Primary "+ Folgen" CTA by default; once following, a deliberately
+   quieter outline "✓ Gefolgt" -- the issue wants the post-follow state to
+   read as calmer, not more prominent. */
+.btn-follow {
+    font-family: inherit;
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    border-radius: 999px;
+    border: 1px solid var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-bg-light);
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-follow:hover {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.btn-follow:active {
+    transform: scale(0.97);
+}
+
+.btn-follow.is-following {
+    background: transparent;
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
+}
+
+.btn-follow.is-following:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.btn-follow:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Hero skeleton (loading state) -- same shape as the real hero so nothing
+   jumps once data arrives. */
+.profile-hero-skeleton {
+    align-items: center;
+}
+
+.skeleton-shape {
+    background: linear-gradient(90deg, var(--color-bg-card) 25%, var(--color-border) 50%, var(--color-bg-card) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+    border-radius: var(--radius);
+}
+
+.profile-hero-skeleton .skeleton-shape.profile-hero-portrait {
+    border-radius: 50%;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+.skeleton-line {
+    height: 0.9rem;
+    margin-bottom: 0.6rem;
+}
+
+.skeleton-line-eyebrow {
+    width: 6rem;
+    height: 0.6rem;
+}
+
+.skeleton-line-name {
+    width: 12rem;
+    height: 1.8rem;
+}
+
+.skeleton-line-meta {
+    width: 9rem;
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Chapters ("Bibliothek" / "Projekte" / "Aktivität") -- a sparse Roman
+   numeral + flanking rules above the heading, then the same double-gold
+   signature rule the rest of the app already uses under h1 (app.css),
+   reapplied here at chapter scale since that global rule only targets h1. */
+.profile-chapter {
+    margin-bottom: var(--space-6);
+}
+
+.profile-chapter-numeral-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+    font-family: var(--font-family-display);
+    font-style: italic;
+    font-size: var(--font-size-small);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+}
+
+.profile-chapter-numeral-row::before,
+.profile-chapter-numeral-row::after {
+    content: "";
+    flex: 0 1 3rem;
+    height: 1px;
+    background: var(--color-border);
+}
+
+.profile-chapter-title {
+    font-family: var(--font-family-display);
+    font-weight: 600;
+    font-size: var(--font-size-h2);
+    text-align: center;
+    width: fit-content;
+    margin: 0 auto var(--space-3);
+    padding-bottom: var(--space-1);
+    border-bottom: 3px double var(--color-gold-accent);
+}
+
+.profile-chapter-caption {
+    font-weight: 400;
+    font-style: italic;
+    font-size: var(--font-size-small);
+    color: var(--color-text-muted);
+}
+
+/* Empty states -- literary flavor text instead of a bare "no items" line. */
+.empty-state-literary {
+    text-align: center;
+    padding: var(--space-5) var(--space-3);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-card);
+}
+
+.empty-state-ornament {
+    display: block;
+    color: var(--color-gold-accent);
+    font-size: 1.3rem;
+    margin-bottom: var(--space-1);
+}
+
+.empty-state-literary p {
+    font-family: var(--font-family-reader);
+    font-style: italic;
+    color: var(--color-text-secondary);
+    max-width: 26rem;
+    margin: 0 auto var(--space-2);
+}
+
+.empty-state-literary .btn {
+    margin-top: var(--space-1);
+}
+
+/* Activity chapter */
+.profile-activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-activity-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: 0.7rem 0;
+    border-bottom: 1px dashed var(--color-border);
+    font-size: var(--font-size-small);
+}
+
+.profile-activity-item:last-child {
+    border-bottom: none;
+}
+
+.profile-activity-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-gold-accent);
+    flex-shrink: 0;
+}
+
+.profile-activity-text {
+    flex: 1;
+    color: var(--color-text-secondary);
+}
+
+.profile-activity-date {
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-follow {
+        transition: none;
+    }
+
+    .skeleton-shape {
+        animation: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .profile-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .profile-hero-actions {
+        padding-bottom: 0;
+    }
+}

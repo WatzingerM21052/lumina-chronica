@@ -1,0 +1,47 @@
+@namespace LuminaChronica.Client.Components
+
+@* Shared line-icon set (viewBox 0 0 24 24, fill:none, stroke:currentColor,
+   stroke-width 1.4) matching BookCard/CharacterCard/LocationCard/ProjectCard's
+   hand-drawn cover placeholders -- used instead of emoji so chrome (bell,
+   search, profile) reads consistently with the rest of the app. Inline per
+   usage rather than a <use> sprite: a sprite injected once into index.html
+   would need to survive every client-side route change, and a component
+   that renders it lazily could unmount before something references it. *@
+<svg class="icon @Class" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    @switch (Name)
+    {
+        case "bell":
+            <path d="M12 4.5c-3 0-4.6 2.2-4.6 5.5v2.7c0 1-.4 1.9-1.1 2.6l-.8.8h13l-.8-.8a3.6 3.6 0 0 1-1.1-2.6v-2.7c0-3.3-1.6-5.5-4.6-5.5z" />
+            <path d="M10 18.5a2 2 0 0 0 4 0" />
+            break;
+        case "person":
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+            break;
+        case "search":
+            <circle cx="10.5" cy="10.5" r="6" />
+            <path d="M15.2 15.2 20 20" />
+            break;
+        case "exchange":
+            <path d="M4 8h13M17 8l-3-3M17 8l-3 3" />
+            <path d="M20 16H7M7 16l3-3M7 16l3 3" />
+            break;
+        case "book":
+            <path d="M4 5.5c2.2-1 5-1 8 0v13c-3-1-5.8-1-8 0z" />
+            <path d="M20 5.5c-2.2-1-5-1-8 0v13c3-1 5.8-1 8 0z" />
+            break;
+        case "project":
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18" />
+            <path d="M12 3c2.8 2.6 4.2 5.8 4.2 9s-1.4 6.4-4.2 9c-2.8-2.6-4.2-5.8-4.2-9s1.4-6.4 4.2-9z" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Class { get; set; } = string.Empty;
+}
