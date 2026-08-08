@@ -158,14 +158,30 @@
         var response = await ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?sort={_sort}");
         _books = response is { Success: true, Data: not null } ? response.Data.Items : [];
 
-        foreach (var book in _books)
-        {
-            if (book.CoverUrl is null) continue;
-            var result = await ApiClient.GetBytesAsync(book.CoverUrl);
-            if (result is { } cover)
+        // Covers are independent requests -- fetch them concurrently instead
+        // of one-at-a-time (issue #349 Phase C). Capped at 6 in flight so a
+        // full page of covers doesn't fire more simultaneous requests than
+        // the backend needs to see.
+        using var throttle = new SemaphoreSlim(6);
+        var coverResults = await Task.WhenAll(_books
+            .Where(book => book.CoverUrl is not null)
+            .Select(async book =>
             {
-                _coverObjectUrls[book.Id] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
-            }
+                await throttle.WaitAsync();
+                try
+                {
+                    var result = await ApiClient.GetBytesAsync(book.CoverUrl!);
+                    return (book.Id, Url: result is { } cover ? await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType) : null);
+                }
+                finally
+                {
+                    throttle.Release();
+                }
+            }));
+
+        foreach (var (id, url) in coverResults)
+        {
+            if (url is not null) _coverObjectUrls[id] = url;
         }
     }
 
