@@ -788,6 +788,8 @@ Live-verified end-to-end against production (2026-08-08): migration applied to r
 
 **Known, deliberate scope trim:** the bell only fetches on mount and when the popover is opened — no polling/websocket for real-time badge updates. Acceptable for an in-app-only, no-push feature; revisit if the eventual "Home Feed" story (deferred from Phase 1) makes staleness more noticeable.
 
-Backend: 339/339 Vitest tests passing (34 new). Frontend: 240/240 bUnit tests passing (16 new).
+**One real bug found live, right after merge — same class as v3.1's PR #302:** `NotificationBell.BuildLink` built hrefs with a leading slash (`/library/books/{id}`), which resolves from the domain root and 404s under GitHub Pages' `/lumina-chronica/` subpath — Blazor's `<base href>` only rewrites *relative* links (no other component in the codebase uses a leading slash; `BookCard.razor`/`Discover.razor` were the reference for the correct pattern). Caught by clicking a real SHARE notification in the browser immediately after deploying; every other trigger (FOLLOW/RATING/COMMENT/mute-at-insert-time/mark-read/mark-all-read/idempotent-share) had already been verified correct via direct API calls before this was found. Fixed to relative hrefs same-day (PR #332), with a new regression test asserting no notification link starts with `/`. Re-verified live with a hard reload — the same SHARE notification now correctly opens the book detail page.
+
+Backend: 339/339 Vitest tests passing (34 new). Frontend: 241/241 bUnit tests passing (17 new, one added by the hotfix).
 
 **v3.3 "Comments, Notifications, Activities" complete — all three phases shipped.** Next up: a Community design rework (issue #315), then v4.0 (KI).

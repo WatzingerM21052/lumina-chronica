@@ -10,11 +10,12 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Community: comments on books and projects (v3.3 Phase 2, issue #325). A book is commentable by anyone who can actually read it — owner, any logged-in user on a `PUBLIC` book, or a listed user on a `SHARED` book's share list — the same rule reading itself uses, not the `PUBLIC`-only rule ratings use. A project is commentable by its owner or, if `PUBLIC`, any logged-in user (projects have no share-list equivalent to books). Create + delete only for this first version (no edit); delete is allowed by the comment's own author or the commented-on book/project's owner. New `comments` table (migration `0019_comments.sql`).
 - Community: in-app notifications with per-type preferences (v3.3 Phase 3, issue #326). A bell icon in the header (badge shows unread count) lists notifications for `FOLLOW`/`COMMENT`/`RATING`/`SHARE` events, newest first, with a small filter to narrow the list to one type; clicking a notification marks it read and links to the relevant profile/book/project. No email or push, in-app only. Every user can enable/disable each notification type individually from `/settings` — the preference is checked at insert time, so muting a type only affects future events and never retroactively hides already-delivered notifications. A fifth preference type, `ACTIVITY_RATING`, was added to the same mechanism (not a notification) to let a user opt their own rating activity out of their public profile's "Aktivitäten" log, since `RATING_GIVEN` is the first activity entry that reveals a specific action rather than restating something already public. New `notifications` and `user_preferences` tables (migration `0020_notifications.sql`).
 
-Backend: 339/339 Vitest tests passing (34 new). Frontend: 240/240 bUnit tests passing (16 new).
+Backend: 339/339 Vitest tests passing (34 new). Frontend: 241/241 bUnit tests passing (17 new).
 
 ### Fixed
 
 - Profile activity log crashing `/u/{username}` for any profile with an activity: `ProfileActivity.CreatedAt` was typed `DateTime`, which `System.Text.Json` rejects for D1's actual timestamp format. See the v3.3 Phase 1 Roadmap entry for the full story.
+- Notification deep-links 404ing under the GitHub Pages `/lumina-chronica/` subpath: `NotificationBell.BuildLink` used leading-slash hrefs, which resolve from the domain root instead of going through Blazor's `<base href>` rewrite. See the v3.3 Phase 3 Roadmap entry for the full story.
 
 ## [3.2.0] - 2026-08-08
 
