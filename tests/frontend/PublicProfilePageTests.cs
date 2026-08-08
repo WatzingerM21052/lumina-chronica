@@ -55,9 +55,16 @@ public class PublicProfilePageTests : BunitContext
     private const string EmptyProfileJson =
         """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[]}}""";
 
-    // v3.3 Phase 1 (issue #324) -- profile activity log.
+    // v3.3 Phase 1 (issue #324) -- profile activity log. createdAt
+    // deliberately uses D1's real "yyyy-MM-dd HH:mm:ss" shape (SQLite's
+    // CURRENT_TIMESTAMP format -- no 'T', no offset), not ISO-8601 --
+    // production returns exactly this, and ProfileActivity.CreatedAt is
+    // string (parsed explicitly at render time), not DateTime, specifically
+    // because System.Text.Json's default DateTime converter rejects this
+    // format outright. Caught live in the browser against the real API,
+    // not by the test suite -- this fixture exists so it would be next time.
     private const string ProfileWithActivitiesJson =
-        """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[],"activities":[{"id":1,"type":"RATING_GIVEN","targetType":"BOOK","targetId":9,"targetTitle":"Dune","rating":4,"createdAt":"2026-08-01T00:00:00Z"},{"id":2,"type":"BOOK_PUBLIC","targetType":"BOOK","targetId":10,"targetTitle":"Mittelerde","rating":null,"createdAt":"2026-07-28T00:00:00Z"},{"id":3,"type":"PROJECT_PUBLIC","targetType":"PROJECT","targetId":11,"targetTitle":"Aetherfall","rating":null,"createdAt":"2026-07-20T00:00:00Z"}]}}""";
+        """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[],"activities":[{"id":1,"type":"RATING_GIVEN","targetType":"BOOK","targetId":9,"targetTitle":"Dune","rating":4,"createdAt":"2026-08-01 00:00:00"},{"id":2,"type":"BOOK_PUBLIC","targetType":"BOOK","targetId":10,"targetTitle":"Mittelerde","rating":null,"createdAt":"2026-07-28 00:00:00"},{"id":3,"type":"PROJECT_PUBLIC","targetType":"PROJECT","targetId":11,"targetTitle":"Aetherfall","rating":null,"createdAt":"2026-07-20 00:00:00"}]}}""";
 
     private const string NotFollowingProfileJson =
         """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":3,"followingCount":1,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[]}}""";
