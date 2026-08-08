@@ -1,0 +1,54 @@
+@namespace LuminaChronica.Client.Components
+
+<div class="notification-bell">
+    <button type="button" class="notification-bell-toggle" @onclick="ToggleOpenAsync" aria-label="Benachrichtigungen">
+        🔔
+        @if (UnreadCount > 0)
+        {
+            <span class="notification-badge">@(UnreadCount > 9 ? "9+" : UnreadCount.ToString())</span>
+        }
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="notification-popover">
+            <div class="notification-popover-header">
+                <div class="notification-filter-pills">
+                    @foreach (var (value, label) in Filters)
+                    {
+                        <button type="button" class="notification-pill @(_activeFilter == value ? "is-selected" : "")" @onclick="() => SetFilter(value)">
+                            @label
+                        </button>
+                    }
+                </div>
+                @if (UnreadCount > 0)
+                {
+                    <button type="button" class="btn notification-mark-all" @onclick="MarkAllReadAsync">Alle als gelesen markieren</button>
+                }
+            </div>
+
+            @if (_notifications is null)
+            {
+                <p class="text-muted">Lade …</p>
+            }
+            else if (FilteredNotifications.Count == 0)
+            {
+                <p class="text-muted">Keine Benachrichtigungen@(_activeFilter is null ? "." : " dieses Typs.")</p>
+            }
+            else
+            {
+                <ul class="notification-list">
+                    @foreach (var n in FilteredNotifications)
+                    {
+                        <li class="notification-item @(n.ReadAt is null ? "is-unread" : "")">
+                            <a href="@BuildLink(n)" class="notification-link" @onclick="() => OnNotificationClickAsync(n)">
+                                <span class="notification-text">@NotificationText(n)</span>
+                                <span class="notification-date text-muted">@FormatNotificationDate(n.CreatedAt)</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>

@@ -20,6 +20,7 @@
 import { NotFoundError } from "./errors";
 import { isBookAccessibleTo, getBookOwnerId } from "./bookService";
 import { isProjectCommentableBy, getProjectOwnerId } from "./projectService";
+import { buildNotificationInsert } from "./notificationService";
 
 export { NotFoundError };
 export class ForbiddenError extends Error {}
@@ -75,7 +76,21 @@ export async function createComment(
     if (trimmed.length > MAX_CONTENT_LENGTH) throw new ValidationError(`content must be at most ${MAX_CONTENT_LENGTH} characters.`);
 
     await assertCommentable(db, callerId, targetType, targetId);
-    await db.prepare("INSERT INTO comments (user_id, target_type, target_id, content) VALUES (?, ?, ?, ?)").bind(callerId, targetType, targetId, trimmed).run();
+
+    const insertComment = db
+        .prepare("INSERT INTO comments (user_id, target_type, target_id, content) VALUES (?, ?, ?, ?)")
+        .bind(callerId, targetType, targetId, trimmed);
+
+    // Self-commenting is allowed (unlike rating/following), so the
+    // ownerId === callerId case relies on buildNotificationInsert's own
+    // self-notify guard rather than a check here.
+    const ownerId = targetType === "BOOK" ? await getBookOwnerId(db, targetId) : await getProjectOwnerId(db, targetId);
+    if (ownerId === null) {
+        await insertComment.run();
+        return;
+    }
+    const notifyOwner = buildNotificationInsert(db, ownerId, "COMMENT", callerId, targetType, targetId);
+    await db.batch([insertComment, notifyOwner]);
 }
 
 export async function deleteComment(db: D1Database, callerId: number, commentId: number): Promise<void> {

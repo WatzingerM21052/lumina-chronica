@@ -3,6 +3,7 @@
 // created_at)` field list (§50.1); this file's shape is designed fresh.
 
 import { NotFoundError } from "./errors";
+import { buildNotificationInsert } from "./notificationService";
 
 export { NotFoundError };
 export class SelfFollowError extends Error {}
@@ -16,7 +17,14 @@ export async function resolveUserIdByUsername(db: D1Database, username: string):
 export async function followUser(db: D1Database, followerId: number, targetUsername: string): Promise<void> {
     const targetId = await resolveUserIdByUsername(db, targetUsername);
     if (targetId === followerId) throw new SelfFollowError();
-    await db.prepare("INSERT OR IGNORE INTO followers (follower_id, following_id) VALUES (?, ?)").bind(followerId, targetId).run();
+    const result = await db.prepare("INSERT OR IGNORE INTO followers (follower_id, following_id) VALUES (?, ?)").bind(followerId, targetId).run();
+    // OR IGNORE means a repeat follow() call is a silent no-op -- only
+    // notify on the row actually being inserted, not on every idempotent
+    // retry (meta.changes, not db.batch(), since the decision depends on
+    // the first statement's own result).
+    if (result.meta.changes > 0) {
+        await buildNotificationInsert(db, targetId, "FOLLOW", followerId, "USER", followerId).run();
+    }
 }
 
 export async function unfollowUser(db: D1Database, followerId: number, targetUsername: string): Promise<void> {
