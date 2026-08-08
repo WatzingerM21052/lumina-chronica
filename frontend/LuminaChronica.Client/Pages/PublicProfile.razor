@@ -81,21 +81,7 @@ else
                             {
                                 <div class="book-card-author">@book.Author</div>
                             }
-                            @if (book.Visibility == "SHARED")
-                            {
-                                <div class="book-card-rating">
-                                    <span class="text-muted">Geteiltes Buch</span>
-                                </div>
-                                <AuthorizeView>
-                                    <Authorized>
-                                        <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">Lesen</a>
-                                    </Authorized>
-                                    <NotAuthorized>
-                                        <span class="text-muted">Anmelden zum Lesen</span>
-                                    </NotAuthorized>
-                                </AuthorizeView>
-                            }
-                            else
+                            @if (book.Visibility == "PUBLIC")
                             {
                                 <div class="book-card-rating">
                                     @if (book.RatingCount > 0)
@@ -124,6 +110,22 @@ else
                                         </Authorized>
                                     </AuthorizeView>
                                 }
+                            }
+                            @if (book.CanRead)
+                            {
+                                <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">Lesen</a>
+                            }
+                            else if (book.Visibility == "PUBLIC")
+                            {
+                                <AuthorizeView>
+                                    <NotAuthorized>
+                                        <span class="text-muted">Anmelden zum Lesen</span>
+                                    </NotAuthorized>
+                                </AuthorizeView>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Privat geteilt</span>
                             }
                         </div>
                     </div>

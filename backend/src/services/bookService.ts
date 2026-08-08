@@ -41,6 +41,11 @@ export type BookSummary = {
     genre: string | null;
     language: string | null;
     visibility: string;
+    // Only meaningful when visibility is SHARED -- whether a person NOT on
+    // this book's share list (book_shares, migration 0017) still sees the
+    // cover+description teaser on the owner's public profile. See
+    // getBookCoverObject/listPublicBooksByUsername for the enforcement.
+    sharedTeaserVisible: boolean;
     createdAt: string;
     isFavorite: boolean;
 };
@@ -64,6 +69,7 @@ export type BookRow = {
     genre: string | null;
     language: string | null;
     visibility: string;
+    shared_teaser_visible: number;
     created_at: string;
     is_favorite: number;
 };
@@ -75,7 +81,7 @@ export type BookRow = {
 // Exported so shelfService.ts's listShelfBooks can reuse it -- shelf_books
 // membership queries are owner-scoped the same way (a book can only be on a
 // shelf its owner also owns, enforced by addBookToShelf's ownership check).
-export const BOOK_ROW_COLUMNS = `id, title, author, description, cover_url, genre, language, visibility, created_at,
+export const BOOK_ROW_COLUMNS = `id, title, author, description, cover_url, genre, language, visibility, shared_teaser_visible, created_at,
     EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = books.owner_id) AS is_favorite`;
 
 export function toSummary(row: BookRow): BookSummary {
@@ -87,6 +93,7 @@ export function toSummary(row: BookRow): BookSummary {
         genre: row.genre,
         language: row.language,
         visibility: row.visibility,
+        sharedTeaserVisible: !!row.shared_teaser_visible,
         createdAt: row.created_at,
         isFavorite: !!row.is_favorite,
     };
@@ -323,27 +330,33 @@ async function findOwnedBookRow(db: D1Database, ownerId: number, bookId: number)
         .first<BookRow>();
 }
 
-// Community "borrowed reading" (issue TBD, follow-up to Phase 1/#300): a
-// logged-in caller can read (not edit/delete/favorite/shelve) a book they
-// don't own if its owner marked it SHARED. Only getBook and
-// getBookFileObject use this -- every mutating function keeps using
-// findOwnedBookRow above, strictly owner-only.
+// Community "borrowed reading" (issue #316/v3.1, semantics swapped by
+// issue #321/v3.2): a logged-in caller can read (not edit/delete/favorite/
+// shelve) a book they don't own if it's PUBLIC (any logged-in user), or if
+// it's SHARED and they're on that book's explicit share list (book_shares,
+// migration 0017). Only getBook and getBookFileObject use this -- every
+// mutating function keeps using findOwnedBookRow above, strictly owner-only.
 //
 // Can't reuse BOOK_ROW_COLUMNS here: its is_favorite subquery is correlated
 // against books.owner_id, which is only correct when the caller IS the
 // owner (true for every other use of that constant). A borrower reading
-// someone else's SHARED book would otherwise see the *owner's* favorite
-// flag mislabeled as their own -- favoriting stays owner-only in this
-// phase, so a borrower must always see is_favorite computed against their
-// own (necessarily absent) row, not leak the owner's.
+// someone else's book would otherwise see the *owner's* favorite flag
+// mislabeled as their own -- favoriting stays owner-only, so a borrower
+// must always see is_favorite computed against their own (necessarily
+// absent) row, not leak the owner's.
 async function findAccessibleBookRow(db: D1Database, callerId: number, bookId: number): Promise<BookRow | null> {
     return db
         .prepare(
-            `SELECT id, title, author, description, cover_url, genre, language, visibility, created_at,
+            `SELECT id, title, author, description, cover_url, genre, language, visibility, shared_teaser_visible, created_at,
                 EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = ?) AS is_favorite
-             FROM books WHERE id = ? AND (owner_id = ? OR visibility = 'SHARED')`
+             FROM books
+             WHERE id = ? AND (
+                owner_id = ?
+                OR visibility = 'PUBLIC'
+                OR (visibility = 'SHARED' AND EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?))
+             )`
         )
-        .bind(callerId, bookId, callerId)
+        .bind(callerId, bookId, callerId, callerId)
         .first<BookRow>();
 }
 
@@ -366,10 +379,6 @@ export async function getBook(db: D1Database, callerId: number, bookId: number):
     return row ? loadDetail(db, row) : null;
 }
 
-// SHARED is stored but has no enforcement semantics anywhere yet (same as
-// the day it was added in migration 0002) -- accepted here for forward
-// compatibility, but the frontend's own visibility selector only offers
-// PRIVATE/PUBLIC (see Community Phase 1, issue #300).
 const VISIBILITY_VALUES = ["PRIVATE", "SHARED", "PUBLIC"] as const;
 
 export type UpdateBookInput = {
@@ -384,6 +393,9 @@ export type UpdateBookInput = {
     pages?: number;
     tags?: string[];
     visibility?: string;
+    // Only meaningful when visibility is (or becomes) SHARED -- see
+    // BookSummary.sharedTeaserVisible.
+    sharedTeaserVisible?: boolean;
 };
 
 export async function updateBook(db: D1Database, ownerId: number, bookId: number, input: UpdateBookInput): Promise<BookDetail> {
@@ -402,6 +414,7 @@ export async function updateBook(db: D1Database, ownerId: number, bookId: number
         ["genre", input.genre],
         ["language", input.language],
         ["visibility", input.visibility],
+        ["shared_teaser_visible", input.sharedTeaserVisible === undefined ? undefined : input.sharedTeaserVisible ? 1 : 0],
     ] as const) {
         if (value !== undefined) {
             sets.push(`${column} = ?`);
@@ -481,6 +494,7 @@ export async function deleteBook(db: D1Database, storage: R2Bucket, ownerId: num
         db.prepare("DELETE FROM shelf_books WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM project_books WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM ratings WHERE book_id = ?").bind(bookId),
+        db.prepare("DELETE FROM book_shares WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM books WHERE id = ?").bind(bookId),
     ]);
 
@@ -505,19 +519,30 @@ export async function getBookFileObject(db: D1Database, storage: R2Bucket, calle
     return object ? { object, format: fileRow.format } : null;
 }
 
-// ownerId is nullable here (unlike every other function in this file) --
+// viewerId is nullable here (unlike every other function in this file) --
 // this is the one route reachable while logged out (optionalAuth, not
 // requireAuth), since a PUBLIC book's cover has to render on its owner's
 // public profile (issue #300) for a visitor with no session at all.
-export async function getBookCoverObject(db: D1Database, storage: R2Bucket, ownerId: number | null, bookId: number): Promise<R2ObjectBody | null> {
-    const row = await db.prepare("SELECT cover_url, owner_id, visibility FROM books WHERE id = ?").bind(bookId).first<{
+// SHARED's teaser visibility depends on shared_teaser_visible (issue #321,
+// migration 0017) -- when off, only the owner and people on the book's
+// share list still see the cover; everyone else (including anonymous) gets
+// nothing, same as PRIVATE.
+export async function getBookCoverObject(db: D1Database, storage: R2Bucket, viewerId: number | null, bookId: number): Promise<R2ObjectBody | null> {
+    const row = await db.prepare("SELECT cover_url, owner_id, visibility, shared_teaser_visible FROM books WHERE id = ?").bind(bookId).first<{
         cover_url: string | null;
         owner_id: number;
         visibility: string;
+        shared_teaser_visible: number;
     }>();
     if (!row || !row.cover_url) return null;
-    if (row.visibility !== "PUBLIC" && row.visibility !== "SHARED" && row.owner_id !== ownerId) return null;
-    return storage.get(row.cover_url);
+    if (row.owner_id === viewerId || row.visibility === "PUBLIC") return storage.get(row.cover_url);
+    if (row.visibility === "SHARED") {
+        if (row.shared_teaser_visible) return storage.get(row.cover_url);
+        if (viewerId === null) return null;
+        const shared = await db.prepare("SELECT 1 FROM book_shares WHERE book_id = ? AND user_id = ?").bind(bookId, viewerId).first();
+        return shared ? storage.get(row.cover_url) : null;
+    }
+    return null;
 }
 
 export type PublicBookSummary = {
@@ -529,38 +554,50 @@ export type PublicBookSummary = {
     genre: string | null;
     language: string | null;
     visibility: string;
+    canRead: boolean;
     averageRating: number | null;
     ratingCount: number;
     myRating: number | null;
 };
 
 // Community Phase 1 (issue #300) -- deliberately excludes owner_id,
-// is_favorite, and every field only meaningful to the owner. No ownerId
-// param: visibility IN ('PUBLIC', 'SHARED') is the only access check, by
-// design -- PRIVATE books never appear here regardless of caller.
+// is_favorite, and every field only meaningful to the owner.
 // Community Phase 3 (issue #307) added viewerId (nullable, same pattern as
 // followService.getFollowState) and the rating aggregate/myRating columns --
 // binding a null viewerId into `ratings.user_id = ?` never matches any row,
 // so an anonymous visitor correctly always gets myRating: null with no
 // branching needed.
-// "Borrowed reading" follow-up (issue TBD, after #300) -- SHARED books now
-// also appear here (same cover+metadata teaser an anonymous visitor already
-// saw for PUBLIC books), with `visibility` exposed so the frontend can show
-// a "Lesen" button only for a logged-in, non-owner viewer of a SHARED book.
-// Ratings stay PUBLIC-only by design (see ratingService.ts's NotPublicError) --
-// a SHARED book always reports averageRating: null, ratingCount: 0, myRating: null.
+// v3.2 (issue #321) swapped PUBLIC/SHARED semantics: PUBLIC now grants full
+// read to any logged-in user, SHARED is gated by an explicit per-book share
+// list (book_shares, migration 0017) with a shared_teaser_visible toggle
+// for whether non-listed people still see the cover+description teaser.
+// Share-list membership isn't visible to the frontend, so this returns a
+// computed `canRead` per book -- the frontend keys the "Lesen" button off
+// that instead of raw `visibility`. Ratings stay PUBLIC-only by design (see
+// ratingService.ts's NotPublicError) -- a SHARED book always reports
+// averageRating: null, ratingCount: 0, myRating: null.
 export async function listPublicBooksByUsername(db: D1Database, username: string, viewerId: number | null): Promise<PublicBookSummary[]> {
     const rows = await db
         .prepare(
             `SELECT books.id, books.title, books.author, books.description, books.cover_url, books.genre, books.language, books.visibility,
                 (SELECT AVG(rating) FROM ratings WHERE book_id = books.id) AS average_rating,
                 (SELECT COUNT(*) FROM ratings WHERE book_id = books.id) AS rating_count,
-                (SELECT rating FROM ratings WHERE book_id = books.id AND user_id = ?) AS my_rating
+                (SELECT rating FROM ratings WHERE book_id = books.id AND user_id = ?) AS my_rating,
+                CASE
+                    WHEN books.owner_id = ? THEN 1
+                    WHEN books.visibility = 'PUBLIC' AND ? IS NOT NULL THEN 1
+                    WHEN books.visibility = 'SHARED' AND EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?) THEN 1
+                    ELSE 0
+                END AS can_read
              FROM books JOIN users ON users.id = books.owner_id
-             WHERE users.username = ? AND users.deleted_at IS NULL AND books.visibility IN ('PUBLIC', 'SHARED')
+             WHERE users.username = ? AND users.deleted_at IS NULL
+               AND (
+                    books.visibility = 'PUBLIC'
+                    OR (books.visibility = 'SHARED' AND (books.shared_teaser_visible = 1 OR EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?)))
+               )
              ORDER BY books.created_at DESC`
         )
-        .bind(viewerId, username)
+        .bind(viewerId, viewerId, viewerId, viewerId, username, viewerId)
         .all<{
             id: number;
             title: string;
@@ -573,6 +610,7 @@ export async function listPublicBooksByUsername(db: D1Database, username: string
             average_rating: number | null;
             rating_count: number;
             my_rating: number | null;
+            can_read: number;
         }>();
 
     return rows.results.map((row) => ({
@@ -584,6 +622,7 @@ export async function listPublicBooksByUsername(db: D1Database, username: string
         genre: row.genre,
         language: row.language,
         visibility: row.visibility,
+        canRead: !!row.can_read,
         averageRating: row.average_rating,
         ratingCount: row.rating_count,
         myRating: row.my_rating,

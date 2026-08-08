@@ -29,6 +29,13 @@ import {
     rateBook,
     unrateBook,
 } from "../services/ratingService";
+import {
+    NotFoundError as ShareNotFoundError,
+    SelfShareError,
+    listBookShares,
+    shareBookWithUser,
+    unshareBookWithUser,
+} from "../services/bookSharingService";
 
 export const booksRoute = new Hono<AppEnv>();
 
@@ -247,6 +254,46 @@ booksRoute.delete("/:id/rating", requireAuth, async (c) => {
         return c.body(null, 204);
     } catch (err) {
         if (err instanceof RatingNotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        throw err;
+    }
+});
+
+// Explicit per-book sharing (v3.2, issue #321) -- who a SHARED book's owner
+// has chosen to give full read access to. Owner-only to manage, same
+// idempotent add/remove shape as Phase 2's follow endpoints.
+booksRoute.get("/:id/shares", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    try {
+        const shares = await listBookShares(c.env.DB, c.get("userId"), bookId);
+        return c.json(success(shares));
+    } catch (err) {
+        if (err instanceof ShareNotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+        throw err;
+    }
+});
+
+booksRoute.post("/:id/shares", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    const body = await c.req.json<{ username?: string }>().catch(() => null);
+    if (!body || !body.username) return c.json(failure("VALIDATION_ERROR", "username is required."), 400);
+
+    try {
+        await shareBookWithUser(c.env.DB, c.get("userId"), bookId, body.username);
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof ShareNotFoundError) return c.json(failure("NOT_FOUND", "Book or user not found."), 404);
+        if (err instanceof SelfShareError) return c.json(failure("VALIDATION_ERROR", "You cannot share a book with yourself."), 400);
+        throw err;
+    }
+});
+
+booksRoute.delete("/:id/shares/:username", requireAuth, async (c) => {
+    const bookId = Number(c.req.param("id"));
+    try {
+        await unshareBookWithUser(c.env.DB, c.get("userId"), bookId, c.req.param("username") ?? "");
+        return c.body(null, 204);
+    } catch (err) {
+        if (err instanceof ShareNotFoundError) return c.json(failure("NOT_FOUND", "Book or user not found."), 404);
         throw err;
     }
 });
