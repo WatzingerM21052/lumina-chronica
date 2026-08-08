@@ -3,6 +3,7 @@
 // full schema. R2 key layout: books/{book-id}/original.{ext}, books/{book-id}/cover.{ext}.
 
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
+import { recordBookPublicActivity } from "./activityService";
 
 export class NotFoundError extends Error {}
 export { ValidationError };
@@ -427,6 +428,12 @@ export async function updateBook(db: D1Database, ownerId: number, bookId: number
         await db.prepare(`UPDATE books SET ${sets.join(", ")} WHERE id = ?`).bind(...values).run();
     }
 
+    // Log only the transition INTO PUBLIC, not every edit made while a book
+    // stays PUBLIC.
+    if (input.visibility === "PUBLIC" && row.visibility !== "PUBLIC") {
+        await recordBookPublicActivity(db, ownerId, bookId);
+    }
+
     if (input.isbn !== undefined || input.publisher !== undefined || input.releaseDate !== undefined || input.pages !== undefined) {
         await db
             .prepare(
@@ -495,6 +502,7 @@ export async function deleteBook(db: D1Database, storage: R2Bucket, ownerId: num
         db.prepare("DELETE FROM project_books WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM ratings WHERE book_id = ?").bind(bookId),
         db.prepare("DELETE FROM book_shares WHERE book_id = ?").bind(bookId),
+        db.prepare("DELETE FROM profile_activities WHERE target_type = 'BOOK' AND target_id = ?").bind(bookId),
         db.prepare("DELETE FROM books WHERE id = ?").bind(bookId),
     ]);
 

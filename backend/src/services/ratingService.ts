@@ -3,6 +3,7 @@
 // created_at)` field list (§50.2); this file's shape is designed fresh.
 
 import { NotFoundError } from "./errors";
+import { recordRatingActivity } from "./activityService";
 
 export { NotFoundError };
 export class SelfRatingError extends Error {}
@@ -33,6 +34,10 @@ export async function rateBook(db: D1Database, userId: number, bookId: number, r
         )
         .bind(userId, bookId, rating)
         .run();
+
+    // A re-rate is logged as a new activity too -- ratings are upsert, but
+    // each PUT is still a distinct, chronologically real event.
+    await recordRatingActivity(db, userId, bookId, rating);
 }
 
 export async function unrateBook(db: D1Database, userId: number, bookId: number): Promise<void> {

@@ -55,6 +55,10 @@ public class PublicProfilePageTests : BunitContext
     private const string EmptyProfileJson =
         """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[]}}""";
 
+    // v3.3 Phase 1 (issue #324) -- profile activity log.
+    private const string ProfileWithActivitiesJson =
+        """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[],"activities":[{"id":1,"type":"RATING_GIVEN","targetType":"BOOK","targetId":9,"targetTitle":"Dune","rating":4,"createdAt":"2026-08-01T00:00:00Z"},{"id":2,"type":"BOOK_PUBLIC","targetType":"BOOK","targetId":10,"targetTitle":"Mittelerde","rating":null,"createdAt":"2026-07-28T00:00:00Z"},{"id":3,"type":"PROJECT_PUBLIC","targetType":"PROJECT","targetId":11,"targetTitle":"Aetherfall","rating":null,"createdAt":"2026-07-20T00:00:00Z"}]}}""";
+
     private const string NotFollowingProfileJson =
         """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":3,"followingCount":1,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[]}}""";
 
@@ -101,6 +105,24 @@ public class PublicProfilePageTests : BunitContext
 
         Assert.Contains("noch keine öffentlichen Bücher", cut.Markup);
         Assert.Contains("noch keine öffentlichen Projekte", cut.Markup);
+        Assert.Contains("noch keine öffentlichen Aktivitäten", cut.Markup);
+    }
+
+    [Fact]
+    public void PublicProfile_RendersActivityLog_WithHumanReadableTextForEachType()
+    {
+        UseRoutes(ProfileWithActivitiesJson);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
+
+        var items = cut.FindAll("li.profile-activity-item");
+        Assert.Equal(3, items.Count);
+        Assert.Contains("Dune", items[0].TextContent);
+        Assert.Contains("4 Sternen", items[0].TextContent);
+        Assert.Contains("Mittelerde", items[1].TextContent);
+        Assert.Contains("veröffentlicht", items[1].TextContent);
+        Assert.Contains("Aetherfall", items[2].TextContent);
+        Assert.Contains("veröffentlicht", items[2].TextContent);
     }
 
     [Fact]

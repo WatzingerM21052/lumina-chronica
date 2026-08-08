@@ -503,4 +503,28 @@ describe("Borrowed reading: PUBLIC (any logged-in user) and SHARED (explicit sha
         const rows = await env.DB.prepare("SELECT COUNT(*) AS total FROM book_shares WHERE book_id = ?").bind(bookId).first<{ total: number }>();
         expect(rows?.total).toBe(0);
     });
+
+    // v3.3 Phase 1 (issue #324): profile_activities has no FK on target_id
+    // (polymorphic BOOK/PROJECT target), so a dangling row wouldn't 500 the
+    // delete the way a real FK violation would -- this only catches a
+    // missing cleanup line by asserting the row is actually gone.
+    it("deleting a PUBLIC book with a rating activity succeeds and cleans up profile_activities", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+        await setVisibility(tokenA, bookId, "PUBLIC");
+        await app.request(
+            `/api/books/${bookId}/rating`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ rating: 4 }) },
+            env
+        );
+
+        const deleteRes = await app.request(`/api/books/${bookId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(deleteRes.status).toBe(204);
+
+        const rows = await env.DB
+            .prepare("SELECT COUNT(*) AS total FROM profile_activities WHERE target_type = 'BOOK' AND target_id = ?")
+            .bind(bookId)
+            .first<{ total: number }>();
+        expect(rows?.total).toBe(0);
+    });
 });

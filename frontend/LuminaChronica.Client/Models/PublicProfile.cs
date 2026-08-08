@@ -70,6 +70,36 @@ public class PublicProject
     public string? CoverUrl { get; set; }
 }
 
+// Mirrors backend/src/services/activityService.ts's ProfileActivity -- a log
+// of the profile owner's own public actions (v3.3 Phase 1, issue #324). No
+// aggregated home feed across followed users yet, own-profile log only.
+public class ProfileActivity
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    // "BOOK_PUBLIC" | "PROJECT_PUBLIC" | "RATING_GIVEN"
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = string.Empty;
+
+    // "BOOK" | "PROJECT"
+    [JsonPropertyName("targetType")]
+    public string TargetType { get; set; } = string.Empty;
+
+    [JsonPropertyName("targetId")]
+    public int TargetId { get; set; }
+
+    [JsonPropertyName("targetTitle")]
+    public string? TargetTitle { get; set; }
+
+    // Snapshot at creation time, only set for RATING_GIVEN.
+    [JsonPropertyName("rating")]
+    public int? Rating { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public DateTime CreatedAt { get; set; }
+}
+
 public class PublicProfileResponse
 {
     [JsonPropertyName("username")]
@@ -95,4 +125,7 @@ public class PublicProfileResponse
 
     [JsonPropertyName("projects")]
     public List<PublicProject> Projects { get; set; } = [];
+
+    [JsonPropertyName("activities")]
+    public List<ProfileActivity> Activities { get; set; } = [];
 }
