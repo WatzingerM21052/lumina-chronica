@@ -261,14 +261,21 @@ else
     // non-public again since the activity was logged, and the activity
     // response doesn't carry a per-viewer canRead flag to gate a link
     // correctly. Plain text avoids offering a link that 404s.
+    //
+    // activity.Rating is null whenever the rater had ACTIVITY_RATING_STARS
+    // off at the time they rated (activityService.recordRatingActivity
+    // stores null, not a real value, in that case) -- rendered without a
+    // star count rather than falling back to "0 Sternen", which would read
+    // as a real (and wrong) rating value.
     private static string ActivityText(ProfileActivity activity)
     {
         var title = activity.TargetTitle ?? "(gelöscht)";
-        return activity.Type switch
+        return (activity.Type, activity.Rating) switch
         {
-            "RATING_GIVEN" => $"hat „{title}“ mit {activity.Rating ?? 0} {(activity.Rating == 1 ? "Stern" : "Sternen")} bewertet",
-            "BOOK_PUBLIC" => $"hat das Buch „{title}“ veröffentlicht",
-            "PROJECT_PUBLIC" => $"hat das Projekt „{title}“ veröffentlicht",
+            ("RATING_GIVEN", { } rating) => $"hat „{title}“ mit {rating} {(rating == 1 ? "Stern" : "Sternen")} bewertet",
+            ("RATING_GIVEN", null) => $"hat „{title}“ bewertet",
+            ("BOOK_PUBLIC", _) => $"hat das Buch „{title}“ veröffentlicht",
+            ("PROJECT_PUBLIC", _) => $"hat das Projekt „{title}“ veröffentlicht",
             _ => title,
         };
     }

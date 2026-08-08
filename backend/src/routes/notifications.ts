@@ -7,7 +7,7 @@ import { listNotifications, markNotificationRead, markAllNotificationsRead, list
 // In-app notifications (v3.3 Phase 3, issue #326). No email/push.
 export const notificationsRoute = new Hono<AppEnv>();
 
-const PREFERENCE_TYPES = new Set<PreferenceType>(["FOLLOW", "COMMENT", "RATING", "SHARE", "ACTIVITY_RATING"]);
+const PREFERENCE_TYPES = new Set<PreferenceType>(["FOLLOW", "COMMENT", "RATING", "SHARE", "ACTIVITY_RATING", "ACTIVITY_RATING_STARS"]);
 
 notificationsRoute.get("/", requireAuth, async (c) => {
     const result = await listNotifications(c.env.DB, c.get("userId"));

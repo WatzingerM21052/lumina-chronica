@@ -138,6 +138,26 @@ public class PublicProfilePageTests : BunitContext
         Assert.Contains("veröffentlicht", items[2].TextContent);
     }
 
+    // rating: null here means the rater had ACTIVITY_RATING_STARS off when
+    // they rated (issue #315 Phase 3) -- the backend still logs that a
+    // rating happened (ACTIVITY_RATING was on), just without the value.
+    private const string ProfileWithStarlessRatingActivityJson =
+        """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[],"activities":[{"id":1,"type":"RATING_GIVEN","targetType":"BOOK","targetId":9,"targetTitle":"Dune","rating":null,"createdAt":"2026-08-01 12:00:00"}]}}""";
+
+    [Fact]
+    public void PublicProfile_RendersRatingActivity_WithoutStarCount_WhenRatingIsNull()
+    {
+        UseRoutes(ProfileWithStarlessRatingActivityJson);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
+
+        var item = cut.Find("li.profile-activity-item");
+        Assert.Contains("Dune", item.TextContent);
+        Assert.Contains("bewertet", item.TextContent);
+        Assert.DoesNotContain("Sternen", item.TextContent);
+        Assert.DoesNotContain("Stern ", item.TextContent);
+    }
+
     [Fact]
     public void PublicProfile_ShowsNotFoundMessage_WhenUserDoesNotExist()
     {

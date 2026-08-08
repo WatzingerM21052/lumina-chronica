@@ -44,16 +44,24 @@ export async function recordProjectPublicActivity(db: D1Database, userId: number
         .run();
 }
 
-// Gated by the ACTIVITY_RATING preference (v3.3 Phase 3, issue #326) --
-// rating activity is the first profile_activities entry that reveals a
-// specific action (who rated what), unlike BOOK_PUBLIC/PROJECT_PUBLIC which
-// just restate something already public. Users can opt out of this one
-// specifically without disabling the whole activity log.
+// Gated by two independent, both opt-in preferences (v3.3 Phase 3, issue
+// #326; split into two in issue #315 Phase 3): ACTIVITY_RATING controls
+// whether a rating shows up in the log at all, ACTIVITY_RATING_STARS
+// controls whether the specific star value is included once it does --
+// the value is the more sensitive part (it can read as an opinion about
+// someone else's work, not just "an activity happened"), so it's checked
+// and gated separately rather than being implied by the first.
+//
+// Both are checked at insert time, not read time (same as every other
+// preference here) -- a row's rating value is fixed at the moment it's
+// written; toggling ACTIVITY_RATING_STARS later never retroactively
+// reveals or hides an already-recorded value.
 export async function recordRatingActivity(db: D1Database, userId: number, bookId: number, rating: number): Promise<void> {
     if (!(await isPreferenceEnabled(db, userId, "ACTIVITY_RATING"))) return;
+    const showStars = await isPreferenceEnabled(db, userId, "ACTIVITY_RATING_STARS");
     await db
         .prepare(`INSERT INTO profile_activities (user_id, type, target_type, target_id, rating) VALUES (?, 'RATING_GIVEN', 'BOOK', ?, ?)`)
-        .bind(userId, bookId, rating)
+        .bind(userId, bookId, showStars ? rating : null)
         .run();
 }
 

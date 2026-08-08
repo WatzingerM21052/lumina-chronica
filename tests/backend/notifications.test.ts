@@ -204,30 +204,38 @@ describe("POST /api/notifications/:id/read and /read-all", () => {
 });
 
 describe("GET/PUT /api/notifications/preferences", () => {
-    it("defaults every type to enabled for a fresh user", async () => {
+    it("defaults notification types to enabled and the two activity-log types to disabled, for a fresh user", async () => {
         const res = await app.request("/api/notifications/preferences", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
         const { data } = await readJson(res);
-        expect(data).toEqual({ FOLLOW: true, COMMENT: true, RATING: true, SHARE: true, ACTIVITY_RATING: true });
+        expect(data).toEqual({ FOLLOW: true, COMMENT: true, RATING: true, SHARE: true, ACTIVITY_RATING: false, ACTIVITY_RATING_STARS: false });
     });
 
     it("persists a per-type toggle without affecting the others", async () => {
         await setPreference(tokenA, "COMMENT", false);
         const res = await app.request("/api/notifications/preferences", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
         const { data } = await readJson(res);
-        expect(data).toEqual({ FOLLOW: true, COMMENT: false, RATING: true, SHARE: true, ACTIVITY_RATING: true });
+        expect(data).toEqual({ FOLLOW: true, COMMENT: false, RATING: true, SHARE: true, ACTIVITY_RATING: false, ACTIVITY_RATING_STARS: false });
     });
 
     it("rejects an unknown preference type", async () => {
         const res = await setPreference(tokenA, "BOGUS", false);
         expect(res.status).toBe(400);
     });
+
+    it("allows opting into ACTIVITY_RATING_STARS independently of ACTIVITY_RATING", async () => {
+        await setPreference(tokenA, "ACTIVITY_RATING", true);
+        await setPreference(tokenA, "ACTIVITY_RATING_STARS", true);
+        const res = await app.request("/api/notifications/preferences", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const { data } = await readJson(res);
+        expect(data.ACTIVITY_RATING).toBe(true);
+        expect(data.ACTIVITY_RATING_STARS).toBe(true);
+    });
 });
 
-describe("ACTIVITY_RATING preference gates profile_activities, not notifications", () => {
-    it("suppresses the RATING_GIVEN activity log entry when disabled, but the RATING notification to the book owner still fires", async () => {
+describe("ACTIVITY_RATING/ACTIVITY_RATING_STARS gate profile_activities, not notifications", () => {
+    it("logs no RATING_GIVEN activity by default (ACTIVITY_RATING is opt-in), but the RATING notification to the book owner still fires", async () => {
         const bookId = await uploadBook(tokenA);
         await setBookVisibility(tokenA, bookId, "PUBLIC");
-        await setPreference(tokenB, "ACTIVITY_RATING", false);
 
         await rate(tokenB, bookId, 3);
 
@@ -238,5 +246,43 @@ describe("ACTIVITY_RATING preference gates profile_activities, not notifications
         const ownerNotifications = await listNotifications(tokenA);
         expect(ownerNotifications.data.notifications).toHaveLength(1);
         expect(ownerNotifications.data.notifications[0].type).toBe("RATING");
+    });
+
+    it("still suppresses the entry when ACTIVITY_RATING is explicitly disabled", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setBookVisibility(tokenA, bookId, "PUBLIC");
+        await setPreference(tokenB, "ACTIVITY_RATING", false);
+
+        await rate(tokenB, bookId, 3);
+
+        const profileRes = await app.request("/api/users/bob/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const profile = await readJson(profileRes);
+        expect(profile.data.activities).toEqual([]);
+    });
+
+    it("logs the activity without a star value when ACTIVITY_RATING is on but ACTIVITY_RATING_STARS is off", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setBookVisibility(tokenA, bookId, "PUBLIC");
+        await setPreference(tokenB, "ACTIVITY_RATING", true);
+
+        await rate(tokenB, bookId, 4);
+
+        const profileRes = await app.request("/api/users/bob/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const profile = await readJson(profileRes);
+        expect(profile.data.activities).toHaveLength(1);
+        expect(profile.data.activities[0]).toMatchObject({ type: "RATING_GIVEN", targetId: bookId, rating: null });
+    });
+
+    it("includes the star value once both preferences are enabled", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setBookVisibility(tokenA, bookId, "PUBLIC");
+        await setPreference(tokenB, "ACTIVITY_RATING", true);
+        await setPreference(tokenB, "ACTIVITY_RATING_STARS", true);
+
+        await rate(tokenB, bookId, 4);
+
+        const profileRes = await app.request("/api/users/bob/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const profile = await readJson(profileRes);
+        expect(profile.data.activities[0]).toMatchObject({ type: "RATING_GIVEN", targetId: bookId, rating: 4 });
     });
 });
