@@ -239,7 +239,10 @@ export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: 
 // requireAuth), since a PUBLIC project's cover has to render on its owner's
 // public profile (issue #300) for a visitor with no session at all. The
 // project's map stays owner-only -- not part of the public "teaser", see #300.
-export async function getProjectCoverObject(db: D1Database, storage: R2Bucket, ownerId: number | null, projectId: number): Promise<R2ObjectBody | null> {
+// isPublic tells the route whether the bytes may go into a shared/CDN cache
+// (issue #349 Phase C) -- true only for PUBLIC-visibility projects. The
+// owner viewing their own PRIVATE project cover still gets isPublic: false.
+export async function getProjectCoverObject(db: D1Database, storage: R2Bucket, ownerId: number | null, projectId: number): Promise<{ object: R2ObjectBody; isPublic: boolean } | null> {
     const row = await db.prepare("SELECT cover_url, owner_id, visibility FROM projects WHERE id = ?").bind(projectId).first<{
         cover_url: string | null;
         owner_id: number;
@@ -247,7 +250,8 @@ export async function getProjectCoverObject(db: D1Database, storage: R2Bucket, o
     }>();
     if (!row || !row.cover_url) return null;
     if (row.visibility !== "PUBLIC" && row.owner_id !== ownerId) return null;
-    return storage.get(row.cover_url);
+    const object = await storage.get(row.cover_url);
+    return object ? { object, isPublic: row.visibility === "PUBLIC" } : null;
 }
 
 // Owner OR PUBLIC check used by commentService.ts -- projects have no

@@ -353,6 +353,55 @@ describe("GET /api/books/:id/file and /cover (ownership check)", () => {
     });
 });
 
+// issue #349 Phase C: only a PUBLIC book's cover may go into a shared/CDN
+// cache. This is a privacy boundary, not a performance nice-to-have --
+// covers this explicitly rather than assuming fileResponse's default is
+// followed correctly at every call site.
+describe("GET /api/books/:id/cover Cache-Control (PUBLIC/PRIVATE/SHARED split)", () => {
+    async function uploadWithCover(token: string) {
+        const uploadRes = await uploadBook(token);
+        const bookId = (await readJson(uploadRes)).data.id;
+        const coverForm = new FormData();
+        coverForm.set("cover", new File(["cover-bytes"], "cover.jpg", { type: "image/jpeg" }));
+        await app.request(`/api/books/${bookId}/cover`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: coverForm }, env);
+        return bookId;
+    }
+
+    it("marks a PUBLIC book's cover cacheable, even for an anonymous viewer", async () => {
+        const bookId = await uploadWithCover(tokenA);
+        await setVisibility(tokenA, bookId, "PUBLIC");
+
+        const res = await app.request(`/api/books/${bookId}/cover`, {}, env);
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+    });
+
+    it("never marks a PRIVATE book's cover cacheable, even for its own owner", async () => {
+        const bookId = await uploadWithCover(tokenA);
+
+        const res = await app.request(`/api/books/${bookId}/cover`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+
+    it("never marks a SHARED book's cover cacheable, for the owner, a listed viewer, or an anonymous teaser view", async () => {
+        const bookId = await uploadWithCover(tokenA);
+        await setVisibility(tokenA, bookId, "SHARED");
+        await shareBook(tokenA, bookId, "bob");
+
+        const ownerRes = await app.request(`/api/books/${bookId}/cover`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(ownerRes.headers.get("Cache-Control")).toBe("private, no-store");
+
+        const listedRes = await app.request(`/api/books/${bookId}/cover`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(listedRes.status).toBe(200);
+        expect(listedRes.headers.get("Cache-Control")).toBe("private, no-store");
+
+        const anonRes = await app.request(`/api/books/${bookId}/cover`, {}, env);
+        expect(anonRes.status).toBe(200);
+        expect(anonRes.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+});
+
 async function setVisibility(token: string, bookId: number, visibility: string) {
     return app.request(
         `/api/books/${bookId}`,

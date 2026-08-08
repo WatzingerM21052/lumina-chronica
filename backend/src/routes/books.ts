@@ -227,10 +227,10 @@ booksRoute.get("/:id/file", requireAuth, async (c) => {
 
 booksRoute.get("/:id/cover", optionalAuth, async (c) => {
     const bookId = Number(c.req.param("id"));
-    const object = await getBookCoverObject(c.env.DB, c.env.STORAGE, c.get("userId") ?? null, bookId);
-    if (!object) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
+    const result = await getBookCoverObject(c.env.DB, c.env.STORAGE, c.get("userId") ?? null, bookId);
+    if (!result) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
 
-    return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
+    return fileResponse(c, result.object.body, result.object.httpMetadata?.contentType ?? "application/octet-stream", { cacheable: result.isPublic });
 });
 
 // Community Phase 3 (issue #307). Upsert semantics (PUT, not POST) --

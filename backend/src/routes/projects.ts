@@ -168,10 +168,10 @@ projectsRoute.delete("/:id", requireAuth, async (c) => {
 
 projectsRoute.get("/:id/cover", optionalAuth, async (c) => {
     const projectId = Number(c.req.param("id"));
-    const object = await getProjectCoverObject(c.env.DB, c.env.STORAGE, c.get("userId") ?? null, projectId);
-    if (!object) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
+    const result = await getProjectCoverObject(c.env.DB, c.env.STORAGE, c.get("userId") ?? null, projectId);
+    if (!result) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
 
-    return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
+    return fileResponse(c, result.object.body, result.object.httpMetadata?.contentType ?? "application/octet-stream", { cacheable: result.isPublic });
 });
 
 // Map — v2.0, Phase 3 (issue #256). One map image per project, parallel to
