@@ -207,7 +207,7 @@ export async function listShelfBooks(
     ]);
 
     return {
-        items: rows.results.map(toBookSummary),
+        items: rows.results.map((row) => toBookSummary(row, ownerId)),
         total: countRow?.total ?? 0,
         page: pagination.page,
         pageSize: pagination.pageSize,

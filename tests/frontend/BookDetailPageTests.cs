@@ -42,7 +42,7 @@ public class BookDetailPageTests : BunitContext
         UseApiResponse("""
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":"A desert planet.",
-                "coverUrl":null,"genre":"scifi","language":"en","visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":"scifi","language":"en","visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """);
@@ -55,12 +55,37 @@ public class BookDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void BookDetail_NonOwner_HidesEditDeleteFavoriteAndShelfPicker()
+    {
+        // A SHARED/PUBLIC "borrowed" book's overview page previously showed
+        // Bearbeiten/Löschen/the favorite star/the shelf picker to anyone who
+        // could view it, even though every one of those calls is owner-only
+        // server-side (findOwnedBookRow) and would just 404. isOwner is now
+        // computed server-side and gates all four.
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Borrowed Book","author":"Someone Else","description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01","isOwner":false,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Empty(cut.FindAll("#edit-button"));
+        Assert.Empty(cut.FindAll("button.book-detail-favorite"));
+        Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent.Trim() == "Löschen");
+        // "Lesen" (reading a borrowed book is legitimate) stays visible.
+        Assert.Contains("Lesen", cut.Markup);
+    }
+
+    [Fact]
     public void BookDetail_EditButton_SwitchesToEditForm()
     {
         UseApiResponse("""
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """);
@@ -80,7 +105,7 @@ public class BookDetailPageTests : BunitContext
         UseApiResponse("""
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """);
@@ -107,7 +132,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -142,7 +167,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -181,7 +206,7 @@ public class BookDetailPageTests : BunitContext
         UseApiResponse("""
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":["Science Fiction","Classics"],"file":{"format":"EPUB","size":1000}
             }}
             """);
@@ -200,7 +225,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -234,7 +259,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -271,7 +296,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -307,7 +332,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
-                "coverUrl":null,"genre":"My Own Genre","language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":"My Own Genre","language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -356,7 +381,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -388,7 +413,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -418,7 +443,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -461,7 +486,7 @@ public class BookDetailPageTests : BunitContext
         const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,"isFavorite":false,
-                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
             """;
@@ -502,7 +527,7 @@ public class BookDetailPageTests : BunitContext
     private const string OfflineTestBookJson = """
         {"success":true,"data":{
             "id":1,"title":"Dune","author":"Frank Herbert","description":null,
-            "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+            "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
             "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
         }}
         """;
@@ -584,7 +609,7 @@ public class BookDetailPageTests : BunitContext
     private const string SimpleBookJson = """
         {"success":true,"data":{
             "id":1,"title":"Dune","author":"Frank Herbert","description":null,
-            "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+            "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
             "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null
         }}
         """;

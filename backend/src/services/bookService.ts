@@ -49,6 +49,12 @@ export type BookSummary = {
     sharedTeaserVisible: boolean;
     createdAt: string;
     isFavorite: boolean;
+    // Edit/delete/favorite/shelve are all owner-only server-side (see
+    // findOwnedBookRow) -- the frontend had no way to know that and showed
+    // Bearbeiten/Löschen/the favorite star to a SHARED-book borrower too,
+    // even though every one of those calls would 404. Computed per-viewer
+    // rather than trusting the client to compare ids itself.
+    isOwner: boolean;
 };
 
 export type BookDetail = BookSummary & {
@@ -73,6 +79,7 @@ export type BookRow = {
     shared_teaser_visible: number;
     created_at: string;
     is_favorite: number;
+    owner_id: number;
 };
 
 // `is_favorite` is a correlated subquery against `books.owner_id` rather than
@@ -82,10 +89,10 @@ export type BookRow = {
 // Exported so shelfService.ts's listShelfBooks can reuse it -- shelf_books
 // membership queries are owner-scoped the same way (a book can only be on a
 // shelf its owner also owns, enforced by addBookToShelf's ownership check).
-export const BOOK_ROW_COLUMNS = `id, title, author, description, cover_url, genre, language, visibility, shared_teaser_visible, created_at,
+export const BOOK_ROW_COLUMNS = `id, title, author, description, cover_url, genre, language, visibility, shared_teaser_visible, created_at, owner_id,
     EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = books.owner_id) AS is_favorite`;
 
-export function toSummary(row: BookRow): BookSummary {
+export function toSummary(row: BookRow, viewerId: number): BookSummary {
     return {
         id: row.id,
         title: row.title,
@@ -97,10 +104,11 @@ export function toSummary(row: BookRow): BookSummary {
         sharedTeaserVisible: !!row.shared_teaser_visible,
         createdAt: row.created_at,
         isFavorite: !!row.is_favorite,
+        isOwner: row.owner_id === viewerId,
     };
 }
 
-async function loadDetail(db: D1Database, row: BookRow): Promise<BookDetail> {
+async function loadDetail(db: D1Database, row: BookRow, viewerId: number): Promise<BookDetail> {
     const [metadata, tagRows, fileRow] = await Promise.all([
         db
             .prepare("SELECT isbn, publisher, release_date, pages FROM book_metadata WHERE book_id = ?")
@@ -114,7 +122,7 @@ async function loadDetail(db: D1Database, row: BookRow): Promise<BookDetail> {
     ]);
 
     return {
-        ...toSummary(row),
+        ...toSummary(row, viewerId),
         description: row.description,
         isbn: metadata?.isbn ?? null,
         publisher: metadata?.publisher ?? null,
@@ -290,7 +298,7 @@ export async function listBooks(db: D1Database, ownerId: number, query: ListBook
     ]);
 
     return {
-        items: rows.results.map(toSummary),
+        items: rows.results.map((row) => toSummary(row, ownerId)),
         total: countRow?.total ?? 0,
         page: query.page,
         pageSize: query.pageSize,
@@ -360,7 +368,7 @@ const BOOK_ACCESS_WHERE = `id = ? AND (
 async function findAccessibleBookRow(db: D1Database, callerId: number, bookId: number): Promise<BookRow | null> {
     return db
         .prepare(
-            `SELECT id, title, author, description, cover_url, genre, language, visibility, shared_teaser_visible, created_at,
+            `SELECT id, title, author, description, cover_url, genre, language, visibility, shared_teaser_visible, created_at, owner_id,
                 EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = ?) AS is_favorite
              FROM books
              WHERE ${BOOK_ACCESS_WHERE}`
@@ -404,7 +412,7 @@ export async function removeFavorite(db: D1Database, ownerId: number, bookId: nu
 // via findOwnedBookRow before ever reaching this function.
 export async function getBook(db: D1Database, callerId: number, bookId: number): Promise<BookDetail | null> {
     const row = await findAccessibleBookRow(db, callerId, bookId);
-    return row ? loadDetail(db, row) : null;
+    return row ? loadDetail(db, row, callerId) : null;
 }
 
 const VISIBILITY_VALUES = ["PRIVATE", "SHARED", "PUBLIC"] as const;

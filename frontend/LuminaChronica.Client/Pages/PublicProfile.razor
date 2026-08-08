@@ -59,7 +59,12 @@ else
             <div class="library-grid">
                 @foreach (var book in _profile.Books)
                 {
-                    <div class="book-card book-card-normal">
+                    // The whole card links to the book's own overview page
+                    // (not straight into the reader) when the viewer can
+                    // actually open it -- an <a> with no href renders as a
+                    // plain, non-interactive container for the CanRead-false
+                    // case, same idea as BookCard.razor's Href fallback.
+                    <a class="book-card book-card-normal" href="@(book.CanRead ? $"library/books/{book.Id}" : null)">
                         <div class="book-card-cover">
                             @if (_coverObjectUrls.TryGetValue($"book-{book.Id}", out var coverUrl))
                             {
@@ -104,31 +109,30 @@ else
                                                     <button type="button" class="star-button @(starValue <= (book.MyRating ?? 0) ? "is-filled" : "")"
                                                             disabled="@_ratingInProgress.Contains(book.Id)"
                                                             title="@($"Mit {starValue} Sternen bewerten")"
-                                                            @onclick="() => RateBookAsync(book, starValue)">★</button>
+                                                            @onclick="() => RateBookAsync(book, starValue)" @onclick:stopPropagation="true" @onclick:preventDefault="true">★</button>
                                                 }
                                             </div>
                                         </Authorized>
                                     </AuthorizeView>
                                 }
                             }
-                            @if (book.CanRead)
+                            @if (!book.CanRead)
                             {
-                                <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">Lesen</a>
-                            }
-                            else if (book.Visibility == "PUBLIC")
-                            {
-                                <AuthorizeView>
-                                    <NotAuthorized>
-                                        <span class="text-muted">Anmelden zum Lesen</span>
-                                    </NotAuthorized>
-                                </AuthorizeView>
-                            }
-                            else
-                            {
-                                <span class="text-muted">Privat geteilt</span>
+                                @if (book.Visibility == "PUBLIC")
+                                {
+                                    <AuthorizeView>
+                                        <NotAuthorized>
+                                            <span class="text-muted">Anmelden zum Lesen</span>
+                                        </NotAuthorized>
+                                    </AuthorizeView>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Privat geteilt</span>
+                                }
                             }
                         </div>
-                    </div>
+                    </a>
                 }
             </div>
         }
