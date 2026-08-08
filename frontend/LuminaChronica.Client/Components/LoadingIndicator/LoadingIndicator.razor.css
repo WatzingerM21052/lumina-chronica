@@ -48,6 +48,7 @@
     flex-direction: row;
     padding: 0;
     display: inline-flex;
+    margin-right: 0.4rem;
 }
 
 .loading-indicator-button .loading-progress {

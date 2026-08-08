@@ -25,10 +25,6 @@ else
         {
             <p class="form-error">@_profileErrorMessage</p>
         }
-        @if (_profileSuccessMessage is not null)
-        {
-            <p class="form-success">@_profileSuccessMessage</p>
-        }
 
         <div class="form-group">
             <label for="username">Benutzername</label>
@@ -41,7 +37,9 @@ else
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary" disabled="@_isSavingProfile">Speichern</button>
+            <button type="submit" class="btn btn-primary" disabled="@(_saveProfileState != ButtonBusyState.Idle)" style="min-width: @(AsyncButtonContent.MinWidthCh("Speichern", null, "Gespeichert"))ch">
+                <AsyncButtonContent State="_saveProfileState" IdleText="Speichern" SuccessText="Gespeichert" />
+            </button>
         </div>
     </EditForm>
 
@@ -86,9 +84,8 @@ else
     private ProfileFormModel _profileForm = new();
     private PasswordFormModel _passwordForm = new();
 
-    private bool _isSavingProfile;
+    private ButtonBusyState _saveProfileState;
     private string? _profileErrorMessage;
-    private string? _profileSuccessMessage;
 
     private bool _isSavingPassword;
     private string? _passwordErrorMessage;
@@ -104,11 +101,16 @@ else
         }
     }
 
-    private async Task SaveProfileAsync()
+    private Task SaveProfileAsync() =>
+        AsyncButtonRunner.RunAsync(SaveProfileCoreAsync, state =>
+        {
+            _saveProfileState = state;
+            StateHasChanged();
+        });
+
+    private async Task<bool> SaveProfileCoreAsync()
     {
-        _isSavingProfile = true;
         _profileErrorMessage = null;
-        _profileSuccessMessage = null;
 
         var request = new UpdateProfileRequest { Username = _profileForm.Username, Email = _profileForm.Email };
         var response = await ApiClient.PutAsync<UpdateProfileRequest, UserProfile>("/api/users/me", request);
@@ -116,14 +118,11 @@ else
         if (response is { Success: true, Data: not null })
         {
             _profile = response.Data;
-            _profileSuccessMessage = "Gespeichert.";
-        }
-        else
-        {
-            _profileErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen. Bitte versuche es erneut.";
+            return true;
         }
 
-        _isSavingProfile = false;
+        _profileErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen. Bitte versuche es erneut.";
+        return false;
     }
 
     private async Task ChangePasswordAsync()
