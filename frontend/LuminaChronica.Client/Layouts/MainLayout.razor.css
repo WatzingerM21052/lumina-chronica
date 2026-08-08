@@ -31,6 +31,13 @@
     flex-shrink: 0;
 }
 
+.app-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+}
+
 .app-profile {
     margin-left: auto;
     text-decoration: none;
