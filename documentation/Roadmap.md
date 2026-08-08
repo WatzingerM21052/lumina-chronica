@@ -818,3 +818,20 @@ Live-verified against real production data (2026-08-08): the real account's own 
 Backend: unchanged, 341/341 Vitest tests still passing. Frontend: 267/267 bUnit tests passing (22 new: `CatalogCardTests.cs`, `IconTests.cs`, plus new coverage in `PublicProfilePageTests.cs`).
 
 **v3.4 Phase 1 complete.** Next: Phase 2 — Discover page redesign (#340).
+
+### Phase 2 — Discover page redesign (issue #340) — complete
+
+- [x] `Discover.razor` restyled as the "Great Library Catalog": page heading gained an italic caption ("Entdecken — Werke und Welten aus aller Welt") using the same chapter-heading device as Profile's chapters; search field restyled (paper background, gold border, focus ring, `Icon Name="search"`); user search results became small "author cards" (avatar + username + "Autor / Worldbuilder" caption, hover = background shift + gold border, same 400ms debounce, unchanged); sort control restyled with a label, same two options; book grid section retitled "Bibliotheksregal", using `.chapter-title`/`.chapter-caption`.
+- [x] Empty state (no public books) gained literary flavor text + an ornament; loading state gained a skeleton grid of card-shaped placeholders instead of "Lädt…".
+- [x] **Kept the page's `<h1>` German ("Entdecken" + italic caption) rather than the spec's literal `DISCOVER — Entdecke neue Werke und Welten`** — the rest of the UI is uniformly German, and a bare English word would read as inconsistent, not intentional. Same conceptual device the spec asked for ("wie eine Kapitelüberschrift"), just in the app's actual language.
+- [x] **Promoted three style groups from `PublicProfile.razor.css` into shared `app.css` utilities** now that Discover is a second consumer, instead of duplicating them (the discipline #315's Definition of Done exists to enforce): `.chapter-title`/`.chapter-caption` (was `.profile-chapter-title`/`.profile-chapter-caption`), `.skeleton-shape`/`@keyframes skeleton-shimmer`, `.empty-state-literary`/`.empty-state-ornament`.
+
+**Scope correction confirmed while writing the phase issue, not discovered mid-implementation:** the reviewed prototype showed a Bücher/Projekte filter and mixed project cards on Discover, but Discover only ever lists public books (`GET /api/discover/books` — no project-listing endpoint exists) and issue #315 explicitly says to keep only the existing sort options for now. That filter/mixing was out of scope from the start (see #340's own issue body) — public project discovery is a real, plausible future feature, but a new one, not a design pass.
+
+**Because this phase changed CSS *scoping* (Blazor-scoped → global) in the exact file (`PublicProfile.razor.css`) and exact bug class (#313's CSS-isolation) issue #315 is designed to prevent, this got its own explicit verification pass before shipping**, not just Discover's own live-verify: fetched the deployed CSS bundles directly and confirmed each promoted rule landed in the correct file (`app.css` for the base rule, the Blazor-generated scoped bundle for the page-specific override — e.g. `.profile-hero-skeleton .skeleton-shape.profile-hero-portrait`, `.empty-state-literary .btn`); then visually re-verified the Profile page's own-empty-library CTA button (`.empty-state-literary .btn`'s margin) still rendered correctly against a fresh throwaway account, live in the browser, after the split.
+
+Live-verified against real production data (2026-08-08): Discover's restyled search (real author-card results for two real users), hover states, sort control, and book grid (real cover, real rating) all rendered correctly; the Profile-page CSS-scoping split re-verified as above. Throwaway account (`user_settings` + `users` rows) removed from D1 afterward.
+
+Backend: unchanged, 341/341 Vitest tests still passing. Frontend: 270/270 bUnit tests passing (3 new: skeleton-loading state, search field a11y, author-card role caption).
+
+**v3.4 Phase 2 complete.** Next: Phase 3 — motion polish, transitions & accessibility audit (#341), including the `documentation/Architecture.md` write-up deferred from Phase 1/2 to cover all of #315 at once.
