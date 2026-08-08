@@ -1,0 +1,10 @@
+@namespace LuminaChronica.Client.Components
+
+<div class="error-message" role="alert">
+    <Icon Name="alert" Class="error-message-icon" />
+    <p class="error-message-text">@Message</p>
+    @if (OnRetry.HasDelegate)
+    {
+        <button type="button" class="btn btn-primary" @onclick="OnRetry">@RetryText</button>
+    }
+</div>
