@@ -4,6 +4,23 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-08-08
+
+### Changed
+
+- Community: swapped PUBLIC/SHARED semantics after direct user feedback the day v3.1.0 shipped. `PUBLIC` now grants full read access (detail, file, reading progress, bookmarks) to any logged-in user — not just the cover+metadata teaser it gave before; the teaser itself is unchanged (visible to anyone, including anonymous visitors). `SHARED` now requires being on the book's explicit share list rather than being open to any logged-in user.
+
+### Added
+
+- Community: per-book sharing — a `SHARED` book's owner picks exactly who can read it (new `book_shares` table), with a toggle for whether people not on that list still see the cover+description teaser on the public profile. Manage the list from the book's edit form (search by username, add/remove).
+- Public profile book cards now expose a server-computed `canRead` field (share-list membership isn't visible to the frontend otherwise) — the "Lesen" button is keyed off that instead of raw visibility.
+
+Ratings, favorites, and shelving stay exactly as before: PUBLIC-only and owner-only respectively — a SHARED book (whether you're on its share list or not) still can't be rated, favorited by a non-owner, or shelved by a non-owner. An option to let PUBLIC books be fully read by anonymous (logged-out) visitors was explicitly considered and rejected — it would need a new public reader page with no progress-saving and would reverse the Phase 1 decision to keep book files behind auth for copyright reasons.
+
+No new migration beyond `0017_book_sharing.sql` (`book_shares` + `books.shared_teaser_visible`) — existing columns are untouched.
+
+Backend: 300/300 Vitest tests passing (16 new/updated). Frontend: 223/223 bUnit tests passing (7 new/updated).
+
 ## [3.1.0] - 2026-08-08
 
 ### Added
