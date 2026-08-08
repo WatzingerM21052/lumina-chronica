@@ -201,12 +201,9 @@
    (issue #340 gave them a second consumer -- Discover's "Bibliotheksregal"
    heading -- so they moved out of this page-scoped file). */
 
-/* .empty-state-literary / .empty-state-ornament are shared utilities in
-   app.css (issue #340 gave them a second consumer -- Discover's empty
-   states -- so they moved out of this page-scoped file). */
-.empty-state-literary .btn {
-    margin-top: var(--space-1);
-}
+/* .empty-state-literary / .empty-state-ornament (incl. the .btn margin
+   rule) are shared utilities in app.css -- rendered via the EmptyState
+   component now (issue #349 Phase B), not hand-rolled markup here. */
 
 /* Activity chapter */
 .profile-activity-list {

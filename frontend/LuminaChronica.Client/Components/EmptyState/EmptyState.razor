@@ -1,9 +1,20 @@
 @namespace LuminaChronica.Client.Components
 
-<div class="empty-state">
-    <p class="empty-state-message">@Message</p>
-    @if (!string.IsNullOrWhiteSpace(ActionText) && OnAction.HasDelegate)
+<div class="empty-state @(Ornament is not null ? "empty-state-literary" : "")">
+    @if (Ornament is not null)
     {
-        <button class="btn btn-primary" @onclick="OnAction">@ActionText</button>
+        <span class="empty-state-ornament" aria-hidden="true">@Ornament</span>
+    }
+    <p class="empty-state-message">@Message</p>
+    @if (!string.IsNullOrWhiteSpace(ActionText))
+    {
+        @if (ActionHref is not null)
+        {
+            <a class="btn btn-primary" href="@ActionHref">@ActionText</a>
+        }
+        else if (OnAction.HasDelegate)
+        {
+            <button class="btn btn-primary" @onclick="OnAction">@ActionText</button>
+        }
     }
 </div>

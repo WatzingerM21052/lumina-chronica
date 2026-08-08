@@ -85,10 +85,7 @@
     }
     else if (_books.Count == 0)
     {
-        <div class="empty-state-literary">
-            <span class="empty-state-ornament" aria-hidden="true">❦</span>
-            <p>Dieses Regal wartet noch auf seinen ersten Eintrag.</p>
-        </div>
+        <EmptyState Ornament="❦" Message="Dieses Regal wartet noch auf seinen ersten Eintrag." />
     }
     else
     {
