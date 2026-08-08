@@ -65,6 +65,21 @@ export type BookDetail = BookSummary & {
     pages: number | null;
     tags: string[];
     file: { format: string; size: number } | null;
+    // Null for the caller's own books; the owner's username for a borrowed
+    // (PUBLIC or SHARED) book -- same "Geliehen von {username}" convention
+    // as dashboardService.ts's ContinueReadingItem.ownerUsername, so
+    // BookDetail.razor can show and link to it. BookSummary itself doesn't
+    // carry this (it backs list views of the caller's own books, where it
+    // would always be null and isn't worth an extra JOIN/lookup per row).
+    ownerUsername: string | null;
+    // Rating capability moved to the book overview page only (was briefly
+    // duplicated on the public profile's rate-stars widget, removed there)
+    // -- same aggregate shape as listPublicBooksByUsername's PublicBookSummary,
+    // but only meaningful (and only ever non-null/non-zero) for a PUBLIC
+    // book, since rateBook itself is PUBLIC-only (see ratingService.ts).
+    averageRating: number | null;
+    ratingCount: number;
+    myRating: number | null;
 };
 
 export type BookRow = {
@@ -109,7 +124,7 @@ export function toSummary(row: BookRow, viewerId: number): BookSummary {
 }
 
 async function loadDetail(db: D1Database, row: BookRow, viewerId: number): Promise<BookDetail> {
-    const [metadata, tagRows, fileRow] = await Promise.all([
+    const [metadata, tagRows, fileRow, ownerRow, ratingRow] = await Promise.all([
         db
             .prepare("SELECT isbn, publisher, release_date, pages FROM book_metadata WHERE book_id = ?")
             .bind(row.id)
@@ -119,6 +134,16 @@ async function loadDetail(db: D1Database, row: BookRow, viewerId: number): Promi
             .bind(row.id)
             .all<{ name: string }>(),
         db.prepare("SELECT format, size FROM book_files WHERE book_id = ? ORDER BY id DESC LIMIT 1").bind(row.id).first<{ format: string; size: number }>(),
+        row.owner_id === viewerId ? Promise.resolve(null) : db.prepare("SELECT username FROM users WHERE id = ?").bind(row.owner_id).first<{ username: string }>(),
+        db
+            .prepare(
+                `SELECT
+                    (SELECT AVG(rating) FROM ratings WHERE book_id = ?) AS average_rating,
+                    (SELECT COUNT(*) FROM ratings WHERE book_id = ?) AS rating_count,
+                    (SELECT rating FROM ratings WHERE book_id = ? AND user_id = ?) AS my_rating`
+            )
+            .bind(row.id, row.id, row.id, viewerId)
+            .first<{ average_rating: number | null; rating_count: number; my_rating: number | null }>(),
     ]);
 
     return {
@@ -130,6 +155,10 @@ async function loadDetail(db: D1Database, row: BookRow, viewerId: number): Promi
         pages: metadata?.pages ?? null,
         tags: tagRows.results.map((t) => t.name),
         file: fileRow ? { format: fileRow.format, size: fileRow.size } : null,
+        ownerUsername: ownerRow?.username ?? null,
+        averageRating: ratingRow?.average_rating ?? null,
+        ratingCount: ratingRow?.rating_count ?? 0,
+        myRating: ratingRow?.my_rating ?? null,
     };
 }
 

@@ -80,6 +80,151 @@ public class BookDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void BookDetail_Borrower_ShowsGeliehenVonBadge_LinkingToOwnerProfile()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Borrowed Book","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","createdAt":"2026-01-01","isOwner":false,"ownerUsername":"alice",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("Geliehen von", cut.Markup);
+        var ownerLink = cut.Find(".book-detail-borrowed-badge a");
+        Assert.Equal("u/alice", ownerLink.GetAttribute("href"));
+    }
+
+    [Fact]
+    public void BookDetail_Owner_ShowsNoGeliehenVonBadge()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"My Book","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01","isOwner":true,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.DoesNotContain("Geliehen von", cut.Markup);
+    }
+
+    [Fact]
+    public void BookDetail_NonPublicBook_ShowsNoRatingSection()
+    {
+        // Rating is PUBLIC-only server-side (ratingService.ts's NotPublicError)
+        // -- a SHARED borrowed book never has a rating section at all, same
+        // gating PublicProfile.razor already used for its own display.
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Borrowed Book","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","createdAt":"2026-01-01","isOwner":false,"ownerUsername":"alice",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Empty(cut.FindAll("div.book-detail-rating"));
+    }
+
+    [Fact]
+    public void BookDetail_Owner_SeesAverageRating_ButNoInteractiveStars()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"My Book","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01","isOwner":true,
+                "averageRating":4.5,"ratingCount":2,"myRating":null,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Contains("4.5", cut.Markup);
+        Assert.Empty(cut.FindAll("button.star-button"));
+    }
+
+    [Fact]
+    public void BookDetail_NonOwnerOnPublicBook_ShowsInteractiveStars_AndSendsPutOnClick()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Public Book","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01","isOwner":false,
+                "averageRating":null,"ratingCount":0,"myRating":null,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        HttpRequestMessage? rateRequest = null;
+        string? requestBody = null;
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .When(r => r.Method == HttpMethod.Put, r =>
+            {
+                rateRequest = r;
+                requestBody = r.Content?.ReadAsStringAsync().Result;
+                return RoutedFakeHttpMessageHandler.JsonResponse("{}");
+            })
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        var stars = cut.FindAll("button.star-button");
+        Assert.Equal(5, stars.Count);
+        stars[3].Click(); // 4th star -> rating 4
+
+        Assert.Equal(HttpMethod.Put, rateRequest?.Method);
+        Assert.Equal("/api/books/1/rating", rateRequest?.RequestUri?.AbsolutePath);
+        Assert.Contains("\"rating\":4", requestBody);
+    }
+
+    [Fact]
+    public void BookDetail_ClickingYourOwnRatingAgain_SendsDelete()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Public Book","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01","isOwner":false,
+                "averageRating":3,"ratingCount":1,"myRating":3,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+
+        HttpRequestMessage? unrateRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .When(r => r.Method == HttpMethod.Delete, r =>
+            {
+                unrateRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse("{}");
+            })
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        // myRating is 3 -- clicking the 3rd star again removes it.
+        cut.FindAll("button.star-button")[2].Click();
+
+        Assert.Equal(HttpMethod.Delete, unrateRequest?.Method);
+        Assert.Equal("/api/books/1/rating", unrateRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
     public void BookDetail_EditButton_SwitchesToEditForm()
     {
         UseApiResponse("""

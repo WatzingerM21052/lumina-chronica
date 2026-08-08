@@ -1,6 +1,7 @@
 using Bunit;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -37,8 +38,24 @@ public class DiscoverPageTests : BunitContext
 
         Assert.Contains("Discoverable Book", cut.Markup);
         Assert.Contains("Jane Doe", cut.Markup);
-        Assert.Contains("von alice", cut.Markup);
+        Assert.Contains("von", cut.Markup);
+        Assert.Equal("alice", cut.Find(".book-card-owner-link").TextContent.Trim());
         Assert.Contains("4.5", cut.Markup);
+    }
+
+    [Fact]
+    public void Discover_ClickingOwnerName_NavigatesToTheirProfile_WithoutNavigatingTheCard()
+    {
+        // The owner's name is a separate clickable span with stopPropagation
+        // (not a nested <a>, which would be invalid HTML inside the card's
+        // own <a href> and behave unreliably across browsers).
+        UseRoutes(BooksJson);
+
+        var cut = Render<Discover>();
+        cut.Find(".book-card-owner-link").Click();
+
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        Assert.EndsWith("u/alice", navigation.Uri);
     }
 
     [Fact]

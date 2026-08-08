@@ -506,6 +506,25 @@ describe("Borrowed reading: PUBLIC (any logged-in user) and SHARED (explicit sha
         expect((await readJson(listRes)).data.items[0].isOwner).toBe(true);
     });
 
+    it("reports ownerUsername only to a borrower, and rating aggregates on the book detail response", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+        await setVisibility(tokenA, bookId, "PUBLIC");
+        await app.request(
+            `/api/books/${bookId}/rating`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ rating: 4 }) },
+            env
+        );
+
+        const ownerView = await readJson(await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env));
+        expect(ownerView.data.ownerUsername).toBeNull();
+        expect(ownerView.data).toMatchObject({ averageRating: 4, ratingCount: 1, myRating: null });
+
+        const borrowerView = await readJson(await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env));
+        expect(borrowerView.data.ownerUsername).toBe("alice");
+        expect(borrowerView.data).toMatchObject({ averageRating: 4, ratingCount: 1, myRating: 4 });
+    });
+
     it("deleting a SHARED book with active shares succeeds and cleans up book_shares", async () => {
         const uploadRes = await uploadBook(tokenA);
         const bookId = (await readJson(uploadRes)).data.id;
