@@ -15,6 +15,7 @@ import { deleteLoreEntriesForProject } from "./loreService";
 import { deleteProjectFilesForProject } from "./projectFileService";
 import { deleteProjectBooksForProject } from "./projectBookService";
 import { deleteCharacterRelationshipsForProject } from "./characterRelationshipService";
+import { recordProjectPublicActivity } from "./activityService";
 import { NotFoundError } from "./errors";
 
 export { NotFoundError, ValidationError };
@@ -151,6 +152,12 @@ export async function updateProject(db: D1Database, ownerId: number, projectId: 
         )
         .run();
 
+    // Log only the transition INTO PUBLIC, not every edit made while a
+    // project stays PUBLIC.
+    if (input.visibility === "PUBLIC" && row.visibility !== "PUBLIC") {
+        await recordProjectPublicActivity(db, ownerId, projectId);
+    }
+
     return getProject(db, ownerId, projectId);
 }
 
@@ -215,6 +222,7 @@ export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: 
     await deleteLoreEntriesForProject(db, projectId);
     await deleteProjectFilesForProject(db, storage, projectId);
     await deleteProjectBooksForProject(db, projectId);
+    await db.prepare("DELETE FROM profile_activities WHERE target_type = 'PROJECT' AND target_id = ?").bind(projectId).run();
     await db.prepare("DELETE FROM projects WHERE id = ?").bind(projectId).run();
 
     for (const key of [row.cover_url, row.map_url]) {

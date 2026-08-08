@@ -171,6 +171,26 @@ else
             </div>
         }
     </section>
+
+    <section>
+        <h2>Aktivitäten</h2>
+        @if (_profile.Activities.Count == 0)
+        {
+            <p class="text-muted">@_profile.Username hat noch keine öffentlichen Aktivitäten.</p>
+        }
+        else
+        {
+            <ul class="profile-activity-list">
+                @foreach (var activity in _profile.Activities)
+                {
+                    <li class="profile-activity-item">
+                        <span class="profile-activity-text">@ActivityText(activity)</span>
+                        <span class="profile-activity-date text-muted">@activity.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)</span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
 }
 
 @code {
@@ -259,6 +279,22 @@ else
         }
 
         _isTogglingFollow = false;
+    }
+
+    // No deep link for now -- the linked book/project may have gone
+    // non-public again since the activity was logged, and the activity
+    // response doesn't carry a per-viewer canRead flag to gate a link
+    // correctly. Plain text avoids offering a link that 404s.
+    private static string ActivityText(ProfileActivity activity)
+    {
+        var title = activity.TargetTitle ?? "(gelöscht)";
+        return activity.Type switch
+        {
+            "RATING_GIVEN" => $"hat „{title}“ mit {activity.Rating ?? 0} {(activity.Rating == 1 ? "Stern" : "Sternen")} bewertet",
+            "BOOK_PUBLIC" => $"hat das Buch „{title}“ veröffentlicht",
+            "PROJECT_PUBLIC" => $"hat das Projekt „{title}“ veröffentlicht",
+            _ => title,
+        };
     }
 
     private async Task ClearCoversAsync()

@@ -181,6 +181,79 @@ describe("GET /api/users/:username/public", () => {
     });
 });
 
+// v3.3 Phase 1 (issue #324) -- a log of the profile owner's own public
+// actions, folded into the same public-profile response.
+describe("GET /api/users/:username/public -- activities", () => {
+    it("logs BOOK_PUBLIC / PROJECT_PUBLIC only on the transition into PUBLIC, not on every subsequent edit", async () => {
+        const bookId = await uploadBook(tokenA);
+        const projectId = await createProject(tokenA);
+
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+        await app.request(
+            `/api/projects/${projectId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+        // A second, unrelated edit while already PUBLIC must not log again.
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ description: "updated" }) },
+            env
+        );
+
+        const res = await app.request("/api/users/alice/public", {}, env);
+        const json = await readJson(res);
+
+        expect(json.data.activities).toHaveLength(2);
+        expect(json.data.activities).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ type: "BOOK_PUBLIC", targetType: "BOOK", targetId: bookId, targetTitle: "Public Book" }),
+                expect.objectContaining({ type: "PROJECT_PUBLIC", targetType: "PROJECT", targetId: projectId, targetTitle: "Public World" }),
+            ])
+        );
+    });
+
+    it("logs RATING_GIVEN with a snapshot of the rating value, newest first, one entry per re-rate", async () => {
+        const bookId = await uploadBook(tokenA);
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+
+        await app.request(
+            `/api/books/${bookId}/rating`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ rating: 3 }) },
+            env
+        );
+        await app.request(
+            `/api/books/${bookId}/rating`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ rating: 5 }) },
+            env
+        );
+
+        const res = await app.request("/api/users/bob/public", {}, env);
+        const json = await readJson(res);
+
+        expect(json.data.activities).toHaveLength(2);
+        expect(json.data.activities[0]).toMatchObject({ type: "RATING_GIVEN", targetId: bookId, rating: 5 });
+        expect(json.data.activities[1]).toMatchObject({ type: "RATING_GIVEN", targetId: bookId, rating: 3 });
+    });
+
+    it("does not log an activity for a book/project that stays PRIVATE", async () => {
+        await uploadBook(tokenA);
+        await createProject(tokenA);
+
+        const res = await app.request("/api/users/alice/public", {}, env);
+        const json = await readJson(res);
+        expect(json.data.activities).toEqual([]);
+    });
+});
+
 describe("GET /api/books/:id/cover and /api/projects/:id/cover (PUBLIC bypass)", () => {
     it("serves a PUBLIC book's cover with no Authorization header", async () => {
         const bookId = await uploadBook(tokenA, true);

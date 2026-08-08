@@ -1764,6 +1764,31 @@ select:focus-visible,
     font-size: 2rem;
 }
 
+/* v3.3 Phase 1 (issue #324) -- profile activity log, PublicProfile.razor. */
+.profile-activity-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-2) 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.profile-activity-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+}
+
+.profile-activity-date {
+    flex-shrink: 0;
+    font-size: var(--font-size-small);
+}
+
 .discover-user-results {
     list-style: none;
     padding: 0;

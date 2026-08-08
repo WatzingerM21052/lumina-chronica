@@ -143,6 +143,28 @@ describe("PUT/DELETE /api/projects/:id", () => {
         expect(getRes.status).toBe(404);
     });
 
+    // v3.3 Phase 1 (issue #324): profile_activities has no FK on target_id
+    // (polymorphic BOOK/PROJECT target) -- a missing cleanup line wouldn't
+    // 500 the delete, so this asserts the row is actually gone rather than
+    // relying on a constraint violation to catch it.
+    it("deleting a project that has a PROJECT_PUBLIC activity cleans up profile_activities", async () => {
+        const projectId = await createProject(tokenA);
+        await app.request(
+            `/api/projects/${projectId}`,
+            { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenA}` }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+
+        const deleteRes = await app.request(`/api/projects/${projectId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(deleteRes.status).toBe(204);
+
+        const rows = await env.DB
+            .prepare("SELECT COUNT(*) AS total FROM profile_activities WHERE target_type = 'PROJECT' AND target_id = ?")
+            .bind(projectId)
+            .first<{ total: number }>();
+        expect(rows?.total).toBe(0);
+    });
+
     it("replaces the cover via PUT /:id/cover", async () => {
         const projectId = await createProject(tokenA);
 

@@ -17,6 +17,7 @@ The Master Project Bible's own parts disagree on one milestone: the Implementati
 | v3.0 | Community | Public profiles/library, following, ratings, comments |
 | v3.1 | Borrowed Reading | Not part of the original §100–§112 version sequence — a user-requested follow-up to v3.0: `SHARED`-visibility books fully readable by any logged-in user, with per-user progress/bookmarks, saving cloud storage |
 | v3.2 | Sharing | Not part of the original §100–§112 version sequence — same-day user follow-up to v3.1: swapped PUBLIC/SHARED meanings and added an explicit per-book share list for SHARED |
+| v3.3 | Comments, Notifications, Activities | Deferred-from-v3.0 items from issue #299 (Phase 8/§123's original 7-item list): comments on books/projects, in-app notifications with per-type preferences, profile activity log — three sequenced phases (#324 → #325 → #326) |
 | v4.0 | KI (AI) | Reader AI (summaries, word explanations, Q&A), Creator AI (character ideas, lore, consistency checks) |
 | v5.0 | Mobile | Native mobile apps, offline sync, push notifications |
 
@@ -736,5 +737,25 @@ Backend: 300/300 Vitest tests passing (16 new/updated, including the 3 assertion
 **A real gap caught (not a bug, a missing render trigger) while writing frontend tests, before it ever shipped:** `StartEditing` originally kicked off `LoadSharesAsync()` as a fire-and-forget `_ = LoadSharesAsync()` call from a synchronous `@onclick` handler. Blazor only auto-re-renders after an event handler's returned `Task` completes — a detached, un-awaited task's continuation never triggers that, so the share list would have silently never appeared until some unrelated re-render happened to occur. Fixed by making `StartEditing` an awaited `async Task` (`StartEditingAsync`) and lazily fetching shares only when the visibility is actually (or becomes) SHARED, via `@bind-Value:after` on the visibility dropdown — also avoids an unnecessary request for every book regardless of visibility.
 
 Live-verified end-to-end against production (2026-08-08): migration applied to real D1, backend redeployed, then three throwaway accounts exercised the full flow via direct API calls — a PUBLIC book is fully readable (detail 200, file 200) by any logged-in non-owner but still 401s for a fully anonymous request; the public-profile listing's `canRead` correctly flips true/false with login state for the same PUBLIC book; a SHARED book with its teaser off is completely invisible (empty `books: []`) to a non-listed logged-in viewer; sharing it makes it fully readable for the listed user (detail 200, file 200) and visible on the profile with `canRead: true`; a still-non-listed third account remains 404'd throughout; edit/rating attempts by the listed (non-owner) user correctly 404/400; unsharing immediately revokes read access (404 again); deleting the book correctly cleaned up its `book_shares` rows (verified directly against D1) before the throwaway accounts' remaining `user_settings` rows and the accounts themselves were removed.
+
+## v3.3 — Comments, Notifications, Activities (in progress, 2026-08-08)
+
+Picks up backlog issue #299 (deferred from v3.0's Phase 8/§123 list — comments' own table was spec-marked "Spätere Version", notifications/activities were never in epic #11's body at all). Scoped via a 4-question `AskUserQuestion` before any code was written, then split into three sequenced GitHub issues under this milestone since the third phase depends on the second: **#324 Activities → #325 Comments → #326 Notifications**.
+
+### Phase 1 — Profile activity log (issue #324) — complete
+
+- [x] New `profile_activities` table (migration `0018_profile_activities.sql`) — deliberately not named `activities`, to avoid colliding with the existing `reading_activity` table (migration `0007`, a different concept: per-day reading counts for the Lesekalender heatmap, not a public event log).
+- [x] Logs exactly three event types: `RATING_GIVEN` (a rating snapshot at creation time — ratings are upsert, but each `PUT` is still logged as its own event, so re-rating a book produces multiple activity rows), `BOOK_PUBLIC`, `PROJECT_PUBLIC` (only the *transition into* PUBLIC, detected by comparing the pre-update row's visibility against the new value — not logged again on a later edit while already PUBLIC).
+- [x] Folded into the existing `GET /api/users/:username/public` response as a new `activities` array rather than a separate endpoint — same visibility scope as the rest of that response.
+- [x] `PublicProfile.razor` renders an "Aktivitäten" section with human-readable German text per event type; no deep link to the target yet (the linked book/project may have gone non-public again since the activity was logged, and the activity payload doesn't carry a per-viewer `canRead` flag to gate a link correctly — plain text avoids offering one that could 404).
+- [x] `deleteBook`/`deleteProject` cleanup batches gained a `profile_activities` line — `target_id` is polymorphic (no FK, same shape as the spec's own `comments` table design), so a missing cleanup line wouldn't throw an FK error, only leave orphaned rows. Caught proactively (not by live testing this time) since the exact same bug class hit `book_shares`/`ratings` in earlier phases — a dedicated regression test now exists in both `books.test.ts` and `projects.test.ts` asserting the row count is actually zero after delete.
+
+**Scope confirmed via `AskUserQuestion` (2026-08-08):** first version is only a log of the *viewing profile's own* actions, shown on their own `/u/{username}` page — not an aggregated Twitter-style feed of everyone you follow. A "Home Feed" aggregation is explicitly deferred to a possible later story.
+
+Backend: 305/305 Vitest tests passing (5 new). Frontend: 224/224 bUnit tests passing (2 new).
+
+### Phase 2 — Comments (issue #325) — not started
+
+### Phase 3 — Notifications with per-type preferences (issue #326) — not started, depends on Phase 2
 
 **v3.2 "Sharing" milestone complete.** Tagged `v3.2.0` and published as a GitHub Release. Live at https://watzingerm21052.github.io/lumina-chronica/ (frontend) and https://lumina-chronica-api.svhofkirchen-api.workers.dev (backend).

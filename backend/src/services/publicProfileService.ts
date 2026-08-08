@@ -11,6 +11,7 @@ import { getUserByUsername } from "./userService";
 import { listPublicBooksByUsername, type PublicBookSummary } from "./bookService";
 import { listPublicProjectsByUsername, type PublicProjectSummary } from "./projectService";
 import { getFollowState } from "./followService";
+import { listProfileActivities, type ProfileActivity } from "./activityService";
 
 export type PublicProfile = {
     username: string;
@@ -21,19 +22,21 @@ export type PublicProfile = {
     isOwnProfile: boolean;
     books: PublicBookSummary[];
     projects: PublicProjectSummary[];
+    activities: ProfileActivity[];
 };
 
 export async function getPublicProfile(db: D1Database, username: string, viewerId: number | null): Promise<PublicProfile | null> {
     const user = await getUserByUsername(db, username);
     if (!user) return null;
 
-    const [books, projects, followState] = await Promise.all([
+    const [books, projects, followState, activities] = await Promise.all([
         listPublicBooksByUsername(db, username, viewerId),
         listPublicProjectsByUsername(db, username),
         getFollowState(db, user.id, viewerId),
+        listProfileActivities(db, user.id),
     ]);
 
     // user.id is deliberately not included below -- see userService.ts's
     // PublicUserProfile comment for why.
-    return { username: user.username, avatarUrl: user.avatarUrl, ...followState, books, projects };
+    return { username: user.username, avatarUrl: user.avatarUrl, ...followState, books, projects, activities };
 }
