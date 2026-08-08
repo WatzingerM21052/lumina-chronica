@@ -73,18 +73,14 @@ else
         <h2 class="chapter-title">Bibliothek <span class="chapter-caption">— Werke dieser Sammlung</span></h2>
         @if (_profile.Books.Count == 0)
         {
-            <div class="empty-state-literary">
-                <span class="empty-state-ornament" aria-hidden="true">❦</span>
-                @if (_profile.IsOwnProfile)
-                {
-                    <p>Beginne deine Sammlung.</p>
-                    <a class="btn btn-primary" href="library/upload">Buch hinzufügen</a>
-                }
-                else
-                {
-                    <p>@_profile.Username hat noch keine öffentlichen Bücher.</p>
-                }
-            </div>
+            @if (_profile.IsOwnProfile)
+            {
+                <EmptyState Ornament="❦" Message="Beginne deine Sammlung." ActionText="Buch hinzufügen" ActionHref="library/upload" />
+            }
+            else
+            {
+                <EmptyState Ornament="❦" Message="@($"{_profile.Username} hat noch keine öffentlichen Bücher.")" />
+            }
         }
         else
         {
@@ -127,10 +123,7 @@ else
         <h2 class="chapter-title">Projekte <span class="chapter-caption">— Welten dieser Sammlung</span></h2>
         @if (_profile.Projects.Count == 0)
         {
-            <div class="empty-state-literary">
-                <span class="empty-state-ornament" aria-hidden="true">❦</span>
-                <p>Dieses Archiv wurde noch mit keiner Welt gefüllt.</p>
-            </div>
+            <EmptyState Ornament="❦" Message="Dieses Archiv wurde noch mit keiner Welt gefüllt." />
         }
         else
         {
@@ -159,10 +152,7 @@ else
         <h2 class="chapter-title">Aktivität <span class="chapter-caption">— zuletzt geschehen</span></h2>
         @if (_profile.Activities.Count == 0)
         {
-            <div class="empty-state-literary">
-                <span class="empty-state-ornament" aria-hidden="true">❦</span>
-                <p>Noch keine öffentlichen Aktivitäten.</p>
-            </div>
+            <EmptyState Ornament="❦" Message="Noch keine öffentlichen Aktivitäten." />
         }
         else
         {
