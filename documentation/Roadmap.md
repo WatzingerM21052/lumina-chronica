@@ -835,3 +835,16 @@ Live-verified against real production data (2026-08-08): Discover's restyled sea
 Backend: unchanged, 341/341 Vitest tests still passing. Frontend: 270/270 bUnit tests passing (3 new: skeleton-loading state, search field a11y, author-card role caption).
 
 **v3.4 Phase 2 complete.** Next: Phase 3 — motion polish, transitions & accessibility audit (#341), including the `documentation/Architecture.md` write-up deferred from Phase 1/2 to cover all of #315 at once.
+
+### Activity-log rating privacy fix (between Phase 2 and Phase 3)
+
+While reviewing the redesign, the user flagged that showing "hat „Titel" mit X Sternen bewertet" on a public profile is more exposing than the v3.3 Phase 3 write-up treated it as — the specific star *value* can read as a personal opinion about someone else's work and unfairly color another visitor's impression, which is a different (and larger) concern than "an activity happened at all."
+
+- [x] Split the existing `ACTIVITY_RATING` preference (show rating activity in the log at all) from a new, independent `ACTIVITY_RATING_STARS` preference (show the star count once it's shown) — both opt-in now (default **disabled**), where every other preference type (`FOLLOW`/`COMMENT`/`RATING`/`SHARE`, and `ACTIVITY_RATING` itself before this change) defaults to enabled/opt-out. `notificationService.ts` gained a `PREFERENCE_DEFAULTS` map instead of the old blanket "no row = enabled" rule.
+- [x] `activityService.recordRatingActivity` now checks both preferences at insert time and stores `rating = NULL` (not "don't insert the row") when stars are off — the entry itself is still controlled solely by `ACTIVITY_RATING`. `PublicProfile.razor`'s `ActivityText` renders a `null` rating as "hat „Titel" bewertet", no number, instead of falling back to a wrong "0 Sternen".
+- [x] New migration `0021_activity_rating_stars.sql` — the first migration in this codebase that needed to alter a `CHECK` constraint, done via SQLite's standard recreate-and-copy (`ALTER ... CHECK` doesn't exist).
+- [x] `/settings` gained a sixth preference row ("Sternezahl bei Bewertungen anzeigen").
+
+Decided via `AskUserQuestion` rather than assumed: the user explicitly asked for *both* the default flip and the separate stars-only toggle together, not either alone.
+
+Backend: 345/345 Vitest tests passing (4 new). Frontend: 272/272 bUnit tests passing (2 new).

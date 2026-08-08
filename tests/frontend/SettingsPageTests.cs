@@ -17,7 +17,7 @@ public class SettingsPageTests : BunitContext
         public Task SetThemeAsync(string theme) { Theme = theme; return Task.CompletedTask; }
     }
 
-    private const string AllEnabledPreferencesJson = """{"success":true,"data":{"FOLLOW":true,"COMMENT":true,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true}}""";
+    private const string AllEnabledPreferencesJson = """{"success":true,"data":{"FOLLOW":true,"COMMENT":true,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true,"ACTIVITY_RATING_STARS":true}}""";
 
     private RoutedFakeHttpMessageHandler UseHandler(RoutedFakeHttpMessageHandler handler)
     {
@@ -29,29 +29,42 @@ public class SettingsPageTests : BunitContext
     }
 
     [Fact]
-    public void Settings_RendersAllFivePreferenceRowsCheckedByDefault()
+    public void Settings_RendersAllSixPreferenceRowsCheckedByDefault()
     {
         UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
 
         var cut = Render<Settings>();
 
         var checkboxes = cut.FindAll(".notification-preference-row input[type=checkbox]");
-        Assert.Equal(5, checkboxes.Count);
+        Assert.Equal(6, checkboxes.Count);
         Assert.All(checkboxes, cb => Assert.True(cb.HasAttribute("checked")));
         Assert.Contains("Neuer Follower", cut.Markup);
         Assert.Contains("Eigene Bewertungen im Aktivitäten-Log", cut.Markup);
+        Assert.Contains("Sternezahl bei Bewertungen anzeigen", cut.Markup);
     }
 
     [Fact]
     public void Settings_RendersDisabledPreferenceAsUnchecked()
     {
-        const string json = """{"success":true,"data":{"FOLLOW":true,"COMMENT":false,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true}}""";
+        const string json = """{"success":true,"data":{"FOLLOW":true,"COMMENT":false,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true,"ACTIVITY_RATING_STARS":true}}""";
         UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", json));
 
         var cut = Render<Settings>();
 
         var commentRow = cut.FindAll(".notification-preference-row")[1];
         Assert.False(commentRow.QuerySelector("input")!.HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void Settings_RendersActivityRatingStarsAsUncheckedWhenDisabled()
+    {
+        const string json = """{"success":true,"data":{"FOLLOW":true,"COMMENT":true,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true,"ACTIVITY_RATING_STARS":false}}""";
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", json));
+
+        var cut = Render<Settings>();
+
+        var starsRow = cut.FindAll(".notification-preference-row")[5];
+        Assert.False(starsRow.QuerySelector("input")!.HasAttribute("checked"));
     }
 
     [Fact]

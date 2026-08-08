@@ -12,9 +12,24 @@
 // can never retroactively affect a row that's already been inserted.
 
 export type NotificationType = "FOLLOW" | "COMMENT" | "RATING" | "SHARE";
-export type PreferenceType = NotificationType | "ACTIVITY_RATING";
+export type PreferenceType = NotificationType | "ACTIVITY_RATING" | "ACTIVITY_RATING_STARS";
 
-const PREFERENCE_TYPES: PreferenceType[] = ["FOLLOW", "COMMENT", "RATING", "SHARE", "ACTIVITY_RATING"];
+const PREFERENCE_TYPES: PreferenceType[] = ["FOLLOW", "COMMENT", "RATING", "SHARE", "ACTIVITY_RATING", "ACTIVITY_RATING_STARS"];
+
+// Notification types default to enabled (opt-out) -- missing a FOLLOW/etc.
+// isn't sensitive on its own. ACTIVITY_RATING and ACTIVITY_RATING_STARS
+// default to *disabled* (opt-in): both reveal something about the user's
+// own personal opinion on their public profile, the latter more so (the
+// specific star value, not just that a rating happened) -- issue #315
+// Phase 3 follow-up, raised by the user directly rather than assumed.
+const PREFERENCE_DEFAULTS: Record<PreferenceType, boolean> = {
+    FOLLOW: true,
+    COMMENT: true,
+    RATING: true,
+    SHARE: true,
+    ACTIVITY_RATING: false,
+    ACTIVITY_RATING_STARS: false,
+};
 
 export type Notification = {
     id: number;
@@ -53,7 +68,7 @@ export function buildNotificationInsert(
 // logged/sent" switch.
 export async function isPreferenceEnabled(db: D1Database, userId: number, type: PreferenceType): Promise<boolean> {
     const row = await db.prepare("SELECT enabled FROM user_preferences WHERE user_id = ? AND type = ?").bind(userId, type).first<{ enabled: number }>();
-    return row === null || row.enabled === 1;
+    return row === null ? PREFERENCE_DEFAULTS[type] : row.enabled === 1;
 }
 
 export async function setPreference(db: D1Database, userId: number, type: PreferenceType, enabled: boolean): Promise<void> {
@@ -70,7 +85,7 @@ export async function setPreference(db: D1Database, userId: number, type: Prefer
 export async function listPreferences(db: D1Database, userId: number): Promise<Record<PreferenceType, boolean>> {
     const { results } = await db.prepare("SELECT type, enabled FROM user_preferences WHERE user_id = ?").bind(userId).all<{ type: PreferenceType; enabled: number }>();
     const overrides = new Map(results.map((row) => [row.type, row.enabled === 1]));
-    return Object.fromEntries(PREFERENCE_TYPES.map((type) => [type, overrides.get(type) ?? true])) as Record<PreferenceType, boolean>;
+    return Object.fromEntries(PREFERENCE_TYPES.map((type) => [type, overrides.get(type) ?? PREFERENCE_DEFAULTS[type]])) as Record<PreferenceType, boolean>;
 }
 
 export async function listNotifications(db: D1Database, userId: number): Promise<{ notifications: Notification[]; unreadCount: number }> {

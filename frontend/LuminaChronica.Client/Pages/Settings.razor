@@ -47,11 +47,14 @@ else
     ];
 
     // (preference type, label, description) -- FOLLOW/COMMENT/RATING/SHARE
-    // gate an in-app notification; ACTIVITY_RATING gates whether a rating
-    // shows up in the profile's own "Aktivitäten" log at all (added via
-    // AskUserQuestion, 2026-08-08, since RATING_GIVEN is the first activity
-    // entry that reveals a specific action rather than restating something
-    // already public).
+    // gate an in-app notification and default to enabled. ACTIVITY_RATING
+    // gates whether a rating shows up in the profile's own "Aktivitäten"
+    // log at all; ACTIVITY_RATING_STARS separately gates whether the
+    // specific star count is shown once it does (split in issue #315
+    // Phase 3, raised by the user directly: the star value is the more
+    // sensitive part, not just that a rating happened). Both default to
+    // disabled -- opt-in, not opt-out, since both reveal something
+    // genuinely personal on a page anyone can view.
     private static readonly (string Type, string Label, string Description)[] NotificationTypes =
     [
         ("FOLLOW", "Neuer Follower", "Wenn dir jemand folgt"),
@@ -59,6 +62,7 @@ else
         ("RATING", "Neue Bewertung", "Wenn jemand dein Buch bewertet"),
         ("SHARE", "Buch geteilt", "Wenn dir ein Buch freigegeben wird"),
         ("ACTIVITY_RATING", "Eigene Bewertungen im Aktivitäten-Log", "Ob deine eigenen Bewertungen in deinem öffentlichen Profil auftauchen"),
+        ("ACTIVITY_RATING_STARS", "Sternezahl bei Bewertungen anzeigen", "Ob die konkrete Sternezahl genannt wird, wenn eine Bewertung im Log auftaucht"),
     ];
 
     private string? _currentTheme;
@@ -83,7 +87,8 @@ else
         "COMMENT" => _preferences?.Comment ?? true,
         "RATING" => _preferences?.Rating ?? true,
         "SHARE" => _preferences?.Share ?? true,
-        "ACTIVITY_RATING" => _preferences?.ActivityRating ?? true,
+        "ACTIVITY_RATING" => _preferences?.ActivityRating ?? false,
+        "ACTIVITY_RATING_STARS" => _preferences?.ActivityRatingStars ?? false,
         _ => true,
     };
 
@@ -97,6 +102,7 @@ else
             case "RATING": _preferences.Rating = enabled; break;
             case "SHARE": _preferences.Share = enabled; break;
             case "ACTIVITY_RATING": _preferences.ActivityRating = enabled; break;
+            case "ACTIVITY_RATING_STARS": _preferences.ActivityRatingStars = enabled; break;
         }
         await ApiClient.PutAsync("/api/notifications/preferences", new { type, enabled });
     }

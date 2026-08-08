@@ -50,6 +50,14 @@ async function shareBook(ownerToken: string, bookId: number, username: string) {
     );
 }
 
+async function setPreference(token: string, type: string, enabled: boolean) {
+    return app.request(
+        "/api/notifications/preferences",
+        { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ type, enabled }) },
+        env
+    );
+}
+
 beforeEach(async () => {
     env = { DB: createFakeD1(), STORAGE: createFakeR2(), JWT_SECRET: "test-secret-do-not-use-in-production" };
     tokenA = await registerAndLogin("alice", "alice@example.com");
@@ -224,6 +232,13 @@ describe("GET /api/users/:username/public -- activities", () => {
             { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PUBLIC" }) },
             env
         );
+
+        // Both preferences default to disabled (see notificationService.ts's
+        // PREFERENCE_DEFAULTS) -- opted in explicitly here since this test
+        // is specifically about the logged value, not the opt-in gating
+        // (covered in tests/backend/notifications.test.ts).
+        await setPreference(tokenB, "ACTIVITY_RATING", true);
+        await setPreference(tokenB, "ACTIVITY_RATING_STARS", true);
 
         await app.request(
             `/api/books/${bookId}/rating`,
