@@ -84,7 +84,7 @@ public class DiscoverPageTests : BunitContext
 
         var cut = Render<Discover>();
 
-        Assert.NotEmpty(cut.FindAll(".discover-skeleton-card"));
+        Assert.NotEmpty(cut.FindAll(".skeleton-catalog-card"));
         // Issue #341 a11y audit -- the skeleton itself stays aria-hidden
         // (it's not real content), but the loading state must still reach
         // a screen reader some other way, and the region should say it's busy.

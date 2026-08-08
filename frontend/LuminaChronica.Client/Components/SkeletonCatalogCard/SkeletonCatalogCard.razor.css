@@ -1,0 +1,24 @@
+.skeleton-catalog-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.skeleton-catalog-card-cover {
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius, 4px);
+}
+
+.skeleton-catalog-card-cover-project {
+    aspect-ratio: 4 / 3;
+}
+
+.skeleton-catalog-card-title {
+    height: 0.9rem;
+    width: 85%;
+}
+
+.skeleton-catalog-card-subtitle {
+    height: 0.75rem;
+    width: 55%;
+}
