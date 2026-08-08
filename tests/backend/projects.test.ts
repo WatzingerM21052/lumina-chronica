@@ -187,3 +187,36 @@ describe("PUT/DELETE /api/projects/:id", () => {
         expect(res.status).toBe(404);
     });
 });
+
+// issue #349 Phase C: only a PUBLIC project's cover may go into a
+// shared/CDN cache -- a privacy boundary, not just a performance detail.
+describe("GET /api/projects/:id/cover Cache-Control (PUBLIC/PRIVATE split)", () => {
+    async function createProjectWithCover(token: string): Promise<number> {
+        const form = new FormData();
+        form.set("title", "Aetherfall");
+        form.set("cover", new File(["cover bytes"], "cover.jpg", { type: "image/jpeg" }));
+        const res = await app.request("/api/projects", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }, env);
+        return (await readJson(res)).data.id;
+    }
+
+    it("marks a PUBLIC project's cover cacheable, even for an anonymous viewer", async () => {
+        const projectId = await createProjectWithCover(tokenA);
+        await app.request(
+            `/api/projects/${projectId}`,
+            { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenA}` }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+
+        const res = await app.request(`/api/projects/${projectId}/cover`, {}, env);
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+    });
+
+    it("never marks a PRIVATE project's cover cacheable, even for its own owner", async () => {
+        const projectId = await createProjectWithCover(tokenA);
+
+        const res = await app.request(`/api/projects/${projectId}/cover`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+});

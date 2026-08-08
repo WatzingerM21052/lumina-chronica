@@ -230,24 +230,36 @@ else
 
         _profile = response.Data;
 
-        foreach (var book in _profile.Books)
+        // Covers are independent requests -- fetch them concurrently instead
+        // of one-at-a-time (issue #349 Phase C). Capped at 6 in flight so a
+        // full profile page doesn't fire more simultaneous requests than the
+        // backend needs to see.
+        using var throttle = new SemaphoreSlim(6);
+
+        async Task<(string Key, string? Url)> FetchCoverAsync(string key, string? coverUrl)
         {
-            if (book.CoverUrl is null || _coverObjectUrls.ContainsKey($"book-{book.Id}")) continue;
-            var result = await ApiClient.GetBytesAsync(book.CoverUrl);
-            if (result is { } cover)
+            await throttle.WaitAsync();
+            try
             {
-                _coverObjectUrls[$"book-{book.Id}"] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+                var result = await ApiClient.GetBytesAsync(coverUrl!);
+                return (key, result is { } cover ? await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType) : null);
+            }
+            finally
+            {
+                throttle.Release();
             }
         }
 
-        foreach (var project in _profile.Projects)
+        var coverFetches = _profile.Books
+            .Where(book => book.CoverUrl is not null && !_coverObjectUrls.ContainsKey($"book-{book.Id}"))
+            .Select(book => FetchCoverAsync($"book-{book.Id}", book.CoverUrl))
+            .Concat(_profile.Projects
+                .Where(project => project.CoverUrl is not null && !_coverObjectUrls.ContainsKey($"project-{project.Id}"))
+                .Select(project => FetchCoverAsync($"project-{project.Id}", project.CoverUrl)));
+
+        foreach (var (key, url) in await Task.WhenAll(coverFetches))
         {
-            if (project.CoverUrl is null || _coverObjectUrls.ContainsKey($"project-{project.Id}")) continue;
-            var result = await ApiClient.GetBytesAsync(project.CoverUrl);
-            if (result is { } cover)
-            {
-                _coverObjectUrls[$"project-{project.Id}"] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
-            }
+            if (url is not null) _coverObjectUrls[key] = url;
         }
     }
 

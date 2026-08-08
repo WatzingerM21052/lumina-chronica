@@ -600,7 +600,12 @@ export async function getBookFileObject(db: D1Database, storage: R2Bucket, calle
 // migration 0017) -- when off, only the owner and people on the book's
 // share list still see the cover; everyone else (including anonymous) gets
 // nothing, same as PRIVATE.
-export async function getBookCoverObject(db: D1Database, storage: R2Bucket, viewerId: number | null, bookId: number): Promise<R2ObjectBody | null> {
+// isPublic tells the route whether the bytes may go into a shared/CDN cache
+// (issue #349 Phase C) -- true only for PUBLIC-visibility books, regardless
+// of who the viewer is. A SHARED book's owner viewing their own cover still
+// gets isPublic: false, since the same URL served to a different viewer
+// (not on the share list) must 404, not return a cached copy.
+export async function getBookCoverObject(db: D1Database, storage: R2Bucket, viewerId: number | null, bookId: number): Promise<{ object: R2ObjectBody; isPublic: boolean } | null> {
     const row = await db.prepare("SELECT cover_url, owner_id, visibility, shared_teaser_visible FROM books WHERE id = ?").bind(bookId).first<{
         cover_url: string | null;
         owner_id: number;
@@ -608,12 +613,21 @@ export async function getBookCoverObject(db: D1Database, storage: R2Bucket, view
         shared_teaser_visible: number;
     }>();
     if (!row || !row.cover_url) return null;
-    if (row.owner_id === viewerId || row.visibility === "PUBLIC") return storage.get(row.cover_url);
+    const isPublic = row.visibility === "PUBLIC";
+    if (row.owner_id === viewerId || isPublic) {
+        const object = await storage.get(row.cover_url);
+        return object ? { object, isPublic } : null;
+    }
     if (row.visibility === "SHARED") {
-        if (row.shared_teaser_visible) return storage.get(row.cover_url);
+        if (row.shared_teaser_visible) {
+            const object = await storage.get(row.cover_url);
+            return object ? { object, isPublic: false } : null;
+        }
         if (viewerId === null) return null;
         const shared = await db.prepare("SELECT 1 FROM book_shares WHERE book_id = ? AND user_id = ?").bind(bookId, viewerId).first();
-        return shared ? storage.get(row.cover_url) : null;
+        if (!shared) return null;
+        const object = await storage.get(row.cover_url);
+        return object ? { object, isPublic: false } : null;
     }
     return null;
 }
