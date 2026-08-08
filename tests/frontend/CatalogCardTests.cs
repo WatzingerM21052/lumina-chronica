@@ -73,6 +73,27 @@ public class CatalogCardTests : BunitContext
         Assert.Equal("alice", clicked);
     }
 
+    // Issue #341 a11y audit -- a plain @onclick-only <span> is invisible to
+    // Tab and can't be activated without a mouse. tabindex + role="link" +
+    // an Enter-key handler make it a real keyboard-operable control.
+    [Fact]
+    public void CatalogCard_OwnerLink_IsKeyboardOperable()
+    {
+        string? clicked = null;
+        var cut = Render<CatalogCard>(parameters => parameters
+            .Add(p => p.Kind, "book")
+            .Add(p => p.Title, "Book")
+            .Add(p => p.OwnerUsername, "alice")
+            .Add(p => p.OnOwnerClick, (string username) => clicked = username));
+
+        var link = cut.Find(".catalog-card-owner-link");
+        Assert.Equal("0", link.GetAttribute("tabindex"));
+        Assert.Equal("link", link.GetAttribute("role"));
+
+        link.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        Assert.Equal("alice", clicked);
+    }
+
     [Fact]
     public void CatalogCard_Book_ShowsRating_WhenRatingCountPositive()
     {

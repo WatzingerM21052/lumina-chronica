@@ -13,6 +13,9 @@
     --color-secondary-hover: #9c3e46;
 
     --color-gold-accent: #d9b04c;
+    /* Already light-on-dark here, so no darkening needed -- see
+       classic-library.css's comment for why this token exists. */
+    --color-accent-text: var(--color-gold-accent);
     --color-info: #6fa8c9;
     --color-success: #6fae6f;
     --color-warning: #d9a441;

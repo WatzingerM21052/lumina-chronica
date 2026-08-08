@@ -224,6 +224,42 @@ public class BookDetailPageTests : BunitContext
         Assert.Equal("/api/books/1/rating", unrateRequest?.RequestUri?.AbsolutePath);
     }
 
+    // Issue #341 a11y audit -- the star widget previously conveyed rating
+    // state only via a CSS class (is-filled), invisible to a screen
+    // reader, and its title attribute (unreliably announced) didn't
+    // distinguish "set" from "remove" even though clicking your own
+    // current rating removes it rather than re-setting it.
+    [Fact]
+    public void BookDetail_RateStars_ExposeAriaPressedAndToggleAwareLabels()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Public Book","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","createdAt":"2026-01-01","isOwner":false,
+                "averageRating":3,"ratingCount":1,"myRating":3,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Equal("Eigene Bewertung abgeben", cut.Find(".book-detail-rate-stars").GetAttribute("aria-label"));
+
+        var stars = cut.FindAll("button.star-button");
+        Assert.Equal("true", stars[2].GetAttribute("aria-pressed")); // 3rd star, myRating == 3
+        Assert.Equal("false", stars[3].GetAttribute("aria-pressed"));
+        Assert.Contains("entfernen", stars[2].GetAttribute("aria-label"));
+        Assert.Contains("Mit 4 Sternen bewerten", stars[3].GetAttribute("aria-label"));
+    }
+
     [Fact]
     public void BookDetail_EditButton_SwitchesToEditForm()
     {

@@ -100,7 +100,9 @@
 }
 
 .catalog-card-rating-star {
-    color: var(--color-gold-accent);
+    /* --color-accent-text, not --color-gold-accent -- see app.css's
+       focus-visible rule comment (issue #341 a11y audit). */
+    color: var(--color-accent-text);
 }
 
 .catalog-card-type-tag {

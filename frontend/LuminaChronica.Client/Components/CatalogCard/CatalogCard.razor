@@ -36,8 +36,17 @@
                 von
                 @* A <span> + stopPropagation, not a nested <a> -- the card
                    itself is already an <a href>, and a second anchor inside
-                   it is invalid HTML with unreliable click behavior. *@
-                <span class="catalog-card-owner-link" @onclick="() => OnOwnerClick.InvokeAsync(ownerUsername)" @onclick:stopPropagation="true" @onclick:preventDefault="true">@ownerUsername</span>
+                   it is invalid HTML with unreliable click behavior.
+                   tabindex/role/@onkeydown make it keyboard-operable too --
+                   a plain @onclick-only span is invisible to Tab and can't
+                   be activated without a mouse (issue #341 a11y audit;
+                   [tabindex] already picks up app.css's global
+                   focus-visible outline). Enter only, matching the
+                   activation key for role="link" (not Space, which is for
+                   role="button"). *@
+                <span class="catalog-card-owner-link" tabindex="0" role="link"
+                      @onclick="() => OnOwnerClick.InvokeAsync(ownerUsername)" @onclick:stopPropagation="true" @onclick:preventDefault="true"
+                      @onkeydown="e => OnOwnerLinkKeyDown(e, ownerUsername)" @onkeydown:stopPropagation="true">@ownerUsername</span>
             </div>
         }
         @if (Kind == "project")
@@ -52,7 +61,10 @@
             <div class="catalog-card-rating">
                 @if (RatingCount > 0)
                 {
-                    <span><span class="catalog-card-rating-star">★</span> @RatingAverage?.ToString("0.0", CultureInfo.InvariantCulture) · @RatingCount</span>
+                    var average = RatingAverage?.ToString("0.0", CultureInfo.InvariantCulture);
+                    <span aria-label="@($"Durchschnittliche Bewertung: {average} von 5 Sternen, {RatingCount} {(RatingCount == 1 ? "Bewertung" : "Bewertungen")}")">
+                        <span class="catalog-card-rating-star" aria-hidden="true">★</span> @average · @RatingCount
+                    </span>
                 }
                 else
                 {
@@ -92,6 +104,11 @@
 
     [Parameter]
     public EventCallback<string> OnOwnerClick { get; set; }
+
+    // role="link" activates on Enter only, not Space (that's role="button"'s
+    // key) -- see the owner-link span's own comment.
+    private Task OnOwnerLinkKeyDown(KeyboardEventArgs e, string ownerUsername) =>
+        e.Key == "Enter" ? OnOwnerClick.InvokeAsync(ownerUsername) : Task.CompletedTask;
 
     [Parameter]
     public bool ShowRating { get; set; } = true;
