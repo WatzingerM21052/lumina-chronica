@@ -491,6 +491,21 @@ describe("Borrowed reading: PUBLIC (any logged-in user) and SHARED (explicit sha
         expect((await readJson(borrowerView)).data.isFavorite).toBe(false);
     });
 
+    it("reports isOwner correctly so the frontend can hide edit/delete/favorite from a borrower", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+        await setVisibility(tokenA, bookId, "PUBLIC");
+
+        const ownerView = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect((await readJson(ownerView)).data.isOwner).toBe(true);
+
+        const borrowerView = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect((await readJson(borrowerView)).data.isOwner).toBe(false);
+
+        const listRes = await app.request("/api/books", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect((await readJson(listRes)).data.items[0].isOwner).toBe(true);
+    });
+
     it("deleting a SHARED book with active shares succeeds and cleans up book_shares", async () => {
         const uploadRes = await uploadBook(tokenA);
         const bookId = (await readJson(uploadRes)).data.id;

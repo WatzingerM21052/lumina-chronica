@@ -52,17 +52,18 @@ public class DiscoverPageTests : BunitContext
     }
 
     [Fact]
-    public void Discover_BookCard_LinksToOwnersPublicProfile_WithoutLeadingSlash()
+    public void Discover_BookCard_LinksToTheBookItself_NotTheOwnersProfile_WithoutLeadingSlash()
     {
-        // Regression coverage for the same class of bug as PublicProfile's
-        // link hotfix (PR #302) -- a leading "/" breaks on the GitHub Pages
-        // subpath.
+        // Previously linked to the owner's public profile -- clicking a book
+        // should go straight to the book's own overview page. Also
+        // regression coverage for the same leading-"/" GitHub Pages subpath
+        // bug class as PR #302/#332.
         UseRoutes(BooksJson);
 
         var cut = Render<Discover>();
 
         var link = cut.Find("a.book-card");
-        Assert.Equal("u/alice", link.GetAttribute("href"));
+        Assert.Equal("library/books/1", link.GetAttribute("href"));
     }
 
     [Fact]

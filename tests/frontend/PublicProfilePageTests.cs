@@ -371,8 +371,11 @@ public class PublicProfilePageTests : BunitContext
     }
 
     [Fact]
-    public void PublicProfile_PublicBook_ShowsLesenButtonAlongsideRatingWidget_WhenLoggedIn()
+    public void PublicProfile_PublicBook_CardLinksToOverview_NotStraightToReader_WhenCanRead()
     {
+        // Clicking a book on someone's profile should go to the book's own
+        // overview page, not straight into the reader, and there's no
+        // separate "Lesen" button anymore -- the whole card is the link.
         var readableJson = """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Public Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","canRead":true,"averageRating":null,"ratingCount":0,"myRating":null}],"projects":[]}}""";
         var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/public", readableJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -383,13 +386,14 @@ public class PublicProfilePageTests : BunitContext
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
-        var lesenLink = cut.FindAll("a").Single(a => a.TextContent.Trim() == "Lesen");
-        Assert.Equal("library/books/9/read", lesenLink.GetAttribute("href"));
+        var cardLink = cut.Find("a.book-card");
+        Assert.Equal("library/books/9", cardLink.GetAttribute("href"));
+        Assert.DoesNotContain(cut.FindAll("a"), a => a.TextContent.Trim() == "Lesen");
         Assert.Contains("Noch keine Bewertungen", cut.Markup);
     }
 
     [Fact]
-    public void PublicProfile_PublicBook_ShowsAnmeldenPrompt_WhenLoggedOut()
+    public void PublicProfile_PublicBook_ShowsAnmeldenPrompt_AndCardIsNotAClick_WhenLoggedOut()
     {
         var teaserOnlyJson = """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Public Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","canRead":false,"averageRating":null,"ratingCount":0,"myRating":null}],"projects":[]}}""";
         UseRoutes(teaserOnlyJson);
@@ -397,11 +401,11 @@ public class PublicProfilePageTests : BunitContext
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
         Assert.Contains("Anmelden zum Lesen", cut.Markup);
-        Assert.DoesNotContain(cut.FindAll("a"), a => a.TextContent.Trim() == "Lesen");
+        Assert.False(cut.Find("a.book-card").HasAttribute("href"));
     }
 
     [Fact]
-    public void PublicProfile_SharedBook_ShowsLesenButton_WhenCanRead()
+    public void PublicProfile_SharedBook_CardLinksToOverview_WhenCanRead()
     {
         var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/public", SharedBookReadableProfileJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -412,13 +416,13 @@ public class PublicProfilePageTests : BunitContext
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
-        var lesenLink = cut.FindAll("a").Single(a => a.TextContent.Trim() == "Lesen");
-        Assert.Equal("library/books/9/read", lesenLink.GetAttribute("href"));
+        var cardLink = cut.Find("a.book-card");
+        Assert.Equal("library/books/9", cardLink.GetAttribute("href"));
         Assert.Empty(cut.FindAll("button.star-button"));
     }
 
     [Fact]
-    public void PublicProfile_SharedBook_ShowsPrivatGeteilt_WhenNotCanRead()
+    public void PublicProfile_SharedBook_ShowsPrivatGeteilt_AndCardIsNotAClick_WhenNotCanRead()
     {
         // Covers both a logged-out visitor and a logged-in user who just
         // isn't on the share list -- neither can tell the two apart, and
@@ -429,7 +433,7 @@ public class PublicProfilePageTests : BunitContext
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
         Assert.Contains("Privat geteilt", cut.Markup);
-        Assert.DoesNotContain(cut.FindAll("a"), a => a.TextContent.Trim() == "Lesen");
+        Assert.False(cut.Find("a.book-card").HasAttribute("href"));
     }
 
     [Fact]

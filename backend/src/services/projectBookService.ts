@@ -40,7 +40,7 @@ export async function listProjectBooks(db: D1Database, ownerId: number, projectI
         )
         .bind(projectId)
         .all<BookRow>();
-    return rows.results.map(toBookSummary);
+    return rows.results.map((row) => toBookSummary(row, ownerId));
 }
 
 // Used by deleteProject (projectService.ts) to clean up a project's book

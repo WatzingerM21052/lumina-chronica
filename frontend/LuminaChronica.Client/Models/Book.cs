@@ -48,6 +48,12 @@ public class Book
     [JsonPropertyName("isFavorite")]
     public bool IsFavorite { get; set; }
 
+    // Edit/delete/favorite are all owner-only server-side -- defaults to
+    // false (deny by default) if a response somehow omits it, so a missing
+    // field never accidentally exposes owner-only UI to a borrower.
+    [JsonPropertyName("isOwner")]
+    public bool IsOwner { get; set; }
+
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 

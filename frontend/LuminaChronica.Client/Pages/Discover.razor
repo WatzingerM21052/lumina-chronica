@@ -63,7 +63,7 @@
         <div class="library-grid">
             @foreach (var book in _books)
             {
-                <a class="book-card book-card-normal" href="@($"u/{book.OwnerUsername}")">
+                <a class="book-card book-card-normal" href="@($"library/books/{book.Id}")">
                     <div class="book-card-cover">
                         @if (_coverObjectUrls.TryGetValue(book.Id, out var coverUrl))
                         {

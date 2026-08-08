@@ -52,18 +52,18 @@ async function getContinueReading(db: D1Database, userId: number): Promise<Conti
     // Owner's own books, a PUBLIC book they're reading, or a SHARED book
     // they're on the explicit share list for -- matches the read-access
     // rule in bookService.ts's findAccessibleBookRow (v3.2, issue #321).
-    // owner_id is added on top of BOOK_ROW_COLUMNS (not part of it) purely
-    // so this function can tell the cases apart below.
+    // BOOK_ROW_COLUMNS already includes owner_id (added for BookSummary.isOwner),
+    // which is also what this function uses to tell the cases apart below.
     const books = await db
         .prepare(
-            `SELECT ${BOOK_ROW_COLUMNS}, owner_id FROM books WHERE id IN (${placeholders}) AND (
+            `SELECT ${BOOK_ROW_COLUMNS} FROM books WHERE id IN (${placeholders}) AND (
                 owner_id = ?
                 OR visibility = 'PUBLIC'
                 OR (visibility = 'SHARED' AND EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?))
              )`
         )
         .bind(...ids, userId, userId)
-        .all<BookRow & { owner_id: number }>();
+        .all<BookRow>();
 
     const borrowedOwnerIds = [...new Set(books.results.filter((row) => row.owner_id !== userId).map((row) => row.owner_id))];
     const ownerUsernameById = new Map<number, string>();
@@ -83,7 +83,7 @@ async function getContinueReading(db: D1Database, userId: number): Promise<Conti
             const book = bookById.get(row.book_id);
             if (!book) return null;
             return {
-                book: toSummary(book),
+                book: toSummary(book, userId),
                 percentage: row.percentage,
                 lastOpened: row.last_opened,
                 ownerUsername: book.owner_id === userId ? null : (ownerUsernameById.get(book.owner_id) ?? null),
@@ -108,7 +108,7 @@ async function getRecommendations(db: D1Database, userId: number): Promise<BookS
         .bind(userId, userId, RECOMMENDATIONS_LIMIT)
         .all<BookRow>();
 
-    return rows.results.map(toSummary);
+    return rows.results.map((row) => toSummary(row, userId));
 }
 
 export async function getDashboard(db: D1Database, userId: number): Promise<Dashboard> {

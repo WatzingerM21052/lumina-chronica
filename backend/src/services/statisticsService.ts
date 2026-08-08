@@ -240,7 +240,7 @@ export async function getStatistics(db: D1Database, userId: number): Promise<Sta
         .sort((a, b) => b.count - a.count);
 
     const recentActivity: RecentActivityItem[] = recentProgress.map(({ row, book }) => ({
-        book: toSummary(book),
+        book: toSummary(book, userId),
         percentage: row.percentage,
         lastOpened: row.last_opened,
     }));

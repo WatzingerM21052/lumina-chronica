@@ -47,11 +47,14 @@ else
             {
                 <div class="book-detail-title-row">
                     <h1>@_book.Title</h1>
-                    <button type="button" class="book-detail-favorite @(_book.IsFavorite ? "is-favorite" : "")"
-                            title="@(_book.IsFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
-                            @onclick="ToggleFavoriteAsync">
-                        @(_book.IsFavorite ? "★" : "☆")
-                    </button>
+                    @if (_book.IsOwner)
+                    {
+                        <button type="button" class="book-detail-favorite @(_book.IsFavorite ? "is-favorite" : "")"
+                                title="@(_book.IsFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
+                                @onclick="ToggleFavoriteAsync">
+                            @(_book.IsFavorite ? "★" : "☆")
+                        </button>
+                    }
                 </div>
                 @if (!string.IsNullOrWhiteSpace(_book.Author))
                 {
@@ -117,17 +120,23 @@ else
                             </button>
                         }
                     }
-                    <button type="button" id="edit-button" class="btn" @onclick="StartEditingAsync">Bearbeiten</button>
-                    <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+                    @if (_book.IsOwner)
+                    {
+                        <button type="button" id="edit-button" class="btn" @onclick="StartEditingAsync">Bearbeiten</button>
+                        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+                    }
                 </div>
-                <ConfirmDialog IsOpen="_confirmingDelete" Message="Buch wirklich löschen?"
-                               OnConfirm="DeleteAsync" OnCancel="() => _confirmingDelete = false" />
+                @if (_book.IsOwner)
+                {
+                    <ConfirmDialog IsOpen="_confirmingDelete" Message="Buch wirklich löschen?"
+                                   OnConfirm="DeleteAsync" OnCancel="() => _confirmingDelete = false" />
+                }
                 @if (_offlineErrorMessage is not null)
                 {
                     <p class="form-error">@_offlineErrorMessage</p>
                 }
 
-                @if (_shelves is { Count: > 0 })
+                @if (_book.IsOwner && _shelves is { Count: > 0 })
                 {
                     <div class="book-detail-shelves">
                         <span class="text-muted">Zu Regal hinzufügen</span>
