@@ -63,6 +63,23 @@ public class NotificationBellTests : BunitContext
     }
 
     [Fact]
+    public void NotificationBell_Links_HaveNoLeadingSlash()
+    {
+        // Caught live: a leading slash resolves from the domain root and
+        // 404s under GitHub Pages' "/lumina-chronica/" subpath -- Blazor's
+        // <base href> only rewrites relative links. Same bug class as the
+        // v3.1 hotfix, PR #302.
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/notifications", TwoNotificationsJson));
+
+        var cut = Render<NotificationBell>();
+        cut.Find(".notification-bell-toggle").Click();
+
+        var hrefs = cut.FindAll(".notification-link").Select(a => a.GetAttribute("href")).ToList();
+        Assert.Equal(2, hrefs.Count);
+        Assert.All(hrefs, href => Assert.False(href!.StartsWith('/'), $"expected a relative link, got '{href}'"));
+    }
+
+    [Fact]
     public void NotificationBell_FilterPill_NarrowsListToSelectedType()
     {
         UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/notifications", TwoNotificationsJson));
