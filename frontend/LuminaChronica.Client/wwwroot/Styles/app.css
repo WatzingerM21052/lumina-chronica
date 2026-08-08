@@ -371,9 +371,17 @@ select:focus-visible,
        measures ~2.2-2.6:1 against light-theme paper/card backgrounds,
        under WCAG's 3:1 floor for a focus indicator (issue #341 a11y
        audit). --color-accent-text is a per-theme variant tuned for
-       real contrast instead of pure decoration. */
-    outline: 2px solid var(--color-accent-text);
-    outline-offset: 2px;
+       real contrast instead of pure decoration -- keep this color choice
+       even when adjusting weight/offset below, it's load-bearing for
+       WCAG 2.4.7 compliance, not just decoration.
+
+       Width/offset toned down 2026-08-08 (user feedback: the original
+       2px outline + 2px offset read as a "glowing" halo floating off the
+       element, not a clean focus ring) -- a thinner outline hugging the
+       element tighter is still clearly visible (WCAG 2.4.7 requires
+       visible, not a minimum width) without the glow effect. */
+    outline: 1.5px solid var(--color-accent-text);
+    outline-offset: 1px;
 }
 
 .auth-form {
