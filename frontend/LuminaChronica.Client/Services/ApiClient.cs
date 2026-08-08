@@ -16,10 +16,25 @@ public class ApiClient(HttpClient httpClient)
         }
         catch (HttpRequestException ex)
         {
+            // Not ex.Message -- GetFromJsonAsync throws with .NET's raw,
+            // unformatted resource-string message on a non-2xx status
+            // under Blazor WASM (e.g. literally
+            // "net_http_message_not_success_statuscode_reason, 404, Not
+            // Found"), which then surfaced verbatim to end users wherever
+            // a caller showed Error.Message (issue #349 Phase B --
+            // caught live while wiring up BookDetail's ErrorMessage/retry
+            // for exactly this failure path). A friendly message per
+            // status code, or a generic fallback, replaces it.
+            var message = ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.NotFound => "Nicht gefunden.",
+                System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "Keine Berechtigung.",
+                _ => "Verbindung zum Server fehlgeschlagen. Bitte versuche es erneut.",
+            };
             return new ApiResponse<T>
             {
                 Success = false,
-                Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
+                Error = new ApiError { Code = "NETWORK_ERROR", Message = message }
             };
         }
     }

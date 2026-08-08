@@ -867,6 +867,37 @@ public class BookDetailPageTests : BunitContext
         Assert.Equal("/api/books/1", deleteRequest!.RequestUri!.AbsolutePath);
     }
 
+    // Regression: DeleteAsync's failure branch used to write into
+    // _loadErrorMessage, the same field the top-level @if checks to decide
+    // whether to collapse the *entire* page down to just an error message.
+    // A failed delete would blank out the whole book view (title, cover,
+    // comments, everything) instead of showing a small inline error next
+    // to the button (issue #349 Phase B, error-state unification).
+    [Fact]
+    public void BookDetail_ConfirmDialog_Confirm_DeleteFails_ShowsInlineError_WithoutHidingRestOfPage()
+    {
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .When(r => r.Method == HttpMethod.Delete, _ => new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError))
+            .When(_ => true, _ => RoutedFakeHttpMessageHandler.JsonResponse(SimpleBookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Ja, löschen").Click();
+
+        Assert.Contains("Löschen fehlgeschlagen", cut.Markup);
+        // The rest of the page must still be there -- title, edit/delete
+        // buttons -- not replaced by the big page-level ErrorMessage.
+        Assert.Empty(cut.FindAll(".error-message"));
+        Assert.NotEmpty(cut.FindAll("h1"));
+    }
+
     // Comments (v3.3, issue #325).
     private const string CommentsJson =
         """{"success":true,"data":[{"id":1,"userId":2,"username":"bob","content":"Great book!","createdAt":"2026-01-02"},{"id":2,"userId":1,"username":"testuser","content":"My own comment","createdAt":"2026-01-03"}]}""";

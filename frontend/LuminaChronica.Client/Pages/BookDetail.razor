@@ -23,7 +23,7 @@
 
 @if (_loadErrorMessage is not null)
 {
-    <p class="form-error">@_loadErrorMessage</p>
+    <ErrorMessage Message="@_loadErrorMessage" OnRetry="LoadBookAsync" />
 }
 else if (_book is null)
 {
@@ -171,6 +171,10 @@ else
                 {
                     <ConfirmDialog IsOpen="_confirmingDelete" Message="Buch wirklich löschen?"
                                    OnConfirm="DeleteAsync" OnCancel="() => _confirmingDelete = false" />
+                }
+                @if (_deleteErrorMessage is not null)
+                {
+                    <p class="form-error">@_deleteErrorMessage</p>
                 }
                 @if (_offlineErrorMessage is not null)
                 {
@@ -448,6 +452,7 @@ else
 
     private Book? _book;
     private string? _loadErrorMessage;
+    private string? _deleteErrorMessage;
     private string? _coverObjectUrl;
     private bool _isRatingInProgress;
 
@@ -1125,7 +1130,14 @@ else
         else
         {
             _confirmingDelete = false;
-            _loadErrorMessage = "Löschen fehlgeschlagen. Bitte versuche es erneut.";
+            // A dedicated field, not the page-load _loadErrorMessage this
+            // used to (mis)use -- that field's non-null check is what
+            // decides whether the *entire* book view collapses to just an
+            // error message (see the top-level @if a few hundred lines up).
+            // Reusing it here meant a failed delete would blank out the
+            // whole page, including the book the user was just looking at,
+            // instead of showing a small inline error next to the button.
+            _deleteErrorMessage = "Löschen fehlgeschlagen. Bitte versuche es erneut.";
         }
     }
 
