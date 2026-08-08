@@ -11,8 +11,8 @@ export type ContinueReadingItem = {
     book: BookSummary;
     percentage: number;
     lastOpened: string;
-    // null for the caller's own books; the owner's username for a SHARED
-    // book being read via "borrowed reading" (see bookService.ts's
+    // null for the caller's own books; the owner's username for a PUBLIC or
+    // SHARED book being read via "borrowed reading" (see bookService.ts's
     // findAccessibleBookRow) -- lets the frontend render a "Geliehen von
     // {username}" badge instead of a whole separate list/page.
     ownerUsername: string | null;
@@ -49,13 +49,20 @@ async function getContinueReading(db: D1Database, userId: number): Promise<Conti
 
     const ids = progress.results.map((row) => row.book_id);
     const placeholders = ids.map(() => "?").join(",");
-    // Owner's own books, or a SHARED book they're borrowing -- matches the
-    // read-access rule in bookService.ts's findAccessibleBookRow. owner_id
-    // is added on top of BOOK_ROW_COLUMNS (not part of it) purely so this
-    // function can tell the two cases apart below.
+    // Owner's own books, a PUBLIC book they're reading, or a SHARED book
+    // they're on the explicit share list for -- matches the read-access
+    // rule in bookService.ts's findAccessibleBookRow (v3.2, issue #321).
+    // owner_id is added on top of BOOK_ROW_COLUMNS (not part of it) purely
+    // so this function can tell the cases apart below.
     const books = await db
-        .prepare(`SELECT ${BOOK_ROW_COLUMNS}, owner_id FROM books WHERE id IN (${placeholders}) AND (owner_id = ? OR visibility = 'SHARED')`)
-        .bind(...ids, userId)
+        .prepare(
+            `SELECT ${BOOK_ROW_COLUMNS}, owner_id FROM books WHERE id IN (${placeholders}) AND (
+                owner_id = ?
+                OR visibility = 'PUBLIC'
+                OR (visibility = 'SHARED' AND EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?))
+             )`
+        )
+        .bind(...ids, userId, userId)
         .all<BookRow & { owner_id: number }>();
 
     const borrowedOwnerIds = [...new Set(books.results.filter((row) => row.owner_id !== userId).map((row) => row.owner_id))];

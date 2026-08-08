@@ -37,6 +37,11 @@ public class Book
     [JsonPropertyName("visibility")]
     public string Visibility { get; set; } = "PRIVATE";
 
+    // Only meaningful when Visibility is SHARED -- whether someone NOT on
+    // this book's share list still sees the cover+description teaser.
+    [JsonPropertyName("sharedTeaserVisible")]
+    public bool SharedTeaserVisible { get; set; } = true;
+
     [JsonPropertyName("createdAt")]
     public string CreatedAt { get; set; } = string.Empty;
 
@@ -65,11 +70,13 @@ public class Book
     public BookFile? File { get; set; }
 }
 
-// Books alone offer SHARED ("borrowed reading" -- any logged-in user can
-// read the full book, with their own reading progress/bookmarks; see
-// backend/src/services/bookService.ts's findAccessibleBookRow). Projects
-// and Shelves still use the plain PRIVATE/PUBLIC VisibilityOption in
-// Project.cs since SHARED has no meaning for them.
+// Books alone offer SHARED ("borrowed reading" -- see
+// backend/src/services/bookService.ts's findAccessibleBookRow). v3.2
+// (issue #321) swapped the PUBLIC/SHARED meanings after user feedback on
+// v3.1: PUBLIC now grants full read access to any logged-in user; SHARED
+// grants it only to people the owner explicitly picked (book_shares).
+// Projects and Shelves still use the plain PRIVATE/PUBLIC VisibilityOption
+// in Project.cs since SHARED has no meaning for them.
 public static class BookVisibilityOption
 {
     public static readonly IReadOnlyList<string> Options = ["PRIVATE", "SHARED", "PUBLIC"];
@@ -77,8 +84,8 @@ public static class BookVisibilityOption
     public static string For(string visibility) => visibility switch
     {
         "PRIVATE" => "Privat",
-        "SHARED" => "Geteilt (angemeldete Nutzer können lesen)",
-        "PUBLIC" => "Öffentlich",
+        "SHARED" => "Geteilt (nur ausgewählte Personen)",
+        "PUBLIC" => "Öffentlich (jeder angemeldete Nutzer)",
         _ => visibility,
     };
 }
@@ -145,4 +152,7 @@ public class UpdateBookRequest
 
     [JsonPropertyName("visibility")]
     public string? Visibility { get; set; }
+
+    [JsonPropertyName("sharedTeaserVisible")]
+    public bool? SharedTeaserVisible { get; set; }
 }

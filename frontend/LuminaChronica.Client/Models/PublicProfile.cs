@@ -30,10 +30,17 @@ public class PublicBook
     [JsonPropertyName("language")]
     public string? Language { get; set; }
 
-    // "PUBLIC" (teaser only) or "SHARED" ("borrowed reading" -- a logged-in,
-    // non-owner viewer gets a "Lesen" button). PRIVATE books never appear here.
+    // "PUBLIC" (full read for any logged-in user) or "SHARED" (full read
+    // only for people on the book's explicit share list, v3.2/issue #321).
+    // PRIVATE books never appear here.
     [JsonPropertyName("visibility")]
     public string Visibility { get; set; } = "PUBLIC";
+
+    // Computed server-side: can THIS viewer actually read the full book?
+    // Share-list membership is invisible to the frontend, so the "Lesen"
+    // button is keyed off this, not off Visibility directly.
+    [JsonPropertyName("canRead")]
+    public bool CanRead { get; set; }
 
     [JsonPropertyName("averageRating")]
     public double? AverageRating { get; set; }

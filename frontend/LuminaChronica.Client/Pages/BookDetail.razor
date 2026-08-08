@@ -114,7 +114,7 @@ else
                             </button>
                         }
                     }
-                    <button type="button" id="edit-button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+                    <button type="button" id="edit-button" class="btn" @onclick="StartEditingAsync">Bearbeiten</button>
                     <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
                 </div>
                 <ConfirmDialog IsOpen="_confirmingDelete" Message="Buch wirklich löschen?"
@@ -275,7 +275,7 @@ else
                     </div>
                     <div class="form-group">
                         <label for="edit-visibility">Sichtbarkeit</label>
-                        <InputSelect id="edit-visibility" @bind-Value="_editForm.Visibility">
+                        <InputSelect id="edit-visibility" @bind-Value="_editForm.Visibility" @bind-Value:after="OnVisibilityChangedAsync">
                             @foreach (var option in BookVisibilityOption.Options)
                             {
                                 <option value="@option">@BookVisibilityOption.For(option)</option>
@@ -283,11 +283,15 @@ else
                         </InputSelect>
                         @if (_editForm.Visibility == "SHARED")
                         {
-                            <p class="text-muted">Geteilte Bücher können von jedem angemeldeten Nutzer vollständig gelesen werden (eigener Lesefortschritt und eigene Lesezeichen) — spart Speicherplatz, da niemand eine eigene Kopie hochladen muss. Cover und Beschreibung sind wie bei Öffentlich sichtbar.</p>
+                            <p class="text-muted">Geteilte Bücher können nur von den unten ausgewählten Personen vollständig gelesen werden (eigener Lesefortschritt und eigene Lesezeichen) — spart Speicherplatz, da diese Personen keine eigene Kopie hochladen müssen.</p>
+                            <label class="checkbox-label">
+                                <InputCheckbox @bind-Value="_editForm.SharedTeaserVisible" />
+                                Cover und Beschreibung auch für alle anderen sichtbar (auf deinem öffentlichen Profil)
+                            </label>
                         }
-                        else
+                        else if (_editForm.Visibility == "PUBLIC")
                         {
-                            <p class="text-muted">Öffentliche Bücher sind mit Cover und Beschreibung auf deinem öffentlichen Profil sichtbar — die Datei selbst bleibt privat.</p>
+                            <p class="text-muted">Öffentliche Bücher sind mit Cover und Beschreibung für jeden sichtbar (auch nicht angemeldete Besucher) und für jeden angemeldeten Nutzer vollständig lesbar.</p>
                         }
                     </div>
 
@@ -296,6 +300,47 @@ else
                         <button type="button" class="btn" @onclick="CancelEditing">Abbrechen</button>
                     </div>
                 </EditForm>
+
+                @if (_editForm.Visibility == "SHARED")
+                {
+                    <div class="book-share-manager">
+                        <h3>Geteilt mit</h3>
+                        @if (_shareUsers is { Count: > 0 })
+                        {
+                            <ul class="book-share-list">
+                                @foreach (var user in _shareUsers)
+                                {
+                                    <li>
+                                        <span>@user.Username</span>
+                                        <button type="button" class="btn" disabled="@_shareActionInProgress.Contains(user.Username)" @onclick="() => RemoveShareAsync(user.Username)">Entfernen</button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="text-muted">Noch mit niemandem geteilt.</p>
+                        }
+
+                        <input placeholder="Benutzername suchen..." @oninput="OnShareSearchInput" value="@_shareSearchTerm" />
+                        @if (_shareSearchResults is { Count: > 0 })
+                        {
+                            <ul class="book-share-search-results">
+                                @foreach (var candidate in _shareSearchResults)
+                                {
+                                    <li>
+                                        <span>@candidate.Username</span>
+                                        <button type="button" class="btn" disabled="@_shareActionInProgress.Contains(candidate.Username)" @onclick="() => AddShareAsync(candidate.Username)">Hinzufügen</button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_shareSearchTerm))
+                        {
+                            <p class="text-muted">Keine Nutzer gefunden.</p>
+                        }
+                    </div>
+                }
             }
         </div>
     </div>
@@ -316,6 +361,12 @@ else
     private IBrowserFile? _selectedEditCover;
     private bool _isDraggingCover;
     private EditFormModel _editForm = new();
+
+    private List<DiscoverUser>? _shareUsers;
+    private readonly HashSet<string> _shareActionInProgress = [];
+    private string _shareSearchTerm = string.Empty;
+    private List<DiscoverUser>? _shareSearchResults;
+    private System.Threading.Timer? _shareSearchDebounceTimer;
 
     private bool _isLookingUpEnrichment;
     private string? _enrichmentStatus;
@@ -498,7 +549,7 @@ else
         }
     }
 
-    private void StartEditing()
+    private async Task StartEditingAsync()
     {
         if (_book is null) return;
 
@@ -515,6 +566,7 @@ else
             ReleaseDate = _book.ReleaseDate,
             Pages = _book.Pages,
             Visibility = _book.Visibility,
+            SharedTeaserVisible = _book.SharedTeaserVisible,
         };
         _saveErrorMessage = null;
         _coverSaveErrorMessage = null;
@@ -525,9 +577,80 @@ else
         ClearPendingCover();
         _selectedEditCover = null;
         _isEditing = true;
+        _shareSearchTerm = string.Empty;
+        _shareSearchResults = null;
+        _shareUsers = null;
+        if (_editForm.Visibility == "SHARED") await LoadSharesAsync();
+    }
+
+    // Fetch the share list lazily, the first time the dropdown is switched
+    // to SHARED -- avoids an always-on request for every book regardless of
+    // visibility, and keeps a book that was never SHARED from ever needing
+    // this endpoint at all.
+    private async Task OnVisibilityChangedAsync()
+    {
+        if (_editForm.Visibility == "SHARED" && _shareUsers is null) await LoadSharesAsync();
     }
 
     private void CancelEditing() => _isEditing = false;
+
+    private async Task LoadSharesAsync()
+    {
+        var response = await ApiClient.GetAsync<List<DiscoverUser>>($"/api/books/{Id}/shares");
+        _shareUsers = response is { Success: true, Data: not null } ? response.Data : [];
+    }
+
+    private void OnShareSearchInput(ChangeEventArgs e)
+    {
+        _shareSearchTerm = e.Value?.ToString() ?? string.Empty;
+
+        _shareSearchDebounceTimer?.Dispose();
+        _shareSearchDebounceTimer = new System.Threading.Timer(
+            _ => InvokeAsync(async () =>
+            {
+                await SearchShareCandidatesAsync();
+                // Same gap as Discover.razor's user search: a Timer callback
+                // reached via InvokeAsync doesn't auto-render.
+                StateHasChanged();
+            }),
+            null,
+            400,
+            Timeout.Infinite);
+    }
+
+    private async Task SearchShareCandidatesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_shareSearchTerm))
+        {
+            _shareSearchResults = null;
+            return;
+        }
+
+        var response = await ApiClient.GetAsync<DiscoverUserListResponse>($"/api/discover/users?search={Uri.EscapeDataString(_shareSearchTerm)}");
+        var alreadyShared = (_shareUsers ?? []).Select(u => u.Username).ToHashSet();
+        _shareSearchResults = response is { Success: true, Data: not null }
+            ? response.Data.Items.Where(u => !alreadyShared.Contains(u.Username)).ToList()
+            : [];
+    }
+
+    private async Task AddShareAsync(string username)
+    {
+        if (!_shareActionInProgress.Add(username)) return;
+
+        var succeeded = await ApiClient.PostAsync($"/api/books/{Id}/shares", new { username });
+        if (succeeded) await LoadSharesAsync();
+        _shareActionInProgress.Remove(username);
+        _shareSearchResults = _shareSearchResults?.Where(u => u.Username != username).ToList();
+    }
+
+    private async Task RemoveShareAsync(string username)
+    {
+        if (!_shareActionInProgress.Add(username)) return;
+
+        var succeeded = await ApiClient.DeleteAsync($"/api/books/{Id}/shares/{Uri.EscapeDataString(username)}");
+        if (succeeded) await LoadSharesAsync();
+        _shareActionInProgress.Remove(username);
+    }
 
     private void OnEditCoverSelected(InputFileChangeEventArgs e) => _selectedEditCover = e.File;
 
@@ -748,6 +871,7 @@ else
             ReleaseDate = _editForm.ReleaseDate,
             Pages = _editForm.Pages,
             Visibility = _editForm.Visibility,
+            SharedTeaserVisible = _editForm.SharedTeaserVisible,
         };
 
         var response = await ApiClient.PutAsync<UpdateBookRequest, Book>($"/api/books/{Id}", request);
@@ -810,6 +934,7 @@ else
         {
             _ = _enrichmentModule.DisposeAsync();
         }
+        _shareSearchDebounceTimer?.Dispose();
     }
 
     private class EditFormModel
@@ -825,6 +950,7 @@ else
         public string? ReleaseDate { get; set; }
         public int? Pages { get; set; }
         public string Visibility { get; set; } = "PRIVATE";
+        public bool SharedTeaserVisible { get; set; } = true;
 
         // InputDate needs a DateOnly?-typed property to bind to; ReleaseDate
         // itself stays a string since that's what crosses the wire.

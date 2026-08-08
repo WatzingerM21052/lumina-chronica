@@ -131,13 +131,21 @@ async function setVisibility(token: string, bookId: number, visibility: string) 
     );
 }
 
-// "Borrowed reading" (follow-up to Community Phase 1/#300): a SHARED book's
-// owner grants any logged-in user full read access, with independently
-// saved progress -- see readingService.ts's isAccessibleByUser.
-describe("Borrowed reading: SHARED books", () => {
-    it("lets a non-owner read and save progress on a SHARED book, independent of the owner's own progress", async () => {
+async function shareBook(ownerToken: string, bookId: number, username: string) {
+    return app.request(
+        `/api/books/${bookId}/shares`,
+        { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${ownerToken}` }, body: JSON.stringify({ username }) },
+        env
+    );
+}
+
+// v3.2 (issue #321): PUBLIC grants progress access to any logged-in user;
+// SHARED requires being on the book's explicit share list -- see
+// readingService.ts's isAccessibleByUser.
+describe("Borrowed reading: PUBLIC (any logged-in user) and SHARED (explicit share list)", () => {
+    it("lets any logged-in non-owner read and save progress on a PUBLIC book, independent of the owner's own progress", async () => {
         const bookId = await uploadBook(tokenA);
-        await setVisibility(tokenA, bookId, "SHARED");
+        await setVisibility(tokenA, bookId, "PUBLIC");
 
         const initialGet = await app.request(`/api/reading/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
         expect(initialGet.status).toBe(200);
@@ -170,9 +178,26 @@ describe("Borrowed reading: SHARED books", () => {
         expect((await readJson(borrowerProgress)).data).toMatchObject({ chapter: 2, position: "0.1", percentage: 10 });
     });
 
-    it("still returns 404 for a non-owner when the book is only PUBLIC, not SHARED", async () => {
+    it("lets a listed user read and save progress on a SHARED book", async () => {
         const bookId = await uploadBook(tokenA);
-        await setVisibility(tokenA, bookId, "PUBLIC");
+        await setVisibility(tokenA, bookId, "SHARED");
+        await shareBook(tokenA, bookId, "bob");
+
+        const saveRes = await app.request(
+            "/api/reading/update",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenB}` },
+                body: JSON.stringify({ bookId, percentage: 10 }),
+            },
+            env
+        );
+        expect(saveRes.status).toBe(200);
+    });
+
+    it("still returns 404 for a non-listed user on a SHARED book", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setVisibility(tokenA, bookId, "SHARED");
 
         const getRes = await app.request(`/api/reading/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
         expect(getRes.status).toBe(404);

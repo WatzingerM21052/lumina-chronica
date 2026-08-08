@@ -80,18 +80,30 @@ public class BookDetailPageTests : BunitContext
     }
 
     [Fact]
-    public void BookDetail_EditForm_VisibilitySelector_OffersSharedAndExplainsBorrowedReading()
+    public void BookDetail_EditForm_VisibilitySelector_OffersSharedAndExplainsSharing()
     {
-        // "Borrowed reading" (follow-up to #300) -- SHARED is now a real,
-        // book-only choice (see Models/Book.cs's BookVisibilityOption),
-        // distinct from Project/Shelf's plain PRIVATE/PUBLIC VisibilityOption.
-        UseApiResponse("""
+        // v3.2 (issue #321) swapped PUBLIC/SHARED semantics: SHARED is now
+        // the explicit-share-list tier (see Models/Book.cs's
+        // BookVisibilityOption), distinct from Project/Shelf's plain
+        // PRIVATE/PUBLIC VisibilityOption. Switching to SHARED lazily fetches
+        // the share list (OnVisibilityChangedAsync) -- needs its own route,
+        // not UseApiResponse's single fixed response, or that GET would
+        // deserialize the book JSON as List<DiscoverUser> and throw.
+        const string bookJson = """
             {"success":true,"data":{
                 "id":1,"title":"Dune","author":"Frank Herbert","description":null,
                 "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
             }}
-            """);
+            """;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/shares", """{"success":true,"data":[]}""")
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.Find("#edit-button").Click();
@@ -101,7 +113,49 @@ public class BookDetailPageTests : BunitContext
 
         cut.Find("#edit-visibility").Change("SHARED");
         Assert.Equal("SHARED", cut.Find("#edit-visibility").GetAttribute("value"));
-        Assert.Contains("können von jedem angemeldeten Nutzer vollständig gelesen werden", cut.Markup);
+        Assert.Contains("können nur von den unten ausgewählten Personen vollständig gelesen werden", cut.Markup);
+        Assert.Contains("Geteilt mit", cut.Markup);
+
+        cut.Find("#edit-visibility").Change("PUBLIC");
+        Assert.Contains("für jeden angemeldeten Nutzer vollständig lesbar", cut.Markup);
+    }
+
+    [Fact]
+    public void BookDetail_ShareManager_RendersExistingShares_AndRemoveSendsDelete()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","createdAt":"2026-01-01",
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+        const string sharesJson = """{"success":true,"data":[{"username":"carol","avatarUrl":null}]}""";
+
+        HttpRequestMessage? deleteRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Delete, r =>
+            {
+                deleteRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":null}""");
+            })
+            .WhenPathEndsWith("/shares", sharesJson)
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<OfflineStorageService>();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+
+        Assert.Contains("carol", cut.Markup);
+
+        cut.FindAll(".book-share-list button").Single(b => b.TextContent.Trim() == "Entfernen").Click();
+
+        Assert.Equal(HttpMethod.Delete, deleteRequest?.Method);
+        Assert.Equal("/api/books/1/shares/carol", deleteRequest?.RequestUri?.AbsolutePath);
     }
 
     [Fact]

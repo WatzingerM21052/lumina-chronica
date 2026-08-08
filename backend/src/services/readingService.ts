@@ -27,14 +27,24 @@ function toProgress(row: ReadingProgressRow): ReadingProgress {
     };
 }
 
-// Owner always qualifies; a SHARED book also qualifies for any other
-// logged-in user ("borrowed reading" -- see bookService.ts's
+// Owner always qualifies; PUBLIC qualifies for any logged-in user; SHARED
+// qualifies only for someone on that book's explicit share list (v3.2,
+// issue #321, book_shares/migration 0017) -- see bookService.ts's
 // findAccessibleBookRow for the matching read-access rule on the book
-// itself). reading_progress/reading_activity are already keyed by user_id,
+// itself. reading_progress/reading_activity are already keyed by user_id,
 // not owner_id, so a borrower's progress is naturally independent of both
 // the owner's and any other borrower's -- no schema change needed.
 async function isAccessibleByUser(db: D1Database, userId: number, bookId: number): Promise<boolean> {
-    const row = await db.prepare("SELECT id FROM books WHERE id = ? AND (owner_id = ? OR visibility = 'SHARED')").bind(bookId, userId).first();
+    const row = await db
+        .prepare(
+            `SELECT id FROM books WHERE id = ? AND (
+                owner_id = ?
+                OR visibility = 'PUBLIC'
+                OR (visibility = 'SHARED' AND EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?))
+             )`
+        )
+        .bind(bookId, userId, userId)
+        .first();
     return row !== null;
 }
 

@@ -41,10 +41,16 @@ public class PublicProfilePageTests : BunitContext
         """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":true,"books":[{"id":9,"title":"My Own Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"averageRating":4.5,"ratingCount":2,"myRating":null}],"projects":[]}}""";
 
     // "Borrowed reading" (follow-up to #300) -- a SHARED book skips the
-    // rating widget entirely (ratings stay PUBLIC-only) and shows a
-    // "Lesen"/"Anmelden zum Lesen" affordance instead.
-    private const string SharedBookProfileJson =
-        """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Shared Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","averageRating":null,"ratingCount":0,"myRating":null}],"projects":[]}}""";
+    // rating widget entirely (ratings stay PUBLIC-only) and shows a "Lesen"
+    // button when canRead is true (v3.2, issue #321 -- share-list
+    // membership is invisible to the frontend, so it's keyed off this
+    // computed field, not raw visibility) or a "Privat geteilt" message
+    // otherwise.
+    private const string SharedBookReadableProfileJson =
+        """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Shared Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","canRead":true,"averageRating":null,"ratingCount":0,"myRating":null}],"projects":[]}}""";
+
+    private const string SharedBookNotReadableProfileJson =
+        """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Shared Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"visibility":"SHARED","canRead":false,"averageRating":null,"ratingCount":0,"myRating":null}],"projects":[]}}""";
 
     private const string EmptyProfileJson =
         """{"success":true,"data":{"username":"alice","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[],"projects":[]}}""";
@@ -327,9 +333,39 @@ public class PublicProfilePageTests : BunitContext
     }
 
     [Fact]
-    public void PublicProfile_SharedBook_ShowsLesenButton_WhenLoggedIn()
+    public void PublicProfile_PublicBook_ShowsLesenButtonAlongsideRatingWidget_WhenLoggedIn()
     {
-        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/public", SharedBookProfileJson);
+        var readableJson = """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Public Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","canRead":true,"averageRating":null,"ratingCount":0,"myRating":null}],"projects":[]}}""";
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/public", readableJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        SetAuthenticated(true, "alice");
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
+
+        var lesenLink = cut.FindAll("a").Single(a => a.TextContent.Trim() == "Lesen");
+        Assert.Equal("library/books/9/read", lesenLink.GetAttribute("href"));
+        Assert.Contains("Noch keine Bewertungen", cut.Markup);
+    }
+
+    [Fact]
+    public void PublicProfile_PublicBook_ShowsAnmeldenPrompt_WhenLoggedOut()
+    {
+        var teaserOnlyJson = """{"success":true,"data":{"username":"bob","avatarUrl":null,"followerCount":0,"followingCount":0,"isFollowing":false,"isOwnProfile":false,"books":[{"id":9,"title":"Public Book","author":null,"description":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PUBLIC","canRead":false,"averageRating":null,"ratingCount":0,"myRating":null}],"projects":[]}}""";
+        UseRoutes(teaserOnlyJson);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
+
+        Assert.Contains("Anmelden zum Lesen", cut.Markup);
+        Assert.DoesNotContain(cut.FindAll("a"), a => a.TextContent.Trim() == "Lesen");
+    }
+
+    [Fact]
+    public void PublicProfile_SharedBook_ShowsLesenButton_WhenCanRead()
+    {
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/public", SharedBookReadableProfileJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
@@ -344,13 +380,17 @@ public class PublicProfilePageTests : BunitContext
     }
 
     [Fact]
-    public void PublicProfile_SharedBook_ShowsAnmeldenPrompt_WhenLoggedOut()
+    public void PublicProfile_SharedBook_ShowsPrivatGeteilt_WhenNotCanRead()
     {
-        UseRoutes(SharedBookProfileJson);
+        // Covers both a logged-out visitor and a logged-in user who just
+        // isn't on the share list -- neither can tell the two apart, and
+        // logging in wouldn't help the second case, so there's no
+        // "Anmelden zum Lesen" prompt for SHARED the way there is for PUBLIC.
+        UseRoutes(SharedBookNotReadableProfileJson);
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
 
-        Assert.Contains("Anmelden zum Lesen", cut.Markup);
+        Assert.Contains("Privat geteilt", cut.Markup);
         Assert.DoesNotContain(cut.FindAll("a"), a => a.TextContent.Trim() == "Lesen");
     }
 

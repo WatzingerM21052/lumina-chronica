@@ -155,18 +155,42 @@ describe("GET /api/dashboard", () => {
         expect(json.data.recommendations).toHaveLength(5);
     });
 
-    // "Borrowed reading" (follow-up to #300): a SHARED book someone else
-    // owns shows up in the caller's own continue-reading list once the
-    // caller has progress on it, tagged with the owner's username so the
-    // frontend can render a "Geliehen von" badge instead of the favorite star.
-    it("includes a borrowed SHARED book in continue-reading, tagged with the owner's username", async () => {
+    // v3.2 (issue #321): a PUBLIC or SHARED book someone else owns shows up
+    // in the caller's own continue-reading list once the caller has
+    // progress on it, tagged with the owner's username so the frontend can
+    // render a "Geliehen von" badge instead of the favorite star.
+    it("includes a borrowed PUBLIC book in continue-reading, tagged with the owner's username", async () => {
         const ownBookId = await uploadBook(tokenA, "Alice's Own Book");
         await saveProgress(tokenA, ownBookId, 20);
 
+        const publicBookId = await uploadBook(tokenB, "Bob's Public Book");
+        await app.request(
+            `/api/books/${publicBookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+        await saveProgress(tokenA, publicBookId, 40);
+
+        const res = await app.request("/api/dashboard", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.continueReading).toHaveLength(2);
+        const own = json.data.continueReading.find((item: { book: { title: string } }) => item.book.title === "Alice's Own Book");
+        const borrowed = json.data.continueReading.find((item: { book: { title: string } }) => item.book.title === "Bob's Public Book");
+        expect(own).toMatchObject({ ownerUsername: null });
+        expect(borrowed).toMatchObject({ ownerUsername: "bob" });
+    });
+
+    it("includes a SHARED book in continue-reading only once listed, tagged with the owner's username", async () => {
         const sharedBookId = await uploadBook(tokenB, "Bob's Shared Book");
         await app.request(
             `/api/books/${sharedBookId}`,
             { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "SHARED" }) },
+            env
+        );
+        await app.request(
+            `/api/books/${sharedBookId}/shares`,
+            { method: "POST", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ username: "alice" }) },
             env
         );
         await saveProgress(tokenA, sharedBookId, 40);
@@ -174,24 +198,21 @@ describe("GET /api/dashboard", () => {
         const res = await app.request("/api/dashboard", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
         const json = await readJson(res);
 
-        expect(json.data.continueReading).toHaveLength(2);
-        const own = json.data.continueReading.find((item: { book: { title: string } }) => item.book.title === "Alice's Own Book");
-        const borrowed = json.data.continueReading.find((item: { book: { title: string } }) => item.book.title === "Bob's Shared Book");
-        expect(own).toMatchObject({ ownerUsername: null });
-        expect(borrowed).toMatchObject({ ownerUsername: "bob" });
+        expect(json.data.continueReading).toHaveLength(1);
+        expect(json.data.continueReading[0]).toMatchObject({ ownerUsername: "bob" });
     });
 
     it("drops a borrowed book from continue-reading once the owner flips it back to PRIVATE", async () => {
-        const sharedBookId = await uploadBook(tokenB, "Bob's Shared Book");
+        const publicBookId = await uploadBook(tokenB, "Bob's Public Book");
         await app.request(
-            `/api/books/${sharedBookId}`,
-            { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "SHARED" }) },
+            `/api/books/${publicBookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PUBLIC" }) },
             env
         );
-        await saveProgress(tokenA, sharedBookId, 40);
+        await saveProgress(tokenA, publicBookId, 40);
 
         await app.request(
-            `/api/books/${sharedBookId}`,
+            `/api/books/${publicBookId}`,
             { method: "PUT", headers: { Authorization: `Bearer ${tokenB}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PRIVATE" }) },
             env
         );

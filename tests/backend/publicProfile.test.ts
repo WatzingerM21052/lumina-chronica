@@ -10,6 +10,7 @@ import { readJson } from "./testUtils";
 
 let env: { DB: D1Database; STORAGE: R2Bucket; JWT_SECRET: string };
 let tokenA: string;
+let tokenB: string;
 
 async function registerAndLogin(username: string, email: string): Promise<string> {
     const res = await app.request(
@@ -41,9 +42,18 @@ async function createProject(token: string, cover = false): Promise<number> {
     return (await readJson(res)).data.id;
 }
 
+async function shareBook(ownerToken: string, bookId: number, username: string) {
+    return app.request(
+        `/api/books/${bookId}/shares`,
+        { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${ownerToken}` }, body: JSON.stringify({ username }) },
+        env
+    );
+}
+
 beforeEach(async () => {
     env = { DB: createFakeD1(), STORAGE: createFakeR2(), JWT_SECRET: "test-secret-do-not-use-in-production" };
     tokenA = await registerAndLogin("alice", "alice@example.com");
+    tokenB = await registerAndLogin("bob", "bob@example.com");
 });
 
 describe("GET /api/users/:username/public", () => {
@@ -99,23 +109,65 @@ describe("GET /api/users/:username/public", () => {
         expect(json.data.books[0]).not.toHaveProperty("isFavorite");
     });
 
-    // "Borrowed reading" (follow-up to #300): SHARED books show the same
-    // cover+metadata teaser as PUBLIC ones on the public profile, tagged
-    // with visibility so the frontend can offer a "Lesen" button to a
-    // logged-in, non-owner viewer instead of the rating widget.
-    it("includes a SHARED book in the public listing, tagged with its visibility", async () => {
+    // v3.2 (issue #321): SHARED books show the same cover+metadata teaser as
+    // PUBLIC ones (unless shared_teaser_visible is off), tagged with
+    // visibility AND a computed canRead so the frontend can offer a "Lesen"
+    // button only to a viewer who can actually read the book -- share-list
+    // membership is invisible to the frontend otherwise.
+    it("includes a SHARED book in the public listing with canRead reflecting share-list membership", async () => {
         const bookId = await uploadBook(tokenA, true);
         await app.request(
             `/api/books/${bookId}`,
             { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "SHARED" }) },
             env
         );
+        await shareBook(tokenA, bookId, "bob");
 
-        const res = await app.request("/api/users/alice/public", {}, env);
-        const json = await readJson(res);
+        const anonRes = await app.request("/api/users/alice/public", {}, env);
+        expect((await readJson(anonRes)).data.books[0]).toMatchObject({ id: bookId, visibility: "SHARED", canRead: false });
 
-        expect(json.data.books).toHaveLength(1);
-        expect(json.data.books[0]).toMatchObject({ id: bookId, visibility: "SHARED" });
+        const listedRes = await app.request("/api/users/alice/public", { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect((await readJson(listedRes)).data.books[0]).toMatchObject({ id: bookId, visibility: "SHARED", canRead: true });
+
+        const ownerRes = await app.request("/api/users/alice/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect((await readJson(ownerRes)).data.books[0]).toMatchObject({ id: bookId, visibility: "SHARED", canRead: true });
+    });
+
+    it("gives canRead: true to any logged-in non-owner for a PUBLIC book, false when anonymous", async () => {
+        const bookId = await uploadBook(tokenA);
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+
+        const loggedInRes = await app.request("/api/users/alice/public", { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect((await readJson(loggedInRes)).data.books[0]).toMatchObject({ canRead: true });
+
+        const anonRes = await app.request("/api/users/alice/public", {}, env);
+        expect((await readJson(anonRes)).data.books[0]).toMatchObject({ canRead: false });
+    });
+
+    it("hides a SHARED book from a non-listed viewer entirely once shared_teaser_visible is turned off", async () => {
+        const bookId = await uploadBook(tokenA, true);
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "SHARED", sharedTeaserVisible: false }) },
+            env
+        );
+        await shareBook(tokenA, bookId, "bob");
+        const tokenC = await registerAndLogin("carol", "carol@example.com");
+
+        const anonRes = await app.request("/api/users/alice/public", {}, env);
+        expect((await readJson(anonRes)).data.books).toEqual([]);
+
+        const nonListedRes = await app.request("/api/users/alice/public", { headers: { Authorization: `Bearer ${tokenC}` } }, env);
+        expect((await readJson(nonListedRes)).data.books).toEqual([]);
+
+        const listedRes = await app.request("/api/users/alice/public", { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        const listedJson = await readJson(listedRes);
+        expect(listedJson.data.books).toHaveLength(1);
+        expect(listedJson.data.books[0]).toMatchObject({ canRead: true });
     });
 
     it("rejects an invalid visibility value", async () => {
@@ -172,7 +224,7 @@ describe("GET /api/books/:id/cover and /api/projects/:id/cover (PUBLIC bypass)",
         expect(res.status).toBe(401);
     });
 
-    it("serves a SHARED book's cover with no Authorization header, same teaser as PUBLIC", async () => {
+    it("serves a SHARED book's cover with no Authorization header, same teaser as PUBLIC (shared_teaser_visible defaults on)", async () => {
         const bookId = await uploadBook(tokenA, true);
         await app.request(
             `/api/books/${bookId}`,
@@ -182,6 +234,26 @@ describe("GET /api/books/:id/cover and /api/projects/:id/cover (PUBLIC bypass)",
 
         const res = await app.request(`/api/books/${bookId}/cover`, {}, env);
         expect(res.status).toBe(200);
+    });
+
+    it("hides a SHARED book's cover from a non-listed viewer once shared_teaser_visible is off, but still serves it to a listed viewer", async () => {
+        const bookId = await uploadBook(tokenA, true);
+        await app.request(
+            `/api/books/${bookId}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "SHARED", sharedTeaserVisible: false }) },
+            env
+        );
+        await app.request(
+            `/api/books/${bookId}/shares`,
+            { method: "POST", headers: { Authorization: `Bearer ${tokenA}`, "Content-Type": "application/json" }, body: JSON.stringify({ username: "bob" }) },
+            env
+        );
+
+        const anonRes = await app.request(`/api/books/${bookId}/cover`, {}, env);
+        expect(anonRes.status).toBe(404);
+
+        const listedRes = await app.request(`/api/books/${bookId}/cover`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(listedRes.status).toBe(200);
     });
 
     it("never serves a SHARED book's FILE without auth (borrowed reading requires being logged in)", async () => {

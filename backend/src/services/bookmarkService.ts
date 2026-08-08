@@ -41,14 +41,24 @@ function toBookmark(row: BookmarkRow): Bookmark {
     };
 }
 
-// Owner always qualifies; a SHARED book also qualifies for any other
-// logged-in user ("borrowed reading" -- see readingService.ts's matching
-// isAccessibleByUser and bookService.ts's findAccessibleBookRow). Bookmark
-// rows themselves are already keyed by user_id (see findOwnedBookmarkRow
-// below), so a borrower's bookmarks are naturally independent of the
-// owner's -- no schema change needed.
+// Owner always qualifies; PUBLIC qualifies for any logged-in user; SHARED
+// qualifies only for someone on that book's explicit share list (v3.2,
+// issue #321, book_shares/migration 0017) -- see readingService.ts's
+// matching isAccessibleByUser and bookService.ts's findAccessibleBookRow.
+// Bookmark rows themselves are already keyed by user_id (see
+// findOwnedBookmarkRow below), so a borrower's bookmarks are naturally
+// independent of the owner's -- no schema change needed.
 async function isAccessibleByUser(db: D1Database, userId: number, bookId: number): Promise<boolean> {
-    const row = await db.prepare("SELECT id FROM books WHERE id = ? AND (owner_id = ? OR visibility = 'SHARED')").bind(bookId, userId).first();
+    const row = await db
+        .prepare(
+            `SELECT id FROM books WHERE id = ? AND (
+                owner_id = ?
+                OR visibility = 'PUBLIC'
+                OR (visibility = 'SHARED' AND EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?))
+             )`
+        )
+        .bind(bookId, userId, userId)
+        .first();
     return row !== null;
 }
 

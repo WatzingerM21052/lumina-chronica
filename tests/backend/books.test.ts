@@ -361,16 +361,25 @@ async function setVisibility(token: string, bookId: number, visibility: string) 
     );
 }
 
-// "Borrowed reading" (follow-up to Community Phase 1/#300): a SHARED book's
-// owner grants any other logged-in user full read access (detail + file),
-// but every mutation (edit/delete/favorite/cover replace) stays strictly
-// owner-only -- see bookService.ts's findAccessibleBookRow vs
-// findOwnedBookRow.
-describe("Borrowed reading: SHARED books", () => {
-    it("lets a non-owner read the book detail and file once SHARED", async () => {
+async function shareBook(ownerToken: string, bookId: number, username: string) {
+    return app.request(
+        `/api/books/${bookId}/shares`,
+        { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${ownerToken}` }, body: JSON.stringify({ username }) },
+        env
+    );
+}
+
+// v3.2 (issue #321) swapped PUBLIC/SHARED semantics after user feedback on
+// v3.1: PUBLIC now grants full read access (detail + file) to any logged-in
+// user; SHARED requires being on the book's explicit share list
+// (book_shares). Every mutation (edit/delete/favorite/cover replace) stays
+// strictly owner-only regardless -- see bookService.ts's
+// findAccessibleBookRow vs findOwnedBookRow.
+describe("Borrowed reading: PUBLIC (any logged-in user) and SHARED (explicit share list)", () => {
+    it("lets any logged-in non-owner read a PUBLIC book's detail and file", async () => {
         const uploadRes = await uploadBook(tokenA);
         const bookId = (await readJson(uploadRes)).data.id;
-        await setVisibility(tokenA, bookId, "SHARED");
+        await setVisibility(tokenA, bookId, "PUBLIC");
 
         const detailRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
         expect(detailRes.status).toBe(200);
@@ -380,10 +389,24 @@ describe("Borrowed reading: SHARED books", () => {
         expect(await fileRes.text()).toBe("epub-bytes");
     });
 
-    it("still returns 404 for a non-owner when the book is only PUBLIC, not SHARED", async () => {
+    it("lets a listed user read a SHARED book's detail and file", async () => {
         const uploadRes = await uploadBook(tokenA);
         const bookId = (await readJson(uploadRes)).data.id;
-        await setVisibility(tokenA, bookId, "PUBLIC");
+        await setVisibility(tokenA, bookId, "SHARED");
+        await shareBook(tokenA, bookId, "bob");
+
+        const detailRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(detailRes.status).toBe(200);
+
+        const fileRes = await app.request(`/api/books/${bookId}/file`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(fileRes.status).toBe(200);
+        expect(await fileRes.text()).toBe("epub-bytes");
+    });
+
+    it("still returns 404 for a non-listed user on a SHARED book", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+        await setVisibility(tokenA, bookId, "SHARED");
 
         const detailRes = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
         expect(detailRes.status).toBe(404);
@@ -392,10 +415,48 @@ describe("Borrowed reading: SHARED books", () => {
         expect(fileRes.status).toBe(404);
     });
 
-    it("keeps edit/delete/favorite/cover-replace strictly owner-only even when SHARED", async () => {
+    it("removes access again once unshared", async () => {
         const uploadRes = await uploadBook(tokenA);
         const bookId = (await readJson(uploadRes)).data.id;
         await setVisibility(tokenA, bookId, "SHARED");
+        await shareBook(tokenA, bookId, "bob");
+        expect((await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env)).status).toBe(200);
+
+        await app.request(`/api/books/${bookId}/shares/bob`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+
+        expect((await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env)).status).toBe(404);
+    });
+
+    it("rejects self-share and sharing by a non-owner", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+        await setVisibility(tokenA, bookId, "SHARED");
+
+        const selfShareRes = await shareBook(tokenA, bookId, "alice");
+        expect(selfShareRes.status).toBe(400);
+
+        const nonOwnerShareRes = await shareBook(tokenB, bookId, "bob");
+        expect(nonOwnerShareRes.status).toBe(404);
+    });
+
+    it("lists shared users, owner-only", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+        await setVisibility(tokenA, bookId, "SHARED");
+        await shareBook(tokenA, bookId, "bob");
+
+        const listRes = await app.request(`/api/books/${bookId}/shares`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect((await readJson(listRes)).data).toEqual([{ username: "bob", avatarUrl: null }]);
+
+        const nonOwnerListRes = await app.request(`/api/books/${bookId}/shares`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        expect(nonOwnerListRes.status).toBe(404);
+    });
+
+    it("keeps edit/delete/favorite/cover-replace strictly owner-only for PUBLIC and SHARED", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+        await setVisibility(tokenA, bookId, "SHARED");
+        await shareBook(tokenA, bookId, "bob");
 
         const editRes = await app.request(
             `/api/books/${bookId}`,
@@ -416,10 +477,11 @@ describe("Borrowed reading: SHARED books", () => {
         expect(deleteRes.status).toBe(404);
     });
 
-    it("never leaks the owner's favorite flag to a borrower reading a SHARED book", async () => {
+    it("never leaks the owner's favorite flag to a listed user reading a SHARED book", async () => {
         const uploadRes = await uploadBook(tokenA);
         const bookId = (await readJson(uploadRes)).data.id;
         await setVisibility(tokenA, bookId, "SHARED");
+        await shareBook(tokenA, bookId, "bob");
         await app.request(`/api/books/${bookId}/favorite`, { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
 
         const ownerView = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
@@ -427,5 +489,18 @@ describe("Borrowed reading: SHARED books", () => {
 
         const borrowerView = await app.request(`/api/books/${bookId}`, { headers: { Authorization: `Bearer ${tokenB}` } }, env);
         expect((await readJson(borrowerView)).data.isFavorite).toBe(false);
+    });
+
+    it("deleting a SHARED book with active shares succeeds and cleans up book_shares", async () => {
+        const uploadRes = await uploadBook(tokenA);
+        const bookId = (await readJson(uploadRes)).data.id;
+        await setVisibility(tokenA, bookId, "SHARED");
+        await shareBook(tokenA, bookId, "bob");
+
+        const deleteRes = await app.request(`/api/books/${bookId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(deleteRes.status).toBe(204);
+
+        const rows = await env.DB.prepare("SELECT COUNT(*) AS total FROM book_shares WHERE book_id = ?").bind(bookId).first<{ total: number }>();
+        expect(rows?.total).toBe(0);
     });
 });
