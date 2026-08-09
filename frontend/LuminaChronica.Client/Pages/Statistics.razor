@@ -16,7 +16,7 @@
 
 @if (_stats is null)
 {
-    <LoadingIndicator Text="Statistik wird geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Processing" Text="Statistik wird geladen..." />
 }
 else if (_stats is { BooksRead: 0, BooksInProgress: 0 })
 {

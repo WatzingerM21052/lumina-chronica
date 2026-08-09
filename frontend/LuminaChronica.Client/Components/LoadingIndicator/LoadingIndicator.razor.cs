@@ -66,6 +66,7 @@ public partial class LoadingIndicator : ComponentBase
             LoadingIndicatorType.Reading => "images/mascot/optimized/lumina-reader.webp",
             LoadingIndicatorType.Upload => "images/mascot/optimized/lumina-scribe.webp",
             LoadingIndicatorType.Map => "images/mascot/optimized/lumina-cartographer.webp",
+            LoadingIndicatorType.Processing => "images/mascot/optimized/lumina-thinker.webp",
             _ => null,
         }
         : null;
