@@ -89,18 +89,37 @@
     }
     else
     {
-        <div class="catalog-grid">
+        <div class="catalog-grid" @ref="_gridRef">
             @foreach (var book in _books)
             {
-                <CatalogCard Kind="book"
-                             Href="@($"library/books/{book.Id}")"
-                             Title="@book.Title"
-                             Subtitle="@book.Author"
-                             CoverUrl="@(_coverObjectUrls.TryGetValue(book.Id, out var coverUrl) ? coverUrl : null)"
-                             OwnerUsername="@book.OwnerUsername"
-                             OnOwnerClick="GoToProfile"
-                             RatingAverage="@book.AverageRating"
-                             RatingCount="@book.RatingCount" />
+                @* data-lazy-cover marks a card whose cover hasn't been fetched yet --
+                   removed once it has, so a later re-observe (e.g. after sorting)
+                   never re-watches an already-loaded card. *@
+                @if (book.CoverUrl is not null && !_coverObjectUrls.ContainsKey(book.Id))
+                {
+                    <div data-lazy-cover data-book-id="@book.Id">
+                        <CatalogCard Kind="book"
+                                     Href="@($"library/books/{book.Id}")"
+                                     Title="@book.Title"
+                                     Subtitle="@book.Author"
+                                     OwnerUsername="@book.OwnerUsername"
+                                     OnOwnerClick="GoToProfile"
+                                     RatingAverage="@book.AverageRating"
+                                     RatingCount="@book.RatingCount" />
+                    </div>
+                }
+                else
+                {
+                    <CatalogCard Kind="book"
+                                 Href="@($"library/books/{book.Id}")"
+                                 Title="@book.Title"
+                                 Subtitle="@book.Author"
+                                 CoverUrl="@(_coverObjectUrls.TryGetValue(book.Id, out var coverUrl) ? coverUrl : null)"
+                                 OwnerUsername="@book.OwnerUsername"
+                                 OnOwnerClick="GoToProfile"
+                                 RatingAverage="@book.AverageRating"
+                                 RatingCount="@book.RatingCount" />
+                }
             }
         </div>
     }
@@ -120,6 +139,9 @@
     private System.Threading.Timer? _userSearchDebounceTimer;
     private bool _isSearchingUsers;
     private IJSObjectReference? _motionModule;
+    private IJSObjectReference? _lazyCoverModule;
+    private DotNetObjectReference<Discover>? _dotNetRef;
+    private ElementReference _gridRef;
 
     protected override async Task OnInitializedAsync() => await LoadBooksAsync();
 
@@ -139,6 +161,20 @@
         catch (Exception)
         {
         }
+
+        // Re-observes on every render, same idempotent-per-render reasoning
+        // as initReveal above: the grid doesn't exist yet during the
+        // skeleton phase, and which cards still need data-lazy-cover
+        // changes as covers finish loading (issue #349 Phase C).
+        try
+        {
+            _lazyCoverModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/lazyCover.js");
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await _lazyCoverModule.InvokeVoidAsync("observe", _gridRef, _dotNetRef, nameof(LoadCoverAsync));
+        }
+        catch (Exception)
+        {
+        }
     }
 
     private async Task LoadBooksAsync()
@@ -151,31 +187,26 @@
 
         var response = await ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?sort={_sort}");
         _books = response is { Success: true, Data: not null } ? response.Data.Items : [];
+        // Covers are no longer fetched eagerly here -- each card's cover is
+        // fetched lazily via LoadCoverAsync, triggered by lazyCover.js once
+        // that card is actually near the viewport (issue #349 Phase C).
+    }
 
-        // Covers are independent requests -- fetch them concurrently instead
-        // of one-at-a-time (issue #349 Phase C). Capped at 6 in flight so a
-        // full page of covers doesn't fire more simultaneous requests than
-        // the backend needs to see.
-        using var throttle = new SemaphoreSlim(6);
-        var coverResults = await Task.WhenAll(_books
-            .Where(book => book.CoverUrl is not null)
-            .Select(async book =>
-            {
-                await throttle.WaitAsync();
-                try
-                {
-                    var result = await ApiClient.GetBytesAsync(book.CoverUrl!);
-                    return (book.Id, Url: result is { } cover ? await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType) : null);
-                }
-                finally
-                {
-                    throttle.Release();
-                }
-            }));
+    // [JSInvokable] target for lazyCover.js's IntersectionObserver callback.
+    // Guards against a book that's since left the list (e.g. a sort change
+    // reloaded _books while this card's fetch was in flight) and against a
+    // duplicate fetch for a card the observer already reported once.
+    [JSInvokable]
+    public async Task LoadCoverAsync(int bookId)
+    {
+        var book = _books?.FirstOrDefault(b => b.Id == bookId);
+        if (book?.CoverUrl is null || _coverObjectUrls.ContainsKey(bookId)) return;
 
-        foreach (var (id, url) in coverResults)
+        var result = await ApiClient.GetBytesAsync(book.CoverUrl);
+        if (result is { } cover)
         {
-            if (url is not null) _coverObjectUrls[id] = url;
+            _coverObjectUrls[bookId] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+            StateHasChanged();
         }
     }
 
@@ -222,6 +253,11 @@
         {
             _ = _motionModule.DisposeAsync();
         }
+        if (_lazyCoverModule is not null)
+        {
+            _ = _lazyCoverModule.DisposeAsync();
+        }
+        _dotNetRef?.Dispose();
         foreach (var url in _coverObjectUrls.Values)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(url);

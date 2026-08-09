@@ -68,6 +68,60 @@ public class DiscoverPageTests : BunitContext
         Assert.Contains("Dieses Regal wartet noch auf seinen ersten Eintrag.", cut.Markup);
     }
 
+    private const string BookWithCoverJson =
+        """{"success":true,"data":{"items":[{"id":1,"title":"Discoverable Book","author":"Jane Doe","coverUrl":"/api/books/1/cover","genre":null,"averageRating":4.5,"ratingCount":2,"myRating":null,"ownerUsername":"alice"}],"total":1,"page":1,"pageSize":20}}""";
+
+    // Covers are lazy-loaded (issue #349 Phase C): a card with an
+    // unfetched cover renders wrapped in [data-lazy-cover] (what
+    // lazyCover.js's IntersectionObserver watches) with no <img> yet;
+    // LoadCoverAsync -- the [JSInvokable] the observer calls once the card
+    // is near-viewport -- fetches the bytes and removes the wrapper.
+    [Fact]
+    public async Task Discover_CoverNotYetLoaded_RendersLazyCoverWrapper_NoImg()
+    {
+        UseRoutes(BookWithCoverJson);
+
+        var cut = Render<Discover>();
+
+        var wrapper = cut.Find("[data-lazy-cover]");
+        Assert.Equal("1", wrapper.GetAttribute("data-book-id"));
+        Assert.Empty(cut.FindAll("img"));
+    }
+
+    [Fact]
+    public async Task Discover_LoadCoverAsync_FetchesBytes_RendersImg_RemovesLazyWrapper()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/discover/books", BookWithCoverJson)
+            .WhenPathEndsWith("/books/1/cover", "fake-jpeg-bytes", "image/jpeg");
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.SetupModule("./js/blobUrl.js")
+            .Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-cover-1");
+
+        var cut = Render<Discover>();
+        await cut.InvokeAsync(() => cut.Instance.LoadCoverAsync(1));
+
+        Assert.Empty(cut.FindAll("[data-lazy-cover]"));
+        Assert.Equal("blob:fake-cover-1", cut.Find("img").GetAttribute("src"));
+    }
+
+    [Fact]
+    public async Task Discover_LoadCoverAsync_UnknownBookId_DoesNothing()
+    {
+        UseRoutes(BookWithCoverJson);
+        var cut = Render<Discover>();
+
+        // Must not throw even though book 999 isn't in the loaded list --
+        // a stale observer callback for a card that scrolled past just
+        // before a sort-triggered reload should be a silent no-op.
+        await cut.InvokeAsync(() => cut.Instance.LoadCoverAsync(999));
+
+        Assert.NotEmpty(cut.FindAll("[data-lazy-cover]"));
+    }
+
     [Fact]
     public void Discover_ShowsSkeletonGrid_WhileBooksLoading()
     {
