@@ -795,7 +795,7 @@ Backend: 339/339 Vitest tests passing (34 new). Frontend: 241/241 bUnit tests pa
 
 **v3.3 "Comments, Notifications, Activities" complete — all three phases shipped.** Next up: the Community Premium Design rework (issue #315, below), then v4.0 (KI).
 
-## v3.4 — Community Premium Design (in progress)
+## v3.4 — Community Premium Design (complete)
 
 Picks up backlog issue #315 (a full literary-archive visual rework of `PublicProfile.razor`/`Discover.razor`, sibling to #269's Worldbuilding rework). Preceded by a static HTML prototype — real tokens pulled 1:1 from `tokens.css`/`themes/*.css`, no invented colors — reviewed live with the user (2026-08-08), approved with one round of feedback (emoji icons swapped for the app's existing hand-drawn stroke-icon style). Scoped into three sequenced phases: **#339 Shared primitives + Profile hero → #340 Discover → #341 Motion/transitions/a11y audit**.
 
