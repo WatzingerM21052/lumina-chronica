@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
 import { optionalAuth, requireAuth } from "../middleware/auth";
-import { fileResponse } from "../utils/fileResponse";
+import { conditionalCoverResponse, fileResponse } from "../utils/fileResponse";
 import {
     NotFoundError,
     ValidationError,
@@ -171,7 +171,7 @@ projectsRoute.get("/:id/cover", optionalAuth, async (c) => {
     const result = await getProjectCoverObject(c.env.DB, c.env.STORAGE, c.get("userId") ?? null, projectId);
     if (!result) return c.json(failure("NOT_FOUND", "Cover not found."), 404);
 
-    return fileResponse(c, result.object.body, result.object.httpMetadata?.contentType ?? "application/octet-stream", { cacheable: result.isPublic });
+    return conditionalCoverResponse(c, result.object, result.isPublic);
 });
 
 // Map — v2.0, Phase 3 (issue #256). One map image per project, parallel to
