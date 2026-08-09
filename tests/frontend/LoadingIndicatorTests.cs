@@ -64,6 +64,18 @@ public class LoadingIndicatorTests : BunitContext
     }
 
     [Fact]
+    public void PageMode_ProcessingType_RendersThinkerIllustration_NoRing()
+    {
+        var cut = Render<LoadingIndicator>(parameters => parameters
+            .Add(p => p.Mode, LoadingIndicatorMode.Page)
+            .Add(p => p.Type, LoadingIndicatorType.Processing));
+
+        var img = cut.Find("img.loading-illustration");
+        Assert.Equal("images/mascot/optimized/lumina-thinker.webp", img.GetAttribute("src"));
+        Assert.Empty(cut.FindAll("svg.loading-progress"));
+    }
+
+    [Fact]
     public void PageMode_NonLibraryType_HasNoDeliveredAsset_FallsBackToRing()
     {
         var cut = Render<LoadingIndicator>(parameters => parameters
