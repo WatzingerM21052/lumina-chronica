@@ -220,3 +220,32 @@ describe("GET /api/projects/:id/cover Cache-Control (PUBLIC/PRIVATE split)", () 
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 });
+
+// issue #352 follow-up: same ETag/If-None-Match conditional-GET behavior as
+// books' cover route.
+describe("GET /api/projects/:id/cover ETag / conditional GET", () => {
+    async function createProjectWithCover(token: string): Promise<number> {
+        const form = new FormData();
+        form.set("title", "Aetherfall");
+        form.set("cover", new File(["cover bytes"], "cover.jpg", { type: "image/jpeg" }));
+        const res = await app.request("/api/projects", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }, env);
+        return (await readJson(res)).data.id;
+    }
+
+    it("returns an ETag, and a matching If-None-Match gets a 304 with no body", async () => {
+        const projectId = await createProjectWithCover(tokenA);
+        await app.request(
+            `/api/projects/${projectId}`,
+            { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenA}` }, body: JSON.stringify({ visibility: "PUBLIC" }) },
+            env
+        );
+
+        const first = await app.request(`/api/projects/${projectId}/cover`, {}, env);
+        const etag = first.headers.get("ETag");
+        expect(etag).toBeTruthy();
+
+        const revalidated = await app.request(`/api/projects/${projectId}/cover`, { headers: { "If-None-Match": etag! } }, env);
+        expect(revalidated.status).toBe(304);
+        expect(await revalidated.text()).toBe("");
+    });
+});

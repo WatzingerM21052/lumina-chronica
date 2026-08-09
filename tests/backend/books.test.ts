@@ -402,6 +402,52 @@ describe("GET /api/books/:id/cover Cache-Control (PUBLIC/PRIVATE/SHARED split)",
     });
 });
 
+// issue #352 follow-up: real cache invalidation via ETag/If-None-Match, so
+// an already-cached client can find out a cover changed without waiting
+// out the (short, but non-zero) max-age.
+describe("GET /api/books/:id/cover ETag / conditional GET", () => {
+    async function uploadWithCover(token: string) {
+        const uploadRes = await uploadBook(token);
+        const bookId = (await readJson(uploadRes)).data.id;
+        const coverForm = new FormData();
+        coverForm.set("cover", new File(["cover-bytes"], "cover.jpg", { type: "image/jpeg" }));
+        await app.request(`/api/books/${bookId}/cover`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: coverForm }, env);
+        return bookId;
+    }
+
+    it("returns an ETag, and a matching If-None-Match gets a 304 with no body", async () => {
+        const bookId = await uploadWithCover(tokenA);
+        await setVisibility(tokenA, bookId, "PUBLIC");
+
+        const first = await app.request(`/api/books/${bookId}/cover`, {}, env);
+        expect(first.status).toBe(200);
+        const etag = first.headers.get("ETag");
+        expect(etag).toBeTruthy();
+
+        const revalidated = await app.request(`/api/books/${bookId}/cover`, { headers: { "If-None-Match": etag! } }, env);
+        expect(revalidated.status).toBe(304);
+        expect(revalidated.headers.get("ETag")).toBe(etag);
+        expect(await revalidated.text()).toBe("");
+    });
+
+    it("a stale If-None-Match (from before a cover replace) still gets a fresh 200, not a 304", async () => {
+        const bookId = await uploadWithCover(tokenA);
+        await setVisibility(tokenA, bookId, "PUBLIC");
+
+        const before = await app.request(`/api/books/${bookId}/cover`, {}, env);
+        const staleEtag = before.headers.get("ETag")!;
+
+        const replaceForm = new FormData();
+        replaceForm.set("cover", new File(["new cover bytes"], "cover.jpg", { type: "image/jpeg" }));
+        await app.request(`/api/books/${bookId}/cover`, { method: "PUT", headers: { Authorization: `Bearer ${tokenA}` }, body: replaceForm }, env);
+
+        const after = await app.request(`/api/books/${bookId}/cover`, { headers: { "If-None-Match": staleEtag } }, env);
+        expect(after.status).toBe(200);
+        expect(after.headers.get("ETag")).not.toBe(staleEtag);
+        expect(await after.text()).toBe("new cover bytes");
+    });
+});
+
 async function setVisibility(token: string, bookId: number, visibility: string) {
     return app.request(
         `/api/books/${bookId}`,
