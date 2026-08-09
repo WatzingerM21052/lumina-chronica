@@ -17,7 +17,7 @@
 
 @if (_isLoading)
 {
-    <LoadingIndicator Text="Offline-Bücher werden geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="Offline-Bücher werden geladen..." />
 }
 else if (_books.Count == 0)
 {
