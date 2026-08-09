@@ -55,7 +55,7 @@
 }
 @if (_books is null)
 {
-    <LoadingIndicator Text="Bibliothek wird geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="Bibliothek wird geladen..." />
 }
 else if (_books.Count == 0)
 {
