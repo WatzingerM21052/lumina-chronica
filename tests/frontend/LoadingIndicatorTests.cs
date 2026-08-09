@@ -49,4 +49,16 @@ public class LoadingIndicatorTests : BunitContext
         Assert.Empty(cut.FindAll("img.loading-illustration"));
         Assert.NotEmpty(cut.FindAll("svg.loading-progress"));
     }
+
+    [Fact]
+    public void PageMode_ReadingType_RendersReaderIllustration_NoRing()
+    {
+        var cut = Render<LoadingIndicator>(parameters => parameters
+            .Add(p => p.Mode, LoadingIndicatorMode.Page)
+            .Add(p => p.Type, LoadingIndicatorType.Reading));
+
+        var img = cut.Find("img.loading-illustration");
+        Assert.Equal("images/mascot/optimized/lumina-reader.webp", img.GetAttribute("src"));
+        Assert.Empty(cut.FindAll("svg.loading-progress"));
+    }
 }
