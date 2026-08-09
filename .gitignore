@@ -27,3 +27,10 @@ Thumbs.db
 # Build output
 wwwroot/dist/
 dist/
+
+# Raster illustration masters (regenerable from the source ChatGPT thread;
+# only the optimized wwwroot/images/**/optimized/*.webp files are shipped)
+frontend/LuminaChronica.Client/wwwroot/images/mascot/*.png
+frontend/LuminaChronica.Client/wwwroot/images/icons/*.png
+frontend/LuminaChronica.Client/wwwroot/images/*.png
+frontend/LuminaChronica.Client/wwwroot/images/*.svg

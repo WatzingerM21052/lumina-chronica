@@ -54,4 +54,16 @@ public partial class LoadingIndicator : ComponentBase
     };
 
     private string TypeAttribute => Type.ToString().ToLowerInvariant();
+
+    // Phase D (issue #353): only Page/Fullscreen are "big enough" for a mascot
+    // illustration to replace the spinner ring, and only Library has a
+    // delivered asset wired up so far. Other Type values fall through to the
+    // ring until a later phase adds their illustration + a real call site.
+    private string? IllustrationPath => Mode is LoadingIndicatorMode.Page or LoadingIndicatorMode.Fullscreen
+        ? Type switch
+        {
+            LoadingIndicatorType.Library => "images/mascot/optimized/lumina-archivist.webp",
+            _ => null,
+        }
+        : null;
 }

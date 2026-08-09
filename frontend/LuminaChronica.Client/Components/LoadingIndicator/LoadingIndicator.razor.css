@@ -93,3 +93,40 @@
 .loading-indicator-fullscreen .loading-progress-text {
     color: var(--color-bg-light);
 }
+
+/* Mascot illustration (issue #353/Phase D): replaces the ring in Page/
+   Fullscreen mode for types that have a delivered asset. Sized relative to
+   its container rather than fixed, since Page and Fullscreen use it at
+   different viewport shares. */
+.loading-illustration {
+    width: min(200px, 50%);
+    height: auto;
+    margin-bottom: var(--space-2);
+    animation: loading-illustration-fade-in var(--motion-reveal) var(--ease-standard);
+}
+
+@keyframes loading-illustration-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-illustration {
+        animation: none;
+    }
+}
+
+/* Dark Library's illustrations are lit for a bright parchment background;
+   on the near-black paper (#1c1510) they'd otherwise read as a glowing
+   rectangle. Pull brightness/contrast down slightly to sit on dark paper
+   instead of re-authoring per-theme art. */
+[data-theme="dark-library"] .loading-illustration {
+    filter: brightness(0.82) contrast(1.05);
+}

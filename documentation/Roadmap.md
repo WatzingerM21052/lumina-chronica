@@ -918,4 +918,18 @@ Backend: 353/353 Vitest tests passing (3 new; `fakeR2.ts` gained a real, if fake
 
 **Phase C complete — issue #352 closed.**
 
-**Remaining epic #349 scope**: Phase D (issue #353, animation-technology decision) is open but blocked on the mascot asset pipeline; Phases E/F/G (the five Lumina illustrations, their integration, and full-app rollout) are not yet filed.
+**Remaining epic #349 scope at the time**: Phase D (issue #353, animation-technology decision) is open but blocked on the mascot asset pipeline; Phases E/F/G (the five Lumina illustrations, their integration, and full-app rollout) are not yet filed.
+
+## Living Library Feedback System — Phase D (issue #349/#353, complete, 2026-08-09)
+
+The asset-pipeline blocker resolved (five core mascot scenes — Archivist/Reader/Scribe/Cartographer/Thinker — plus two bonus scenes and six semantic icons delivered as PNG masters, WebP-optimized in-repo). Phase D is scoped as a decision-only issue ("Reine Technologie-Entscheidung, keine Implementierung") plus a verification prototype — real page integration is explicitly Phase F, not this phase.
+
+- [x] **Technology decision**: optimized static raster (WebP) + CSS motion, documented in `documentation/Architecture.md`'s decision log with the full four-criteria evaluation. SVG and Lottie were never live candidates — the delivered assets are full-scene raster illustrations with no vector source and no frame/AE export to animate from, so the source format decided this rather than a preference between the three.
+- [x] **Prototype**: `LoadingIndicator` gained `IllustrationPath` — `null` unless `Mode` is `Page`/`Fullscreen` **and** `Type` has a delivered asset (only `Library` → `lumina-archivist.webp` so far, the rest of the `Type` enum still falls back to the existing spinner ring). A `loading-illustration-fade-in` animation reuses the existing `--motion-reveal`/`--ease-standard` tokens and is fully disabled under `prefers-reduced-motion: reduce`; a `[data-theme="dark-library"]` filter (`brightness(0.82) contrast(1.05)`) keeps the candlelit scene from reading as a glowing rectangle on that theme's near-black paper. Verified live in both Classic Library and Dark Library via a throwaway local-only preview route (not a real page), screenshotted in both themes and deleted before merging — per the issue's own DoD, this used the real delivered Archivist asset rather than a placeholder, since a placeholder can't answer the theme/contrast question the same artwork's actual lighting can.
+- [x] No existing call site was changed — `Library.razor`'s own `Mode="Section"` (default) `LoadingIndicator` is untouched. Picking real call sites for the Library→Archivist mapping, and building the other four Type→asset mappings, is unscoped follow-up (not opened as Phase E/F/G issues yet, to avoid speculative mappings with no call site exercising them).
+
+Frontend: 308/308 bUnit tests passing (4 new: default Section mode still renders the ring; `Mode=Page`+`Type=Library` renders the illustration with no ring; `Mode=Fullscreen`+`Type=Library` likewise; a `Type` with no delivered asset falls back to the ring).
+
+**Phase D complete — issue #353 closed.**
+
+**Remaining epic #349 scope**: Phases E (build the five core animations)/F (wire them into real pages)/G (full-app motion-system rollout) are not yet filed — deliberately, since each would commit to call sites and a rollout order that haven't been decided yet.
