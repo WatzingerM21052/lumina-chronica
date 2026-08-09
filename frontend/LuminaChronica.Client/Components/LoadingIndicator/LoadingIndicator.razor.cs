@@ -63,6 +63,7 @@ public partial class LoadingIndicator : ComponentBase
         ? Type switch
         {
             LoadingIndicatorType.Library => "images/mascot/optimized/lumina-archivist.webp",
+            LoadingIndicatorType.Reading => "images/mascot/optimized/lumina-reader.webp",
             _ => null,
         }
         : null;

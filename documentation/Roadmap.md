@@ -939,7 +939,8 @@ Frontend: 308/308 bUnit tests passing (4 new: default Section mode still renders
 Combines Phase E and F into one issue: the tech decision (Phase D) made "building" an illustration trivial (one `IllustrationPath` map entry + the WebP), so there's no separate authoring step distinct from wiring it into a page. Phase G (retrofitting all ~21 existing `LoadingIndicator` call sites) stays a separate, larger, still-unfiled decision. Proposed mapping, following the epic's own mascot semantics (Reader=Bücher/Kapitel, Scribe=Speichern/Schreiben, Cartographer=Maps/Worldbuilding, Thinker=Suche/Analyse): Reader→`Reader.razor`, Scribe→`BookUpload.razor`, Cartographer→`ProjectDetail.razor`'s Orte tab, Thinker→`Statistics.razor`.
 
 - [x] **Archivist → `Library.razor`**: `Mode="Section"` → `Mode="Page"` on the one call site Phase D's prototype was built against but deliberately didn't touch. Live-verified against the real authenticated page (not the throwaway preview) in both themes — froze `window.fetch`, then triggered a real client-side nav into `/library` to catch the loading state a normal screenshot is too fast to show.
-- [ ] Reader → `Reader.razor`
+- [x] **Reader → `Reader.razor`**: new `IllustrationPath` map entry (`Type=Reading` → `lumina-reader.webp`), `Reader.razor`'s "Buch wird geladen…" gained `Mode="Page"` `Type="Reading"`. Live-verified against a real throwaway book (uploaded via `curl` — logging in through the UI hit an unrelated automation flake with Blazor's `@bind-Value`, worked around by injecting the JWT directly into `localStorage`'s `lumina_auth_token` key instead of driving the login form) — froze `window.fetch`, clicked "Lesen" from the book's own detail page, confirmed in both themes, then deleted the throwaway book.
+- [ ] Scribe → `BookUpload.razor`
 - [ ] Scribe → `BookUpload.razor`
 - [ ] Cartographer → `ProjectDetail.razor` Orte tab
 - [ ] Thinker → `Statistics.razor`
