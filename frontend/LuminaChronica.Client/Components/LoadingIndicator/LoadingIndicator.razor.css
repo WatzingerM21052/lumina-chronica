@@ -91,7 +91,7 @@
 }
 
 .loading-indicator-fullscreen .loading-progress-text {
-    color: var(--color-bg-light);
+    color: var(--color-text-on-dark);
 }
 
 /* Mascot illustration (issue #353/Phase D): replaces the ring in Page/

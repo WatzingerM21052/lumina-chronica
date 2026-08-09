@@ -40,6 +40,18 @@ public class LoadingIndicatorTests : BunitContext
     }
 
     [Fact]
+    public void FullscreenMode_UploadType_RendersScribeIllustration_NoRing()
+    {
+        var cut = Render<LoadingIndicator>(parameters => parameters
+            .Add(p => p.Mode, LoadingIndicatorMode.Fullscreen)
+            .Add(p => p.Type, LoadingIndicatorType.Upload));
+
+        var img = cut.Find("img.loading-illustration");
+        Assert.Equal("images/mascot/optimized/lumina-scribe.webp", img.GetAttribute("src"));
+        Assert.Empty(cut.FindAll("svg.loading-progress"));
+    }
+
+    [Fact]
     public void PageMode_NonLibraryType_HasNoDeliveredAsset_FallsBackToRing()
     {
         var cut = Render<LoadingIndicator>(parameters => parameters
