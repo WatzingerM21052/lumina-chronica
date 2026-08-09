@@ -903,4 +903,19 @@ Live-verified in a real local dev environment for the first time this session (`
 
 Backend: `ApiClient.cs`-equivalent error-message change is frontend-only; no backend changes this phase. Frontend: 301/301 bUnit tests passing (24 new across the six slices: `AsyncButtonTests`, `ToastHostTests`, `EmptyStateTests`, `ErrorMessageTests`, `ApiClientTests`, plus regression coverage added to `DiscoverPageTests`/`BookDetailPageTests`).
 
-**Phase B complete. Remaining epic #349 scope**: Phase D (issue #353, animation-technology decision) is open but blocked on the mascot asset pipeline; Phases E/F/G (the five Lumina illustrations, their integration, and full-app rollout) are not yet filed.
+**Phase B complete.**
+
+## Living Library Feedback System — Phase C completion (issue #352, complete, 2026-08-09)
+
+Phase C shipped in two parts on different days: cover parallelization + PUBLIC/PRIVATE-aware `Cache-Control` (2026-08-08, alongside Phase B), then the two remaining Definition of Done items closed out the next day.
+
+- [x] **Lazy-loaded covers on `Discover.razor`**: covers were fetched eagerly (in parallel, but still all upfront, before the grid ever rendered). Native `loading="lazy"` doesn't apply — covers are authenticated byte fetches turned into blob URLs, not plain `<img src>`. New `wwwroot/js/lazyCover.js`: one `IntersectionObserver` per grid (300px `rootMargin`, starts the fetch slightly before a card is actually visible), calling a new `[JSInvokable] LoadCoverAsync` only once a card is near-viewport.
+- [x] **ETag/If-None-Match conditional GET on both cover routes**: new `conditionalCoverResponse()` (`fileResponse.ts`) compares R2's `httpEtag` (changes automatically on a cover replace) against the request's `If-None-Match`; a match returns 304 with no body, a mismatch returns fresh bytes + a new ETag. **Explicit limitation, not a gap**: this does not un-cache a cover after a PUBLIC→PRIVATE visibility flip — the route already 404s a disallowed viewer before ever reaching this function, so there's no object to compare against for them; that case stays bounded only by the existing 5-minute max-age.
+
+Live-verified against the real local dev stack: uploaded two `PUBLIC` books with distinct real cover images and confirmed both loaded correctly with the lazy wrapper removed after load; captured a cover's ETag, confirmed a matching `If-None-Match` → 304 with an empty body, replaced the cover, and confirmed the *old* ETag now gets a fresh 200 with new bytes and a new ETag.
+
+Backend: 353/353 Vitest tests passing (3 new; `fakeR2.ts` gained a real, if fake, `httpEtag` — a monotonic per-key version counter, sufficient for what conditional-GET logic needs). Frontend: 304/304 bUnit tests passing (3 new lazy-cover tests).
+
+**Phase C complete — issue #352 closed.**
+
+**Remaining epic #349 scope**: Phase D (issue #353, animation-technology decision) is open but blocked on the mascot asset pipeline; Phases E/F/G (the five Lumina illustrations, their integration, and full-app rollout) are not yet filed.
