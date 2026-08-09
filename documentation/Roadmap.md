@@ -932,4 +932,16 @@ Frontend: 308/308 bUnit tests passing (4 new: default Section mode still renders
 
 **Phase D complete — issue #353 closed.**
 
-**Remaining epic #349 scope**: Phases E (build the five core animations)/F (wire them into real pages)/G (full-app motion-system rollout) are not yet filed — deliberately, since each would commit to call sites and a rollout order that haven't been decided yet.
+**Remaining epic #349 scope at the time**: Phases E (build the five core animations)/F (wire them into real pages)/G (full-app motion-system rollout) are not yet filed — deliberately, since each would commit to call sites and a rollout order that haven't been decided yet.
+
+## Living Library Feedback System — Phase E/F (issue #349/#366, in progress, 2026-08-09)
+
+Combines Phase E and F into one issue: the tech decision (Phase D) made "building" an illustration trivial (one `IllustrationPath` map entry + the WebP), so there's no separate authoring step distinct from wiring it into a page. Phase G (retrofitting all ~21 existing `LoadingIndicator` call sites) stays a separate, larger, still-unfiled decision. Proposed mapping, following the epic's own mascot semantics (Reader=Bücher/Kapitel, Scribe=Speichern/Schreiben, Cartographer=Maps/Worldbuilding, Thinker=Suche/Analyse): Reader→`Reader.razor`, Scribe→`BookUpload.razor`, Cartographer→`ProjectDetail.razor`'s Orte tab, Thinker→`Statistics.razor`.
+
+- [x] **Archivist → `Library.razor`**: `Mode="Section"` → `Mode="Page"` on the one call site Phase D's prototype was built against but deliberately didn't touch. Live-verified against the real authenticated page (not the throwaway preview) in both themes — froze `window.fetch`, then triggered a real client-side nav into `/library` to catch the loading state a normal screenshot is too fast to show.
+- [ ] Reader → `Reader.razor`
+- [ ] Scribe → `BookUpload.razor`
+- [ ] Cartographer → `ProjectDetail.razor` Orte tab
+- [ ] Thinker → `Statistics.razor`
+
+**Phase E/F in progress.**
