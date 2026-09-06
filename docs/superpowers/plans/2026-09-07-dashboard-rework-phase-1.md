@@ -145,7 +145,7 @@ git commit -m "refactor: extract dashboard stat boxes into StatCard component"
 **Files:**
 - Modify: `frontend/LuminaChronica.Client/Pages/Home.razor:22-31`
 - Modify: `frontend/LuminaChronica.Client/Components/BookCard/BookCard.razor.css`
-- Modify: `tests/frontend/HomePageTests.cs` (extends `Home_ShowsContinueReadingSection_WhenReadingHistoryExists`, see Task 4's full-file rewrite)
+- Modify: `tests/frontend/HomePageTests.cs` (extends `Home_ShowsContinueReadingSection_WhenReadingHistoryExists`, see Task 3's full-file rewrite)
 
 **Interfaces:**
 - Consumes: `BookCardSize.Large` (already defined in `Components/BookCard/BookCard.razor.cs`, already has a `.book-card-large` CSS rule, currently has zero real callers — confirmed via grep before writing this plan).
@@ -153,7 +153,7 @@ git commit -m "refactor: extract dashboard stat boxes into StatCard component"
 
 - [ ] **Step 1: Write the failing test**
 
-In `tests/frontend/HomePageTests.cs`, add a new test (final file content is written out in full in Task 4 — for now, add this method to the existing file, in the same handler style as `Home_ShowsContinueReadingSection_WhenReadingHistoryExists`):
+In `tests/frontend/HomePageTests.cs`, add a new test (final file content is written out in full in Task 3 — for now, add this method to the existing file, in the same handler style as `Home_ShowsContinueReadingSection_WhenReadingHistoryExists`):
 
 ```csharp
 [Fact]
@@ -174,7 +174,6 @@ public void Home_ContinueReading_FirstBookIsFeaturedSize_RestAreNormal()
     UseHandler(new RoutedFakeHttpMessageHandler()
         .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
         .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
-        .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
         .WhenPathEndsWith("/api/dashboard", dashboardJson));
     Services.AddSingleton<BlobUrlService>();
 
@@ -186,6 +185,8 @@ public void Home_ContinueReading_FirstBookIsFeaturedSize_RestAreNormal()
     Assert.Contains("book-card-normal", cards[1].ClassList);
 }
 ```
+
+Note: no `/api/projects` route is needed here — `Home.razor` doesn't fetch it until Task 3. Task 3's full-file rewrite of `HomePageTests.cs` will add that route to this test method too, once the fetch exists.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -254,7 +255,7 @@ In `frontend/LuminaChronica.Client/Components/BookCard/BookCard.razor.css`, afte
 }
 ```
 
-This step has no bUnit test — bUnit doesn't compute rendered CSS (the same limitation `documentation/Roadmap.md` notes repeatedly for this project's motion/color work). It's covered in Task 5's live verification pass instead.
+This step has no bUnit test — bUnit doesn't compute rendered CSS (the same limitation `documentation/Roadmap.md` notes repeatedly for this project's motion/color work). It's covered in Task 4's live verification pass instead.
 
 - [ ] **Step 6: Commit**
 
@@ -265,19 +266,27 @@ git commit -m "feat: feature the first Weiterlesen card with a gold progress lin
 
 ---
 
-## Task 3: Wire "Aktuelle Projekte" to the real Projects API
+## Task 3: Wire "Aktuelle Projekte" to the real Projects API (and keep every test routed)
 
 **Files:**
 - Modify: `frontend/LuminaChronica.Client/Pages/Home.razor` (imports, `@code` block, and the "Aktuelle Projekte" markup at lines 91-93)
-- Modify: `tests/frontend/HomePageTests.cs` (full rewrite in Task 4)
+- Modify: `tests/frontend/HomePageTests.cs` (full rewrite, this task's last step)
 
 **Interfaces:**
 - Consumes: `ApiClient.GetAsync<List<Project>>("/api/projects")` (existing method, same call shape already used by `Pages/Projects.razor:92`), `Project` model (`Models/Project.cs`, fields `Id`/`Title`/`Type`/`CoverUrl`/etc.), `ProjectCard` component (`Components/ProjectCard/ProjectCard.razor`, single `[Parameter] Project Project` — used as-is, unmodified).
 - Produces: `Home.razor`'s `_projects` field (`List<Project>?`), used only within this file.
 
+This task must end with the *entire* `tests/frontend` suite green, not just its own new tests — Step 3 below makes `Home.razor` unconditionally fetch `/api/projects`, and `RoutedFakeHttpMessageHandler` throws `InvalidOperationException` for any unrouted request. Every pre-existing `HomePageTests.cs` method (the 8 from before this plan, plus Task 1/2's `StatCardTests.cs` is a different file and unaffected) needs that route added — done in this task's final step (Step 6), not deferred to a separate task, so no commit in this task ever leaves the suite red.
+
 - [ ] **Step 1: Write the failing tests**
 
-Add to `tests/frontend/HomePageTests.cs` (full file rewrite is in Task 4 — these are the two new methods being added):
+Add to `tests/frontend/HomePageTests.cs`: first add the new constant next to the existing `EmptyDashboardJson`:
+
+```csharp
+    private const string EmptyProjectsJson = """{"success":true,"data":[]}""";
+```
+
+Then add these two new test methods (the full, final file layout — with this constant placed correctly and every method routed — is written out in Step 6; for now just add the constant and these two methods to the existing file):
 
 ```csharp
 [Fact]
@@ -439,32 +448,14 @@ else
 
 Note: the previous `EmptyState` had no `OnAction`/`ActionHref` at all, so its "Projekt erstellen" button was a dead click — this fixes that too, using the same `ActionHref="projects"` pattern `Home.razor`'s books section doesn't use (it uses `OnAction="GoToUpload"` because `/library/upload` is a dedicated page) but that fits here since project creation is an inline form on `/projects` itself, not a separate route.
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [ ] **Step 5: Run the two new tests to verify they pass**
 
 Run: `dotnet test tests/frontend --filter "Home_ShowsEmptyStateForProjects_WhenNoProjectsExist|Home_ShowsRealProjects_WhenProjectsExist"`
-Expected: PASS
+Expected: PASS. Do **not** run the full suite yet — Step 3 just made `Home.razor` unconditionally call `/api/projects`, so every pre-existing test (and Task 2's featured-card test) will currently fail with `InvalidOperationException: No route configured for GET .../api/projects`. That's expected and fixed by Step 6 next, in this same task.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Fix every other test's handler — replace the entire contents of `tests/frontend/HomePageTests.cs`**
 
-```bash
-git add frontend/LuminaChronica.Client/Pages/Home.razor tests/frontend/HomePageTests.cs
-git commit -m "fix: wire Aktuelle Projekte section to the real Projects API"
-```
-
----
-
-## Task 4: Update all pre-existing `HomePageTests.cs` handlers for the new `/api/projects` fetch
-
-**Files:**
-- Modify: `tests/frontend/HomePageTests.cs` (full replacement)
-
-**Interfaces:**
-- Consumes: everything defined in Tasks 1-3 (`StatCard`, `BookCardSize.Large`, the `_projects` fetch).
-- Produces: the final, complete test file — no later task depends on anything from this one.
-
-Every one of the 8 pre-existing tests calls `UseHandler(new RoutedFakeHttpMessageHandler()...)` without a `/api/projects` route. Since `Home.razor` now always fetches `/api/projects` in `OnInitializedAsync`, and `RoutedFakeHttpMessageHandler` throws `InvalidOperationException` for any unrouted request, every one of those 8 calls needs a `.WhenPathEndsWith("/api/projects", EmptyProjectsJson)` line added (unless the test itself is about projects, per Task 3). Doing this as one full-file rewrite avoids missing one of the 8 call sites.
-
-- [ ] **Step 1: Replace the entire contents of `tests/frontend/HomePageTests.cs`**
+Every pre-existing test (from before this plan) plus Task 2's `Home_ContinueReading_FirstBookIsFeaturedSize_RestAreNormal` calls `UseHandler(new RoutedFakeHttpMessageHandler()...)` without a `/api/projects` route — each now needs `.WhenPathEndsWith("/api/projects", EmptyProjectsJson)` added. Doing this as one full-file replacement (rather than editing each call site individually) avoids missing one.
 
 ```csharp
 using Bunit;
@@ -746,21 +737,21 @@ public class HomePageTests : BunitContext
 }
 ```
 
-- [ ] **Step 2: Run the full frontend test suite**
+- [ ] **Step 7: Run the full frontend test suite**
 
 Run: `dotnet test tests/frontend`
-Expected: all tests pass, including every test in `HomePageTests.cs`, `BookCardTests.cs`, and `StatCardTests.cs`.
+Expected: all tests pass — every test in `HomePageTests.cs` (11 methods: the original 8, Task 2's featured-card test, and this task's 2 new project tests), plus `BookCardTests.cs` and `StatCardTests.cs` from Tasks 1-2, unaffected.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add tests/frontend/HomePageTests.cs
-git commit -m "test: cover Dashboard Phase 1's featured card, StatCard, and real Projects data"
+git add frontend/LuminaChronica.Client/Pages/Home.razor tests/frontend/HomePageTests.cs
+git commit -m "fix: wire Aktuelle Projekte section to the real Projects API"
 ```
 
 ---
 
-## Task 5: Live verification against the real deployed backend
+## Task 4: Live verification against the real deployed backend
 
 **Files:** none (manual verification pass, per this project's established pattern of live-verifying every phase against production before considering it done — see `documentation/Roadmap.md`'s entries for #349's phases).
 
