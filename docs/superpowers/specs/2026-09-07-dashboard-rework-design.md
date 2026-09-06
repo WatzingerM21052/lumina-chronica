@@ -24,7 +24,7 @@ Two items from #358 are explicitly **out of scope** for this slice and stay sepa
 
 ### Weiterlesen: Featured + grid layout
 
-The first `ContinueReading` entry renders as a larger "featured" card; up to 4 more render at normal size alongside it. This needs a new `Large` size on `BookCard` (currently only `Normal`/`Small` exist, used by Library's grid/list views). Reading progress switches from the current blue `book-card-progress-bar` to a thin gold line, consistent with the "Living Library" material language used elsewhere (brass/gilt tokens).
+The first `ContinueReading` entry renders as a larger "featured" card; up to 4 more render at normal size alongside it (the backend already caps `ContinueReading` at 5, so no extra client-side truncation is needed). Correction after checking the actual component: `BookCardSize.Large` and its `.book-card-large` CSS already exist (added at some point, never wired to a real caller) — no new size needs adding, just a real usage. Reading progress on the featured card switches from `book-card-progress-bar`'s current `--color-secondary` fill (oxblood/gray depending on theme, not blue as first assumed) to a thin gold line using `--color-accent-text` — the same accessible gold token the #341 a11y pass introduced for rating stars/focus rings (`--color-gold-accent` itself fails the 3:1 non-text contrast floor). Scoped to `.book-card-large` only, so Library/Reader's existing `Normal`/`Small` cards are untouched.
 
 ### Stat row → `StatCard` primitive
 
@@ -69,7 +69,7 @@ Phase 2 ships as its own issue/PR, separate from Phase 1 — Phase 1 must not wa
 | Component | Change |
 |---|---|
 | `StatCard` | New primitive (Phase 1) |
-| `BookCard` | New `Large` size variant + gold progress line (Phase 1) |
+| `BookCard` | Wire up existing (unused) `Large` size + gold progress line for it (Phase 1) |
 | `Home.razor` | Weiterlesen featured layout, `StatCard` row, real Projects fetch (Phase 1) |
 | Dashboard hero markup/CSS | Three-layer parallax + compaction (Phase 2, gated) |
 
