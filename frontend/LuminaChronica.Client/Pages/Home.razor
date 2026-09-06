@@ -35,22 +35,10 @@
 @if (_dashboard is not null)
 {
     <div class="dashboard-overview">
-        <div class="dashboard-stat">
-            <span class="dashboard-stat-value">@_dashboard.Overview.TotalBooks</span>
-            <span class="dashboard-stat-label">Bücher</span>
-        </div>
-        <div class="dashboard-stat">
-            <span class="dashboard-stat-value">@_dashboard.Overview.TotalShelves</span>
-            <span class="dashboard-stat-label">Regale</span>
-        </div>
-        <div class="dashboard-stat">
-            <span class="dashboard-stat-value">@_dashboard.Overview.TotalFavorites</span>
-            <span class="dashboard-stat-label">Favoriten</span>
-        </div>
-        <div class="dashboard-stat">
-            <span class="dashboard-stat-value">@_dashboard.Overview.FinishedBooks</span>
-            <span class="dashboard-stat-label">Gelesen</span>
-        </div>
+        <StatCard Value="@_dashboard.Overview.TotalBooks.ToString()" Label="Bücher" />
+        <StatCard Value="@_dashboard.Overview.TotalShelves.ToString()" Label="Regale" />
+        <StatCard Value="@_dashboard.Overview.TotalFavorites.ToString()" Label="Favoriten" />
+        <StatCard Value="@_dashboard.Overview.FinishedBooks.ToString()" Label="Gelesen" />
     </div>
 }
 @if (_books is null)
