@@ -1,16 +1,21 @@
 @page "/"
 @attribute [Authorize]
+@implements IAsyncDisposable
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Lumina Chronica</PageTitle>
 
-<div class="home-hero">
-    <img src="images/home-hero.jpg" alt="" class="home-hero-image" />
+<div class="home-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
+<div class="home-hero" @ref="_heroRef">
+    <img src="images/dashboard-hero-layer1-background.webp" alt="" class="home-hero-layer home-hero-layer-1" fetchpriority="high" />
+    <img src="images/dashboard-hero-layer2-lights.webp" alt="" class="home-hero-layer home-hero-layer-2" fetchpriority="low" decoding="async" />
+    <img src="images/dashboard-hero-layer3-foreground.webp" alt="" class="home-hero-layer home-hero-layer-3" fetchpriority="low" decoding="async" />
     <div class="home-hero-scrim"></div>
     <div class="home-hero-content">
         <h1>Willkommen zurück</h1>
@@ -108,6 +113,10 @@ else
     private const int RecentBooksLimit = 6;
     private const int RecentProjectsLimit = 6;
 
+    private ElementReference _heroRef;
+    private ElementReference _heroSentinelRef;
+    private IJSObjectReference? _motionModule;
+
     private List<Book>? _books;
     private int _totalBooks;
     private DashboardResponse? _dashboard;
@@ -135,5 +144,41 @@ else
         _projects = projectsResponse is { Success: true, Data: not null } ? projectsResponse.Data : [];
     }
 
+    // Reuses motion.js's initHeaderCompact for the hero itself (already
+    // generic over any header/sentinel element pair, not app-header-
+    // specific). Wired here rather than in MainLayout because this
+    // sentinel is Home-page-only; MainLayout's own OnAfterRenderAsync only
+    // ever wires the app-wide header. Wrapped in try/catch matching
+    // Discover.razor/PublicProfile.razor's own motion.js wiring — a
+    // blocked/failed module load just leaves the hero uncompacted, same
+    // "progressive enhancement" shape as everywhere else this module is used.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            _motionModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
+            await _motionModule.InvokeVoidAsync("initHeaderCompact", _heroRef, _heroSentinelRef);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
     private void GoToUpload() => NavigationManager.NavigateTo("library/upload");
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_motionModule is not null)
+        {
+            try
+            {
+                await _motionModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
 }
