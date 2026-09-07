@@ -42,27 +42,27 @@ Fetch real projects (`GET /api/projects`, same request-shape pattern already use
 - No functional regression — Continue Reading, Recommendations, and the `ownerUsername` "Geliehen von"-badge on shared books must keep working exactly as today.
 - Accessibility: `StatCard` values and the gold progress line need non-color-only meaning (e.g. `aria-label`/text equivalent), consistent with the accessibility pass already done for Statistics' Goal Ring/Heatmap in #341.
 
-## Phase 2 — Three-layer parallax Hero (gated)
+## Phase 2 — Three-layer parallax Hero (assets delivered, ready to build)
 
-### Asset requirement
+### Assets — delivered 2026-09-07
 
-No pre-separated layer art exists today — only flat hero images (`hero-banner.png`, `home-hero.jpg`). This phase needs three new, genuinely separate illustration layers, produced the same way the five Lumina mascot illustrations were (external creation, then delivered as optimized WebP into the repo). **This phase cannot start until these assets exist.**
+Three real, separately-generated layers now exist at `frontend/LuminaChronica.Client/wwwroot/images/Layerimage/` (PNG masters, gitignored, 3360×1440) and have been optimized to WebP (2400×1029, quality 82, committed):
+- `dashboard-hero-layer1-background.webp` (302KB) — fully opaque grand hall interior: columns, bookshelves, marble floor, warm light, distant statue.
+- `dashboard-hero-layer2-lights.webp` (528KB) — hanging lanterns + light shafts/dust, with **genuine alpha transparency** (~42% of pixels fully transparent, not a flat black plate).
+- `dashboard-hero-layer3-foreground.webp` (92KB) — column silhouette (left) + bookshelf edge (right), **genuine alpha transparency** in the center (~70% of pixels fully transparent).
 
-Asset brief (Alexandria hall, depth-staged):
-- **Background**: distant columns/arches/shelf silhouettes of the great hall.
-- **Midground**: floating dust motes / light rays through tall windows, hanging lanterns.
-- **Foreground**: a nearer shelf/column silhouette at the frame edge, meant to scroll past faster than the background — the actual parallax depth cue.
+This is better than the original brief assumed: the brief's fallback compositing instructions (pure-black plate + `Screen` blend for the light layer, magenta chroma-key for the foreground layer) are **not needed** — all three layers already carry real per-pixel alpha and can be stacked with plain `<img>`/`background-image` alpha compositing, no blend-mode or color-keying logic required.
 
 ### Behavior
 
-- Real scroll-linked parallax: each layer moves at a different scroll speed, implemented with `transform`/`opacity` only — no permanent JS scroll-event handler (performance guardrail from #358, and consistent with how `motion.js`'s existing `IntersectionObserver`-based reveal avoids scroll-event listeners).
-- Hero compaction on scroll, following the same mechanism `motion.js` already uses for `.app-header`'s `is-compact` toggle (scroll-sentinel `IntersectionObserver`, not a scroll listener).
-- `prefers-reduced-motion`: layers stay visible and statically positioned; only the scroll-linked movement is disabled — never hide content to satisfy this preference (same rule #351 already established).
-- Performance: the Dashboard hero is a likely LCP candidate. The background layer image must be available early and not blocked by any animation-engine or JS module load, building on the cover-loading/caching work from #352.
+- **Parallax mechanism — CSS Scroll-Driven Animations (`animation-timeline: scroll()`), not a scroll-event listener.** This is a genuinely zero-JS way to move each layer at a different rate as the hero scrolls past — `animation-timeline: scroll(nearest block)` drives a `@keyframes` translateY per layer, with the three layers using three different distances (background moves least, foreground moves most, matching real-world parallax). This satisfies the guardrail more strongly than a scroll listener would (nothing runs on the main thread at all, vs. even a passive/rAF-throttled listener). **Documented tradeoff**: Baseline browser support for scroll-driven animations landed in Chrome/Edge 115+ (2023) and Firefox 144 (2026); Safari remains unsupported as of this writing. Un-supporting browsers simply see the layers in their static, non-parallaxed position — a real but graceful degradation (same "worst case is static, never broken" shape as `initReveal`'s own fallback), acceptable for this personal-use app. `@supports` gates the animation rules so unsupported browsers never receive them at all.
+- Hero compaction on scroll reuses the existing `motion.js` `initHeaderCompact` pattern as-is (sentinel `IntersectionObserver` toggling `.is-compact`), applied to the hero element instead of `.app-header`.
+- `prefers-reduced-motion`: the scroll-driven `@keyframes` rules are wrapped in `@media (prefers-reduced-motion: no-preference)` — under reduced motion, layers render in their static base position (no parallax offset), never hidden.
+- Performance: Layer 1 (background) loads as a plain `<img>`/CSS background with no JS dependency, so it's never blocked by animation-timeline support detection or module loading — keeps it LCP-safe per #352's precedent. Total payload for all three layers (~920KB) is comparable to the existing single `hero-banner.png`.
 
 ### Scope boundary
 
-Phase 2 ships as its own issue/PR, separate from Phase 1 — Phase 1 must not wait on asset delivery.
+Phase 2 ships as its own issue/PR, separate from Phase 1 (already merged).
 
 ## New/changed components summary
 
