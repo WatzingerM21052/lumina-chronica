@@ -9,32 +9,78 @@ Two established style families already exist in this app, and everything below s
 
 ---
 
-## 1. Statistics hero — "The Reading Observatory"
+## 1. Statistics hero — "The Reading Observatory" (three-layer parallax, confirmed)
 
-Speculative: whether Statistics gets a hero at all is not decided yet (still mid-scoping). Photorealistic style, matching the Dashboard hero's single-flat-image approach (not multi-layer — that's a Dashboard-specific decision, not a default).
+**Decided during scoping**: Statistics gets a hero, and it uses the same three-layer CSS scroll-driven parallax technique as the Dashboard hero (`documentation/branding/dashboard-hero-parallax-brief.md`), not a single flat image. Same shared technical requirements as that brief: 21:9 minimum 3000×1300px per layer, all three layers sharing one consistent single-point perspective/vanishing point/eye-level camera (generate Background first and feed it back in as an image-to-image reference for Midground/Foreground if your tool supports it — three independent generations will not agree on perspective by chance), warm golden-amber base grading with the cool moonlight accent kept only on Background, no people/text/watermark/signature/logos in any layer.
+
+The Dashboard brief's fallback compositing instructions (flat-black plate + Screen blend for the light layer, magenta chroma-key for the foreground layer) turned out to be unnecessary in practice — the actual generator produced genuine per-pixel alpha transparency directly. Try for real transparency first; fall back to the chroma-key/black-plate technique only if your tool can't produce clean alpha.
+
+**Layer 1 — Background** (opaque, the room itself):
 
 ```
-Cinematic photorealistic digital painting of an ancient astronomical
-observatory built into a grand library, viewed from within a circular
-domed chamber. A large brass and bronze armillary sphere and an ornate
-astrolabe sit on a carved stone pedestal in the center, surrounded by
-tall shelves of star-charts and scrolls. Warm candlelight and lantern
-glow mix with cool moonlight streaming down through a circular oculus
-opening in the domed ceiling above, illuminating drifting dust motes.
-Polished brass instruments catch warm highlights against deep shadow.
-Single-point perspective, eye-level camera looking toward the central
-instrument. Warm golden-amber and deep midnight-blue color grading,
-rich brass and aged-bronze textures, moody atmospheric depth,
-matte-painting quality, ultra-detailed, high dynamic range. Wide
-cinematic aspect ratio (21:9), minimum 3000x1300px, no people, no text,
-no watermark, no signature, no logos.
+Cinematic photorealistic digital painting of the interior of an ancient
+astronomical observatory built into a grand library, viewed from within
+a circular domed stone chamber, straight ahead toward a carved stone
+pedestal at the center of the room. Tall shelves of star-charts and
+scrolls line the curved walls, receding into soft atmospheric haze.
+Warm candlelight glows from wall-mounted lanterns low in the frame,
+mixing with cool moonlight from above. Single-point perspective,
+vanishing point centered horizontally at the central pedestal, eye-level
+camera. Warm golden-amber and deep midnight-blue color grading, rich
+brass and aged-stone textures, moody atmospheric depth, matte-painting
+quality, ultra-detailed, high dynamic range. Wide cinematic aspect ratio
+(21:9), minimum 3000x1300px, no people, no text, no watermark, no
+signature, no logos.
 
 Negative prompt (if supported): people, human figures, characters, text,
 words, letters, watermark, signature, logo, modern objects, cartoon,
 anime, line-art illustration
 ```
 
-**Why brass/midnight-blue instead of pure gold-amber like Dashboard**: Statistics is "stark inszeniert, aber datenorientiert" per #358 — the brass-instrument/observatory framing is what the issue's own "Brass Reading Dial" language for the Goal Ring points at, so the hero should set up that same material language before the user even reaches the ring. The cool moonlight accent is the one deliberate departure from Dashboard's all-warm palette, to keep Statistics visually distinct rather than a re-skin of the same hall.
+Leave the center of the frame (where the pedestal sits) and a band across the upper third relatively open — that's where Layer 3's foreground instrument and Layer 2's light shaft will sit on top.
+
+**Layer 2 — Midground** (moonlight + dust only, mostly transparent):
+
+```
+A single soft shaft of cool moonlight streaming down from a circular
+oculus opening in a domed ceiling high above, thick with slowly drifting
+dust motes caught in the light, faint wisps of atmospheric haze. Same
+single-point perspective and vanishing point as looking toward the
+center of a domed observatory chamber at eye level. Cool blue-white
+moonlight against otherwise dark surroundings, photorealistic, cinematic
+volumetric lighting, ultra-detailed.
+
+If your tool can produce real alpha transparency: render ONLY the light
+shaft and dust motes, everything else fully transparent. If not, render
+everything else as pure flat black (#000000) so it can be composited
+with a "Screen" or "Lighten" blend mode instead. Wide cinematic aspect
+ratio (21:9), same canvas size as Layer 1. No people, no text, no
+watermark, no signature.
+```
+
+**Layer 3 — Foreground silhouette** (a large instrument close to camera):
+
+```
+Close-up view of a large ornate brass armillary sphere and astrolabe,
+positioned to one side of the frame as if standing right beside it,
+cropped tightly at the frame's edge, looking past it toward the domed
+observatory chamber beyond. The instrument is rendered as a detailed
+dark silhouette with warm brass rim-lighting catching its curved rings
+and engraved surfaces from the glow of the room beyond. Same
+single-point perspective and vanishing point as the background shot,
+eye-level camera. Warm golden-amber rim-light only, photorealistic,
+cinematic, ultra-detailed.
+
+If your tool can produce real alpha transparency: render ONLY the
+instrument silhouette, everything else (the open two-thirds of the
+frame where the room beyond would show) fully transparent. If not,
+render that open area as one uniform flat magenta (#FF00FF) for
+chroma-keying instead — pick a color unlikely to appear elsewhere in a
+warm brass/gold scene. Wide cinematic aspect ratio (21:9), same canvas
+size as Layers 1-2. No people, no text, no watermark, no signature.
+```
+
+**Why brass/midnight-blue instead of pure gold-amber like Dashboard**: Statistics is "stark inszeniert, aber datenorientiert" per #358 — the brass-instrument/observatory framing is what the issue's own "Brass Reading Dial" language for the Goal Ring points at, so the hero sets up that same material language before the user even reaches the ring. The cool moonlight accent is the one deliberate departure from Dashboard's all-warm palette, to keep Statistics visually distinct rather than a re-skin of the same hall.
 
 ---
 
