@@ -986,16 +986,52 @@ select:focus-visible,
     background-color: var(--color-bg-card);
 }
 
+/* "Illuminated Reading Calendar" (Statistics Rework Phase 1): the same
+   low-opacity brass-texture technique as the Goal Ring (Task 3), applied
+   once to the whole calendar panel rather than per-cell (364+ repeated
+   background images would be wasteful). position: relative + overflow:
+   hidden keep the texture inside the panel's own rounded corners.
+   isolation: isolate makes this panel establish its own stacking context;
+   combined with z-index: -1 on the ::before below, the texture paints
+   after the panel's own background but before its non-positioned in-flow
+   children (h2, .calendar-heatmap, .calendar-legend) -- per CSS painting
+   order, a positioned box with negative z-index paints earlier than
+   non-positioned in-flow descendants regardless of DOM order, so without
+   isolation + z-index the texture would incorrectly paint on top of the
+   content instead of behind it. */
+.stats-panel.calendar-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.stats-panel.calendar-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url("../images/statistics/brass-texture.webp");
+    background-size: cover;
+    opacity: 0.15;
+    pointer-events: none;
+}
+
 .stats-panel h2 {
     align-self: flex-start;
     margin: 0;
 }
 
-/* A conic-gradient ring rather than an SVG/JS chart -- the "modern, high-tech"
-   touch the redesign asked for, kept to plain CSS custom properties so it
-   still themes correctly across all four color themes with no JS. */
+/* "Brass Reading Dial" (Statistics Rework Phase 1): the conic-gradient
+   mechanism above is untouched -- it still carries 100% of the actual
+   data meaning. This adds a metallic bevel (box-shadow) and a low-opacity
+   brass texture on a ::before pseudo-element, since CSS opacity applies to
+   a whole element and can't fade just one layer of a multi-background
+   stack -- the pseudo-element is the only way to fade only the texture
+   while the conic-gradient stays at full strength. */
 .goal-ring {
     --goal-pct: 0;
+    position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1003,7 +1039,23 @@ select:focus-visible,
     height: 8rem;
     border-radius: 50%;
     background: conic-gradient(var(--color-primary) calc(var(--goal-pct) * 1%), var(--color-border) 0);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 60%, black);
+    box-shadow:
+        inset 2px 2px 4px color-mix(in srgb, white 25%, transparent),
+        inset -2px -2px 4px color-mix(in srgb, black 25%, transparent);
     transition: background 0.3s ease;
+}
+
+.goal-ring::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 50%;
+    background-image: url("../images/statistics/brass-texture.webp");
+    background-size: cover;
+    opacity: 0.15;
+    pointer-events: none;
 }
 
 .goal-ring-inner {
@@ -1067,7 +1119,7 @@ select:focus-visible,
 .calendar-cell {
     width: 0.7rem;
     height: 0.7rem;
-    border-radius: 2px;
+    border-radius: 3px;
     background-color: var(--color-bg-paper);
     border: 1px solid var(--color-border);
 }
@@ -1077,19 +1129,26 @@ select:focus-visible,
     border-color: transparent;
 }
 
+/* Levels 2-4 get a glow that intensifies with the underlying activity
+   level ("earned illumination") -- levels 0-1 stay flat on purpose, so
+   the effect reads as a reward for real reading activity, not decoration
+   applied uniformly regardless of the data. */
 .calendar-cell--level-2 {
     background-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-bg-paper));
     border-color: transparent;
+    box-shadow: 0 0 3px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 .calendar-cell--level-3 {
     background-color: color-mix(in srgb, var(--color-primary) 75%, var(--color-bg-paper));
     border-color: transparent;
+    box-shadow: 0 0 4px color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
 .calendar-cell--level-4 {
     background-color: var(--color-primary);
     border-color: transparent;
+    box-shadow: 0 0 5px color-mix(in srgb, var(--color-primary) 70%, transparent);
 }
 
 .calendar-legend {
