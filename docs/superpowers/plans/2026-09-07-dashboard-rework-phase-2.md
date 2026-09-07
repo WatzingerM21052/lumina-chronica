@@ -339,8 +339,11 @@ Add to `frontend/LuminaChronica.Client/Pages/Home.razor.css`, after the `.home-h
    less height, not a layout jump. */
 .home-hero.is-compact {
     height: 22vh;
+    min-height: 160px;
 }
 ```
+
+`.home-hero`'s existing base rule (Phase 1) has `min-height: 260px`, which would otherwise clamp `.is-compact`'s `height: 22vh` to 260px on typical viewport heights (making the compaction partially or fully invisible below ~1182px viewport height) — this second `min-height` on the more specific `.is-compact` selector overrides that floor for the compact state specifically. 160px is proportional to the base floor at the same 22vh/38vh ≈ 0.58 ratio as the height values themselves (260px × 0.58 ≈ 151px, rounded up).
 
 `Home.razor.css` has no `@media (prefers-reduced-motion: reduce)` block yet (confirmed by reading the current file) — add one at the end of the file:
 
