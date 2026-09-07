@@ -92,6 +92,7 @@ else if (_projects.Count == 0)
 else
 {
     <div class="library-grid">
+        @* Only shows newest projects; backend orders by created_at DESC (see projectService.listProjects) *@
         @foreach (var project in _projects.Take(RecentProjectsLimit))
         {
             <ProjectCard Project="project" />
