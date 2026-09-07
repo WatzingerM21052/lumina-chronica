@@ -3,7 +3,10 @@
     height: 38vh;
     min-height: 260px;
     border-radius: var(--radius-lg);
-    overflow: hidden;
+    /* overflow: clip, not hidden -- hidden makes this element a scroll
+       container, which makes it the source of the layers' animation-timeline:
+       view(), pinning progress near 0.5 instead of tracking page scroll. */
+    overflow: clip;
     margin-bottom: var(--space-3);
     box-shadow: var(--shadow-card);
     background-color: var(--color-bg-dark);
