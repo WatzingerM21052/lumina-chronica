@@ -82,6 +82,20 @@ size as Layers 1-2. No people, no text, no watermark, no signature.
 
 **Why brass/midnight-blue instead of pure gold-amber like Dashboard**: Statistics is "stark inszeniert, aber datenorientiert" per #358 — the brass-instrument/observatory framing is what the issue's own "Brass Reading Dial" language for the Goal Ring points at, so the hero sets up that same material language before the user even reaches the ring. The cool moonlight accent is the one deliberate departure from Dashboard's all-warm palette, to keep Statistics visually distinct rather than a re-skin of the same hall.
 
+**Brushed-brass texture overlay** — confirmed during scoping: the Goal Ring/Heatmap "Brass Reading Dial"/"Illuminated Reading Calendar" look is CSS (gradients, bevel box-shadows) **plus** this small tileable texture as a subtle background overlay for material depth, not CSS alone.
+
+```
+A seamless tileable texture of brushed brass metal, fine circular
+brushing pattern catching soft directional light, warm golden-brass
+color, subtle warm highlights and soft shadow in the brushing grooves,
+evenly lit, no strong directional glare, no scratches or dirt, no
+vignette, no border. Flat, top-down, uniform lighting across the whole
+tile so it repeats without a visible seam. Square canvas, 512x512px,
+photorealistic material texture, no text, no watermark, no signature.
+```
+
+Meant to sit at low opacity behind the ring/calendar cells (`background-blend-mode` or a low-alpha overlay), not as a full-strength texture — generate it clean/evenly lit so it still reads correctly at 10-20% opacity over a themed background color.
+
 ---
 
 ## 2. Library hero — "The Private Stacks"
