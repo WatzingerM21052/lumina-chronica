@@ -6,6 +6,7 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Lumina Chronica</PageTitle>
 
@@ -113,6 +114,7 @@ else
 
     private ElementReference _heroRef;
     private ElementReference _heroSentinelRef;
+    private IJSObjectReference? _motionModule;
 
     private List<Book>? _books;
     private int _totalBooks;
@@ -139,6 +141,28 @@ else
 
         var projectsResponse = await projectsTask;
         _projects = projectsResponse is { Success: true, Data: not null } ? projectsResponse.Data : [];
+    }
+
+    // Reuses motion.js's initHeaderCompact for the hero itself (already
+    // generic over any header/sentinel element pair, not app-header-
+    // specific). Wired here rather than in MainLayout because this
+    // sentinel is Home-page-only; MainLayout's own OnAfterRenderAsync only
+    // ever wires the app-wide header. Wrapped in try/catch matching
+    // Discover.razor/PublicProfile.razor's own motion.js wiring — a
+    // blocked/failed module load just leaves the hero uncompacted, same
+    // "progressive enhancement" shape as everywhere else this module is used.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            _motionModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
+            await _motionModule.InvokeVoidAsync("initHeaderCompact", _heroRef, _heroSentinelRef);
+        }
+        catch (Exception)
+        {
+        }
     }
 
     private void GoToUpload() => NavigationManager.NavigateTo("library/upload");

@@ -121,3 +121,17 @@
 .home-hero-sentinel {
     height: 1px;
 }
+
+/* Toggled by motion.js's initHeaderCompact once .home-hero-sentinel
+   scrolls out of view — same mechanism and transition tokens as
+   MainLayout.razor.css's .app-header.is-compact. Subtle on purpose:
+   less height, not a layout jump. */
+.home-hero.is-compact {
+    height: 22vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-hero {
+        transition: none;
+    }
+}
