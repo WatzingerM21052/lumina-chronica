@@ -1,4 +1,5 @@
 using Bunit;
+using LuminaChronica.Client.Models;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,12 +12,15 @@ public class HomePageTests : BunitContext
     private const string EmptyDashboardJson =
         """{"success":true,"data":{"continueReading":[],"recommendations":[],"overview":{"totalBooks":0,"totalShelves":0,"totalFavorites":0,"finishedBooks":0}}}""";
 
+    private const string EmptyProjectsJson = """{"success":true,"data":[]}""";
+
     [Fact]
     public void Home_RendersWithoutThrowing_AndShowsWelcomeHeading()
     {
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
 
         var cut = Render<Home>();
@@ -30,6 +34,7 @@ public class HomePageTests : BunitContext
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
 
         var cut = Render<Home>();
@@ -52,6 +57,7 @@ public class HomePageTests : BunitContext
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", booksJson)
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
         Services.AddSingleton<BlobUrlService>();
 
@@ -69,6 +75,7 @@ public class HomePageTests : BunitContext
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", dashboardJson));
 
         var cut = Render<Home>();
@@ -99,6 +106,7 @@ public class HomePageTests : BunitContext
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", dashboardJson));
         Services.AddSingleton<BlobUrlService>();
 
@@ -107,6 +115,36 @@ public class HomePageTests : BunitContext
         Assert.Contains("Weiterlesen", cut.Markup);
         Assert.Contains("Der Herr der Ringe", cut.Markup);
         Assert.Contains("href=\"library/books/7/read\"", cut.Markup);
+    }
+
+    [Fact]
+    public void Home_ContinueReading_FirstBookIsFeaturedSize_RestAreNormal()
+    {
+        const string dashboardJson = """
+            {"success":true,"data":{"continueReading":[
+                {"book":{"id":7,"title":"Der Herr der Ringe","author":"J.R.R. Tolkien","description":null,
+                 "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null},
+                 "percentage":42.5,"lastOpened":"2026-08-01T10:00:00Z"},
+                {"book":{"id":8,"title":"Der Hobbit","author":"J.R.R. Tolkien","description":null,
+                 "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null},
+                 "percentage":10,"lastOpened":"2026-08-01T09:00:00Z"}
+            ],"overview":{"totalBooks":2,"totalShelves":0,"totalFavorites":0,"finishedBooks":0}}}
+            """;
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/api/dashboard", dashboardJson));
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Home>();
+
+        var cards = cut.FindAll("a.book-card");
+        Assert.Equal(2, cards.Count);
+        Assert.Contains("book-card-large", cards[0].ClassList);
+        Assert.Contains("book-card-normal", cards[1].ClassList);
     }
 
     [Fact]
@@ -129,6 +167,7 @@ public class HomePageTests : BunitContext
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", dashboardJson));
         Services.AddSingleton<BlobUrlService>();
 
@@ -145,6 +184,7 @@ public class HomePageTests : BunitContext
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
 
         var cut = Render<Home>();
@@ -166,6 +206,7 @@ public class HomePageTests : BunitContext
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", dashboardJson));
         Services.AddSingleton<BlobUrlService>();
 
@@ -181,11 +222,50 @@ public class HomePageTests : BunitContext
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
             .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
             .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
 
         var cut = Render<Home>();
 
         Assert.DoesNotContain("Empfehlungen", cut.Markup);
+    }
+
+    [Fact]
+    public void Home_ShowsEmptyStateForProjects_WhenNoProjectsExist()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
+
+        var cut = Render<Home>();
+
+        Assert.Contains("Du hast noch keine Projekte erstellt", cut.Markup);
+    }
+
+    [Fact]
+    public void Home_ShowsRealProjects_WhenProjectsExist()
+    {
+        // Regression coverage for the bug where "Aktuelle Projekte" always
+        // showed the empty state regardless of real data (never wired to the
+        // Projects API that's existed since v2.0 -- see Roadmap.md).
+        const string projectsJson = """
+            {"success":true,"data":[
+                {"id":3,"title":"Mittelerde","description":null,"type":"WORLD","coverUrl":null,"mapUrl":null,"visibility":"PRIVATE","createdAt":"2026-01-01"}
+            ]}
+            """;
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", projectsJson)
+            .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Home>();
+
+        Assert.Contains("Mittelerde", cut.Markup);
+        Assert.DoesNotContain("Du hast noch keine Projekte erstellt", cut.Markup);
     }
 
     private void UseHandler(RoutedFakeHttpMessageHandler handler)

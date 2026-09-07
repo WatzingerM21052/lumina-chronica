@@ -1,0 +1,14 @@
+@namespace LuminaChronica.Client.Components
+
+<div class="dashboard-stat">
+    <span class="dashboard-stat-value">@Value</span>
+    <span class="dashboard-stat-label">@Label</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+}
