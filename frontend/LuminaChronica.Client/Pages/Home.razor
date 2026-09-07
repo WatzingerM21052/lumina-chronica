@@ -1,5 +1,6 @@
 @page "/"
 @attribute [Authorize]
+@implements IAsyncDisposable
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
@@ -10,16 +11,16 @@
 
 <PageTitle>Lumina Chronica</PageTitle>
 
+<div class="home-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
 <div class="home-hero" @ref="_heroRef">
     <img src="images/dashboard-hero-layer1-background.webp" alt="" class="home-hero-layer home-hero-layer-1" fetchpriority="high" />
-    <img src="images/dashboard-hero-layer2-lights.webp" alt="" class="home-hero-layer home-hero-layer-2" />
-    <img src="images/dashboard-hero-layer3-foreground.webp" alt="" class="home-hero-layer home-hero-layer-3" />
+    <img src="images/dashboard-hero-layer2-lights.webp" alt="" class="home-hero-layer home-hero-layer-2" fetchpriority="low" decoding="async" />
+    <img src="images/dashboard-hero-layer3-foreground.webp" alt="" class="home-hero-layer home-hero-layer-3" fetchpriority="low" decoding="async" />
     <div class="home-hero-scrim"></div>
     <div class="home-hero-content">
         <h1>Willkommen zurück</h1>
     </div>
 </div>
-<div class="home-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
 
 <StatusWidget />
 
@@ -166,4 +167,18 @@ else
     }
 
     private void GoToUpload() => NavigationManager.NavigateTo("library/upload");
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_motionModule is not null)
+        {
+            try
+            {
+                await _motionModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
 }

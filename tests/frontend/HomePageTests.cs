@@ -47,6 +47,30 @@ public class HomePageTests : BunitContext
     }
 
     [Fact]
+    public void Home_Hero_SentinelRendersBeforeHero()
+    {
+        // The compaction sentinel must precede .home-hero in document order —
+        // it needs to leave the viewport while the (non-sticky) hero is
+        // still on screen, or motion.js's initHeaderCompact toggles a class
+        // on an element the user can no longer see. See Home.razor.css's
+        // .home-hero-sentinel comment for why this differs from
+        // MainLayout's header sentinel, which goes after its (sticky) header.
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
+
+        var cut = Render<Home>();
+
+        var sentinelIndex = cut.Markup.IndexOf("home-hero-sentinel", StringComparison.Ordinal);
+        var heroIndex = cut.Markup.IndexOf("\"home-hero\"", StringComparison.Ordinal);
+        Assert.True(sentinelIndex >= 0, "Sentinel element not found in markup.");
+        Assert.True(heroIndex >= 0, "Hero element not found in markup.");
+        Assert.True(sentinelIndex < heroIndex, "Sentinel must render before .home-hero in document order.");
+    }
+
+    [Fact]
     public void Home_ShowsEmptyStateForLibrary_WhenLibraryIsEmpty()
     {
         UseHandler(new RoutedFakeHttpMessageHandler()

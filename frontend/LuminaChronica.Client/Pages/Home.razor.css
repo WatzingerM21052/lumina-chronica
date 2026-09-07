@@ -6,14 +6,22 @@
     overflow: hidden;
     margin-bottom: var(--space-3);
     box-shadow: var(--shadow-card);
+    background-color: var(--color-bg-dark);
     transition: height var(--motion-standard) var(--ease-standard);
 }
 
 /* Three depth layers (Dashboard Rework Phase 2) replace the old single
    .home-hero-image. Each layer is sized larger than its container
    (inset: -10% 0 -> 120% height) so Task 2's parallax translateY can move
-   it without ever exposing empty space at the top/bottom edge — the
-   largest layer (layer-3) moves up to 9%, well inside this 10% margin. */
+   it without ever exposing empty space at the top/bottom edge. Note
+   translateY(%) resolves against the layer's OWN height (120% of the
+   container), not the container's — so layer-3's translateY(9%) is
+   actually a 10.8%-of-container shift, slightly past this 10% overhang.
+   No empty space is exposed in practice: layer-1 (the only fully opaque
+   layer) only moves 2% (2.4% of container, well inside the margin), and
+   layer-3 is ~70% transparent, so its edge crossing the container bound
+   has no visible effect. Increasing layer-3's travel distance without
+   re-checking this margin would not be safe. */
 .home-hero-layer {
     position: absolute;
     inset: -10% 0;
@@ -115,9 +123,16 @@
     margin: 0;
 }
 
-/* Sentinel for Task 3's motion.js initHeaderCompact call — same pattern
-   as MainLayout.razor.css's .scroll-sentinel, kept local here since this
-   sentinel is Home-page-specific, not app-wide. */
+/* Sentinel for Task 3's motion.js initHeaderCompact call — same mechanism
+   as MainLayout.razor.css's .scroll-sentinel, but placed BEFORE .home-hero
+   in Home.razor rather than after it. MainLayout's sentinel goes after the
+   header because the header is `position: sticky` and stays visible while
+   compacting; .home-hero is a normal, non-sticky block, so a sentinel
+   placed after it would only leave the viewport once the hero itself had
+   already fully scrolled away — the compaction would apply to an element
+   the user can no longer see. Placing the sentinel first means it clears
+   the viewport (just below the app header) while the hero is still mostly
+   on screen, so the height change is the thing the user actually watches. */
 .home-hero-sentinel {
     height: 1px;
 }
@@ -129,8 +144,8 @@
    .home-hero's base rule has min-height: 260px, which would otherwise
    clamp this compact state's height: 22vh on typical viewport heights —
    this second, more specific min-height overrides that floor for the
-   compact state only. 160px keeps the same ~0.58 ratio (22vh/38vh) as the
-   height values themselves relative to the base 260px floor. */
+   compact state only. 160px is 260px scaled by the same 22vh/38vh ratio
+   as the height values themselves (260 * 22/38 = 150.5px), rounded up. */
 .home-hero.is-compact {
     height: 22vh;
     min-height: 160px;
