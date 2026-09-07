@@ -9,13 +9,16 @@
 
 <PageTitle>Lumina Chronica</PageTitle>
 
-<div class="home-hero">
-    <img src="images/home-hero.jpg" alt="" class="home-hero-image" />
+<div class="home-hero" @ref="_heroRef">
+    <img src="images/dashboard-hero-layer1-background.webp" alt="" class="home-hero-layer home-hero-layer-1" fetchpriority="high" />
+    <img src="images/dashboard-hero-layer2-lights.webp" alt="" class="home-hero-layer home-hero-layer-2" />
+    <img src="images/dashboard-hero-layer3-foreground.webp" alt="" class="home-hero-layer home-hero-layer-3" />
     <div class="home-hero-scrim"></div>
     <div class="home-hero-content">
         <h1>Willkommen zurück</h1>
     </div>
 </div>
+<div class="home-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
 
 <StatusWidget />
 
@@ -107,6 +110,9 @@ else
 @code {
     private const int RecentBooksLimit = 6;
     private const int RecentProjectsLimit = 6;
+
+    private ElementReference _heroRef;
+    private ElementReference _heroSentinelRef;
 
     private List<Book>? _books;
     private int _totalBooks;

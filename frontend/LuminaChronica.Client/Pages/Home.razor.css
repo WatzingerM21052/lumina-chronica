@@ -6,20 +6,39 @@
     overflow: hidden;
     margin-bottom: var(--space-3);
     box-shadow: var(--shadow-card);
+    transition: height var(--motion-standard) var(--ease-standard);
 }
 
-.home-hero-image {
+/* Three depth layers (Dashboard Rework Phase 2) replace the old single
+   .home-hero-image. Each layer is sized larger than its container
+   (inset: -10% 0 -> 120% height) so Task 2's parallax translateY can move
+   it without ever exposing empty space at the top/bottom edge — the
+   largest layer (layer-3) moves up to 9%, well inside this 10% margin. */
+.home-hero-layer {
     position: absolute;
-    inset: 0;
+    inset: -10% 0;
     width: 100%;
-    height: 100%;
+    height: 120%;
     object-fit: cover;
+}
+
+.home-hero-layer-1 {
+    z-index: 1;
+}
+
+.home-hero-layer-2 {
+    z-index: 2;
+}
+
+.home-hero-layer-3 {
+    z-index: 3;
 }
 
 .home-hero-scrim {
     position: absolute;
     inset: 0;
     background: linear-gradient(180deg, rgba(20, 12, 6, 0.35) 0%, rgba(20, 12, 6, 0.2) 45%, rgba(15, 9, 5, 0.75) 100%);
+    z-index: 4;
 }
 
 .home-hero-content {
@@ -28,6 +47,7 @@
     display: flex;
     align-items: flex-end;
     padding: var(--space-3);
+    z-index: 5;
 }
 
 .home-hero-content h1 {
@@ -35,4 +55,11 @@
     color: var(--color-text-on-dark);
     text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
     margin: 0;
+}
+
+/* Sentinel for Task 3's motion.js initHeaderCompact call — same pattern
+   as MainLayout.razor.css's .scroll-sentinel, kept local here since this
+   sentinel is Home-page-specific, not app-wide. */
+.home-hero-sentinel {
+    height: 1px;
 }

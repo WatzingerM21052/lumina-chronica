@@ -29,6 +29,24 @@ public class HomePageTests : BunitContext
     }
 
     [Fact]
+    public void Home_Hero_RendersAllThreeParallaxLayers()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
+
+        var cut = Render<Home>();
+
+        var layers = cut.FindAll("img.home-hero-layer");
+        Assert.Equal(3, layers.Count);
+        Assert.Contains("dashboard-hero-layer1-background.webp", layers[0].GetAttribute("src"));
+        Assert.Contains("dashboard-hero-layer2-lights.webp", layers[1].GetAttribute("src"));
+        Assert.Contains("dashboard-hero-layer3-foreground.webp", layers[2].GetAttribute("src"));
+    }
+
+    [Fact]
     public void Home_ShowsEmptyStateForLibrary_WhenLibraryIsEmpty()
     {
         UseHandler(new RoutedFakeHttpMessageHandler()
