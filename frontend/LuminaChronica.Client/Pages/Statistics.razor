@@ -6,12 +6,20 @@
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Statistik — Lumina Chronica</PageTitle>
 
-<div class="stats-header">
-    <h1>Statistik</h1>
-    <p class="stats-subtitle">Deine Lesereise in Zahlen.</p>
+<div class="stats-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
+<div class="stats-hero" @ref="_heroRef">
+    <img src="images/statistics-hero-layer1-background.webp" alt="" class="stats-hero-layer stats-hero-layer-1" fetchpriority="high" />
+    <img src="images/statistics-hero-layer2-moonlight.webp" alt="" class="stats-hero-layer stats-hero-layer-2" fetchpriority="low" decoding="async" />
+    <img src="images/statistics-hero-layer3-armillary.webp" alt="" class="stats-hero-layer stats-hero-layer-3" fetchpriority="low" decoding="async" />
+    <div class="stats-hero-scrim"></div>
+    <div class="stats-hero-content">
+        <h1>Statistik</h1>
+        <p class="stats-subtitle">Deine Lesereise in Zahlen.</p>
+    </div>
 </div>
 
 @if (_stats is null)
@@ -147,6 +155,10 @@ else
 }
 
 @code {
+    private ElementReference _heroRef;
+    private ElementReference _heroSentinelRef;
+    private IJSObjectReference? _motionModule;
+
     private StatisticsResponse? _stats;
     private int? _goalInput;
     private List<List<CalendarCell>> _calendarWeeks = [];

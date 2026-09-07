@@ -952,18 +952,13 @@ select:focus-visible,
     text-align: right;
 }
 
-/* Statistics page (v1.5 extended stats): header, stat-tile row reuse
+/* Statistics page (v1.5 extended stats): stat-tile row reuses
    .dashboard-overview/.dashboard-stat as-is, then two side-by-side panels
    (goal ring + reading calendar), then a yearly-overview list reusing the
-   same bar-track/bar-fill visual as the genre breakdown below it. */
-.stats-header {
-    margin-bottom: var(--space-2);
-}
-
-.stats-subtitle {
-    color: var(--color-text-secondary);
-}
-
+   same bar-track/bar-fill visual as the genre breakdown below it. The
+   page's header moved into the hero (Statistics.razor.css, Statistics
+   Rework Phase 2) — .stats-header/.stats-subtitle's old plain-page
+   styling no longer applies. */
 .stats-overview .dashboard-stat {
     min-width: 8rem;
 }
