@@ -986,6 +986,29 @@ select:focus-visible,
     background-color: var(--color-bg-card);
 }
 
+/* "Illuminated Reading Calendar" (Statistics Rework Phase 1): the same
+   low-opacity brass-texture technique as the Goal Ring (Task 3), applied
+   once to the whole calendar panel rather than per-cell (364+ repeated
+   background images would be wasteful). position: relative + overflow:
+   hidden keep the texture inside the panel's own rounded corners; child
+   content (h2, .calendar-heatmap, .calendar-legend) paints after this
+   pseudo-element in normal flow, so it naturally sits on top without
+   needing z-index. */
+.stats-panel.calendar-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-panel.calendar-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("images/statistics/brass-texture.webp");
+    background-size: cover;
+    opacity: 0.15;
+    pointer-events: none;
+}
+
 .stats-panel h2 {
     align-self: flex-start;
     margin: 0;
@@ -1087,7 +1110,7 @@ select:focus-visible,
 .calendar-cell {
     width: 0.7rem;
     height: 0.7rem;
-    border-radius: 2px;
+    border-radius: 3px;
     background-color: var(--color-bg-paper);
     border: 1px solid var(--color-border);
 }
@@ -1097,19 +1120,26 @@ select:focus-visible,
     border-color: transparent;
 }
 
+/* Levels 2-4 get a glow that intensifies with the underlying activity
+   level ("earned illumination") -- levels 0-1 stay flat on purpose, so
+   the effect reads as a reward for real reading activity, not decoration
+   applied uniformly regardless of the data. */
 .calendar-cell--level-2 {
     background-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-bg-paper));
     border-color: transparent;
+    box-shadow: 0 0 3px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 .calendar-cell--level-3 {
     background-color: color-mix(in srgb, var(--color-primary) 75%, var(--color-bg-paper));
     border-color: transparent;
+    box-shadow: 0 0 4px color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
 .calendar-cell--level-4 {
     background-color: var(--color-primary);
     border-color: transparent;
+    box-shadow: 0 0 5px color-mix(in srgb, var(--color-primary) 70%, transparent);
 }
 
 .calendar-legend {
