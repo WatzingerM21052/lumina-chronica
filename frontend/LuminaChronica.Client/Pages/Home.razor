@@ -79,19 +79,43 @@ else
 }
 
 <h2>Aktuelle Projekte</h2>
-<EmptyState Message="Du hast noch keine Projekte erstellt. Beginne mit deiner ersten Welt, Geschichte oder Kampagne."
-            ActionText="Projekt erstellen" />
+@if (_projects is null)
+{
+    <LoadingIndicator Text="Projekte werden geladen..." />
+}
+else if (_projects.Count == 0)
+{
+    <EmptyState Message="Du hast noch keine Projekte erstellt. Beginne mit deiner ersten Welt, Geschichte oder Kampagne."
+                ActionText="Projekt erstellen"
+                ActionHref="projects" />
+}
+else
+{
+    <div class="library-grid">
+        @foreach (var project in _projects.Take(RecentProjectsLimit))
+        {
+            <ProjectCard Project="project" />
+        }
+    </div>
+    @if (_projects.Count > RecentProjectsLimit)
+    {
+        <p><a href="projects">Alle Projekte ansehen (@_projects.Count)</a></p>
+    }
+}
 
 @code {
     private const int RecentBooksLimit = 6;
+    private const int RecentProjectsLimit = 6;
 
     private List<Book>? _books;
     private int _totalBooks;
     private DashboardResponse? _dashboard;
+    private List<Project>? _projects;
 
     protected override async Task OnInitializedAsync()
     {
         var dashboardTask = ApiClient.GetAsync<DashboardResponse>("/api/dashboard");
+        var projectsTask = ApiClient.GetAsync<List<Project>>("/api/projects");
         var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?sort=createdAt&order=desc&pageSize={RecentBooksLimit}");
         if (response is { Success: true, Data: not null })
         {
@@ -105,6 +129,9 @@ else
 
         var dashboardResponse = await dashboardTask;
         _dashboard = dashboardResponse is { Success: true, Data: not null } ? dashboardResponse.Data : new DashboardResponse();
+
+        var projectsResponse = await projectsTask;
+        _projects = projectsResponse is { Success: true, Data: not null } ? projectsResponse.Data : [];
     }
 
     private void GoToUpload() => NavigationManager.NavigateTo("library/upload");
