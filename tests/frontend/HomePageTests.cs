@@ -153,6 +153,35 @@ public class HomePageTests : BunitContext
     }
 
     [Fact]
+    public void Home_ContinueReading_FirstBookIsFeaturedSize_RestAreNormal()
+    {
+        const string dashboardJson = """
+            {"success":true,"data":{"continueReading":[
+                {"book":{"id":7,"title":"Der Herr der Ringe","author":"J.R.R. Tolkien","description":null,
+                 "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null},
+                 "percentage":42.5,"lastOpened":"2026-08-01T10:00:00Z"},
+                {"book":{"id":8,"title":"Der Hobbit","author":"J.R.R. Tolkien","description":null,
+                 "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01",
+                 "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null},
+                 "percentage":10,"lastOpened":"2026-08-01T09:00:00Z"}
+            ],"overview":{"totalBooks":2,"totalShelves":0,"totalFavorites":0,"finishedBooks":0}}}
+            """;
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/dashboard", dashboardJson));
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Home>();
+
+        var cards = cut.FindAll("a.book-card");
+        Assert.Equal(2, cards.Count);
+        Assert.Contains("book-card-large", cards[0].ClassList);
+        Assert.Contains("book-card-normal", cards[1].ClassList);
+    }
+
+    [Fact]
     public void Home_ShowsRecommendationsSection_WhenUnstartedBooksExist()
     {
         const string dashboardJson = """

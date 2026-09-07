@@ -124,3 +124,16 @@
 .book-card-large .book-card-title {
     font-size: var(--font-size-h3);
 }
+
+/* Featured Weiterlesen card only (Dashboard Rework Phase 1) -- uses
+   --color-accent-text, not --color-gold-accent: the plain gold accent
+   fails WCAG's 3:1 non-text-contrast floor against light-theme paper
+   (see #341's identical reasoning for the rating-star/focus-ring fix in
+   app.css). Small/Normal cards elsewhere (Library, Reader) are untouched. */
+.book-card-large .book-card-progress {
+    height: 2px;
+}
+
+.book-card-large .book-card-progress-bar {
+    background-color: var(--color-accent-text);
+}

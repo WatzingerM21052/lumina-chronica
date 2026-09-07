@@ -23,10 +23,12 @@
 {
     <h2>Weiterlesen</h2>
     <div class="library-grid">
-        @foreach (var item in _dashboard.ContinueReading)
+        @for (var i = 0; i < _dashboard.ContinueReading.Count; i++)
         {
+            var item = _dashboard.ContinueReading[i];
             <BookCard Book="item.Book" ProgressPercentage="item.Percentage" Href="@($"library/books/{item.Book.Id}/read")"
-                      ShowFavorite="item.OwnerUsername is null" OwnerUsername="@item.OwnerUsername" />
+                      ShowFavorite="item.OwnerUsername is null" OwnerUsername="@item.OwnerUsername"
+                      Size="@(i == 0 ? BookCardSize.Large : BookCardSize.Normal)" />
         }
     </div>
 }
