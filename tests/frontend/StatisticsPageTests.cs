@@ -189,6 +189,23 @@ public class StatisticsPageTests : BunitContext
     }
 
     [Fact]
+    public void Statistics_CalendarCell_HasAccessibleRoleAndAriaLabel()
+    {
+        const string template = """
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":10,"genreBreakdown":[],
+             "recentActivity":[],"readingCalendar":[{"date":"__DATE__","count":3}]}}
+            """;
+        var today = DateTime.UtcNow;
+        var json = template.Replace("__DATE__", today.ToString("yyyy-MM-dd"));
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        var expectedLabel = $"{today:dd.MM.yyyy}: 3 Aktivität(en)";
+        Assert.Contains($"role=\"img\" aria-label=\"{expectedLabel}\"", cut.Markup);
+    }
+
+    [Fact]
     public void Statistics_SavingGoal_PutsToGoalEndpoint_AndShowsUpdatedRing()
     {
         const string initialJson = """

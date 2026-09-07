@@ -77,7 +77,7 @@ else
                     <div class="calendar-week">
                         @foreach (var day in week)
                         {
-                            <div class="calendar-cell calendar-cell--level-@day.Level" title="@day.Tooltip"></div>
+                            <div class="calendar-cell calendar-cell--level-@day.Level" title="@day.Tooltip" role="img" aria-label="@day.Tooltip"></div>
                         }
                     </div>
                 }
