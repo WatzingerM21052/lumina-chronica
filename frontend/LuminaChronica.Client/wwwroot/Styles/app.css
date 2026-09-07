@@ -990,20 +990,27 @@ select:focus-visible,
    low-opacity brass-texture technique as the Goal Ring (Task 3), applied
    once to the whole calendar panel rather than per-cell (364+ repeated
    background images would be wasteful). position: relative + overflow:
-   hidden keep the texture inside the panel's own rounded corners; child
-   content (h2, .calendar-heatmap, .calendar-legend) paints after this
-   pseudo-element in normal flow, so it naturally sits on top without
-   needing z-index. */
+   hidden keep the texture inside the panel's own rounded corners.
+   isolation: isolate makes this panel establish its own stacking context;
+   combined with z-index: -1 on the ::before below, the texture paints
+   after the panel's own background but before its non-positioned in-flow
+   children (h2, .calendar-heatmap, .calendar-legend) -- per CSS painting
+   order, a positioned box with negative z-index paints earlier than
+   non-positioned in-flow descendants regardless of DOM order, so without
+   isolation + z-index the texture would incorrectly paint on top of the
+   content instead of behind it. */
 .stats-panel.calendar-card {
     position: relative;
     overflow: hidden;
+    isolation: isolate;
 }
 
 .stats-panel.calendar-card::before {
     content: "";
     position: absolute;
     inset: 0;
-    background-image: url("images/statistics/brass-texture.webp");
+    z-index: -1;
+    background-image: url("../images/statistics/brass-texture.webp");
     background-size: cover;
     opacity: 0.15;
     pointer-events: none;
@@ -1024,6 +1031,7 @@ select:focus-visible,
 .goal-ring {
     --goal-pct: 0;
     position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1042,8 +1050,9 @@ select:focus-visible,
     content: "";
     position: absolute;
     inset: 0;
+    z-index: -1;
     border-radius: 50%;
-    background-image: url("images/statistics/brass-texture.webp");
+    background-image: url("../images/statistics/brass-texture.webp");
     background-size: cover;
     opacity: 0.15;
     pointer-events: none;

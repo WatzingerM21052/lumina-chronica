@@ -206,6 +206,22 @@ public class StatisticsPageTests : BunitContext
     }
 
     [Fact]
+    public void Statistics_CalendarCell_ZeroActivityDay_HasNoRoleOrAriaLabel()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":10,"genreBreakdown":[],
+             "recentActivity":[],"readingCalendar":[]}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Contains("calendar-heatmap", cut.Markup);
+        Assert.Contains("calendar-cell--level-0", cut.Markup);
+        Assert.DoesNotContain("role=\"img\"", cut.Markup);
+    }
+
+    [Fact]
     public void Statistics_SavingGoal_PutsToGoalEndpoint_AndShowsUpdatedRing()
     {
         const string initialJson = """
