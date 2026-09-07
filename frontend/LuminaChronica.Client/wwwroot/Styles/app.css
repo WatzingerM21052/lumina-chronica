@@ -991,11 +991,16 @@ select:focus-visible,
     margin: 0;
 }
 
-/* A conic-gradient ring rather than an SVG/JS chart -- the "modern, high-tech"
-   touch the redesign asked for, kept to plain CSS custom properties so it
-   still themes correctly across all four color themes with no JS. */
+/* "Brass Reading Dial" (Statistics Rework Phase 1): the conic-gradient
+   mechanism above is untouched -- it still carries 100% of the actual
+   data meaning. This adds a metallic bevel (box-shadow) and a low-opacity
+   brass texture on a ::before pseudo-element, since CSS opacity applies to
+   a whole element and can't fade just one layer of a multi-background
+   stack -- the pseudo-element is the only way to fade only the texture
+   while the conic-gradient stays at full strength. */
 .goal-ring {
     --goal-pct: 0;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1003,7 +1008,22 @@ select:focus-visible,
     height: 8rem;
     border-radius: 50%;
     background: conic-gradient(var(--color-primary) calc(var(--goal-pct) * 1%), var(--color-border) 0);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 60%, black);
+    box-shadow:
+        inset 2px 2px 4px color-mix(in srgb, white 25%, transparent),
+        inset -2px -2px 4px color-mix(in srgb, black 25%, transparent);
     transition: background 0.3s ease;
+}
+
+.goal-ring::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background-image: url("images/statistics/brass-texture.webp");
+    background-size: cover;
+    opacity: 0.15;
+    pointer-events: none;
 }
 
 .goal-ring-inner {
