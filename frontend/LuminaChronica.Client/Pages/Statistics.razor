@@ -1,5 +1,6 @@
 @page "/statistics"
 @attribute [Authorize]
+@implements IAsyncDisposable
 @using System.Globalization
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
@@ -171,6 +172,26 @@ else
         BuildCalendarWeeks();
     }
 
+    // Reuses motion.js's initHeaderCompact for the hero itself (already
+    // generic over any header/sentinel element pair, not app-header- or
+    // Home-page-specific). Wrapped in try/catch matching every other
+    // motion.js call site in this codebase — a blocked/failed module load
+    // just leaves the hero uncompacted, same "progressive enhancement"
+    // shape as everywhere else this module is used.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            _motionModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
+            await _motionModule.InvokeVoidAsync("initHeaderCompact", _heroRef, _heroSentinelRef);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
     // Builds a full Monday-start grid covering the last 52 weeks, even for
     // days with zero activity -- the API only returns days that actually
     // have a reading_activity row (sparse), but a heatmap needs every cell.
@@ -238,5 +259,19 @@ else
     private record CalendarCell(DateTime Date, int Count, int Level, bool IsFuture)
     {
         public string Tooltip => IsFuture ? "" : $"{Date:dd.MM.yyyy}: {Count} Aktivität(en)";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_motionModule is not null)
+        {
+            try
+            {
+                await _motionModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }
