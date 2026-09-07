@@ -1,17 +1,26 @@
 @page "/statistics"
 @attribute [Authorize]
+@implements IAsyncDisposable
 @using System.Globalization
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Statistik — Lumina Chronica</PageTitle>
 
-<div class="stats-header">
-    <h1>Statistik</h1>
-    <p class="stats-subtitle">Deine Lesereise in Zahlen.</p>
+<div class="stats-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
+<div class="stats-hero" @ref="_heroRef">
+    <img src="images/statistics-hero-layer1-background.webp" alt="" class="stats-hero-layer stats-hero-layer-1" fetchpriority="high" />
+    <img src="images/statistics-hero-layer2-moonlight.webp" alt="" class="stats-hero-layer stats-hero-layer-2" fetchpriority="low" decoding="async" />
+    <img src="images/statistics-hero-layer3-armillary.webp" alt="" class="stats-hero-layer stats-hero-layer-3" fetchpriority="low" decoding="async" />
+    <div class="stats-hero-scrim"></div>
+    <div class="stats-hero-content">
+        <h1>Statistik</h1>
+        <p class="stats-subtitle">Deine Lesereise in Zahlen.</p>
+    </div>
 </div>
 
 @if (_stats is null)
@@ -147,6 +156,10 @@ else
 }
 
 @code {
+    private ElementReference _heroRef;
+    private ElementReference _heroSentinelRef;
+    private IJSObjectReference? _motionModule;
+
     private StatisticsResponse? _stats;
     private int? _goalInput;
     private List<List<CalendarCell>> _calendarWeeks = [];
@@ -157,6 +170,26 @@ else
         _stats = response is { Success: true, Data: not null } ? response.Data : new StatisticsResponse();
         _goalInput = _stats.Goal.TargetBooks;
         BuildCalendarWeeks();
+    }
+
+    // Reuses motion.js's initHeaderCompact for the hero itself (already
+    // generic over any header/sentinel element pair, not app-header- or
+    // Home-page-specific). Wrapped in try/catch matching every other
+    // motion.js call site in this codebase — a blocked/failed module load
+    // just leaves the hero uncompacted, same "progressive enhancement"
+    // shape as everywhere else this module is used.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            _motionModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
+            await _motionModule.InvokeVoidAsync("initHeaderCompact", _heroRef, _heroSentinelRef);
+        }
+        catch (Exception)
+        {
+        }
     }
 
     // Builds a full Monday-start grid covering the last 52 weeks, even for
@@ -226,5 +259,19 @@ else
     private record CalendarCell(DateTime Date, int Count, int Level, bool IsFuture)
     {
         public string Tooltip => IsFuture ? "" : $"{Date:dd.MM.yyyy}: {Count} Aktivität(en)";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_motionModule is not null)
+        {
+            try
+            {
+                await _motionModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }

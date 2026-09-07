@@ -31,6 +31,34 @@ public class StatisticsPageTests : BunitContext
     }
 
     [Fact]
+    public void Statistics_Hero_RendersAllThreeParallaxLayers()
+    {
+        UseApiResponse(EmptyStatisticsJson);
+
+        var cut = Render<Statistics>();
+
+        var layers = cut.FindAll("img.stats-hero-layer");
+        Assert.Equal(3, layers.Count);
+        Assert.Contains("statistics-hero-layer1-background.webp", layers[0].GetAttribute("src"));
+        Assert.Contains("statistics-hero-layer2-moonlight.webp", layers[1].GetAttribute("src"));
+        Assert.Contains("statistics-hero-layer3-armillary.webp", layers[2].GetAttribute("src"));
+    }
+
+    [Fact]
+    public void Statistics_Hero_SentinelRendersBeforeHero()
+    {
+        UseApiResponse(EmptyStatisticsJson);
+
+        var cut = Render<Statistics>();
+
+        var sentinelIndex = cut.Markup.IndexOf("stats-hero-sentinel", StringComparison.Ordinal);
+        var heroIndex = cut.Markup.IndexOf("\"stats-hero\"", StringComparison.Ordinal);
+        Assert.True(sentinelIndex >= 0, "Sentinel element not found in markup.");
+        Assert.True(heroIndex >= 0, "Hero element not found in markup.");
+        Assert.True(sentinelIndex < heroIndex, "Sentinel must render before .stats-hero in document order.");
+    }
+
+    [Fact]
     public void Statistics_ShowsOverviewCounts_FromStatisticsEndpoint()
     {
         const string json =
