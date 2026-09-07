@@ -34,6 +34,64 @@
     z-index: 3;
 }
 
+/* Scroll-driven parallax (Dashboard Rework Phase 2) — pure CSS, no JS
+   scroll listener. animation-timeline: view() ties each layer's animation
+   progress to the hero's own position crossing the viewport (not the
+   page's total scroll distance), which is what makes this a "parallax
+   while the hero is in view" effect rather than a drift across the whole
+   page. Background moves least, foreground moves most — standard parallax
+   depth ordering. All three keyframes start at the layer's own neutral
+   transform (translateY(0), implicit "from"), so removing the animation
+   entirely (the @supports/prefers-reduced-motion fallback below) leaves
+   every layer in exactly the same resting position as the animated case's
+   starting point — no separate "static" CSS branch needed.
+
+   Browser support note: animation-timeline: view() shipped in Chromium
+   115+ (2023) and Firefox 144+ (2026); Safari does not support it as of
+   this writing. The @supports gate means unsupported browsers receive
+   none of these rules at all and simply show the static layered hero —
+   documented, accepted tradeoff for this personal-use app (see the design
+   spec's Phase 2 section). */
+@supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+        .home-hero-layer-1 {
+            animation: hero-parallax-layer-1 linear both;
+            animation-timeline: view();
+            animation-range: cover;
+        }
+
+        .home-hero-layer-2 {
+            animation: hero-parallax-layer-2 linear both;
+            animation-timeline: view();
+            animation-range: cover;
+        }
+
+        .home-hero-layer-3 {
+            animation: hero-parallax-layer-3 linear both;
+            animation-timeline: view();
+            animation-range: cover;
+        }
+    }
+}
+
+@keyframes hero-parallax-layer-1 {
+    to {
+        transform: translateY(2%);
+    }
+}
+
+@keyframes hero-parallax-layer-2 {
+    to {
+        transform: translateY(5%);
+    }
+}
+
+@keyframes hero-parallax-layer-3 {
+    to {
+        transform: translateY(9%);
+    }
+}
+
 .home-hero-scrim {
     position: absolute;
     inset: 0;
