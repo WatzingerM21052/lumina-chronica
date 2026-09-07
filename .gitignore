@@ -28,6 +28,9 @@ Thumbs.db
 wwwroot/dist/
 dist/
 
+# Superpowers skill scratch state (SDD ledgers, brainstorming-companion mockups)
+.superpowers/
+
 # Raster illustration masters (regenerable from the source ChatGPT thread;
 # only the optimized wwwroot/images/**/optimized/*.webp files are shipped)
 frontend/LuminaChronica.Client/wwwroot/images/mascot/*.png
