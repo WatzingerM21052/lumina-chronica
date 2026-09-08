@@ -114,9 +114,7 @@ else
             {
                 <div class="yearly-overview-row">
                     <span class="yearly-overview-year">@year.Year</span>
-                    <div class="statistics-genre-bar-track">
-                        <div class="statistics-genre-bar-fill" style="width: @(year.BooksFinished * 100.0 / maxBooksPerYear)%"></div>
-                    </div>
+                    <MiniDial Value="@year.BooksFinished" Percentage="@(year.BooksFinished * 100.0 / maxBooksPerYear)" />
                     <span class="yearly-overview-detail">@year.BooksFinished Bücher · @year.PagesRead Seiten · @year.ActiveDays aktive Tage</span>
                 </div>
             }
@@ -134,10 +132,7 @@ else
             {
                 <div class="statistics-genre-row">
                     <span class="statistics-genre-label">@genre.Genre</span>
-                    <div class="statistics-genre-bar-track">
-                        <div class="statistics-genre-bar-fill" style="width: @(genre.Count * 100.0 / maxGenreCount)%"></div>
-                    </div>
-                    <span class="statistics-genre-count">@genre.Count</span>
+                    <MiniDial Value="@genre.Count" Percentage="@(genre.Count * 100.0 / maxGenreCount)" />
                 </div>
             }
         </div>

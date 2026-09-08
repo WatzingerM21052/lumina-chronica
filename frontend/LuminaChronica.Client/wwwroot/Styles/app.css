@@ -939,7 +939,7 @@ select:focus-visible,
 
 .statistics-genre-row {
     display: grid;
-    grid-template-columns: 8rem 1fr 2.5rem;
+    grid-template-columns: 8rem 1fr;
     align-items: center;
     gap: var(--space-2);
 }
@@ -952,29 +952,10 @@ select:focus-visible,
     white-space: nowrap;
 }
 
-.statistics-genre-bar-track {
-    height: 0.6rem;
-    border-radius: var(--radius);
-    background-color: var(--color-bg-card);
-    overflow: hidden;
-}
-
-.statistics-genre-bar-fill {
-    height: 100%;
-    background-color: var(--color-primary);
-    border-radius: var(--radius);
-}
-
-.statistics-genre-count {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-    text-align: right;
-}
-
 /* Statistics page (v1.5 extended stats): stat-tile row reuses
    .dashboard-overview/.dashboard-stat as-is, then two side-by-side panels
    (goal ring + reading calendar), then a yearly-overview list reusing the
-   same bar-track/bar-fill visual as the genre breakdown below it. The
+   same Mini Brass Dial visual as the genre breakdown below it. The
    page's header moved into the hero (Statistics.razor.css, Statistics
    Rework Phase 2) — .stats-header/.stats-subtitle's old plain-page
    styling no longer applies. */
@@ -1081,6 +1062,37 @@ select:focus-visible,
     height: 6.2rem;
     border-radius: 50%;
     background-color: var(--color-bg-card);
+}
+
+/* Mini Brass Dial: the Goal Ring's conic-gradient technique (see
+   .goal-ring above) at a much smaller scale for Genre Breakdown and
+   Yearly Overview rows. No brass-texture overlay and no dual inset/
+   outset shadow -- at ~2.5rem those effects are imperceptible/muddy,
+   so this carries only what still reads at that size. */
+.mini-dial {
+    --mini-dial-pct: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: conic-gradient(var(--color-primary) calc(var(--mini-dial-pct) * 1%), var(--color-border) 0);
+    flex-shrink: 0;
+}
+
+.mini-dial-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    background-color: var(--color-bg-card);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
 }
 
 .goal-ring-value {
