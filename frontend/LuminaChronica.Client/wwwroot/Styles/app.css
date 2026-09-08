@@ -1130,12 +1130,12 @@ select:focus-visible,
    (computed in Statistics.razor's BuildCalendarWeeks, not here).
 
    "Sternenkarte" (Statistics Polish Phase C): star-point reskin of the
-   reading calendar. Each .calendar-cell keeps the same fixed 0.7rem
-   footprint at every activity level -- the grid must stay pixel-aligned --
-   so "size" differences between levels come from an inner ::before dot
-   sized as a percentage of that fixed box, never from resizing the cell
-   itself. Every cell (including the legend swatches, which reuse these
-   same classes outside .calendar-heatmap) always paints its own small dark
+   reading calendar. Each .calendar-cell keeps the same fixed footprint at
+   every activity level -- the grid must stay pixel-aligned -- so "size"
+   differences between levels come from an inner ::before dot sized as a
+   percentage of that fixed box, never from resizing the cell itself.
+   Every cell (including the legend swatches, which reuse these same
+   classes outside .calendar-heatmap) always paints its own small dark
    circular base, so the star-point stays legible whether it's sitting on
    the heatmap's night-sky background or directly on the panel's normal
    background in the legend row.
@@ -1144,10 +1144,19 @@ select:focus-visible,
    the Phase 1 brass-texture panel background (.stats-panel.calendar-card
    ::before) within the heatmap's own bounds -- this is a brass-framed
    window onto a starfield, not the texture being disabled. The texture
-   remains visible in the surrounding header/padding/legend area. */
+   remains visible in the surrounding header/padding/legend area.
+
+   Compact density (Statistics Visuals Round 2, Task 3): the cell footprint
+   was tightened from 0.7rem/3px gap (14.2px pitch) to 0.58rem/1px gap
+   (10.28px pitch) so all 52 weeks fit inside the panel's column width
+   without horizontal scrolling, at both ~1366px and ~1920px viewport
+   widths -- see task-3-report.md for the live-measured clientWidth/
+   scrollWidth numbers behind this value. The level percentages and glow
+   box-shadows below were kept as-is; at this cell size they still read as
+   a distinguishable 0-4 progression when zoomed in. */
 .calendar-heatmap {
     display: flex;
-    gap: 3px;
+    gap: 1px;
     overflow-x: auto;
     padding: var(--space-2);
     max-width: 100%;
@@ -1163,13 +1172,13 @@ select:focus-visible,
 .calendar-week {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
 }
 
 .calendar-cell {
     position: relative;
-    width: 0.7rem;
-    height: 0.7rem;
+    width: 0.58rem;
+    height: 0.58rem;
     border-radius: 50%;
     background-color: color-mix(in srgb, var(--color-bg-dark) 65%, transparent);
 }
