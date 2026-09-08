@@ -1098,12 +1098,35 @@ select:focus-visible,
 /* GitHub-contribution-style heatmap: one column per week, 7 rows, colored
    by a 0-4 intensity level scaled against the user's own busiest day
    (computed in Statistics.razor's BuildCalendarWeeks, not here). */
+/* "Sternenkarte" (Statistics Polish Phase C): star-point reskin of the
+   reading calendar. Each .calendar-cell keeps the same fixed 0.7rem
+   footprint at every activity level -- the grid must stay pixel-aligned --
+   so "size" differences between levels come from an inner ::before dot
+   sized as a percentage of that fixed box, never from resizing the cell
+   itself. Every cell (including the legend swatches, which reuse these
+   same classes outside .calendar-heatmap) always paints its own small dark
+   circular base, so the star-point stays legible whether it's sitting on
+   the heatmap's night-sky background or directly on the panel's normal
+   background in the legend row.
+
+   The night-sky background on .calendar-heatmap intentionally paints over
+   the Phase 1 brass-texture panel background (.stats-panel.calendar-card
+   ::before) within the heatmap's own bounds -- this is a brass-framed
+   window onto a starfield, not the texture being disabled. The texture
+   remains visible in the surrounding header/padding/legend area. */
 .calendar-heatmap {
     display: flex;
     gap: 3px;
     overflow-x: auto;
-    padding-bottom: var(--space-1);
+    padding: var(--space-2);
     max-width: 100%;
+    background: radial-gradient(
+        ellipse at center,
+        color-mix(in srgb, var(--color-bg-dark) 85%, black 15%) 0%,
+        var(--color-bg-dark) 100%
+    );
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.45);
 }
 
 .calendar-week {
@@ -1113,38 +1136,55 @@ select:focus-visible,
 }
 
 .calendar-cell {
+    position: relative;
     width: 0.7rem;
     height: 0.7rem;
-    border-radius: 3px;
-    background-color: var(--color-bg-paper);
-    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-bg-dark) 65%, transparent);
 }
 
-.calendar-cell--level-1 {
-    background-color: color-mix(in srgb, var(--color-primary) 25%, var(--color-bg-paper));
-    border-color: transparent;
+.calendar-cell::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    width: 15%;
+    height: 15%;
+    opacity: 0.3;
+    background-color: color-mix(in srgb, var(--color-primary) 40%, white 10%);
 }
 
-/* Levels 2-4 get a glow that intensifies with the underlying activity
-   level ("earned illumination") -- levels 0-1 stay flat on purpose, so
-   the effect reads as a reward for real reading activity, not decoration
-   applied uniformly regardless of the data. */
-.calendar-cell--level-2 {
-    background-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-bg-paper));
-    border-color: transparent;
-    box-shadow: 0 0 3px color-mix(in srgb, var(--color-primary) 40%, transparent);
+.calendar-cell--level-1::before {
+    width: 30%;
+    height: 30%;
+    opacity: 0.55;
 }
 
-.calendar-cell--level-3 {
-    background-color: color-mix(in srgb, var(--color-primary) 75%, var(--color-bg-paper));
-    border-color: transparent;
-    box-shadow: 0 0 4px color-mix(in srgb, var(--color-primary) 55%, transparent);
+.calendar-cell--level-2::before {
+    width: 45%;
+    height: 45%;
+    opacity: 0.8;
+    box-shadow: 0 0 3px color-mix(in srgb, var(--color-primary) 60%, transparent);
 }
 
-.calendar-cell--level-4 {
+.calendar-cell--level-3::before {
+    width: 62%;
+    height: 62%;
+    opacity: 1;
+    background-color: color-mix(in srgb, var(--color-primary) 80%, white 15%);
+    box-shadow: 0 0 5px color-mix(in srgb, var(--color-primary) 75%, transparent);
+}
+
+.calendar-cell--level-4::before {
+    width: 80%;
+    height: 80%;
+    opacity: 1;
     background-color: var(--color-primary);
-    border-color: transparent;
-    box-shadow: 0 0 5px color-mix(in srgb, var(--color-primary) 70%, transparent);
+    box-shadow:
+        0 0 6px color-mix(in srgb, var(--color-primary) 90%, transparent),
+        0 0 14px color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
 .calendar-legend {
