@@ -1,5 +1,13 @@
 .stats-hero {
     position: relative;
+    /* isolation: isolate -- forms this box's own stacking context so
+       layer-2's mix-blend-mode: screen (see .stats-hero-layer-2 below)
+       stays contained to the hero. Not load-bearing today (layer-1 is
+       fully opaque and covers the whole box), but guards against future
+       bleed-through if layer-1 ever gains transparency or .stats-hero
+       gains a semi-transparent overlay -- same defensive pattern as
+       .stats-panel.calendar-card and .goal-ring in app.css. */
+    isolation: isolate;
     height: 38vh;
     min-height: 260px;
     border-radius: var(--radius-lg);
@@ -36,14 +44,16 @@
     z-index: 1;
 }
 
-/* mix-blend-mode: screen makes black pixels contribute nothing and blends
-   bright pixels additively -- the correct model for "light shaft over a
-   dark scene." Without it, the moonlight/dust layer reads as a solid,
-   milky white shape instead of translucent light (user feedback,
-   2026-09-08). Verified live: the background architecture and star-chart
-   windows show through the beam with this applied; without it, they
-   don't. Statistics-only -- the Dashboard hero's layers are architectural
-   (columns/shelves), not a light shaft, so this fix doesn't apply there. */
+/* mix-blend-mode: screen lightens rather than darkens -- black pixels
+   contribute nothing while bright pixels lighten what's beneath them,
+   the correct model for "light shaft over a dark scene." Without it, the
+   moonlight/dust layer reads as a solid, milky white shape instead of
+   translucent light (user feedback, 2026-09-08). Verified live: the
+   background architecture and star-chart windows show through the beam
+   with this applied; without it, they don't. Statistics-only -- the
+   Dashboard hero's own light layer (dashboard-hero-layer2-lights.webp)
+   was delivered with genuine per-pixel alpha transparency baked into the
+   asset, so it never needed this compositing fix. */
 .stats-hero-layer-2 {
     z-index: 2;
     mix-blend-mode: screen;

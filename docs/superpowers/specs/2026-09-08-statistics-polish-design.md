@@ -17,11 +17,11 @@ Each ships as its own PR so a problem in one doesn't block or get tangled with t
 
 **Problem**: `statistics-hero-layer2-moonlight.webp`'s light shaft reads as a solid, milky object rather than translucent light, per direct user feedback (confirmed against the current live rendering, not assumed from the source asset alone).
 
-**Fix**: `.stats-hero-layer-2` gains `mix-blend-mode: screen` in `Statistics.razor.css`. `screen` blend treats black pixels as contributing nothing and blends bright pixels additively — exactly the right model for "light shaft over a dark scene," and it requires no new image asset.
+**Fix**: `.stats-hero-layer-2` gains `mix-blend-mode: screen` in `Statistics.razor.css`. `screen` blend treats black pixels as contributing nothing and lightens (rather than darkens) whatever sits beneath bright pixels — exactly the right model for "light shaft over a dark scene," and it requires no new image asset.
 
 **Verified live before writing this spec** (not just asserted): with the blend mode applied, the beam reads as airy light with the background architecture and star-chart windows visible through it, instead of a flat white cone. Screenshotted before/after at the same scroll position. Also checked: the raw source image has a visible red/green/orange generation-artifact stripe on its left edge (more prominent than the design spec's original "small, low-opacity residual tint" note) — confirmed via zoomed screenshot that Layer 3's armillary-sphere silhouette fully covers this region in the live composite, in both the current and blend-mode-applied states, so it does not need a fix in this phase.
 
-**Scope boundary**: Statistics hero only. The Dashboard hero's layers are architectural (columns/shelves), not a light-shaft image, so this specific complaint doesn't apply there — no change to `Home.razor.css` in this phase.
+**Scope boundary**: Statistics hero only. The Dashboard hero's own light layer (`dashboard-hero-layer2-lights.webp`) was delivered with genuine per-pixel alpha transparency baked into the asset itself (see the Roadmap's Dashboard Rework — Phase 2 entry), so it never needed a CSS blend-mode fix — not because it lacks a light layer — no change to `Home.razor.css` in this phase.
 
 **Testing**: no bUnit coverage is possible or meaningful (this is a rendering/compositing behavior, not markup) — same category as the parallax-timeline fix. Verification is the live before/after screenshot comparison already done for this spec, repeated once more against the final committed CSS during implementation.
 
