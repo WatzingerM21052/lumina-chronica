@@ -12,7 +12,7 @@
 
 - No new color tokens (per #358's standing guardrail — this task adds no colors at all, just a blend mode).
 - No new image assets (per the design spec's Phase A section — the fix is CSS-only; image regeneration stays a fallback outside this plan's scope if this fix turns out insufficient).
-- Scope is the Statistics hero only. Do not touch `Home.razor.css` / `.home-hero-layer-2` — the design spec explicitly excludes the Dashboard hero from this phase (its layers are architectural, not a light shaft, so the complaint doesn't apply there).
+- Scope is the Statistics hero only. Do not touch `Home.razor.css` / `.home-hero-layer-2` — the design spec explicitly excludes the Dashboard hero from this phase: its own light layer (`dashboard-hero-layer2-lights.webp`) was delivered with genuine per-pixel alpha transparency baked into the asset, so it never needed this compositing fix.
 - No bUnit test changes — this is a rendering/compositing behavior with no markup change, so there is nothing for bUnit (which does not execute CSS/paint) to assert on. Verification is live-browser only.
 
 ---
@@ -40,14 +40,16 @@ Open `frontend/LuminaChronica.Client/Pages/Statistics.razor.css`. Find the `.sta
 Change it to:
 
 ```css
-/* mix-blend-mode: screen makes black pixels contribute nothing and blends
-   bright pixels additively -- the correct model for "light shaft over a
-   dark scene." Without it, the moonlight/dust layer reads as a solid,
-   milky white shape instead of translucent light (user feedback,
-   2026-09-08). Verified live: the background architecture and star-chart
-   windows show through the beam with this applied; without it, they
-   don't. Statistics-only -- the Dashboard hero's layers are architectural
-   (columns/shelves), not a light shaft, so this fix doesn't apply there. */
+/* mix-blend-mode: screen lightens rather than darkens -- black pixels
+   contribute nothing while bright pixels lighten what's beneath them,
+   the correct model for "light shaft over a dark scene." Without it, the
+   moonlight/dust layer reads as a solid, milky white shape instead of
+   translucent light (user feedback, 2026-09-08). Verified live: the
+   background architecture and star-chart windows show through the beam
+   with this applied; without it, they don't. Statistics-only -- the
+   Dashboard hero's own light layer (dashboard-hero-layer2-lights.webp)
+   was delivered with genuine per-pixel alpha transparency baked into the
+   asset, so it never needed this compositing fix. */
 .stats-hero-layer-2 {
     z-index: 2;
     mix-blend-mode: screen;
@@ -66,9 +68,9 @@ git add frontend/LuminaChronica.Client/Pages/Statistics.razor.css
 git commit -m "fix: make the Statistics hero's moonlight layer read as translucent light
 
 mix-blend-mode: screen instead of normal compositing -- black pixels
-contribute nothing, bright pixels blend additively, so the beam reads
-as light through the scene instead of a solid milky shape. Statistics
-hero only, per direct user feedback."
+contribute nothing, bright pixels lighten rather than darken, so the
+beam reads as light through the scene instead of a solid milky shape.
+Statistics hero only, per direct user feedback."
 ```
 
 - [ ] **Step 4: Live-verify in the browser**
@@ -95,7 +97,7 @@ Open `documentation/Roadmap.md`. Find the "Parallax Timeline Fix (Dashboard + St
 
 First of three follow-up polish items from direct user feedback on the shipped Statistics hero — full spec at `docs/superpowers/specs/2026-09-08-statistics-polish-design.md`, plan at `docs/superpowers/plans/2026-09-08-statistics-polish-phase-a.md`.
 
-- [x] **`mix-blend-mode: screen` on `.stats-hero-layer-2`**: the moonlight/dust layer previously composited as a solid, milky shape rather than translucent light. `screen` blend treats black pixels as contributing nothing and blends bright pixels additively -- the correct model for a light shaft over a dark scene, and it needed no new image asset. Statistics hero only; the Dashboard hero's layers are architectural (columns/shelves), not a light shaft, so this specific complaint didn't apply there.
+- [x] **`mix-blend-mode: screen` on `.stats-hero-layer-2`**: the moonlight/dust layer previously composited as a solid, milky shape rather than translucent light. `screen` blend treats black pixels as contributing nothing and lightens (rather than darkens) whatever sits beneath bright pixels -- the correct model for a light shaft over a dark scene, and it needed no new image asset. Statistics hero only; the Dashboard hero's own light layer (`dashboard-hero-layer2-lights.webp`) was delivered with genuine per-pixel alpha transparency baked into the asset, so it never needed this compositing fix -- not because it lacks a light layer.
 
 **Live verification**: confirmed via before/after screenshots at the same scroll position that the background architecture and star-chart windows now show faintly through the beam, instead of a flat opaque cone. Also confirmed the raw source image's known left-edge generation artifact (a red/green/orange stripe, more prominent than the original asset note's "small, low-opacity residual tint" suggested) remains fully covered by Layer 3's armillary-sphere silhouette in the composite, unaffected by the blend-mode change. Checked in [theme names used], no cross-theme regression.
 
