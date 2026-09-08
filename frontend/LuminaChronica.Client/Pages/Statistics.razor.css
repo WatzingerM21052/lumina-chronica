@@ -36,8 +36,17 @@
     z-index: 1;
 }
 
+/* mix-blend-mode: screen makes black pixels contribute nothing and blends
+   bright pixels additively -- the correct model for "light shaft over a
+   dark scene." Without it, the moonlight/dust layer reads as a solid,
+   milky white shape instead of translucent light (user feedback,
+   2026-09-08). Verified live: the background architecture and star-chart
+   windows show through the beam with this applied; without it, they
+   don't. Statistics-only -- the Dashboard hero's layers are architectural
+   (columns/shelves), not a light shaft, so this fix doesn't apply there. */
 .stats-hero-layer-2 {
     z-index: 2;
+    mix-blend-mode: screen;
 }
 
 .stats-hero-layer-3 {
