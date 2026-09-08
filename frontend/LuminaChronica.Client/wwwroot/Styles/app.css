@@ -939,7 +939,7 @@ select:focus-visible,
 
 .statistics-genre-row {
     display: grid;
-    grid-template-columns: 8rem 1fr;
+    grid-template-columns: 8rem auto;
     align-items: center;
     gap: var(--space-2);
 }
@@ -1064,6 +1064,18 @@ select:focus-visible,
     background-color: var(--color-bg-card);
 }
 
+.goal-ring-value {
+    font-family: var(--font-family-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.goal-ring-of {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
 /* Mini Brass Dial: the Goal Ring's conic-gradient technique (see
    .goal-ring above) at a much smaller scale for Genre Breakdown and
    Yearly Overview rows. No brass-texture overlay and no dual inset/
@@ -1071,7 +1083,6 @@ select:focus-visible,
    so this carries only what still reads at that size. */
 .mini-dial {
     --mini-dial-pct: 0;
-    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1079,7 +1090,6 @@ select:focus-visible,
     height: 2.75rem;
     border-radius: 50%;
     background: conic-gradient(var(--color-primary) calc(var(--mini-dial-pct) * 1%), var(--color-border) 0);
-    flex-shrink: 0;
 }
 
 .mini-dial-inner {
@@ -1093,18 +1103,6 @@ select:focus-visible,
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--color-text-primary);
-}
-
-.goal-ring-value {
-    font-family: var(--font-family-display);
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: var(--color-primary);
-}
-
-.goal-ring-of {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
 }
 
 .goal-status {
@@ -1148,12 +1146,13 @@ select:focus-visible,
 
    Compact density (Statistics Visuals Round 2, Task 3): the cell footprint
    was tightened from 0.7rem/3px gap (14.2px pitch) to 0.58rem/1px gap
-   (10.28px pitch) so all 52 weeks fit inside the panel's column width
-   without horizontal scrolling, at both ~1366px and ~1920px viewport
-   widths -- see task-3-report.md for the live-measured clientWidth/
-   scrollWidth numbers behind this value. The level percentages and glow
-   box-shadows below were kept as-is; at this cell size they still read as
-   a distinguishable 0-4 progression when zoomed in. */
+   (10.28px pitch) so all 53 week columns fit inside the panel's column
+   width without horizontal scrolling, at both ~1366px and ~1920px
+   viewport widths -- see task-3-report.md for the live-measured
+   clientWidth/scrollWidth numbers behind this value. The level
+   percentages and glow box-shadows below were kept as-is; live-browser
+   verification across three themes at normal viewing size confirmed
+   they still read as a distinguishable 0-4 progression. */
 .calendar-heatmap {
     display: flex;
     gap: 1px;

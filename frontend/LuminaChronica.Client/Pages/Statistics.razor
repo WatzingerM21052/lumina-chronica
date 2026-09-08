@@ -114,7 +114,7 @@ else
             {
                 <div class="yearly-overview-row">
                     <span class="yearly-overview-year">@year.Year</span>
-                    <MiniDial Value="@year.BooksFinished" Percentage="@(year.BooksFinished * 100.0 / maxBooksPerYear)" />
+                    <MiniDial Value="@year.BooksFinished" Percentage="@(year.BooksFinished * 100.0 / maxBooksPerYear)" aria-hidden="true" />
                     <span class="yearly-overview-detail">@year.BooksFinished Bücher · @year.PagesRead Seiten · @year.ActiveDays aktive Tage</span>
                 </div>
             }
