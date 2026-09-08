@@ -86,6 +86,7 @@ public class StatisticsPageTests : BunitContext
 
         Assert.Contains("Fantasy", cut.Markup);
         Assert.Contains("Unbekannt", cut.Markup);
+        Assert.Contains("--mini-dial-pct: 100", cut.Markup);
     }
 
     [Fact]

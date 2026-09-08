@@ -1,0 +1,17 @@
+@namespace LuminaChronica.Client.Components
+@using System.Globalization
+
+<div class="mini-dial" style="--mini-dial-pct: @(Math.Round(Percentage, MidpointRounding.AwayFromZero).ToString("F0", CultureInfo.InvariantCulture))" @attributes="AdditionalAttributes">
+    <div class="mini-dial-inner">@Value</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public int Value { get; set; }
+
+    [Parameter, EditorRequired]
+    public double Percentage { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+}

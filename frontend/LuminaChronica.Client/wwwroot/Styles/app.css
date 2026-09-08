@@ -320,6 +320,24 @@ button:not(:disabled):active,
     background-color: var(--color-primary-active);
 }
 
+/* App-wide base styling for text-like form fields. Before this rule,
+   every input/select/textarea in the app rendered on unstyled browser
+   defaults -- there was no project-wide rule for them (confirmed via
+   grep), only the shared :focus-visible outline above. Scoped to
+   exclude checkbox/radio, which already render fine as native controls
+   and were never part of this complaint. */
+input:where(:not([type="checkbox"]):not([type="radio"])),
+select,
+textarea {
+    font-family: inherit;
+    font-size: var(--font-size-body);
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-bg-card);
+    color: var(--color-text-primary);
+    padding: var(--space-1) var(--space-2);
+}
+
 #blazor-error-ui {
     background: var(--color-error);
     color: var(--color-bg-light);
@@ -921,7 +939,7 @@ select:focus-visible,
 
 .statistics-genre-row {
     display: grid;
-    grid-template-columns: 8rem 1fr 2.5rem;
+    grid-template-columns: 8rem auto;
     align-items: center;
     gap: var(--space-2);
 }
@@ -934,29 +952,10 @@ select:focus-visible,
     white-space: nowrap;
 }
 
-.statistics-genre-bar-track {
-    height: 0.6rem;
-    border-radius: var(--radius);
-    background-color: var(--color-bg-card);
-    overflow: hidden;
-}
-
-.statistics-genre-bar-fill {
-    height: 100%;
-    background-color: var(--color-primary);
-    border-radius: var(--radius);
-}
-
-.statistics-genre-count {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-    text-align: right;
-}
-
 /* Statistics page (v1.5 extended stats): stat-tile row reuses
    .dashboard-overview/.dashboard-stat as-is, then two side-by-side panels
    (goal ring + reading calendar), then a yearly-overview list reusing the
-   same bar-track/bar-fill visual as the genre breakdown below it. The
+   same Mini Brass Dial visual as the genre breakdown below it. The
    page's header moved into the hero (Statistics.razor.css, Statistics
    Rework Phase 2) — .stats-header/.stats-subtitle's old plain-page
    styling no longer applies. */
@@ -1077,6 +1076,35 @@ select:focus-visible,
     color: var(--color-text-muted);
 }
 
+/* Mini Brass Dial: the Goal Ring's conic-gradient technique (see
+   .goal-ring above) at a much smaller scale for Genre Breakdown and
+   Yearly Overview rows. No brass-texture overlay and no dual inset/
+   outset shadow -- at ~2.5rem those effects are imperceptible/muddy,
+   so this carries only what still reads at that size. */
+.mini-dial {
+    --mini-dial-pct: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: conic-gradient(var(--color-primary) calc(var(--mini-dial-pct) * 1%), var(--color-border) 0);
+}
+
+.mini-dial-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    background-color: var(--color-bg-card);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
 .goal-status {
     text-align: center;
     color: var(--color-text-secondary);
@@ -1100,12 +1128,12 @@ select:focus-visible,
    (computed in Statistics.razor's BuildCalendarWeeks, not here).
 
    "Sternenkarte" (Statistics Polish Phase C): star-point reskin of the
-   reading calendar. Each .calendar-cell keeps the same fixed 0.7rem
-   footprint at every activity level -- the grid must stay pixel-aligned --
-   so "size" differences between levels come from an inner ::before dot
-   sized as a percentage of that fixed box, never from resizing the cell
-   itself. Every cell (including the legend swatches, which reuse these
-   same classes outside .calendar-heatmap) always paints its own small dark
+   reading calendar. Each .calendar-cell keeps the same fixed footprint at
+   every activity level -- the grid must stay pixel-aligned -- so "size"
+   differences between levels come from an inner ::before dot sized as a
+   percentage of that fixed box, never from resizing the cell itself.
+   Every cell (including the legend swatches, which reuse these same
+   classes outside .calendar-heatmap) always paints its own small dark
    circular base, so the star-point stays legible whether it's sitting on
    the heatmap's night-sky background or directly on the panel's normal
    background in the legend row.
@@ -1114,10 +1142,20 @@ select:focus-visible,
    the Phase 1 brass-texture panel background (.stats-panel.calendar-card
    ::before) within the heatmap's own bounds -- this is a brass-framed
    window onto a starfield, not the texture being disabled. The texture
-   remains visible in the surrounding header/padding/legend area. */
+   remains visible in the surrounding header/padding/legend area.
+
+   Compact density (Statistics Visuals Round 2, Task 3): the cell footprint
+   was tightened from 0.7rem/3px gap (14.2px pitch) to 0.58rem/1px gap
+   (10.28px pitch) so all 53 week columns fit inside the panel's column
+   width without horizontal scrolling, at both ~1366px and ~1920px
+   viewport widths -- see task-3-report.md for the live-measured
+   clientWidth/scrollWidth numbers behind this value. The level
+   percentages and glow box-shadows below were kept as-is; live-browser
+   verification across three themes at normal viewing size confirmed
+   they still read as a distinguishable 0-4 progression. */
 .calendar-heatmap {
     display: flex;
-    gap: 3px;
+    gap: 1px;
     overflow-x: auto;
     padding: var(--space-2);
     max-width: 100%;
@@ -1133,13 +1171,13 @@ select:focus-visible,
 .calendar-week {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
 }
 
 .calendar-cell {
     position: relative;
-    width: 0.7rem;
-    height: 0.7rem;
+    width: 0.58rem;
+    height: 0.58rem;
     border-radius: 50%;
     background-color: color-mix(in srgb, var(--color-bg-dark) 65%, transparent);
 }
