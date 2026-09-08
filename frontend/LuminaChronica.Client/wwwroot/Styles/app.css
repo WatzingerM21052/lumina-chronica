@@ -326,7 +326,7 @@ button:not(:disabled):active,
    grep), only the shared :focus-visible outline above. Scoped to
    exclude checkbox/radio, which already render fine as native controls
    and were never part of this complaint. */
-input:not([type="checkbox"]):not([type="radio"]),
+input:where(:not([type="checkbox"]):not([type="radio"])),
 select,
 textarea {
     font-family: inherit;
