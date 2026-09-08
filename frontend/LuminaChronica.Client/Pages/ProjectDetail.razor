@@ -229,7 +229,7 @@ else
                 {
                     @foreach (var location in _locations.Where(l => l.X is not null && l.Y is not null))
                     {
-                        <a class="map-pin" style="@PinStyle(location)" href="@($"projects/{Id}/locations/{location.Id}")" title="@location.Name"><Icon Name="location-pin" /></a>
+                        <a class="map-pin" style="@PinStyle(location)" href="@($"projects/{Id}/locations/{location.Id}")" title="@location.Name" aria-label="@location.Name"><Icon Name="location-pin" /></a>
                     }
                 }
             </div>
