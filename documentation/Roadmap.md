@@ -1041,3 +1041,13 @@ Dedicated one-line-per-file follow-up to the pinned-progress defect both hero en
 Frontend: 322/322 bUnit tests unchanged and passing — this defect has no bUnit coverage, since bUnit does not execute layout/CSS/scroll-timeline behavior. That gap is intentional, not an oversight: the failure mode only exists in a real rendered viewport, which is exactly what the live-verification pass above covers instead.
 
 **Both heroes' parallax now genuinely scroll-driven.** This closes the "known, pre-existing limitation" both the Dashboard and Statistics Phase 2 entries above flagged as open.
+
+## Statistics Polish — Phase A (Hero Light Transparency, complete)
+
+First of three follow-up polish items from direct user feedback on the shipped Statistics hero — full spec at `docs/superpowers/specs/2026-09-08-statistics-polish-design.md`, plan at `docs/superpowers/plans/2026-09-08-statistics-polish-phase-a.md`.
+
+- [x] **`mix-blend-mode: screen` on `.stats-hero-layer-2`**: the moonlight/dust layer previously composited as a solid, milky shape rather than translucent light. `screen` blend treats black pixels as contributing nothing and blends bright pixels additively — the correct model for a light shaft over a dark scene, and it needed no new image asset. Statistics hero only; the Dashboard hero's layers are architectural (columns/shelves), not a light shaft, so this specific complaint didn't apply there.
+
+**Live verification**: confirmed via screenshots at the same scroll position (top of page, hero at rest) that the background architecture and star-chart windows now show faintly through the beam, instead of a flat opaque cone — matching the same check already prototyped live once before the design spec was written. Also confirmed the raw source image's known left-edge generation artifact (a red/green/orange stripe, more prominent than the original asset note's "small, low-opacity residual tint" suggested) remains fully covered by Layer 3's armillary-sphere silhouette in the composite, unaffected by the blend-mode change (zoomed screenshot of the hero's left edge). Checked in Classic Library and Dark Library themes — the beam blends cleanly within the hero scene in both, with no bleed-through into the surrounding page background (a real risk the task reviewer flagged for stacking-context reasons before this check ran; it did not materialize).
+
+Frontend: 322/322 bUnit tests passing (unchanged — no test coverage is possible for a compositing/rendering-only change, per this plan's Global Constraints).
