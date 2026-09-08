@@ -135,6 +135,14 @@ Nothing in `Library.razor`'s current behavior may regress:
 - Reduced-motion behavior needs explicit live verification (toggle `prefers-reduced-motion` in devtools, confirm instant state change with no spring animation and no neighbor-parting motion, cover still reachable).
 - Keyboard-only pass: tab through a shelf row, confirm each book reveals via `:focus-visible` and is announced correctly by accessible-name inspection (or a screen reader spot-check if feasible).
 
+## Phasing
+
+Given this spec's scope significantly exceeds any single prior slice of #358 (new components, a new JS physics module, new image assets, Canvas API integration, full page restructure), it ships as three phases rather than one plan, mirroring the Dashboard/Statistics precedent (structural phase first, polish/motion phase after):
+
+- **Phase 1 — Structure & Mechanic**: shelf compartments, the spine/cover `ShelfBook` component with the validated CSS 3D rotation (plain CSS transition, not yet spring physics), resting-state variation, visual grouping/dividers, the re-skinned header band, and — non-negotiably in this phase, not deferred — full preservation of existing Library functionality (search/filter/sort/pagination/favorites/borrowed-badge/progress) and full accessibility (focus parity, always-present accessible text, reduced-motion fallback). Ships with gradient-only materials (no texture images yet) and procedural (not cover-derived) spine coloring — both upgraded in Phase 3.
+- **Phase 2 — Physics-Based Motion**: replaces Phase 1's CSS transition with the `motion.js` spring-physics pull-out animation and dynamic neighbor-parting. Purely a motion-quality upgrade; the interaction's *end state* (rotated, revealed cover) doesn't change, only *how* it gets there.
+- **Phase 3 — Materials**: real wood/leather texture images (once generated — an external asset dependency, not blocked on by Phase 1/2) applied via blend-mode compositing, and Canvas-based spine-color extraction from each book's actual cover, replacing Phase 1's procedural placeholder coloring.
+
 ## Global Constraints
 
 - No new color tokens/palette — existing theme tokens across all 4 themes, verified live.
