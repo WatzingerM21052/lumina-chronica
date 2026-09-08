@@ -39,7 +39,7 @@ else
     {
         <div class="reader-controls">
             <div class="reader-settings-menu">
-                <button type="button" class="btn" @onclick="ToggleSettingsMenu">⚙ Einstellungen</button>
+                <button type="button" class="btn" @onclick="ToggleSettingsMenu"><Icon Name="settings" /> Einstellungen</button>
                 @if (_settingsMenuOpen)
                 {
                     <div class="reader-settings-popover">
@@ -124,7 +124,7 @@ else
                 }
             </div>
             <div class="reader-settings-menu">
-                <button type="button" class="btn" @onclick="ToggleBookmarksMenuAsync">🔖 Lesezeichen</button>
+                <button type="button" class="btn" @onclick="ToggleBookmarksMenuAsync"><Icon Name="bookmark" /> Lesezeichen</button>
                 @if (_bookmarksMenuOpen)
                 {
                     <div class="reader-settings-popover reader-bookmarks-popover">
