@@ -23,7 +23,7 @@
     @if (_toc.Count > 0)
     {
         <div class="epub-toc-menu">
-            <button type="button" class="btn" @onclick="ToggleTocMenu">📑 Inhaltsverzeichnis</button>
+            <button type="button" class="btn" @onclick="ToggleTocMenu"><Icon Name="toc-list" /> Inhaltsverzeichnis</button>
             @if (_tocMenuOpen)
             {
                 <div class="epub-toc-popover">

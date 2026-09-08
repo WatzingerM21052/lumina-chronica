@@ -903,6 +903,7 @@ select:focus-visible,
     font-family: var(--font-family-display);
     font-size: 1.75rem;
     font-weight: 600;
+    line-height: 1;
     color: var(--color-primary);
 }
 

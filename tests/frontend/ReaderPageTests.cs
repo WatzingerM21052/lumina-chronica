@@ -73,7 +73,7 @@ public class ReaderPageTests : BunitContext
         Assert.DoesNotContain("reader-content--font-sans", cut.Markup);
 
         // Settings live behind a menu button now, not always-visible controls.
-        var toggle = cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen");
+        var toggle = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen");
         toggle.Click();
 
         var sansButton = cut.FindAll("button").Single(b => b.TextContent == "Sans");
@@ -96,7 +96,7 @@ public class ReaderPageTests : BunitContext
         JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
 
         Assert.Contains("Ansicht", cut.Markup);
         Assert.DoesNotContain("Realistisch", cut.Markup);
@@ -119,7 +119,7 @@ public class ReaderPageTests : BunitContext
         Assert.Contains("◀ Zurück", cut.Markup);
         Assert.Contains("reader-content--paginated", cut.Markup);
 
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
         cut.FindAll("button").Single(b => b.TextContent == "Scroll").Click();
 
         Assert.DoesNotContain("Weiter ▶", cut.Markup);
@@ -166,7 +166,7 @@ public class ReaderPageTests : BunitContext
         Assert.Contains("Weiter ▶", cut.Markup);
         Assert.Contains("◀ Zurück", cut.Markup);
 
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
         cut.FindAll("button").Single(b => b.TextContent == "Scroll").Click();
 
         Assert.DoesNotContain("Weiter ▶", cut.Markup);
@@ -191,7 +191,7 @@ public class ReaderPageTests : BunitContext
         JSInterop.SetupModule("./js/readerSettings.js").Setup<string>("getReaderMode", _ => true).SetResult("book");
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
 
         Assert.Contains("Buch", cut.Markup);
         Assert.Contains("Scroll", cut.Markup);
@@ -288,7 +288,7 @@ public class ReaderPageTests : BunitContext
         JSInterop.SetupModule("./js/textPaginator.js").Setup<int>("init", _ => true).SetResult(1);
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
 
         Assert.Contains("Seite pro Kapitel", cut.Markup);
 
@@ -313,7 +313,7 @@ public class ReaderPageTests : BunitContext
         paginatorModule.SetupVoid("destroyChapterMode", _ => true).SetVoidResult();
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
         cut.Find("input[type=checkbox]").Change(true);
 
         var segments = cut.FindAll(".reader-content-txt-segment");
@@ -345,7 +345,7 @@ public class ReaderPageTests : BunitContext
         paginatorModule.SetupVoid("destroyChapterMode", _ => true).SetVoidResult();
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
         cut.Find("input[type=checkbox]").Change(true);
 
         Assert.Contains("Kapitel 1", cut.Markup);
@@ -382,7 +382,7 @@ public class ReaderPageTests : BunitContext
         paginatorModule.SetupVoid("destroyChapterMode", _ => true).SetVoidResult();
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
         cut.Find("input[type=checkbox]").Change(true);
 
         Assert.Contains("Seite 1 / 3", cut.Markup);
@@ -513,8 +513,8 @@ public class ReaderPageTests : BunitContext
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
 
         var epubReader = cut.FindComponent<EpubReader>();
-        epubReader.WaitForAssertion(() => Assert.Contains("📑 Inhaltsverzeichnis", epubReader.Markup), TimeSpan.FromSeconds(2));
-        var tocToggle = cut.FindAll("button").Single(b => b.TextContent == "📑 Inhaltsverzeichnis");
+        epubReader.WaitForAssertion(() => Assert.Contains("Inhaltsverzeichnis", epubReader.Markup), TimeSpan.FromSeconds(2));
+        var tocToggle = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Inhaltsverzeichnis");
         tocToggle.Click();
 
         Assert.Contains("Kapitel 1", cut.Markup);
@@ -543,7 +543,7 @@ public class ReaderPageTests : BunitContext
         // page-width still don't -- PDF has no text layout for them to act
         // on -- so those specific rows should be absent from the popover.
         Assert.Contains("reader-controls", cut.Markup);
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
         Assert.Contains("Ansicht", cut.Markup);
         Assert.DoesNotContain("Schriftgröße", cut.Markup);
     }
@@ -566,7 +566,7 @@ public class ReaderPageTests : BunitContext
         setFlowHandler.SetVoidResult();
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
         cut.FindAll("button").Single(b => b.TextContent == "Scroll").Click();
 
         var invocation = Assert.Single(setFlowHandler.Invocations);
@@ -599,7 +599,7 @@ public class ReaderPageTests : BunitContext
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
         Assert.Contains("pdf-reader-zoom", cut.Markup);
 
-        cut.FindAll("button").Single(b => b.TextContent == "⚙ Einstellungen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Einstellungen").Click();
         cut.FindAll("button").Single(b => b.TextContent == "Realistisch").Click();
 
         var invocation = Assert.Single(setFlowHandler.Invocations);
@@ -727,7 +727,7 @@ public class ReaderPageTests : BunitContext
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
         Assert.DoesNotContain("Cool part", cut.Markup);
 
-        cut.FindAll("button").Single(b => b.TextContent == "🔖 Lesezeichen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lesezeichen").Click();
 
         Assert.Contains("Cool part", cut.Markup);
         Assert.Contains("50%", cut.Markup);
@@ -753,7 +753,7 @@ public class ReaderPageTests : BunitContext
         JSInterop.SetupModule("./js/textPaginator.js").Setup<int>("init", _ => true).SetResult(1);
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "🔖 Lesezeichen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lesezeichen").Click();
         Assert.Contains("Noch keine Lesezeichen.", cut.Markup);
 
         cut.Find(".reader-bookmark-note-input").Input("Ending");
@@ -781,7 +781,7 @@ public class ReaderPageTests : BunitContext
         UseHandler(handler);
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "🔖 Lesezeichen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lesezeichen").Click();
         Assert.Contains("Cool part", cut.Markup);
 
         cut.Find(".reader-bookmark-delete").Click();
@@ -808,7 +808,7 @@ public class ReaderPageTests : BunitContext
         epubModule.SetupVoid("goTo", _ => true).SetVoidResult();
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
-        cut.FindAll("button").Single(b => b.TextContent == "🔖 Lesezeichen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lesezeichen").Click();
         cut.FindAll("button.reader-bookmark-jump").Single(b => b.TextContent.Contains("Twist")).Click();
 
         Assert.Single(JSInterop.Invocations["goTo"], inv => inv.Arguments.Contains("epubcfi(/6/8!/4/2/1:0)"));

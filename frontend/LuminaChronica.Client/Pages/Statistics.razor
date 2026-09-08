@@ -37,13 +37,13 @@ else
         <StatCard Value="@_stats.BooksRead.ToString()" Label="Gelesene Bücher" />
         <StatCard Value="@_stats.BooksInProgress.ToString()" Label="In Arbeit" />
         <StatCard Value="@_stats.PagesRead.ToString()" Label="Gelesene Seiten" />
-        <StatCard Value="@($"🔥 {_stats.Streaks.CurrentStreak}")" Label="Serie (Tage)" />
-        <StatCard Value="@($"🏆 {_stats.Streaks.LongestStreak}")" Label="Längste Serie" />
+        <StatCard Value="@_stats.Streaks.CurrentStreak.ToString()" Label="Serie (Tage)" IconName="flame" />
+        <StatCard Value="@_stats.Streaks.LongestStreak.ToString()" Label="Längste Serie" IconName="trophy" />
     </div>
 
     <div class="stats-panels">
         <section class="stats-panel goal-card">
-            <h2>🎯 Jahresziel</h2>
+            <h2><Icon Name="target" /> Jahresziel</h2>
             @if (_stats.Goal.TargetBooks is { } target && target > 0)
             {
                 var pct = Math.Clamp(_stats.Goal.BooksFinishedThisYear * 100.0 / target, 0, 100);
@@ -79,7 +79,7 @@ else
         </section>
 
         <section class="stats-panel calendar-card">
-            <h2>📅 Lesekalender</h2>
+            <h2><Icon Name="calendar" /> Lesekalender</h2>
             <div class="calendar-heatmap">
                 @foreach (var week in _calendarWeeks)
                 {
@@ -105,7 +105,7 @@ else
 
     @if (_stats.YearlyOverview.Count > 0)
     {
-        <h2>📈 Jahresübersicht</h2>
+        <h2><Icon Name="chart" /> Jahresübersicht</h2>
         <div class="yearly-overview-list">
             @{
                 var maxBooksPerYear = Math.Max(1, _stats.YearlyOverview.Max(y => y.BooksFinished));

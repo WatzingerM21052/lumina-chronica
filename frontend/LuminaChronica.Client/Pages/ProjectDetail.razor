@@ -48,7 +48,7 @@ else
             }
             else
             {
-                <div class="book-card-cover-placeholder">🌎</div>
+                <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="project" /></div>
             }
         </div>
 
@@ -229,7 +229,7 @@ else
                 {
                     @foreach (var location in _locations.Where(l => l.X is not null && l.Y is not null))
                     {
-                        <a class="map-pin" style="@PinStyle(location)" href="@($"projects/{Id}/locations/{location.Id}")" title="@location.Name">📍</a>
+                        <a class="map-pin" style="@PinStyle(location)" href="@($"projects/{Id}/locations/{location.Id}")" title="@location.Name" aria-label="@location.Name"><Icon Name="location-pin" /></a>
                     }
                 }
             </div>
@@ -583,7 +583,7 @@ else
                             }
                             else
                             {
-                                <div class="project-card-cover-placeholder" aria-hidden="true">@(file.Category == "IMAGE" ? "🖼" : "📄")</div>
+                                <div class="project-card-cover-placeholder" aria-hidden="true"><Icon Name="@(file.Category == "IMAGE" ? "image" : "document")" /></div>
                             }
                         </div>
                         <div class="project-card-info">
