@@ -320,6 +320,24 @@ button:not(:disabled):active,
     background-color: var(--color-primary-active);
 }
 
+/* App-wide base styling for text-like form fields. Before this rule,
+   every input/select/textarea in the app rendered on unstyled browser
+   defaults -- there was no project-wide rule for them (confirmed via
+   grep), only the shared :focus-visible outline above. Scoped to
+   exclude checkbox/radio, which already render fine as native controls
+   and were never part of this complaint. */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+    font-family: inherit;
+    font-size: var(--font-size-body);
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-bg-card);
+    color: var(--color-text-primary);
+    padding: var(--space-1) var(--space-2);
+}
+
 #blazor-error-ui {
     background: var(--color-error);
     color: var(--color-bg-light);
