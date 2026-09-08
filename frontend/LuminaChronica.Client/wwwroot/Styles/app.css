@@ -1095,10 +1095,11 @@ select:focus-visible,
     min-width: 8rem;
 }
 
-/* GitHub-contribution-style heatmap: one column per week, 7 rows, colored
-   by a 0-4 intensity level scaled against the user's own busiest day
-   (computed in Statistics.razor's BuildCalendarWeeks, not here). */
-/* "Sternenkarte" (Statistics Polish Phase C): star-point reskin of the
+/* GitHub-contribution-style heatmap: one column per week, 7 rows, rendered
+   at a 0-4 intensity level scaled against the user's own busiest day
+   (computed in Statistics.razor's BuildCalendarWeeks, not here).
+
+   "Sternenkarte" (Statistics Polish Phase C): star-point reskin of the
    reading calendar. Each .calendar-cell keeps the same fixed 0.7rem
    footprint at every activity level -- the grid must stay pixel-aligned --
    so "size" differences between levels come from an inner ::before dot
@@ -1153,7 +1154,7 @@ select:focus-visible,
     width: 15%;
     height: 15%;
     opacity: 0.3;
-    background-color: color-mix(in srgb, var(--color-primary) 40%, white 10%);
+    background-color: color-mix(in srgb, var(--color-primary) 80%, white);
 }
 
 .calendar-cell--level-1::before {
@@ -1162,6 +1163,9 @@ select:focus-visible,
     opacity: 0.55;
 }
 
+/* Glow ("earned illumination") is deliberately reserved for levels 2-4, where it
+   intensifies with activity; levels 0-1 stay flat so the effect reads as a reward
+   for real reading activity, not decoration applied uniformly regardless of the data. */
 .calendar-cell--level-2::before {
     width: 45%;
     height: 45%;
@@ -1173,7 +1177,7 @@ select:focus-visible,
     width: 62%;
     height: 62%;
     opacity: 1;
-    background-color: color-mix(in srgb, var(--color-primary) 80%, white 15%);
+    background-color: color-mix(in srgb, var(--color-primary) 84%, white);
     box-shadow: 0 0 5px color-mix(in srgb, var(--color-primary) 75%, transparent);
 }
 
