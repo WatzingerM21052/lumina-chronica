@@ -133,8 +133,9 @@ public class StatisticsPageTests : BunitContext
 
         var cut = Render<Statistics>();
 
-        Assert.Contains("🔥 4", cut.Markup);
-        Assert.Contains("🏆 9", cut.Markup);
+        var statValues = cut.FindAll(".dashboard-stat-value");
+        Assert.Contains(statValues, v => v.TextContent.Trim() == "4" && v.QuerySelector("svg.icon") is not null);
+        Assert.Contains(statValues, v => v.TextContent.Trim() == "9" && v.QuerySelector("svg.icon") is not null);
     }
 
     [Fact]
