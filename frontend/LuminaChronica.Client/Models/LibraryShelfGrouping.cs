@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace LuminaChronica.Client.Models;
 
 public record BookGroup(string? Label, List<Book> Books);
@@ -59,7 +61,7 @@ public static class LibraryShelfGrouping
 
         foreach (var book in books)
         {
-            if (!DateTime.TryParse(book.CreatedAt, out var createdAt))
+            if (!DateTime.TryParse(book.CreatedAt, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var createdAt))
             {
                 buckets[^1].Books.Add(book);
                 continue;
