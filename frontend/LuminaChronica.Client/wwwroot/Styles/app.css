@@ -1473,7 +1473,8 @@ select:focus-visible,
    actually initializes (skipped entirely under prefers-reduced-motion,
    in which case Phase 1's plain CSS transition -- itself already
    reduced-motion-aware -- remains the only mechanism). */
-.shelf-physics-active .shelf-book {
+.shelf-physics-active .shelf-book,
+.shelf-physics-active .shelf-book-slot {
     transition: none;
 }
 

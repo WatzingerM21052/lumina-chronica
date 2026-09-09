@@ -104,6 +104,56 @@ const active = new Set();
 let rafHandle = null;
 let lastFrameTime = 0;
 
+// Second, independent spring channel: how far a .shelf-book-slot parts
+// sideways (translateX, in px) when a nearby book in the same row is
+// revealed. Distance-decaying -- an immediate neighbor moves more than a
+// slot two away, and nothing moves at distance 3+.
+const partSprings = new WeakMap();
+const activeParts = new Set();
+
+function getOrCreatePartSpring(slot) {
+    let state = partSprings.get(slot);
+    if (!state) {
+        state = { value: 0, velocity: 0, target: 0 };
+        partSprings.set(slot, state);
+    }
+    return state;
+}
+
+// Deliberately plain px, not rem-scaled like getRevealedTranslatePx above:
+// the spec calls for "a few pixels" of parting, a much smaller and more
+// forgiving visual amount than the reveal's own translate/rotate values,
+// so unlike those, a non-default root font-size shifting this by a pixel
+// or two is not worth the extra lookup on this hot path.
+function partOffsetForDistance(distance) {
+    if (distance === 1) return 8;
+    if (distance === 2) return 3;
+    return 0;
+}
+
+function setPartTargets(revealedSlot, revealed) {
+    const row = revealedSlot.closest(".shelf-books");
+    if (!row) return;
+
+    const slots = Array.from(row.children).filter((el) => el.classList.contains("shelf-book-slot"));
+    const revealedIndex = slots.indexOf(revealedSlot);
+    if (revealedIndex === -1) return;
+
+    for (let i = 0; i < slots.length; i++) {
+        if (i === revealedIndex) continue;
+        const distance = Math.abs(i - revealedIndex);
+        const magnitude = partOffsetForDistance(distance);
+        if (magnitude === 0) continue;
+
+        const direction = i < revealedIndex ? -1 : 1;
+        const state = getOrCreatePartSpring(slots[i]);
+        state.target = revealed ? magnitude * direction : 0;
+        activeParts.add(slots[i]);
+    }
+
+    ensureLoopRunning();
+}
+
 function getOrCreateSpring(book) {
     let state = springs.get(book);
     if (!state) {
@@ -127,9 +177,6 @@ function ensureLoopRunning() {
 }
 
 function tick(now) {
-    // Clamp a long gap (e.g. the tab was backgrounded) to a single
-    // reasonable step instead of letting the spring "catch up" with one
-    // huge jump.
     const dt = Math.min((now - lastFrameTime) / 1000, 1 / 30);
     lastFrameTime = now;
 
@@ -144,10 +191,6 @@ function tick(now) {
             state.velocity = 0;
             applyTransform(book, state.value);
             if (state.value === 0) {
-                // Fully back at rest -- clear the inline style so Phase 1's
-                // CSS rule (transform: rotateY(var(--shelf-book-rest)))
-                // owns it again, avoiding float-precision drift
-                // accumulating across many reveal/unreveal cycles.
                 book.style.removeProperty("transform");
             }
             active.delete(book);
@@ -156,52 +199,64 @@ function tick(now) {
         }
     }
 
-    rafHandle = active.size > 0 ? requestAnimationFrame(tick) : null;
+    for (const slot of activeParts) {
+        const state = partSprings.get(slot);
+        if (!state) { activeParts.delete(slot); continue; }
+
+        stepSpring(state, dt);
+
+        if (isSettled(state)) {
+            state.value = state.target;
+            state.velocity = 0;
+            if (state.value === 0) {
+                slot.style.removeProperty("transform");
+            } else {
+                slot.style.transform = `translateX(${state.value}px)`;
+            }
+            activeParts.delete(slot);
+        } else {
+            slot.style.transform = `translateX(${state.value}px)`;
+        }
+    }
+
+    rafHandle = (active.size > 0 || activeParts.size > 0) ? requestAnimationFrame(tick) : null;
 }
 
-// Delegated listeners on a stable ancestor (the whole shelf, not each book
-// individually) survive Blazor re-rendering the book list (e.g. a filter
-// change swaps which .shelf-book elements exist under `root`) without
-// needing to re-attach anything -- events still reach `root` regardless of
-// which specific books currently exist under it.
 export function initShelfPhysics(root) {
     if (!root || prefersReducedMotion()) return;
 
-    // Disables Phase 1's CSS `transition` on every .shelf-book under root
-    // while this module is driving the transform every frame -- without
-    // this, the CSS transition would try to further ease between each of
-    // this module's own already-eased per-frame writes, compounding into
-    // a sluggish double-smoothed motion instead of the intended spring feel.
     root.classList.add("shelf-physics-active");
 
     root.addEventListener("mouseenter", (e) => {
         const book = e.target.closest?.(".shelf-book");
-        if (book && root.contains(book)) setRevealTarget(book, true);
-    }, true); // capture: true -- mouseenter does not bubble, but a
-              // capture-phase listener on an ancestor still receives it
-              // during the capturing traversal, which is the standard
-              // delegation technique for this event.
+        if (!book || !root.contains(book)) return;
+        setRevealTarget(book, true);
+        const slot = book.closest(".shelf-book-slot");
+        if (slot) setPartTargets(slot, true);
+    }, true);
 
     root.addEventListener("mouseleave", (e) => {
         const book = e.target.closest?.(".shelf-book");
-        if (book && root.contains(book)) setRevealTarget(book, false);
+        if (!book || !root.contains(book)) return;
+        setRevealTarget(book, false);
+        const slot = book.closest(".shelf-book-slot");
+        if (slot) setPartTargets(slot, false);
     }, true);
 
     root.addEventListener("focusin", (e) => {
         const book = e.target.closest?.(".shelf-book");
-        if (book && root.contains(book)) setRevealTarget(book, true);
+        if (!book || !root.contains(book)) return;
+        setRevealTarget(book, true);
+        const slot = book.closest(".shelf-book-slot");
+        if (slot) setPartTargets(slot, true);
     });
 
     root.addEventListener("focusout", (e) => {
         const book = e.target.closest?.(".shelf-book");
         if (!book || !root.contains(book)) return;
-        // Moving focus to a descendant (e.g. the favorite button) fires
-        // focusout on the book itself -- only treat this as "focus left
-        // the book" if the new focus target isn't still inside it. This is
-        // this module's equivalent of Phase 1's CSS :has(:focus-visible)
-        // rule, which drove the same "stay revealed while focus is on a
-        // descendant" behavior for the CSS-only fallback.
         if (e.relatedTarget && book.contains(e.relatedTarget)) return;
         setRevealTarget(book, false);
+        const slot = book.closest(".shelf-book-slot");
+        if (slot) setPartTargets(slot, false);
     });
 }
