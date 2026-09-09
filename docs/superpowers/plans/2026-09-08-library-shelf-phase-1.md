@@ -14,7 +14,7 @@
 - **No functional regression anywhere in `Library.razor`.** Search (debounced, with suggestions), genre/tag filters, sort/order, favorites-only, clear-filters, pagination, the `EmptyState`/no-results/error states, and the List view mode must all continue to work exactly as they do today. `BookCard` itself is not modified — it stays in use elsewhere in the app (Home, Statistics, PublicProfile) unchanged.
 - **Two real CSS 3D bugs, found and fixed during design-phase browser validation, are load-bearing implementation constraints — not optional style choices:**
   1. Every element between the `perspective`-establishing ancestor and the rotating book must carry `transform-style: preserve-3d`, or the 3D context flattens at that boundary and the rotation silently renders as a 2D distortion instead of a real turn.
-  2. The hover/focus transform must list `rotateY` before `translateY`/`translateZ` (CSS applies the rightmost/innermost function first) — rotate in the book's own local frame first, then translate toward the viewer in the resulting world frame. Reversing this order was tried and visibly failed (the book appeared to slide sideways instead of turning) during design validation.
+  2. The hover/focus transform must list `rotateY` last (rightmost) in the transform function list, after `translateY`/`translateZ` (CSS applies the rightmost function first) — this rotates in the book's own local frame first, then translates toward the viewer in the resulting world frame. Listing `rotateY` before the translates was tried and visibly failed (the book appeared to slide sideways instead of turning) during design validation. (Corrected during final review: an earlier version of this sentence had the ordering backwards in the prose even though the actual implemented CSS was always correct — see `.shelf-book:hover` in `app.css`, which lists `translateY`/`translateZ` first and `rotateY` last.)
 - **Shelf groupings are visual-only**, derived from the current sort/filter state (recency buckets when sorted by date, alphabetical when sorted by title/author, the active filter name when a single genre/tag filter is active). They must **never** be confused with or replace the app's separate, real `/library/shelves` feature (`Shelf` model, `Shelves.razor`, `ShelfDetail.razor`) — that feature is untouched by this plan.
 - **Accessibility is a hard requirement, not a follow-up.** `:focus-visible` must trigger the identical reveal as `:hover`. Every book's title (and author, when present) must be available as its accessible name via `aria-label` on the book's root link, regardless of the book's current visual rotation state — a screen reader must never depend on which face is currently "facing" the viewer.
 - **`prefers-reduced-motion: reduce` must disable the CSS transition** (instant state change on hover/focus, not removed capability) — matches the project-wide standing rule already applied elsewhere (`app.css:205`, `motion.js`'s `prefersReducedMotion()`).
@@ -363,10 +363,12 @@ Add to `frontend/LuminaChronica.Client/wwwroot/Styles/app.css`, in a new section
    (1) every element between the perspective-establishing ancestor
    (.shelf-books, see ShelfRow) and this element needs
    transform-style: preserve-3d, or the rotation flattens into a 2D
-   distortion; (2) the hover transform lists rotateY before translateY/
-   translateZ -- rotate in the book's own local frame first, then move
-   toward the viewer in the resulting world frame. Reversing this order
-   was tried and visibly failed (the book appeared to slide sideways). */
+   distortion; (2) the hover transform lists rotateY LAST (after
+   translateY/translateZ) -- CSS applies the rightmost function first, so
+   this rotates in the book's own local frame first, then moves toward
+   the viewer in the resulting world frame. Listing rotateY before the
+   translates was tried and visibly failed (the book appeared to slide
+   sideways instead of turning). */
 .shelf-book {
     display: block;
     width: 3.25rem;
