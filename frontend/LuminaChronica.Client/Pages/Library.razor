@@ -167,12 +167,20 @@ else
         await LoadBooksAsync();
     }
 
+    private bool ShelfIsRendered =>
+        _errorMessage is null
+        && _result is not null
+        && !(_result.Total == 0 && !HasActiveFilters)
+        && _result.Items.Count != 0
+        && _viewMode == LibraryViewMode.Grid;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_viewMode != LibraryViewMode.Grid)
+        if (!ShelfIsRendered)
         {
-            // Leaving Grid mode tears down .library-shelf; force re-init next
-            // time we're back in Grid mode, since that will be a new DOM node.
+            // .library-shelf isn't in the DOM right now for any reason (still
+            // loading, error, empty result, List view, etc.) -- force re-init
+            // next time it reappears, since it may be a new DOM node.
             _shelfPhysicsInitialized = false;
             return;
         }
