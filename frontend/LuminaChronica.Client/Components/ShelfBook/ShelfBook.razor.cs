@@ -24,6 +24,7 @@ public partial class ShelfBook : ComponentBase, IDisposable
     private string? _loadedCoverUrl;
     private bool _isFavorite;
     private int? _loadedBookId;
+    private string? _spineTint;
 
     // Tight-banded resting rotation only (no combined rotateZ lean) --
     // wider variation combined with a simultaneous tilt read as a
@@ -43,12 +44,31 @@ public partial class ShelfBook : ComponentBase, IDisposable
         ? Book.Title
         : $"{Book.Title}, {Book.Author}";
 
+    // Cover-derived tint (Library Rework Phase 3), applied only when a real
+    // cover-derived color is available. Deliberately scoped to the two face
+    // spans (.shelf-book-spine/.shelf-book-cover) rather than the .shelf-book
+    // anchor itself: shelf-physics.js (Phase 2) writes directly to the
+    // anchor's style.transform every rAF frame during the spring animation
+    // and to its classList (is-revealed) on the touch-reveal path. Putting
+    // this tint's class/style on the anchor too meant Blazor's async
+    // re-render (once cover load + extraction complete) called setAttribute
+    // on the anchor's class/style -- which replaces the whole attribute --
+    // wiping out shelf-physics.js's JS-owned is-revealed class and
+    // transform. The two face spans are never touched by shelf-physics.js,
+    // so this is safe there. app.css's .has-cover-tint rule is what
+    // actually consumes this custom property -- when _spineTint is null (no
+    // cover, or extraction failed), neither the class nor this style is
+    // set at all, and the existing procedural .shelf-book-palette-N rules
+    // apply exactly as they did before this phase.
+    private string? TintStyle => _spineTint is null ? null : $"--shelf-book-tint: {_spineTint}";
+
     protected override async Task OnParametersSetAsync()
     {
         if (Book.Id != _loadedBookId)
         {
             _loadedBookId = Book.Id;
             _isFavorite = Book.IsFavorite;
+            _spineTint = null;
         }
 
         if (Book.CoverUrl == _loadedCoverUrl) return;
@@ -60,12 +80,14 @@ public partial class ShelfBook : ComponentBase, IDisposable
         }
 
         _loadedCoverUrl = Book.CoverUrl;
+        _spineTint = null;
         if (Book.CoverUrl is null) return;
 
         var result = await ApiClient.GetBytesAsync(Book.CoverUrl);
         if (result is { } cover)
         {
             _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+            _spineTint = await CoverColorService.ExtractDominantColorAsync(Book.CoverUrl, _coverObjectUrl);
         }
     }
 

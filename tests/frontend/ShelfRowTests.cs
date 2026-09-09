@@ -16,6 +16,7 @@ public class ShelfRowTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
     }
 
     private static List<Book> MakeBooks(int count) =>

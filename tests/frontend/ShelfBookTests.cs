@@ -16,9 +16,21 @@ public class ShelfBookTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
     }
 
     private static Book MakeBook() => new() { Id = 1, Title = "The Hobbit", Author = "J.R.R. Tolkien", CoverUrl = null };
+
+    private sealed class FakeCoverColorService(string? result) : CoverColorService(null!)
+    {
+        public string? CapturedCoverUrl { get; private set; }
+
+        public override Task<string?> ExtractDominantColorAsync(string coverUrl, string objectUrl)
+        {
+            CapturedCoverUrl = coverUrl;
+            return Task.FromResult(result);
+        }
+    }
 
     [Fact]
     public void ShelfBook_RendersAccessibleLabelWithTitleAndAuthor()
@@ -104,5 +116,81 @@ public class ShelfBookTests : BunitContext
             .Add(p => p.ProgressPercentage, 42.0));
 
         Assert.Contains("width: 42%", cut.Find(".shelf-book-progress-bar").GetAttribute("style"));
+    }
+
+    [Fact]
+    public void ShelfBook_CoverColorExtracted_AppliesTintStyleAndClass()
+    {
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/cover", "fake cover bytes", "image/jpeg");
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        JSInterop.SetupModule("./js/blobUrl.js").Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-cover-url");
+        var fakeCoverColorService = new FakeCoverColorService("rgb(120, 60, 30)");
+        Services.AddSingleton<CoverColorService>(fakeCoverColorService);
+
+        var book = new Book { Id = 3, Title = "Farbtest", CoverUrl = "/api/books/3/cover" };
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, book));
+
+        // The tint's class/style must land on the face span, NOT the
+        // .shelf-book anchor -- shelf-physics.js owns the anchor's
+        // class/style at runtime (spring-animation transform, is-revealed
+        // class on touch-reveal) and a Blazor re-render on the anchor would
+        // wipe that JS-owned state via setAttribute's whole-attribute
+        // replacement.
+        var spine = cut.Find(".shelf-book-spine");
+        Assert.Contains("--shelf-book-tint: rgb(120, 60, 30)", spine.GetAttribute("style"));
+        Assert.Contains("has-cover-tint", spine.ClassList);
+        Assert.Equal("/api/books/3/cover", fakeCoverColorService.CapturedCoverUrl);
+
+        // The anchor itself must still carry --shelf-book-rest (Phase 1's
+        // fan-rotation custom property) and nothing tint-related -- a
+        // regression that dropped this from the anchor's now-static style
+        // expression would silently flatten the fan-rotation effect
+        // (invalid custom property -> rotateY(var(--shelf-book-rest))
+        // goes invalid-at-computed-value-time) while every other assertion
+        // here stayed green.
+        var anchor = cut.Find("a.shelf-book");
+        Assert.Contains("--shelf-book-rest:", anchor.GetAttribute("style"));
+        Assert.DoesNotContain("--shelf-book-tint", anchor.GetAttribute("style"));
+        Assert.DoesNotContain("has-cover-tint", anchor.ClassList);
+    }
+
+    [Fact]
+    public void ShelfBook_CoverColorExtractionFailed_DoesNotApplyTint()
+    {
+        // Distinct from ShelfBook_NoCoverImage_DoesNotApplyTint below: this
+        // book DOES have a cover (OnParametersSetAsync reaches the
+        // extraction call), but the service returned null (extraction
+        // failure) -- exercising the "extraction attempted but failed"
+        // path rather than the "extraction never attempted" early-return.
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/cover", "fake cover bytes", "image/jpeg");
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        JSInterop.SetupModule("./js/blobUrl.js").Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-cover-url");
+        Services.AddSingleton<CoverColorService>(new FakeCoverColorService(null));
+
+        var book = new Book { Id = 4, Title = "Fehlgeschlagen", CoverUrl = "/api/books/4/cover" };
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, book));
+
+        var spine = cut.Find(".shelf-book-spine");
+        Assert.DoesNotContain("--shelf-book-tint", spine.GetAttribute("style"));
+        Assert.DoesNotContain("has-cover-tint", spine.ClassList);
+    }
+
+    [Fact]
+    public void ShelfBook_NoCoverImage_DoesNotApplyTint()
+    {
+        Services.AddSingleton<CoverColorService>(new FakeCoverColorService("rgb(120, 60, 30)"));
+
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        var spine = cut.Find(".shelf-book-spine");
+        Assert.DoesNotContain("--shelf-book-tint", spine.GetAttribute("style"));
+        Assert.DoesNotContain("has-cover-tint", spine.ClassList);
+
+        var anchor = cut.Find("a.shelf-book");
+        Assert.Contains("--shelf-book-rest:", anchor.GetAttribute("style"));
+        Assert.DoesNotContain("--shelf-book-tint", anchor.GetAttribute("style"));
+        Assert.DoesNotContain("has-cover-tint", anchor.ClassList);
     }
 }
