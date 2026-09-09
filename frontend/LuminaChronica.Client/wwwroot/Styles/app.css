@@ -1537,7 +1537,8 @@ select:focus-visible,
    alone already covers focus landing on the favorite button, since it's
    a descendant of the slot just like the anchor is. */
 .shelf-book-slot:has(.shelf-book:hover),
-.shelf-book-slot:has(:focus-visible) {
+.shelf-book-slot:has(:focus-visible),
+.shelf-book-slot:has(.shelf-book.is-revealed) {
     position: relative;
     z-index: 5;
 }

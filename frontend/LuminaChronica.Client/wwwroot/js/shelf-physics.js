@@ -141,6 +141,7 @@ function setPartTargets(revealedSlot, revealed) {
 
     for (let i = 0; i < slots.length; i++) {
         if (i === revealedIndex) continue;
+        if (slots[i].offsetTop !== revealedSlot.offsetTop) continue;
         const distance = Math.abs(i - revealedIndex);
         const magnitude = partOffsetForDistance(distance);
         if (magnitude === 0) continue;
@@ -330,6 +331,7 @@ export function initShelfPhysics(root) {
     root.addEventListener("mouseleave", (e) => {
         const book = e.target.closest?.(".shelf-book");
         if (!book || !root.contains(book)) return;
+        if (e.relatedTarget && book.contains(e.relatedTarget)) return;
         setRevealTarget(book, false);
         const slot = book.closest(".shelf-book-slot");
         if (slot) setPartTargets(slot, false);
