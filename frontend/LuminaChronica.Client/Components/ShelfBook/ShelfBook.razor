@@ -4,14 +4,14 @@
 @inject BlobUrlService BlobUrlService
 @inject CoverColorService CoverColorService
 
-<a class="shelf-book shelf-book-palette-@(Book.Id % 5) @(_spineTint is not null ? "has-cover-tint" : "")"
-   style="@InlineStyle"
+<a class="shelf-book shelf-book-palette-@(Book.Id % 5)"
+   style="--shelf-book-rest: @(RestRotation.ToString(System.Globalization.CultureInfo.InvariantCulture))deg"
    href="@(Href ?? $"library/books/{Book.Id}")"
    aria-label="@AccessibleLabel">
-    <span class="shelf-book-spine">
+    <span class="shelf-book-spine @(_spineTint is not null ? "has-cover-tint" : "")" style="@TintStyle">
         <span class="shelf-book-spine-title" aria-hidden="true">@Book.Title</span>
     </span>
-    <span class="shelf-book-cover">
+    <span class="shelf-book-cover @(_spineTint is not null ? "has-cover-tint" : "")" style="@TintStyle">
         @if (_coverObjectUrl is not null)
         {
             <img src="@_coverObjectUrl" alt="" aria-hidden="true" />

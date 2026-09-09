@@ -44,26 +44,23 @@ public partial class ShelfBook : ComponentBase, IDisposable
         ? Book.Title
         : $"{Book.Title}, {Book.Author}";
 
-    // Combines the existing --shelf-book-rest custom property with a
-    // --shelf-book-tint custom property (Library Rework Phase 3) when a
-    // real cover-derived color is available. app.css's .has-cover-tint
-    // rule is what actually consumes this custom property -- when
-    // _spineTint is null (no cover, or extraction failed), no such
-    // property is set at all, and the existing procedural
-    // .shelf-book-palette-N rules apply exactly as they did before this
-    // phase.
-    private string InlineStyle
-    {
-        get
-        {
-            var style = $"--shelf-book-rest: {RestRotation.ToString(System.Globalization.CultureInfo.InvariantCulture)}deg";
-            if (_spineTint is not null)
-            {
-                style += $"; --shelf-book-tint: {_spineTint}";
-            }
-            return style;
-        }
-    }
+    // Cover-derived tint (Library Rework Phase 3), applied only when a real
+    // cover-derived color is available. Deliberately scoped to the two face
+    // spans (.shelf-book-spine/.shelf-book-cover) rather than the .shelf-book
+    // anchor itself: shelf-physics.js (Phase 2) writes directly to the
+    // anchor's style.transform every rAF frame during the spring animation
+    // and to its classList (is-revealed) on the touch-reveal path. Putting
+    // this tint's class/style on the anchor too meant Blazor's async
+    // re-render (once cover load + extraction complete) called setAttribute
+    // on the anchor's class/style -- which replaces the whole attribute --
+    // wiping out shelf-physics.js's JS-owned is-revealed class and
+    // transform. The two face spans are never touched by shelf-physics.js,
+    // so this is safe there. app.css's .has-cover-tint rule is what
+    // actually consumes this custom property -- when _spineTint is null (no
+    // cover, or extraction failed), neither the class nor this style is
+    // set at all, and the existing procedural .shelf-book-palette-N rules
+    // apply exactly as they did before this phase.
+    private string? TintStyle => _spineTint is null ? null : $"--shelf-book-tint: {_spineTint}";
 
     protected override async Task OnParametersSetAsync()
     {

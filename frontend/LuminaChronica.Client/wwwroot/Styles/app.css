@@ -1345,7 +1345,7 @@ select:focus-visible,
 }
 
 /* Subtle leather grain overlay (Library Rework Phase 3), same established
-   technique as the wood texture above. Painted at z-index: -1, so it sits
+   technique as the wood texture below (.shelf-compartment::before). Painted at z-index: -1, so it sits
    above each face's own gradient background (which now carries either a
    cover-derived tint or the Phase 1 procedural palette color -- see the
    Canvas color extraction task) but below the face's own children. On
@@ -1376,6 +1376,10 @@ select:focus-visible,
     align-items: center;
     justify-content: center;
     writing-mode: vertical-rl;
+    /* Establishes its own stacking context so the ::before leather-texture
+       overlay's z-index: -1 (above) scopes to this element and paints
+       behind its own children, instead of escaping to the nearest
+       positioned ancestor and painting in the wrong place. */
     isolation: isolate;
 }
 
@@ -1491,16 +1495,25 @@ select:focus-visible,
 
 /* Cover-derived spine tint (Library Rework Phase 3): when ShelfBook.razor.cs
    successfully extracted a color from the book's actual cover image, it
-   sets --shelf-book-tint inline and adds this class, which then takes
-   precedence over whichever .shelf-book-palette-N class the book also
-   carries (two classes on .shelf-book gives this selector higher
-   specificity than any single-class palette rule, so the override holds
-   regardless of source order). Uses the same 85%/70% white/black mix
-   pattern as the simpler palette rules above, applied uniformly to the
-   extracted color rather than trying to retrofit --shelf-book-tint into
-   each palette's own distinct two-token mix recipe. */
-.shelf-book.has-cover-tint .shelf-book-spine,
-.shelf-book.has-cover-tint .shelf-book-cover {
+   sets --shelf-book-tint and adds this class directly on each face span
+   (.shelf-book-spine/.shelf-book-cover), NOT on the .shelf-book anchor --
+   shelf-physics.js (Phase 2) writes the anchor's style.transform every rAF
+   frame during the spring animation and its classList (is-revealed) on the
+   touch-reveal path; putting this tint's class/style on the anchor too
+   would mean Blazor's async re-render (once cover load + extraction
+   complete) replaces the whole class/style attribute via setAttribute,
+   wiping out shelf-physics.js's JS-owned state. The face spans are never
+   touched by shelf-physics.js, so it's safe there. This selector
+   (.shelf-book .shelf-book-spine.has-cover-tint, specificity 0,3,0) still
+   needs to unconditionally beat .shelf-book-palette-N .shelf-book-spine
+   (0,2,0) regardless of source order, since a book always carries both a
+   palette-N class on its ancestor and (when a tint applies) this class on
+   the face span itself. Uses the same 85%/70% white/black mix pattern as
+   the simpler palette rules above, applied uniformly to the extracted
+   color rather than trying to retrofit --shelf-book-tint into each
+   palette's own distinct two-token mix recipe. */
+.shelf-book .shelf-book-spine.has-cover-tint,
+.shelf-book .shelf-book-cover.has-cover-tint {
     background: linear-gradient(160deg,
         color-mix(in srgb, var(--shelf-book-tint) 85%, white),
         color-mix(in srgb, var(--shelf-book-tint) 70%, black));
@@ -1557,6 +1570,10 @@ select:focus-visible,
     box-shadow: inset 0 10px 18px rgba(0, 0, 0, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
     padding: var(--space-3) var(--space-3) 0;
     position: relative;
+    /* Establishes its own stacking context so the ::before wood-texture
+       overlay's z-index: -1 (below) scopes to this element and paints
+       behind its own children, instead of escaping to the nearest
+       positioned ancestor and painting in the wrong place. */
     isolation: isolate;
 }
 
