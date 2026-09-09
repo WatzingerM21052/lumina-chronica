@@ -1380,7 +1380,8 @@ select:focus-visible,
 
 .shelf-book:hover .shelf-book-cover,
 .shelf-book:focus-visible .shelf-book-cover,
-.shelf-book:has(:focus-visible) .shelf-book-cover {
+.shelf-book:has(:focus-visible) .shelf-book-cover,
+.shelf-book.is-revealed .shelf-book-cover {
     pointer-events: auto;
 }
 

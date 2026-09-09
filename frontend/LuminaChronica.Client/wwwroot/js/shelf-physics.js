@@ -222,6 +222,96 @@ function tick(now) {
     rafHandle = (active.size > 0 || activeParts.size > 0) ? requestAnimationFrame(tick) : null;
 }
 
+function isTouchPrimary() {
+    return window.matchMedia("(hover: none)").matches;
+}
+
+// Two-tap navigation for touch-primary devices (see design spec's
+// Responsive Behavior section): a tap on a not-yet-revealed book reveals
+// it and is swallowed (no navigation); a second tap on the now-revealed
+// book proceeds to navigate; a tap anywhere else collapses whatever was
+// open. Deliberately separate from initShelfPhysics -- hover-capable
+// devices never need this, since hover already reveals before any click
+// happens.
+//
+// Unlike initShelfPhysics, this does NOT no-op under prefers-reduced-motion
+// -- a touch-primary device has no hover/:focus-visible path, so fully
+// disabling this module would leave reduced-motion touch users with no way
+// to ever see a cover at all. Instead, under reduced motion the reveal/
+// collapse below snaps the spring straight to its target value (no rAF
+// loop, no neighbor-parting motion) rather than easing -- see the
+// `reducedMotion` branch in setRevealedState.
+export function initShelfTouch(root) {
+    if (!root || !isTouchPrimary()) return;
+
+    const reducedMotion = prefersReducedMotion();
+    let currentlyRevealed = null;
+
+    function setRevealedState(book, revealed) {
+        if (!reducedMotion) {
+            setRevealTarget(book, revealed);
+            return;
+        }
+        // Reduced motion: snap instantly, no rAF loop. Reuses the same
+        // spring-state object (via getOrCreateSpring) purely as storage for
+        // the current value, so a later non-reduced-motion interaction
+        // (e.g. this device also has a mouse) starts from a consistent
+        // state rather than an untouched spring.
+        const state = getOrCreateSpring(book);
+        state.target = revealed ? 1 : 0;
+        state.value = state.target;
+        state.velocity = 0;
+        applyTransform(book, state.value);
+        if (state.value === 0) {
+            book.style.removeProperty("transform");
+        }
+    }
+
+    function collapse(book) {
+        setRevealedState(book, false);
+        book.classList.remove("is-revealed");
+        if (reducedMotion) return; // no neighbor-parting motion under reduced motion
+        const slot = book.closest(".shelf-book-slot");
+        if (slot) setPartTargets(slot, false);
+    }
+
+    function reveal(book) {
+        setRevealedState(book, true);
+        book.classList.add("is-revealed");
+        if (reducedMotion) return; // no neighbor-parting motion under reduced motion
+        const slot = book.closest(".shelf-book-slot");
+        if (slot) setPartTargets(slot, true);
+    }
+
+    root.addEventListener("click", (e) => {
+        const book = e.target.closest?.(".shelf-book");
+
+        if (!book || !root.contains(book)) {
+            // Tapped outside any book -- collapse whatever's open.
+            if (currentlyRevealed) {
+                collapse(currentlyRevealed);
+                currentlyRevealed = null;
+            }
+            return;
+        }
+
+        if (book === currentlyRevealed) {
+            // Second tap on the already-revealed book -- let the click
+            // proceed to navigation (don't preventDefault).
+            currentlyRevealed = null;
+            return;
+        }
+
+        // First tap on a not-yet-revealed book (or a different book while
+        // another was open): reveal this one, collapse any other, and
+        // swallow this tap instead of navigating.
+        e.preventDefault();
+        if (currentlyRevealed) collapse(currentlyRevealed);
+        reveal(book);
+        currentlyRevealed = book;
+    });
+}
+
 export function initShelfPhysics(root) {
     if (!root || prefersReducedMotion()) return;
 
