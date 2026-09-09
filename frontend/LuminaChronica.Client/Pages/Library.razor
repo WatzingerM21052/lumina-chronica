@@ -10,7 +10,7 @@
 
 <PageTitle>Bibliothek — Lumina Chronica</PageTitle>
 
-<div class="library-header">
+<div class="library-header library-header-shelf">
     <h1>Bibliothek</h1>
     <div class="form-actions">
         <a class="btn" href="library/shelves">Regale</a>
@@ -91,7 +91,7 @@ else
         <div class="library-shelf">
             @foreach (var group in LibraryShelfGrouping.Group(_result.Items, _sort, _genreFilters, _tagFilters))
             {
-                <ShelfRow Label="@group.Label" Books="group.Books" />
+                <ShelfRow @key="group.Label" Label="@group.Label" Books="group.Books" />
             }
         </div>
     }

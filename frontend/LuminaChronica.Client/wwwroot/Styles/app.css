@@ -812,6 +812,13 @@ select:focus-visible,
     justify-content: space-between;
     align-items: center;
     gap: var(--space-2);
+}
+
+/* Dark shelf-themed treatment for the Library page's own header only --
+   applied alongside .library-header via a second class so the shared
+   .library-header pattern used by ProjectDetail/CharacterDetail/Projects/
+   Shelves section headers stays unaffected. */
+.library-header-shelf {
     padding: var(--space-3) var(--space-4, 2rem);
     background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 92%, var(--color-primary) 8%), var(--color-bg-dark));
     border-radius: var(--radius-lg, var(--radius));
@@ -819,9 +826,8 @@ select:focus-visible,
     color: var(--color-text-on-dark, #f2e9d8);
 }
 
-.library-header h1 {
+.library-header-shelf h1 {
     color: inherit;
-    font-family: var(--font-family-display);
 }
 
 .library-shelf {
@@ -1354,6 +1360,7 @@ select:focus-visible,
     max-height: 90%;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .shelf-book-cover {
@@ -1372,7 +1379,8 @@ select:focus-visible,
 }
 
 .shelf-book:hover .shelf-book-cover,
-.shelf-book:focus-visible .shelf-book-cover {
+.shelf-book:focus-visible .shelf-book-cover,
+.shelf-book:has(:focus-visible) .shelf-book-cover {
     pointer-events: auto;
 }
 
@@ -1434,24 +1442,28 @@ select:focus-visible,
 }
 
 /* Procedural placeholder palette (Phase 1 only -- replaced by real
-   cover-derived color extraction in Phase 3). Muted, theme-appropriate
-   hues per the design spec's palette (bordeaux, green, brass, blue,
-   brown), each as a gradient plus a matching cover-face tint. */
+   cover-derived color extraction in Phase 3). 5 procedurally-varied
+   swatches derived from --color-primary/--color-secondary/--color-border/
+   --color-bg-dark, each as a gradient plus a matching cover-face tint.
+   Every color-mix() below intentionally specifies only the first color's
+   percentage so the second defaults to the exact remainder (percentages
+   summing to less than 100% makes the browser apply an unwanted alpha
+   multiplier to the result). */
 .shelf-book-palette-0 .shelf-book-spine,
-.shelf-book-palette-0 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 85%, white 10%), color-mix(in srgb, var(--color-secondary) 70%, black 30%)); }
+.shelf-book-palette-0 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 85%, white), color-mix(in srgb, var(--color-secondary) 70%, black)); }
 .shelf-book-palette-1 .shelf-book-spine,
-.shelf-book-palette-1 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-border) 60%, var(--color-secondary) 40%), color-mix(in srgb, var(--color-border) 40%, black 40%)); }
+.shelf-book-palette-1 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-border) 60%, var(--color-secondary)), color-mix(in srgb, var(--color-border) 50%, black)); }
 .shelf-book-palette-2 .shelf-book-spine,
-.shelf-book-palette-2 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white 10%), color-mix(in srgb, var(--color-primary) 70%, black 30%)); }
+.shelf-book-palette-2 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white), color-mix(in srgb, var(--color-primary) 70%, black)); }
 .shelf-book-palette-3 .shelf-book-spine,
-.shelf-book-palette-3 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 40%, var(--color-primary) 60%), color-mix(in srgb, var(--color-bg-dark) 70%, black 30%)); }
+.shelf-book-palette-3 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 40%, var(--color-primary)), color-mix(in srgb, var(--color-bg-dark) 70%, black)); }
 .shelf-book-palette-4 .shelf-book-spine,
-.shelf-book-palette-4 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 70%, var(--color-primary) 20%), color-mix(in srgb, var(--color-secondary) 55%, black 30%)); }
+.shelf-book-palette-4 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 78%, var(--color-primary)), color-mix(in srgb, var(--color-secondary) 65%, black)); }
 
 .shelf-book:hover,
-.shelf-book:focus-visible {
+.shelf-book:focus-visible,
+.shelf-book:has(:focus-visible) {
     transform: translateY(-1.4rem) translateZ(3.6rem) rotateY(-88deg) scale(1.08);
-    z-index: 5;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1500,6 +1512,21 @@ select:focus-visible,
 
 .shelf-book-slot {
     transform-style: preserve-3d;
+}
+
+/* .shelf-book-slot establishes its own stacking context via
+   transform-style: preserve-3d, so a z-index set directly on the
+   .shelf-book inside it can never lift the slot above a sibling slot --
+   the z-index has to live on the slot itself instead. Note: :has()
+   nested inside :has() is deliberately avoided here -- support is
+   inconsistent and an invalid selector in a comma-separated list drops
+   the *entire* rule, silently reverting this fix. :has(:focus-visible)
+   alone already covers focus landing on the favorite button, since it's
+   a descendant of the slot just like the anchor is. */
+.shelf-book-slot:has(.shelf-book:hover),
+.shelf-book-slot:has(:focus-visible) {
+    position: relative;
+    z-index: 5;
 }
 
 .shelf-lip {

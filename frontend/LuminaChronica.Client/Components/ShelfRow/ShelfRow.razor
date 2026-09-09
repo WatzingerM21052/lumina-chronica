@@ -9,7 +9,7 @@
         <div class="shelf-books">
             @foreach (var book in Books)
             {
-                <div class="shelf-book-slot">
+                <div class="shelf-book-slot" @key="book.Id">
                     <ShelfBook Book="book" />
                 </div>
             }
