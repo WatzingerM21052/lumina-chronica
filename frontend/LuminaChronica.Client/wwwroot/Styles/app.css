@@ -1344,11 +1344,39 @@ select:focus-visible,
     overflow: hidden;
 }
 
+/* Subtle leather grain overlay (Library Rework Phase 3), same established
+   technique as the wood texture above. Painted at z-index: -1, so it sits
+   above each face's own gradient background (which now carries either a
+   cover-derived tint or the Phase 1 procedural palette color -- see the
+   Canvas color extraction task) but below the face's own children. On
+   .shelf-book-cover specifically, this means the leather grain is only
+   visible when there's no real cover image on top (the placeholder/no-cover
+   case) -- once a real photographic cover image paints (an absolutely-
+   positioned child, painting above z-index: -1), it naturally covers the
+   leather texture, which is correct: a real cover photo doesn't need a
+   fake leather-grain overlay pretending to be its material. On
+   .shelf-book-spine, which never has an image, the leather texture is
+   always visible. If book-leather-texture.webp is ever missing, this
+   simply fails to paint -- each face's existing gradient still renders
+   correctly with no layout break. */
+.shelf-book-spine::before,
+.shelf-book-cover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url("../images/library/book-leather-texture.webp");
+    background-size: cover;
+    opacity: 0.18;
+    pointer-events: none;
+}
+
 .shelf-book-spine {
     display: flex;
     align-items: center;
     justify-content: center;
     writing-mode: vertical-rl;
+    isolation: isolate;
 }
 
 .shelf-book-spine-title {
@@ -1512,6 +1540,29 @@ select:focus-visible,
     box-shadow: inset 0 10px 18px rgba(0, 0, 0, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
     padding: var(--space-3) var(--space-3) 0;
     position: relative;
+    isolation: isolate;
+}
+
+/* Aged wood grain overlay (Library Rework Phase 3), following the exact
+   established brass-texture.webp technique (.goal-ring::before, app.css) --
+   a low-opacity ::before painted at z-index: -1, above the compartment's
+   own gradient but below its children. Uses its OWN matching border-radius
+   rather than the parent's overflow: hidden (unlike the calendar-card
+   precedent), since a revealed .shelf-book (Phase 2's spring reveal) can
+   lift slightly above the compartment's resting bounds and must never be
+   clipped. If shelf-wood-texture.webp is ever missing, this simply fails
+   to paint -- the compartment's existing gradient background still renders
+   correctly underneath with no layout break. */
+.shelf-compartment::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius)) 0.15rem 0.15rem;
+    background-image: url("../images/library/shelf-wood-texture.webp");
+    background-size: cover;
+    opacity: 0.15;
+    pointer-events: none;
 }
 
 .shelf-books {
