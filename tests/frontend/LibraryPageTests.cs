@@ -42,7 +42,7 @@ public class LibraryPageTests : BunitContext
 
         Assert.Contains("Dune", cut.Markup);
         Assert.Contains("The Hobbit", cut.Markup);
-        Assert.Equal(2, cut.FindAll("a.book-card").Count);
+        Assert.Equal(2, cut.FindAll("a.shelf-book").Count);
     }
 
     [Fact]

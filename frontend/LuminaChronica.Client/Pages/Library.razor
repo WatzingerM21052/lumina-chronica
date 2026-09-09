@@ -61,7 +61,7 @@
     <button type="button" class="btn" @onclick="ClearFiltersAsync">Filter zurücksetzen</button>
 
     <div class="library-view-toggle">
-        <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Raster</button>
+        <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Regal</button>
         <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Liste</button>
     </div>
 </div>
@@ -86,12 +86,24 @@ else if (_result.Items.Count == 0)
 }
 else
 {
-    <div class="@(_viewMode == LibraryViewMode.Grid ? "library-grid" : "library-list")">
-        @foreach (var book in _result.Items)
-        {
-            <BookCard Book="book" Size="@(_viewMode == LibraryViewMode.Grid ? BookCardSize.Normal : BookCardSize.Small)" />
-        }
-    </div>
+    @if (_viewMode == LibraryViewMode.Grid)
+    {
+        <div class="library-shelf">
+            @foreach (var group in LibraryShelfGrouping.Group(_result.Items, _sort, _genreFilters, _tagFilters))
+            {
+                <ShelfRow Label="@group.Label" Books="group.Books" />
+            }
+        </div>
+    }
+    else
+    {
+        <div class="library-list">
+            @foreach (var book in _result.Items)
+            {
+                <BookCard Book="book" Size="BookCardSize.Small" />
+            }
+        </div>
+    }
 
     @if (_result.Total > _result.PageSize)
     {
