@@ -84,6 +84,10 @@ export async function extractDominantColor(coverUrl, objectUrl) {
         // procedural default rather than surfacing an error to the user.
     }
 
-    colorCache.set(coverUrl, color);
+    // Only cache successful extractions -- caching a null (failure) result
+    // by the stable coverUrl would permanently suppress this book's tint
+    // for the rest of the session after a single transient failure (e.g. a
+    // decode error or a blob URL revoked mid-flight), with no retry.
+    if (color !== null) colorCache.set(coverUrl, color);
     return color;
 }

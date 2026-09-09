@@ -23,7 +23,13 @@ public class ShelfBookTests : BunitContext
 
     private sealed class FakeCoverColorService(string? result) : CoverColorService(null!)
     {
-        public override Task<string?> ExtractDominantColorAsync(string coverUrl, string objectUrl) => Task.FromResult(result);
+        public string? CapturedCoverUrl { get; private set; }
+
+        public override Task<string?> ExtractDominantColorAsync(string coverUrl, string objectUrl)
+        {
+            CapturedCoverUrl = coverUrl;
+            return Task.FromResult(result);
+        }
     }
 
     [Fact]
@@ -119,7 +125,8 @@ public class ShelfBookTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         JSInterop.SetupModule("./js/blobUrl.js").Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-cover-url");
-        Services.AddSingleton<CoverColorService>(new FakeCoverColorService("rgb(120, 60, 30)"));
+        var fakeCoverColorService = new FakeCoverColorService("rgb(120, 60, 30)");
+        Services.AddSingleton<CoverColorService>(fakeCoverColorService);
 
         var book = new Book { Id = 3, Title = "Farbtest", CoverUrl = "/api/books/3/cover" };
         var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, book));
@@ -127,6 +134,7 @@ public class ShelfBookTests : BunitContext
         var anchor = cut.Find("a.shelf-book");
         Assert.Contains("--shelf-book-tint: rgb(120, 60, 30)", anchor.GetAttribute("style"));
         Assert.Contains("has-cover-tint", anchor.ClassList);
+        Assert.Equal("/api/books/3/cover", fakeCoverColorService.CapturedCoverUrl);
     }
 
     [Fact]
