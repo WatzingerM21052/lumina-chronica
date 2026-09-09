@@ -662,7 +662,7 @@ Add to `frontend/LuminaChronica.Client/wwwroot/Styles/app.css`, immediately befo
 
 .shelf-plaque {
     display: inline-block;
-    background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 70%, white 15%), color-mix(in srgb, var(--color-primary) 60%, black 25%));
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white), color-mix(in srgb, var(--color-primary) 75%, black));
     color: var(--color-bg-dark);
     font-family: var(--font-family-display);
     font-size: 0.75rem;
@@ -697,7 +697,7 @@ Add to `frontend/LuminaChronica.Client/wwwroot/Styles/app.css`, immediately befo
 
 .shelf-lip {
     height: 1rem;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 80%, white 15%) 0%, var(--color-primary) 45%, color-mix(in srgb, var(--color-primary) 70%, black 30%) 100%);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 85%, white) 0%, var(--color-primary) 45%, color-mix(in srgb, var(--color-primary) 70%, black) 100%);
     border-radius: 0 0 var(--radius) var(--radius);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
