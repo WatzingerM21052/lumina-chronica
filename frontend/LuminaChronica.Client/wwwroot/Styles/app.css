@@ -1380,7 +1380,8 @@ select:focus-visible,
 
 .shelf-book:hover .shelf-book-cover,
 .shelf-book:focus-visible .shelf-book-cover,
-.shelf-book:has(:focus-visible) .shelf-book-cover {
+.shelf-book:has(:focus-visible) .shelf-book-cover,
+.shelf-book.is-revealed .shelf-book-cover {
     pointer-events: auto;
 }
 
@@ -1466,6 +1467,18 @@ select:focus-visible,
     transform: translateY(-1.4rem) translateZ(3.6rem) rotateY(-88deg) scale(1.08);
 }
 
+/* Added by shelf-physics.js (Phase 2) once it takes over the reveal
+   animation -- disables the Phase 1 CSS transition so it doesn't try to
+   further ease between this module's own already-eased per-frame writes
+   to .shelf-book's inline transform. Only applied when the module
+   actually initializes (skipped entirely under prefers-reduced-motion,
+   in which case Phase 1's plain CSS transition -- itself already
+   reduced-motion-aware -- remains the only mechanism). */
+.shelf-physics-active .shelf-book,
+.shelf-physics-active .shelf-book-slot {
+    transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .shelf-book {
         transition: none;
@@ -1524,7 +1537,8 @@ select:focus-visible,
    alone already covers focus landing on the favorite button, since it's
    a descendant of the slot just like the anchor is. */
 .shelf-book-slot:has(.shelf-book:hover),
-.shelf-book-slot:has(:focus-visible) {
+.shelf-book-slot:has(:focus-visible),
+.shelf-book-slot:has(.shelf-book.is-revealed) {
     position: relative;
     z-index: 5;
 }

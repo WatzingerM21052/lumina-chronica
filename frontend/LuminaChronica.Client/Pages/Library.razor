@@ -1,12 +1,13 @@
 @page "/library"
 @attribute [Authorize]
-@implements IDisposable
+@implements IAsyncDisposable
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Bibliothek — Lumina Chronica</PageTitle>
 
@@ -88,7 +89,7 @@ else
 {
     @if (_viewMode == LibraryViewMode.Grid)
     {
-        <div class="library-shelf">
+        <div class="library-shelf" @ref="_shelfRef">
             @foreach (var group in LibraryShelfGrouping.Group(_result.Items, _sort, _genreFilters, _tagFilters))
             {
                 <ShelfRow @key="group.Label" Label="@group.Label" Books="group.Books" />
@@ -136,6 +137,10 @@ else
 
     private System.Threading.Timer? _searchDebounceTimer;
 
+    private ElementReference _shelfRef;
+    private IJSObjectReference? _shelfPhysicsModule;
+    private bool _shelfPhysicsInitialized;
+
     private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || _genreFilters.Count > 0 || _tagFilters.Count > 0 || _favoritesOnly;
 
     private int PageCount => _result is null ? 1 : Math.Max(1, (int)Math.Ceiling((double)_result.Total / _result.PageSize));
@@ -160,6 +165,43 @@ else
         }
 
         await LoadBooksAsync();
+    }
+
+    private bool ShelfIsRendered =>
+        _errorMessage is null
+        && _result is not null
+        && !(_result.Total == 0 && !HasActiveFilters)
+        && _result.Items.Count != 0
+        && _viewMode == LibraryViewMode.Grid;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!ShelfIsRendered)
+        {
+            // .library-shelf isn't in the DOM right now for any reason (still
+            // loading, error, empty result, List view, etc.) -- force re-init
+            // next time it reappears, since it may be a new DOM node.
+            _shelfPhysicsInitialized = false;
+            return;
+        }
+
+        if (_shelfPhysicsInitialized) return;
+
+        try
+        {
+            _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
+            await _shelfPhysicsModule.InvokeVoidAsync("initShelfPhysics", _shelfRef);
+            await _shelfPhysicsModule.InvokeVoidAsync("initShelfTouch", _shelfRef);
+            // Re-check rather than unconditionally setting true: a later
+            // OnAfterRenderAsync invocation (e.g. a view-mode toggle mid-import)
+            // may have already reset this while these awaits were suspended --
+            // only claim "initialized" if the shelf is still actually rendered
+            // now that we've resumed.
+            _shelfPhysicsInitialized = ShelfIsRendered;
+        }
+        catch (Exception)
+        {
+        }
     }
 
     private void SetViewMode(LibraryViewMode mode) => _viewMode = mode;
@@ -264,8 +306,19 @@ else
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _searchDebounceTimer?.Dispose();
+
+        if (_shelfPhysicsModule is not null)
+        {
+            try
+            {
+                await _shelfPhysicsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }
