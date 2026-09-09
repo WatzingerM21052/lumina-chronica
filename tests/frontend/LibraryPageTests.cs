@@ -42,6 +42,23 @@ public class LibraryPageTests : BunitContext
 
         Assert.Contains("Dune", cut.Markup);
         Assert.Contains("The Hobbit", cut.Markup);
+        Assert.Equal(2, cut.FindAll("a.shelf-book").Count);
+    }
+
+    [Fact]
+    public void Library_ListViewMode_StillRendersOriginalBookCardComponent()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{"items":[
+                {"id":1,"title":"Dune","author":"Frank Herbert","coverUrl":null,"genre":"scifi","language":"en","visibility":"PRIVATE","createdAt":"2026-01-01"},
+                {"id":2,"title":"The Hobbit","author":"J.R.R. Tolkien","coverUrl":null,"genre":"fantasy","language":"en","visibility":"PRIVATE","createdAt":"2026-01-02"}
+            ],"total":2,"page":1,"pageSize":20}}
+            """);
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Liste").Click();
+
+        Assert.NotEmpty(cut.FindAll(".library-list"));
         Assert.Equal(2, cut.FindAll("a.book-card").Count);
     }
 

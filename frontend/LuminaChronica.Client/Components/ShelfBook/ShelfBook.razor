@@ -1,0 +1,46 @@
+@namespace LuminaChronica.Client.Components
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+
+<a class="shelf-book shelf-book-palette-@(Book.Id % 5)"
+   style="--shelf-book-rest: @(RestRotation.ToString(System.Globalization.CultureInfo.InvariantCulture))deg"
+   href="@(Href ?? $"library/books/{Book.Id}")"
+   aria-label="@AccessibleLabel">
+    <span class="shelf-book-spine">
+        <span class="shelf-book-spine-title" aria-hidden="true">@Book.Title</span>
+    </span>
+    <span class="shelf-book-cover">
+        @if (_coverObjectUrl is not null)
+        {
+            <img src="@_coverObjectUrl" alt="" aria-hidden="true" />
+        }
+        else
+        {
+            <span class="shelf-book-cover-placeholder" aria-hidden="true"></span>
+        }
+        <span class="shelf-book-cover-title" aria-hidden="true">@Book.Title</span>
+        @if (!string.IsNullOrWhiteSpace(Book.Author))
+        {
+            <span class="shelf-book-cover-author" aria-hidden="true">@Book.Author</span>
+        }
+        @if (ShowFavorite)
+        {
+            <button type="button" class="shelf-book-favorite @(_isFavorite ? "is-favorite" : "")"
+                    title="@(_isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
+                    @onclick="ToggleFavoriteAsync" @onclick:stopPropagation="true" @onclick:preventDefault="true">
+                @(_isFavorite ? "★" : "☆")
+            </button>
+        }
+        @if (OwnerUsername is { } ownerUsername)
+        {
+            <span class="shelf-book-borrowed-badge" title="@($"Geteiltes Buch von {ownerUsername}")">Geliehen von @ownerUsername</span>
+        }
+        @if (ProgressPercentage is { } progress)
+        {
+            <span class="shelf-book-progress">
+                <span class="shelf-book-progress-bar" style="width: @(progress)%"></span>
+            </span>
+        }
+    </span>
+</a>

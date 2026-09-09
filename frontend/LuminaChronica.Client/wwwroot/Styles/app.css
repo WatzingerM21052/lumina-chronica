@@ -814,6 +814,27 @@ select:focus-visible,
     gap: var(--space-2);
 }
 
+/* Dark shelf-themed treatment for the Library page's own header only --
+   applied alongside .library-header via a second class so the shared
+   .library-header pattern used by ProjectDetail/CharacterDetail/Projects/
+   Shelves section headers stays unaffected. */
+.library-header-shelf {
+    padding: var(--space-3) var(--space-4, 2rem);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 92%, var(--color-primary) 8%), var(--color-bg-dark));
+    border-radius: var(--radius-lg, var(--radius));
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    color: var(--color-text-on-dark, #f2e9d8);
+}
+
+.library-header-shelf h1 {
+    color: inherit;
+}
+
+.library-shelf {
+    display: flex;
+    flex-direction: column;
+}
+
 .library-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -1288,6 +1309,231 @@ select:focus-visible,
 .library-list .book-card-cover {
     width: 3rem;
     flex-shrink: 0;
+}
+
+/* ShelfBook: books stand spine-out at rest, rotate ~90 deg on hover/
+   focus to reveal the cover. Two load-bearing rules learned from live
+   3D-transform validation during design (see plan Global Constraints):
+   (1) every element between the perspective-establishing ancestor
+   (.shelf-books, see ShelfRow) and this element needs
+   transform-style: preserve-3d, or the rotation flattens into a 2D
+   distortion; (2) the hover transform lists rotateY before translateY/
+   translateZ -- rotate in the book's own local frame first, then move
+   toward the viewer in the resulting world frame. Reversing this order
+   was tried and visibly failed (the book appeared to slide sideways). */
+.shelf-book {
+    display: block;
+    width: 3.25rem;
+    height: 9.5rem;
+    position: relative;
+    text-decoration: none;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transform-origin: bottom center;
+    transform: rotateY(var(--shelf-book-rest));
+    transition: transform var(--motion-reveal) var(--ease-standard);
+}
+
+.shelf-book-spine,
+.shelf-book-cover {
+    position: absolute;
+    inset: 0;
+    border-radius: 0.15rem 0.3rem 0.3rem 0.15rem;
+    backface-visibility: hidden;
+    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+}
+
+.shelf-book-spine {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+}
+
+.shelf-book-spine-title {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: color-mix(in srgb, var(--color-text-on-dark) 85%, transparent);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    max-height: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shelf-book-cover {
+    transform: rotateY(90deg) translateZ(1.6rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0.5rem;
+    gap: 0.15rem;
+    color: var(--color-text-on-dark);
+    /* Only clickable once actually revealed -- at rest this face is
+       edge-on (a thin sliver visually) but still occupies its full
+       bounding box in the DOM, so without this the favorite button
+       inside it could be spuriously clickable while barely visible. */
+    pointer-events: none;
+}
+
+.shelf-book:hover .shelf-book-cover,
+.shelf-book:focus-visible .shelf-book-cover,
+.shelf-book:has(:focus-visible) .shelf-book-cover {
+    pointer-events: auto;
+}
+
+.shelf-book-cover img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.shelf-book-cover-placeholder {
+    position: absolute;
+    inset: 0;
+}
+
+.shelf-book-cover-title,
+.shelf-book-cover-author {
+    position: relative;
+    font-size: 0.65rem;
+    line-height: 1.2;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.shelf-book-cover-title { font-weight: 600; }
+.shelf-book-cover-author { font-size: 0.6rem; opacity: 0.85; }
+
+.shelf-book-favorite {
+    position: relative;
+    align-self: flex-end;
+    background: none;
+    border: none;
+    color: var(--color-text-on-dark);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.15rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.shelf-book-favorite.is-favorite { color: var(--color-primary); }
+
+.shelf-book-borrowed-badge {
+    position: relative;
+    font-size: 0.55rem;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.15rem;
+    align-self: flex-start;
+}
+
+.shelf-book-progress {
+    position: relative;
+    height: 0.2rem;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 0.1rem;
+    overflow: hidden;
+}
+.shelf-book-progress-bar {
+    height: 100%;
+    background: var(--color-primary);
+}
+
+/* Procedural placeholder palette (Phase 1 only -- replaced by real
+   cover-derived color extraction in Phase 3). 5 procedurally-varied
+   swatches derived from --color-primary/--color-secondary/--color-border/
+   --color-bg-dark, each as a gradient plus a matching cover-face tint.
+   Every color-mix() below intentionally specifies only the first color's
+   percentage so the second defaults to the exact remainder (percentages
+   summing to less than 100% makes the browser apply an unwanted alpha
+   multiplier to the result). */
+.shelf-book-palette-0 .shelf-book-spine,
+.shelf-book-palette-0 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 85%, white), color-mix(in srgb, var(--color-secondary) 70%, black)); }
+.shelf-book-palette-1 .shelf-book-spine,
+.shelf-book-palette-1 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-border) 60%, var(--color-secondary)), color-mix(in srgb, var(--color-border) 50%, black)); }
+.shelf-book-palette-2 .shelf-book-spine,
+.shelf-book-palette-2 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white), color-mix(in srgb, var(--color-primary) 70%, black)); }
+.shelf-book-palette-3 .shelf-book-spine,
+.shelf-book-palette-3 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 40%, var(--color-primary)), color-mix(in srgb, var(--color-bg-dark) 70%, black)); }
+.shelf-book-palette-4 .shelf-book-spine,
+.shelf-book-palette-4 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 78%, var(--color-primary)), color-mix(in srgb, var(--color-secondary) 65%, black)); }
+
+.shelf-book:hover,
+.shelf-book:focus-visible,
+.shelf-book:has(:focus-visible) {
+    transform: translateY(-1.4rem) translateZ(3.6rem) rotateY(-88deg) scale(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shelf-book {
+        transition: none;
+    }
+}
+
+.shelf-row-group {
+    margin-top: var(--space-3);
+}
+.shelf-row-group:first-child {
+    margin-top: 0;
+}
+
+.shelf-plaque {
+    display: inline-block;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white), color-mix(in srgb, var(--color-primary) 75%, black));
+    color: var(--color-bg-dark);
+    font-family: var(--font-family-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.8rem;
+    border-radius: 0.15rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    margin-bottom: var(--space-2);
+    letter-spacing: 0.03em;
+}
+
+.shelf-compartment {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-dark) 90%, black), var(--color-bg-dark));
+    border-radius: var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius)) 0.15rem 0.15rem;
+    box-shadow: inset 0 10px 18px rgba(0, 0, 0, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+    padding: var(--space-3) var(--space-3) 0;
+    position: relative;
+}
+
+.shelf-books {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding-bottom: var(--space-2);
+    perspective: 60rem;
+}
+
+.shelf-book-slot {
+    transform-style: preserve-3d;
+}
+
+/* .shelf-book-slot establishes its own stacking context via
+   transform-style: preserve-3d, so a z-index set directly on the
+   .shelf-book inside it can never lift the slot above a sibling slot --
+   the z-index has to live on the slot itself instead. Note: :has()
+   nested inside :has() is deliberately avoided here -- support is
+   inconsistent and an invalid selector in a comma-separated list drops
+   the *entire* rule, silently reverting this fix. :has(:focus-visible)
+   alone already covers focus landing on the favorite button, since it's
+   a descendant of the slot just like the anchor is. */
+.shelf-book-slot:has(.shelf-book:hover),
+.shelf-book-slot:has(:focus-visible) {
+    position: relative;
+    z-index: 5;
+}
+
+.shelf-lip {
+    height: 1rem;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 85%, white) 0%, var(--color-primary) 45%, color-mix(in srgb, var(--color-primary) 70%, black) 100%);
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .book-detail {
