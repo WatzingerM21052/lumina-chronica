@@ -192,7 +192,12 @@ else
             _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
             await _shelfPhysicsModule.InvokeVoidAsync("initShelfPhysics", _shelfRef);
             await _shelfPhysicsModule.InvokeVoidAsync("initShelfTouch", _shelfRef);
-            _shelfPhysicsInitialized = true;
+            // Re-check rather than unconditionally setting true: a later
+            // OnAfterRenderAsync invocation (e.g. a view-mode toggle mid-import)
+            // may have already reset this while these awaits were suspended --
+            // only claim "initialized" if the shelf is still actually rendered
+            // now that we've resumed.
+            _shelfPhysicsInitialized = ShelfIsRendered;
         }
         catch (Exception)
         {
