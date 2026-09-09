@@ -12,7 +12,7 @@
 
 - **No new color tokens, no new CSS custom properties beyond what's already established** — this phase is almost entirely JS; the only CSS additions are a `transition: none` override class and a `pointer-events` extension for the new `.is-revealed` state, neither introduces a color.
 - **Phase 1's CSS fallback must stay intact and correct.** Do not remove or weaken `.shelf-book:hover, .shelf-book:focus-visible, .shelf-book:has(:focus-visible) { transform: ...; }` (`app.css`) or its `transition` declaration — if this JS module fails to load (network failure, `prefers-reduced-motion`, etc.), Phase 1's CSS-only reveal must keep working exactly as it does today.
-- **`prefers-reduced-motion: reduce` must skip this module's animation entirely** — when reduced motion is set, `initShelfPhysics`/`initShelfTouch` must no-op (return immediately without attaching any listeners), leaving Phase 1's CSS rule (which already has its own `transition: none` override for reduced motion) as the sole mechanism. Do not attempt to run the spring loop with a zero-duration spring — just don't start it.
+- **`prefers-reduced-motion: reduce` must skip the spring/parting animation entirely, but must NOT remove the cover-reveal capability itself.** `initShelfPhysics` (Task 1) no-ops completely under reduced motion (return immediately, no listeners attached) — hover/keyboard-focus users fall back to Phase 1's CSS rule, which already has its own `transition: none` override. `initShelfTouch` (Task 3) is different: a touch-primary device has no hover/`:focus-visible` path at all, so if it also no-op'd under reduced motion, a reduced-motion touch user would have **no way to ever see a cover** — the spec (`docs/superpowers/specs/2026-09-08-library-shelf-design.md`, "Physics-Based Motion") is explicit that reduced motion means "apply the hover/focus end-state instantly ... not remove the cover-reveal capability itself." So `initShelfTouch` must still attach its click listener under reduced motion, but the reveal/collapse it triggers must snap the spring's `value` straight to its `target` (no `requestAnimationFrame` loop, no neighbor-parting motion) instead of easing — see Task 3 Step 1's `reducedMotion` branch. Do not attempt to run the spring loop with a zero-duration spring — just don't start it.
 - **The spring must not visibly bounce/oscillate, and must settle within roughly 300-500ms** (the spec's motion-duration guidance — not a hard fixed value, since spring physics has no single fixed duration, but the pull-out must *read* as being in that range, not near-instant and not sluggish). Tune `STIFFNESS`/`DAMPING` so the motion reads as a single smooth settle in that window, verified by live observation, not just by the numbers looking reasonable on paper. Task 1's starting values (`STIFFNESS = 210`, `DAMPING = 26`) target roughly a 300ms settle at ~0.9 damping ratio — a reasonable starting point, not a value to treat as final without live confirmation.
 - **Neighbor-parting and touch handling must stay scoped per shelf row** (`.shelf-books`, one per `ShelfRow`) — a book revealed in one row must never part books in a different row.
 - **The revealed-value constants in this module (`REVEALED_ROTATE_Y_DEG`/`REVEALED_TRANSLATE_Y_REM`/`REVEALED_TRANSLATE_Z_REM`/`REVEALED_SCALE`) must match Phase 1's CSS `.shelf-book:hover` rule's values exactly** (`translateY(-1.4rem) translateZ(3.6rem) rotateY(-88deg) scale(1.08)`, `app.css`) — if a future change touches one, it must touch the other, since the CSS rule is the fallback and the JS constants are the enhanced path; a mismatch would make the two diverge visibly depending on whether JS loaded. The `_rem` constants are converted to px at runtime from the real root font-size (see `getRevealedTranslatePx`), not a hardcoded 16, so the enhanced path stays correct even for a user with a non-default browser font-size setting.
@@ -323,6 +323,11 @@ function getOrCreatePartSpring(slot) {
     return state;
 }
 
+// Deliberately plain px, not rem-scaled like getRevealedTranslatePx above:
+// the spec calls for "a few pixels" of parting, a much smaller and more
+// forgiving visual amount than the reveal's own translate/rotate values,
+// so unlike those, a non-default root font-size shifting this by a pixel
+// or two is not worth the extra lookup on this hot path.
 function partOffsetForDistance(distance) {
     if (distance === 1) return 8;
     if (distance === 2) return 3;
@@ -481,7 +486,7 @@ git commit -m "Add dynamic neighbor-parting to shelf-physics.js"
 - Modify: `frontend/LuminaChronica.Client/wwwroot/Styles/app.css` (extend the existing pointer-events rule to include the new touch-driven state)
 
 **Interfaces:**
-- Consumes: Task 1's `setRevealTarget`, Task 2's `setPartTargets` (both same-module internal functions, no signature changes needed).
+- Consumes: Task 1's `setRevealTarget`, `getOrCreateSpring`, `applyTransform`, `prefersReducedMotion`, and Task 2's `setPartTargets` (all same-module internal functions, no signature changes needed).
 - Produces: `export function initShelfTouch(root)` — a second init function (deliberately separate from `initShelfPhysics`, since it's conditionally relevant only on touch-primary devices, whereas hover/focus physics matters on every device with a mouse/keyboard, including hybrid touch+mouse laptops where both should coexist). Task 4 calls both this and `initShelfPhysics`.
 
 **Context — why this needs its own function and its own device check**: hover-capable devices (desktop, most laptops) already reveal via Task 1's `mouseenter`/`focusin` handlers, and a single click on a *touch-primary* device (phone, most tablets) has no hover state to trigger a reveal first — without special handling, a tap would navigate immediately without ever showing the cover. The design spec's answer is two-tap: first tap reveals (and is swallowed, not navigated), second tap (on the now-revealed book) proceeds to navigate normally, and tapping elsewhere collapses whatever was open. This must **only** apply on touch-primary devices — a mouse click on desktop should keep navigating immediately on the first click, exactly as it does today, since hover already showed the cover before the click happened.
@@ -502,21 +507,52 @@ function isTouchPrimary() {
 // open. Deliberately separate from initShelfPhysics -- hover-capable
 // devices never need this, since hover already reveals before any click
 // happens.
+//
+// Unlike initShelfPhysics, this does NOT no-op under prefers-reduced-motion
+// -- a touch-primary device has no hover/:focus-visible path, so fully
+// disabling this module would leave reduced-motion touch users with no way
+// to ever see a cover at all. Instead, under reduced motion the reveal/
+// collapse below snaps the spring straight to its target value (no rAF
+// loop, no neighbor-parting motion) rather than easing -- see the
+// `reducedMotion` branch in setRevealedState.
 export function initShelfTouch(root) {
     if (!root || !isTouchPrimary()) return;
 
+    const reducedMotion = prefersReducedMotion();
     let currentlyRevealed = null;
 
+    function setRevealedState(book, revealed) {
+        if (!reducedMotion) {
+            setRevealTarget(book, revealed);
+            return;
+        }
+        // Reduced motion: snap instantly, no rAF loop. Reuses the same
+        // spring-state object (via getOrCreateSpring) purely as storage for
+        // the current value, so a later non-reduced-motion interaction
+        // (e.g. this device also has a mouse) starts from a consistent
+        // state rather than an untouched spring.
+        const state = getOrCreateSpring(book);
+        state.target = revealed ? 1 : 0;
+        state.value = state.target;
+        state.velocity = 0;
+        applyTransform(book, state.value);
+        if (state.value === 0) {
+            book.style.removeProperty("transform");
+        }
+    }
+
     function collapse(book) {
-        setRevealTarget(book, false);
+        setRevealedState(book, false);
         book.classList.remove("is-revealed");
+        if (reducedMotion) return; // no neighbor-parting motion under reduced motion
         const slot = book.closest(".shelf-book-slot");
         if (slot) setPartTargets(slot, false);
     }
 
     function reveal(book) {
-        setRevealTarget(book, true);
+        setRevealedState(book, true);
         book.classList.add("is-revealed");
+        if (reducedMotion) return; // no neighbor-parting motion under reduced motion
         const slot = book.closest(".shelf-book-slot");
         if (slot) setPartTargets(slot, true);
     }
@@ -658,20 +694,32 @@ Find the shelf's wrapper `<div class="library-shelf">` (search for it, added in 
 
 - [ ] **Step 2: Add the field and `OnAfterRenderAsync` override**
 
+**Why not a plain `firstRender` guard**: `Statistics.razor`'s pattern (and Phase 1's own assumption) only holds if the target element persists for the component's whole lifetime. `.library-shelf` does not — it's rendered only in the `_viewMode == LibraryViewMode.Grid` branch (search Phase 1's Task 4 changes); the `else` branch (List view) renders something else entirely. Toggling Regal → Liste destroys the `.library-shelf` DOM node (and with it, this module's delegated listeners); toggling back Liste → Regal creates a *new* node that a `firstRender`-only override never sees again, since `OnAfterRenderAsync(firstRender: true)` fires exactly once per component instance, not once per view-mode switch. Left unguarded this way, spring/parting/touch would silently stop working after the first Regal→Liste→Regal round-trip — Phase 1's plain CSS reveal would keep working underneath it, so nothing would look broken, it would just quietly stop being Phase 2's enhanced version. Track initialization with a flag that resets when leaving Grid mode instead:
+
 In the `@code` block, add:
 ```csharp
 private ElementReference _shelfRef;
 private IJSObjectReference? _shelfPhysicsModule;
+private bool _shelfPhysicsInitialized;
 
 protected override async Task OnAfterRenderAsync(bool firstRender)
 {
-    if (!firstRender) return;
+    if (_viewMode != LibraryViewMode.Grid)
+    {
+        // Leaving Grid mode tears down .library-shelf; force re-init next
+        // time we're back in Grid mode, since that will be a new DOM node.
+        _shelfPhysicsInitialized = false;
+        return;
+    }
+
+    if (_shelfPhysicsInitialized) return;
 
     try
     {
         _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
         await _shelfPhysicsModule.InvokeVoidAsync("initShelfPhysics", _shelfRef);
         await _shelfPhysicsModule.InvokeVoidAsync("initShelfTouch", _shelfRef);
+        _shelfPhysicsInitialized = true;
     }
     catch (Exception)
     {
@@ -679,9 +727,7 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
 }
 ```
 
-This only runs once (`firstRender`), matching `Statistics.razor`'s pattern — the shelf container element itself persists across re-renders driven by filter/sort/pagination changes (only its *children*, the individual `ShelfRow`/`ShelfBook` instances, get added/removed), so the JS module's delegated listeners (attached once to this stable container) keep working correctly across those changes without needing to re-initialize.
-
-Note: `_shelfRef` is only assigned when `_viewMode == LibraryViewMode.Grid` (the shelf branch) — the `else` branch (List view) doesn't render `.library-shelf` at all. If the page happens to render in List mode on first render (e.g. if that becomes the default in some future change), `_shelfRef` would be Blazor's default/unset `ElementReference`, and passing that to the JS interop calls would fail. Guard against this: only make the interop calls if `_viewMode == LibraryViewMode.Grid` at the time `OnAfterRenderAsync` runs. Today's default `_viewMode` is `Grid` (unchanged from Phase 1), so this doesn't change current behavior, only makes the code robust to a future default change.
+This runs on every render (not just `firstRender`), but only does real work on the render immediately after `.library-shelf` (re)appears — while in Grid mode with `_shelfPhysicsInitialized` already `true` (e.g. a search/filter/sort/pagination re-render, where the container itself persists and only its *children* change), it's a single cheap boolean check and returns immediately. The cached `_shelfPhysicsModule` reference is reused across re-initializations (no repeated `import` calls); only the two `InvokeVoidAsync` calls repeat, attaching fresh delegated listeners to the fresh container.
 
 - [ ] **Step 3: Update the Dispose method**
 
@@ -725,7 +771,9 @@ Using the established technique (JWT + `window.fetch` intercept against a local 
 3. **Neighbor-parting**: hover a book with neighbors on both sides, confirm the immediately-adjacent slots shift a few pixels apart and slots further away shift less/not at all, confirm it settles smoothly and reverses cleanly on mouse-leave, confirm it stays confined to the same shelf row (hovering a book in one row must never part books in a different row — check with at least two visible rows on screen at once).
 4. **`prefers-reduced-motion`**: toggle it (devtools), confirm hovering/focusing a book falls back to Phase 1's instant CSS-driven reveal (no spring motion, no parting) — confirm via `getComputedStyle`/DOM inspection that `shelf-physics-active` class was never added to the shelf container in this mode, not just that it visually looks instant.
 5. **Touch two-tap** (devtools device-toolbar touch emulation, or a real touch device if available): first tap on a book reveals its cover without navigating; second tap on that same (now-revealed) book navigates to its detail page; tapping a different book collapses the first and reveals the second; tapping empty space collapses whatever was open. Confirm a **mouse click on a non-touch-emulated desktop view still navigates on the first click** (the two-tap behavior must not leak onto hover-capable devices).
-6. Confirm all of Phase 1's already-verified behavior still holds unchanged: search/filters/sort/pagination/List-view/favorite-toggle/all 4 themes' color rendering — this task only changes *how* the reveal animates and adds touch support, not any of Phase 1's underlying structure or data flow.
+6. **Touch + `prefers-reduced-motion` together** (both enabled at once — this exact combination is why Task 3's `initShelfTouch` deliberately does not no-op under reduced motion): confirm the two-tap flow from point 5 still works (cover still reachable — first tap reveals, second tap navigates), confirm the reveal/collapse is instant with no spring easing and no neighbor-parting motion, and confirm via DOM inspection that this combination never leaves `.shelf-book-slot` elements with a stray non-zero `translateX` inline style after a collapse.
+7. **Regal ↔ Liste round-trip**: while in Regal (Grid/shelf) view, hover a book to confirm the spring reveal works; switch to Liste (List) view and back to Regal; hover a book again and confirm the spring reveal (and neighbor-parting) still works exactly as before the round-trip — not silently fallen back to Phase 1's plain CSS transition. Repeat the round-trip a second time to rule out a fluke. This specifically exercises the `_shelfPhysicsInitialized` re-init logic in Task 4 Step 2.
+8. Confirm all of Phase 1's already-verified behavior still holds unchanged: search/filters/sort/pagination/List-view/favorite-toggle/all 4 themes' color rendering — this task only changes *how* the reveal animates and adds touch support, not any of Phase 1's underlying structure or data flow.
 
 Document any concern (a spring that feels off, a device-detection edge case, anything Phase 1's own verification already covered that now behaves differently) honestly in the task report.
 
