@@ -284,6 +284,8 @@ export function initShelfTouch(root) {
     }
 
     root.addEventListener("click", (e) => {
+        if (e.target.closest?.(".shelf-book-favorite")) return;
+
         const book = e.target.closest?.(".shelf-book");
 
         if (!book || !root.contains(book)) {
