@@ -558,6 +558,17 @@ export function initShelfTouch(root) {
     }
 
     root.addEventListener("click", (e) => {
+        // A tap on the favorite button must never touch the two-tap state
+        // machine below. @onclick:stopPropagation on the button (ShelfBook.razor)
+        // does NOT protect this listener -- this listener sits on an
+        // ancestor closer to the target than Blazor's own delegated
+        // dispatch listener, so it fires first in the bubble phase, before
+        // Blazor's later stopPropagation() call can have any effect. Bail
+        // out here instead, before currentlyRevealed/collapse/reveal are
+        // touched, so Blazor's own click handling for the favorite toggle
+        // runs completely independent of this state machine.
+        if (e.target.closest?.(".shelf-book-favorite")) return;
+
         const book = e.target.closest?.(".shelf-book");
 
         if (!book || !root.contains(book)) {
@@ -587,7 +598,7 @@ export function initShelfTouch(root) {
 }
 ```
 
-Note: the favorite button (`.shelf-book-favorite`) already has `@onclick:stopPropagation="true"` set in `ShelfBook.razor` (Phase 1, unchanged) — a tap on it never reaches this delegated `click` listener at all, so favoriting on touch devices is unaffected by any of this.
+Note: the favorite button (`.shelf-book-favorite`) has `@onclick:stopPropagation="true"` set in `ShelfBook.razor` (Phase 1, unchanged), but that alone does NOT stop a tap on it from reaching this delegated `click` listener — `root`'s bubble-phase listener sits on an ancestor much closer to the target than wherever Blazor's own delegated dispatch listener lives, so it fires first, before Blazor's later `stopPropagation()` call can have any effect. (This was caught by task review during implementation: the original code assumed stopPropagation would shield this listener and it did not, corrupting `currentlyRevealed` tracking when a tap landed on the star.) The actual fix is for this handler itself to check for the favorite button and bail out before touching any two-tap state — as the very first statement in the click handler above: `if (e.target.closest?.(".shelf-book-favorite")) return;`. With that guard present, favoriting on touch devices is unaffected by the two-tap logic.
 
 - [ ] **Step 2: Extend the pointer-events CSS rule to cover the touch-revealed state**
 
