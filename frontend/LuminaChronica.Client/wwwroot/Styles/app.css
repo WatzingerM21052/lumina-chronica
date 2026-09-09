@@ -1470,14 +1470,14 @@ select:focus-visible,
     background: var(--color-primary);
 }
 
-/* Procedural placeholder palette (Phase 1 only -- replaced by real
-   cover-derived color extraction in Phase 3). 5 procedurally-varied
-   swatches derived from --color-primary/--color-secondary/--color-border/
-   --color-bg-dark, each as a gradient plus a matching cover-face tint.
-   Every color-mix() below intentionally specifies only the first color's
-   percentage so the second defaults to the exact remainder (percentages
-   summing to less than 100% makes the browser apply an unwanted alpha
-   multiplier to the result). */
+/* Procedural placeholder palette -- the fallback for books with no cover
+   image, or where cover-color extraction failed (Library Rework Phase 3,
+   see .has-cover-tint below). 5 procedurally-varied swatches derived from
+   --color-primary/--color-secondary/--color-border/--color-bg-dark, each
+   as a gradient plus a matching cover-face tint. Every color-mix() below
+   intentionally specifies only the first color's percentage so the second
+   defaults to the exact remainder (percentages summing to less than 100%
+   makes the browser apply an unwanted alpha multiplier to the result). */
 .shelf-book-palette-0 .shelf-book-spine,
 .shelf-book-palette-0 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 85%, white), color-mix(in srgb, var(--color-secondary) 70%, black)); }
 .shelf-book-palette-1 .shelf-book-spine,
@@ -1488,6 +1488,23 @@ select:focus-visible,
 .shelf-book-palette-3 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 40%, var(--color-primary)), color-mix(in srgb, var(--color-bg-dark) 70%, black)); }
 .shelf-book-palette-4 .shelf-book-spine,
 .shelf-book-palette-4 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 78%, var(--color-primary)), color-mix(in srgb, var(--color-secondary) 65%, black)); }
+
+/* Cover-derived spine tint (Library Rework Phase 3): when ShelfBook.razor.cs
+   successfully extracted a color from the book's actual cover image, it
+   sets --shelf-book-tint inline and adds this class, which then takes
+   precedence over whichever .shelf-book-palette-N class the book also
+   carries (two classes on .shelf-book gives this selector higher
+   specificity than any single-class palette rule, so the override holds
+   regardless of source order). Uses the same 85%/70% white/black mix
+   pattern as the simpler palette rules above, applied uniformly to the
+   extracted color rather than trying to retrofit --shelf-book-tint into
+   each palette's own distinct two-token mix recipe. */
+.shelf-book.has-cover-tint .shelf-book-spine,
+.shelf-book.has-cover-tint .shelf-book-cover {
+    background: linear-gradient(160deg,
+        color-mix(in srgb, var(--shelf-book-tint) 85%, white),
+        color-mix(in srgb, var(--shelf-book-tint) 70%, black));
+}
 
 .shelf-book:hover,
 .shelf-book:focus-visible,

@@ -2,9 +2,10 @@
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject CoverColorService CoverColorService
 
-<a class="shelf-book shelf-book-palette-@(Book.Id % 5)"
-   style="--shelf-book-rest: @(RestRotation.ToString(System.Globalization.CultureInfo.InvariantCulture))deg"
+<a class="shelf-book shelf-book-palette-@(Book.Id % 5) @(_spineTint is not null ? "has-cover-tint" : "")"
+   style="@InlineStyle"
    href="@(Href ?? $"library/books/{Book.Id}")"
    aria-label="@AccessibleLabel">
     <span class="shelf-book-spine">

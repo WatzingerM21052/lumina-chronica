@@ -24,6 +24,7 @@ public partial class ShelfBook : ComponentBase, IDisposable
     private string? _loadedCoverUrl;
     private bool _isFavorite;
     private int? _loadedBookId;
+    private string? _spineTint;
 
     // Tight-banded resting rotation only (no combined rotateZ lean) --
     // wider variation combined with a simultaneous tilt read as a
@@ -43,12 +44,34 @@ public partial class ShelfBook : ComponentBase, IDisposable
         ? Book.Title
         : $"{Book.Title}, {Book.Author}";
 
+    // Combines the existing --shelf-book-rest custom property with a
+    // --shelf-book-tint custom property (Library Rework Phase 3) when a
+    // real cover-derived color is available. app.css's .has-cover-tint
+    // rule is what actually consumes this custom property -- when
+    // _spineTint is null (no cover, or extraction failed), no such
+    // property is set at all, and the existing procedural
+    // .shelf-book-palette-N rules apply exactly as they did before this
+    // phase.
+    private string InlineStyle
+    {
+        get
+        {
+            var style = $"--shelf-book-rest: {RestRotation.ToString(System.Globalization.CultureInfo.InvariantCulture)}deg";
+            if (_spineTint is not null)
+            {
+                style += $"; --shelf-book-tint: {_spineTint}";
+            }
+            return style;
+        }
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if (Book.Id != _loadedBookId)
         {
             _loadedBookId = Book.Id;
             _isFavorite = Book.IsFavorite;
+            _spineTint = null;
         }
 
         if (Book.CoverUrl == _loadedCoverUrl) return;
@@ -60,12 +83,14 @@ public partial class ShelfBook : ComponentBase, IDisposable
         }
 
         _loadedCoverUrl = Book.CoverUrl;
+        _spineTint = null;
         if (Book.CoverUrl is null) return;
 
         var result = await ApiClient.GetBytesAsync(Book.CoverUrl);
         if (result is { } cover)
         {
             _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+            _spineTint = await CoverColorService.ExtractDominantColorAsync(Book.CoverUrl, _coverObjectUrl);
         }
     }
 

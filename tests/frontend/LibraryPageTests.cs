@@ -16,6 +16,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
     }
 
     [Fact]
@@ -77,6 +78,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Tag").Click();
@@ -95,6 +97,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
         Services.GetRequiredService<NavigationManager>().NavigateTo("library?tag=Fantasy");
 
         var cut = Render<Library>();
@@ -117,6 +120,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
         cut.Find("input[type=checkbox]").Change(true);
@@ -140,6 +144,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
         cut.Find("input[type=search]").Input("Killi");
@@ -168,6 +173,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter →").Click();
