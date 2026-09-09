@@ -1,0 +1,27 @@
+@namespace LuminaChronica.Client.Components
+
+<div class="shelf-row-group">
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <span class="shelf-plaque">@Label</span>
+    }
+    <div class="shelf-compartment">
+        <div class="shelf-books">
+            @foreach (var book in Books)
+            {
+                <div class="shelf-book-slot">
+                    <ShelfBook Book="book" />
+                </div>
+            }
+        </div>
+        <div class="shelf-lip"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? Label { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Book> Books { get; set; } = [];
+}
