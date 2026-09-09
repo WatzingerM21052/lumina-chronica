@@ -1334,7 +1334,7 @@ select:focus-visible,
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.05em;
-    color: rgba(242, 233, 216, 0.85);
+    color: color-mix(in srgb, var(--color-text-on-dark) 85%, transparent);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     max-height: 90%;
     overflow: hidden;
@@ -1348,7 +1348,7 @@ select:focus-visible,
     justify-content: flex-end;
     padding: 0.5rem;
     gap: 0.15rem;
-    color: #f2e9d8;
+    color: var(--color-text-on-dark);
     /* Only clickable once actually revealed -- at rest this face is
        edge-on (a thin sliver visually) but still occupies its full
        bounding box in the DOM, so without this the favorite button
@@ -1389,7 +1389,7 @@ select:focus-visible,
     align-self: flex-end;
     background: none;
     border: none;
-    color: #f2e9d8;
+    color: var(--color-text-on-dark);
     font-size: 0.85rem;
     cursor: pointer;
     padding: 0.15rem;
@@ -1425,11 +1425,11 @@ select:focus-visible,
 .shelf-book-palette-0 .shelf-book-spine,
 .shelf-book-palette-0 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 85%, white 10%), color-mix(in srgb, var(--color-secondary) 70%, black 30%)); }
 .shelf-book-palette-1 .shelf-book-spine,
-.shelf-book-palette-1 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, #2f4a3d 85%, white 10%), color-mix(in srgb, #2f4a3d 70%, black 30%)); }
+.shelf-book-palette-1 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-border) 60%, var(--color-secondary) 40%), color-mix(in srgb, var(--color-border) 40%, black 40%)); }
 .shelf-book-palette-2 .shelf-book-spine,
 .shelf-book-palette-2 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white 10%), color-mix(in srgb, var(--color-primary) 70%, black 30%)); }
 .shelf-book-palette-3 .shelf-book-spine,
-.shelf-book-palette-3 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, #3d4a6e 85%, white 10%), color-mix(in srgb, #3d4a6e 70%, black 30%)); }
+.shelf-book-palette-3 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 40%, var(--color-primary) 60%), color-mix(in srgb, var(--color-bg-dark) 70%, black 30%)); }
 .shelf-book-palette-4 .shelf-book-spine,
 .shelf-book-palette-4 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 70%, var(--color-primary) 20%), color-mix(in srgb, var(--color-secondary) 55%, black 30%)); }
 
