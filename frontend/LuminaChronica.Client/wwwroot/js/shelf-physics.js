@@ -107,6 +107,78 @@ function applyTransform(book, progress) {
     if (rotator) rotator.style.transform = `rotateY(${rotateY}deg)`;
 }
 
+// Single source of truth for "which book is currently revealed", shared
+// between the hover/focus path (initShelfPhysics) and the two-tap touch
+// path (initShelfTouch) -- guarantees at most one book is ever logically
+// revealed regardless of which input triggered it. Tracked by ID (the
+// data-book-id attribute set in ShelfBook.razor), not by DOM element
+// reference, specifically so a stale reference can never linger: if
+// Blazor removes the revealed book from the DOM (a filter/sort change
+// while it's revealed), the ID becomes simply un-findable rather than
+// pointing at a detached element, and the MutationObserver guard below
+// (installed by whichever init function runs first) notices and resets
+// cleanly.
+let revealedBookId = null;
+let shelfRoot = null;
+let guardInstalled = false;
+
+function bookId(book) {
+    return book.dataset.bookId ?? null;
+}
+
+function findBookById(root, id) {
+    if (!root || id === null) return null;
+    return root.querySelector(`.shelf-book[data-book-id="${CSS.escape(id)}"]`);
+}
+
+// All slots (.shelf-book-slot) currently parted away from their resting
+// translateX position, whether still mid-spring-animation or already
+// settled at a non-zero offset. Needed because activeParts (below) only
+// tracks slots that still need per-frame work -- a slot that finished
+// settling at a non-zero parted offset is correctly removed from
+// activeParts (nothing left to animate) but must stay discoverable here
+// so resetAllParts (the DOM-removal guard's cleanup) can still find and
+// un-part it later even though it long ago stopped animating.
+const partedSlots = new Set();
+
+// One shared instance per shelf root (installed by whichever of
+// initShelfPhysics/initShelfTouch runs first -- guarded by
+// guardInstalled so a page with both hover AND touch capability, or a
+// re-entrant init call, never double-observes the same root). Watches
+// for the currently-revealed book's element disappearing from the DOM
+// without a normal collapse ever firing -- the only way that can happen
+// is a Blazor re-render (filter/sort/search change) removing it while
+// it's still revealed. When that happens, any of its neighbors that were
+// parted away are reset back to resting (there is no other way to find
+// "which slots were parted by this now-gone book" once it's gone, so
+// this resets every currently-parted slot rather than trying to
+// recompute which ones belonged to it) and revealedBookId is cleared so
+// the state machine's invariant (0 or 1 revealed) stays true.
+function ensureRevealGuard(root) {
+    shelfRoot = root;
+    if (guardInstalled) return;
+    guardInstalled = true;
+    new MutationObserver(() => {
+        if (revealedBookId === null) return;
+        if (findBookById(shelfRoot, revealedBookId)) return;
+        resetAllParts();
+        revealedBookId = null;
+    }).observe(root, { childList: true, subtree: true });
+}
+
+function resetAllParts() {
+    for (const slot of partedSlots) {
+        const state = partSprings.get(slot);
+        if (!state) {
+            partedSlots.delete(slot);
+            continue;
+        }
+        state.target = 0;
+        activeParts.add(slot);
+    }
+    ensureLoopRunning();
+}
+
 // One spring-state object per book, keyed by element -- garbage collected
 // automatically if Blazor removes the element (e.g. a filter change swaps
 // which .shelf-book elements exist), no manual cleanup needed. `active`
@@ -163,6 +235,7 @@ function setPartTargets(revealedSlot, revealed) {
         const state = getOrCreatePartSpring(slots[i]);
         state.target = revealed ? magnitude * direction : 0;
         activeParts.add(slots[i]);
+        if (revealed) partedSlots.add(slots[i]);
     }
 
     ensureLoopRunning();
@@ -226,6 +299,7 @@ function tick(now) {
             state.velocity = 0;
             if (state.value === 0) {
                 slot.style.removeProperty("transform");
+                partedSlots.delete(slot);
             } else {
                 slot.style.transform = `translateX(${state.value}px)`;
             }
@@ -259,9 +333,9 @@ function isTouchPrimary() {
 // `reducedMotion` branch in setRevealedState.
 export function initShelfTouch(root) {
     if (!root || !isTouchPrimary()) return;
+    ensureRevealGuard(root);
 
     const reducedMotion = prefersReducedMotion();
-    let currentlyRevealed = null;
 
     function setRevealedState(book, revealed) {
         if (!reducedMotion) {
@@ -302,23 +376,33 @@ export function initShelfTouch(root) {
     }
 
     root.addEventListener("click", (e) => {
+        // A tap on the favorite button must never touch the two-tap state
+        // machine below. @onclick:stopPropagation on the button (ShelfBook.razor)
+        // does NOT protect this listener -- this listener sits on an
+        // ancestor closer to the target than Blazor's own delegated
+        // dispatch listener, so it fires first in the bubble phase, before
+        // Blazor's later stopPropagation() call can have any effect. Bail
+        // out here instead, before revealedBookId/collapse/reveal are
+        // touched, so Blazor's own click handling for the favorite toggle
+        // runs completely independent of this state machine.
         if (e.target.closest?.(".shelf-book-favorite")) return;
 
         const book = e.target.closest?.(".shelf-book");
 
         if (!book || !root.contains(book)) {
             // Tapped outside any book -- collapse whatever's open.
-            if (currentlyRevealed) {
-                collapse(currentlyRevealed);
-                currentlyRevealed = null;
+            if (revealedBookId !== null) {
+                const previous = findBookById(root, revealedBookId);
+                if (previous) collapse(previous);
+                revealedBookId = null;
             }
             return;
         }
 
-        if (book === currentlyRevealed) {
+        if (bookId(book) === revealedBookId) {
             // Second tap on the already-revealed book -- let the click
             // proceed to navigation (don't preventDefault).
-            currentlyRevealed = null;
+            revealedBookId = null;
             return;
         }
 
@@ -326,48 +410,74 @@ export function initShelfTouch(root) {
         // another was open): reveal this one, collapse any other, and
         // swallow this tap instead of navigating.
         e.preventDefault();
-        if (currentlyRevealed) collapse(currentlyRevealed);
+        if (revealedBookId !== null) {
+            const previous = findBookById(root, revealedBookId);
+            if (previous) collapse(previous);
+        }
         reveal(book);
-        currentlyRevealed = book;
+        revealedBookId = bookId(book);
     });
 }
 
 export function initShelfPhysics(root) {
     if (!root || prefersReducedMotion()) return;
+    ensureRevealGuard(root);
 
     root.classList.add("shelf-physics-active");
+
+    function revealHoverBook(book) {
+        const id = bookId(book);
+        if (id !== null && id === revealedBookId) return;
+        if (revealedBookId !== null) {
+            const previous = findBookById(root, revealedBookId);
+            if (previous && previous !== book) hideHoverBook(previous);
+        }
+        setRevealTarget(book, true);
+        const slot = book.closest(".shelf-book-slot");
+        if (slot) setPartTargets(slot, true);
+        revealedBookId = id;
+    }
+
+    function hideHoverBook(book) {
+        setRevealTarget(book, false);
+        const slot = book.closest(".shelf-book-slot");
+        if (slot) setPartTargets(slot, false);
+    }
+
+    // Only collapses if `book` is still the one this state machine
+    // believes is revealed -- guards against a stale mouseleave/focusout
+    // (e.g. fast pointer movement) firing after some other event has
+    // already handed the reveal off to a different book.
+    function closeIfCurrentlyRevealed(book) {
+        const id = bookId(book);
+        if (id === null || id !== revealedBookId) return;
+        hideHoverBook(book);
+        revealedBookId = null;
+    }
 
     root.addEventListener("mouseenter", (e) => {
         const book = e.target.closest?.(".shelf-book");
         if (!book || !root.contains(book)) return;
-        setRevealTarget(book, true);
-        const slot = book.closest(".shelf-book-slot");
-        if (slot) setPartTargets(slot, true);
+        revealHoverBook(book);
     }, true);
 
     root.addEventListener("mouseleave", (e) => {
         const book = e.target.closest?.(".shelf-book");
         if (!book || !root.contains(book)) return;
         if (e.relatedTarget && book.contains(e.relatedTarget)) return;
-        setRevealTarget(book, false);
-        const slot = book.closest(".shelf-book-slot");
-        if (slot) setPartTargets(slot, false);
+        closeIfCurrentlyRevealed(book);
     }, true);
 
     root.addEventListener("focusin", (e) => {
         const book = e.target.closest?.(".shelf-book");
         if (!book || !root.contains(book)) return;
-        setRevealTarget(book, true);
-        const slot = book.closest(".shelf-book-slot");
-        if (slot) setPartTargets(slot, true);
+        revealHoverBook(book);
     });
 
     root.addEventListener("focusout", (e) => {
         const book = e.target.closest?.(".shelf-book");
         if (!book || !root.contains(book)) return;
         if (e.relatedTarget && book.contains(e.relatedTarget)) return;
-        setRevealTarget(book, false);
-        const slot = book.closest(".shelf-book-slot");
-        if (slot) setPartTargets(slot, false);
+        closeIfCurrentlyRevealed(book);
     });
 }
