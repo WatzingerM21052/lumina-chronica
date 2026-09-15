@@ -508,7 +508,7 @@ Insert immediately before that comment (new module-level state, shared by both `
 // cleanly.
 let revealedBookId = null;
 let shelfRoot = null;
-let guardInstalled = false;
+let revealGuardObserver = null;
 
 function bookId(book) {
     return book.dataset.bookId ?? null;
@@ -530,28 +530,49 @@ function findBookById(root, id) {
 const partedSlots = new Set();
 
 // One shared instance per shelf root (installed by whichever of
-// initShelfPhysics/initShelfTouch runs first -- guarded by
-// guardInstalled so a page with both hover AND touch capability, or a
-// re-entrant init call, never double-observes the same root). Watches
-// for the currently-revealed book's element disappearing from the DOM
-// without a normal collapse ever firing -- the only way that can happen
-// is a Blazor re-render (filter/sort/search change) removing it while
-// it's still revealed. When that happens, any of its neighbors that were
-// parted away are reset back to resting (there is no other way to find
-// "which slots were parted by this now-gone book" once it's gone, so
-// this resets every currently-parted slot rather than trying to
-// recompute which ones belonged to it) and revealedBookId is cleared so
-// the state machine's invariant (0 or 1 revealed) stays true.
+// initShelfPhysics/initShelfTouch runs first against a given root --
+// re-entrant calls against the SAME root, e.g. both init functions
+// running back-to-back in Library.razor's OnAfterRenderAsync, correctly
+// no-op below). Watches for the currently-revealed book's element
+// disappearing from the DOM without a normal collapse ever firing -- the
+// only way that can happen is a Blazor re-render (filter/sort/search
+// change) removing it while it's still revealed. When that happens, any
+// of its neighbors that were parted away are reset back to resting
+// (there is no other way to find "which slots were parted by this
+// now-gone book" once it's gone, so this resets every currently-parted
+// slot rather than trying to recompute which ones belonged to it) and
+// revealedBookId is cleared so the state machine's invariant (0 or 1
+// revealed) stays true.
+//
+// Root-aware, not a one-shot flag: Library.razor tears down and rebuilds
+// the ENTIRE .library-shelf element (a new ElementReference) whenever the
+// shelf reappears after not being rendered -- a Grid<->List view-mode
+// toggle, or the shelf temporarily replaced by a loading/error/empty
+// state -- and re-calls initShelfPhysics/initShelfTouch on that new root
+// each time. A one-shot "already installed, ever" flag would leave the
+// observer forever attached to the first, now-detached root, silently
+// going inert for the rest of the session on every later root -- exactly
+// the failure this guard exists to prevent. So: if `root` differs from
+// the previously-observed `shelfRoot`, disconnect the old observer (it
+// can never fire again anyway, its root is detached) and attach a fresh
+// one to the new root. Any revealedBookId/partedSlots state tracked
+// against the old root is meaningless once that root is gone (nothing in
+// the new root corresponds to it), so both are cleared on migration too
+// -- this also prevents a reveal left active at teardown from leaking
+// into the freshly-initialized shelf and desyncing its first hover/tap.
 function ensureRevealGuard(root) {
+    if (root === shelfRoot) return;
+    if (revealGuardObserver) revealGuardObserver.disconnect();
+    revealedBookId = null;
+    partedSlots.clear();
     shelfRoot = root;
-    if (guardInstalled) return;
-    guardInstalled = true;
-    new MutationObserver(() => {
+    revealGuardObserver = new MutationObserver(() => {
         if (revealedBookId === null) return;
         if (findBookById(shelfRoot, revealedBookId)) return;
         resetAllParts();
         revealedBookId = null;
-    }).observe(root, { childList: true, subtree: true });
+    });
+    revealGuardObserver.observe(root, { childList: true, subtree: true });
 }
 
 function resetAllParts() {
@@ -875,6 +896,15 @@ export function initShelfPhysics(root) {
 
     function hideHoverBook(book) {
         setRevealTarget(book, false);
+        // Unconditional, not conditional on how it got revealed: since
+        // revealedBookId is now shared with the touch path, the book this
+        // hides might have been revealed by a tap (which adds
+        // "is-revealed" for its own CSS pointer-events rule, see
+        // app.css), and this hover-side path is what ends up closing it
+        // if the same device also has a mouse and it leaves the book.
+        // Removing a class that was never added is a harmless no-op, so
+        // this is safe to call unconditionally rather than checking first.
+        book.classList.remove("is-revealed");
         const slot = book.closest(".shelf-book-slot");
         if (slot) setPartTargets(slot, false);
     }
