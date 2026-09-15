@@ -1329,7 +1329,8 @@ select:focus-visible,
     text-decoration: none;
     cursor: pointer;
     transform-style: preserve-3d;
-    transition: transform var(--motion-reveal) var(--ease-standard));
+    transform-origin: bottom center;
+    transition: transform var(--motion-reveal) var(--ease-standard);
 }
 
 /* Carries ONLY the rotation (rest angle, or the reveal rotation on hover/
@@ -1360,7 +1361,7 @@ select:focus-visible,
     transform-style: preserve-3d;
     transform-origin: bottom center;
     transform: rotateY(var(--shelf-book-rest));
-    transition: transform var(--motion-reveal) var(--ease-standard));
+    transition: transform var(--motion-reveal) var(--ease-standard);
 }
 
 .shelf-book-spine,
