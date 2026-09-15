@@ -188,6 +188,7 @@ Replace with (rotation moves entirely to the new `.shelf-book-rotator` rule belo
     text-decoration: none;
     cursor: pointer;
     transform-style: preserve-3d;
+    transform-origin: bottom center;
     transition: transform var(--motion-reveal) var(--ease-standard);
 }
 
@@ -205,9 +206,13 @@ Replace with (rotation moves entirely to the new `.shelf-book-rotator` rule belo
    local frame is NEVER rotated, so translateZ on .shelf-book always
    means "toward the viewer" regardless of how far this child has
    rotated. Needs its own transform-style: preserve-3d (same "every
-   ancestor in the chain" rule noted on .shelf-book above) and inherits
-   .shelf-book's old transform-origin, since it's now the element that
-   actually rotates. position: absolute; inset: 0 makes it fill
+   ancestor in the chain" rule noted on .shelf-book above) and its own
+   copy of the bottom-center transform-origin, since it's now the element
+   that actually rotates -- .shelf-book keeps that same origin too
+   (updated above), since .shelf-book still receives `scale(...)` on
+   reveal (see the hover-fallback rule below) and must keep anchoring
+   that scale at the book's base, not its center, to look identical to
+   today. position: absolute; inset: 0 makes it fill
    .shelf-book's box exactly as .shelf-book-spine/.shelf-book-cover did
    when they were direct children of .shelf-book (their own `position:
    absolute; inset: 0` rule, unchanged, now resolves against this
