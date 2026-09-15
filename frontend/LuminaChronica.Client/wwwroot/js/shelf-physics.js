@@ -120,7 +120,7 @@ function applyTransform(book, progress) {
 // cleanly.
 let revealedBookId = null;
 let shelfRoot = null;
-let guardInstalled = false;
+let revealGuardObserver = null;
 
 function bookId(book) {
     return book.dataset.bookId ?? null;
@@ -155,15 +155,18 @@ const partedSlots = new Set();
 // recompute which ones belonged to it) and revealedBookId is cleared so
 // the state machine's invariant (0 or 1 revealed) stays true.
 function ensureRevealGuard(root) {
+    if (root === shelfRoot) return;
+    if (revealGuardObserver) revealGuardObserver.disconnect();
+    revealedBookId = null;
+    partedSlots.clear();
     shelfRoot = root;
-    if (guardInstalled) return;
-    guardInstalled = true;
-    new MutationObserver(() => {
+    revealGuardObserver = new MutationObserver(() => {
         if (revealedBookId === null) return;
         if (findBookById(shelfRoot, revealedBookId)) return;
         resetAllParts();
         revealedBookId = null;
-    }).observe(root, { childList: true, subtree: true });
+    });
+    revealGuardObserver.observe(root, { childList: true, subtree: true });
 }
 
 function resetAllParts() {
@@ -439,6 +442,7 @@ export function initShelfPhysics(root) {
     }
 
     function hideHoverBook(book) {
+        book.classList.remove("is-revealed");
         setRevealTarget(book, false);
         const slot = book.closest(".shelf-book-slot");
         if (slot) setPartTargets(slot, false);
