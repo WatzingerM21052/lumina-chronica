@@ -84,6 +84,17 @@ function getRestDeg(book) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+// .shelf-book itself only ever needs translate/scale -- rotation lives on
+// the nested .shelf-book-rotator (see app.css comment on that class for
+// why: keeping .shelf-book's own local frame un-rotated is what makes
+// translateZ here always mean "toward the viewer", regardless of how far
+// the rotator has turned). `:scope > .shelf-book-rotator` is a direct-
+// child query -- the rotator is always exactly one level below .shelf-book,
+// see ShelfBook.razor.
+function getRotator(book) {
+    return book.querySelector(":scope > .shelf-book-rotator");
+}
+
 function applyTransform(book, progress) {
     const restDeg = getRestDeg(book);
     const { y: revealedY, z: revealedZ } = getRevealedTranslatePx();
@@ -91,7 +102,9 @@ function applyTransform(book, progress) {
     const translateY = lerp(0, revealedY, progress);
     const translateZ = lerp(0, revealedZ, progress);
     const scale = lerp(1, REVEALED_SCALE, progress);
-    book.style.transform = `translateY(${translateY}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
+    book.style.transform = `translateY(${translateY}px) translateZ(${translateZ}px) scale(${scale})`;
+    const rotator = getRotator(book);
+    if (rotator) rotator.style.transform = `rotateY(${rotateY}deg)`;
 }
 
 // One spring-state object per book, keyed by element -- garbage collected
@@ -193,6 +206,8 @@ function tick(now) {
             applyTransform(book, state.value);
             if (state.value === 0) {
                 book.style.removeProperty("transform");
+                const rotator = getRotator(book);
+                if (rotator) rotator.style.removeProperty("transform");
             }
             active.delete(book);
         } else {
@@ -265,6 +280,8 @@ export function initShelfTouch(root) {
         applyTransform(book, state.value);
         if (state.value === 0) {
             book.style.removeProperty("transform");
+            const rotator = getRotator(book);
+            if (rotator) rotator.style.removeProperty("transform");
         }
     }
 
