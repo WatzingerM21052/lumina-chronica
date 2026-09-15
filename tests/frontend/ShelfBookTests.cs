@@ -57,6 +57,24 @@ public class ShelfBookTests : BunitContext
     }
 
     [Fact]
+    public void ShelfBook_RootAnchor_HasDataBookIdAttribute()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        Assert.Equal("1", cut.Find("a.shelf-book").GetAttribute("data-book-id"));
+    }
+
+    [Fact]
+    public void ShelfBook_SpineAndCover_AreWrappedInRotator()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        var rotator = cut.Find(".shelf-book-rotator");
+        Assert.NotNull(rotator.QuerySelector(".shelf-book-spine"));
+        Assert.NotNull(rotator.QuerySelector(".shelf-book-cover"));
+    }
+
+    [Fact]
     public void ShelfBook_SpineAndCoverTitleText_AreAriaHidden()
     {
         var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));

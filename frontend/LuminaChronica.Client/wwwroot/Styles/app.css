@@ -1329,9 +1329,38 @@ select:focus-visible,
     text-decoration: none;
     cursor: pointer;
     transform-style: preserve-3d;
+    transition: transform var(--motion-reveal) var(--ease-standard));
+}
+
+/* Carries ONLY the rotation (rest angle, or the reveal rotation on hover/
+   focus/touch) -- .shelf-book itself carries only translate/scale (see
+   its own rule above and the hover-fallback rule below). This split is
+   the fix for a real, previously-shipped bug: when a single element
+   combined `translateZ(...) rotateY(...)` in one transform, CSS's
+   rightmost-function-first evaluation rotated the book FIRST, so the
+   `translateZ` meant to push it toward the viewer was then applied in
+   the book's own already-rotated local frame -- at angles near 90 deg
+   that local "forward" axis points sideways in the viewer's frame, so
+   the book visibly slid sideways instead of pulling toward the viewer.
+   Splitting rotation onto this dedicated child means .shelf-book's own
+   local frame is NEVER rotated, so translateZ on .shelf-book always
+   means "toward the viewer" regardless of how far this child has
+   rotated. Needs its own transform-style: preserve-3d (same "every
+   ancestor in the chain" rule noted on .shelf-book above) and inherits
+   .shelf-book's old transform-origin, since it's now the element that
+   actually rotates. position: absolute; inset: 0 makes it fill
+   .shelf-book's box exactly as .shelf-book-spine/.shelf-book-cover did
+   when they were direct children of .shelf-book (their own `position:
+   absolute; inset: 0` rule, unchanged, now resolves against this
+   element instead). */
+.shelf-book-rotator {
+    display: block;
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
     transform-origin: bottom center;
     transform: rotateY(var(--shelf-book-rest));
-    transition: transform var(--motion-reveal) var(--ease-standard);
+    transition: transform var(--motion-reveal) var(--ease-standard));
 }
 
 .shelf-book-spine,
@@ -1522,7 +1551,13 @@ select:focus-visible,
 .shelf-book:hover,
 .shelf-book:focus-visible,
 .shelf-book:has(:focus-visible) {
-    transform: translateY(-1.4rem) translateZ(3.6rem) rotateY(-88deg) scale(1.08);
+    transform: translateY(-1.4rem) translateZ(3.6rem) scale(1.08);
+}
+
+.shelf-book:hover .shelf-book-rotator,
+.shelf-book:focus-visible .shelf-book-rotator,
+.shelf-book:has(:focus-visible) .shelf-book-rotator {
+    transform: rotateY(-88deg);
 }
 
 /* Added by shelf-physics.js (Phase 2) once it takes over the reveal
@@ -1533,12 +1568,14 @@ select:focus-visible,
    in which case Phase 1's plain CSS transition -- itself already
    reduced-motion-aware -- remains the only mechanism). */
 .shelf-physics-active .shelf-book,
+.shelf-physics-active .shelf-book-rotator,
 .shelf-physics-active .shelf-book-slot {
     transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .shelf-book {
+    .shelf-book,
+    .shelf-book-rotator {
         transition: none;
     }
 }
