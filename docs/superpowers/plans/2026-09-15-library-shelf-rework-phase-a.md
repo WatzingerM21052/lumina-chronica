@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix the shelf-book reveal's 3D transform bug (the pulled-out book visibly slides sideways instead of toward the viewer) by splitting rotation and translation onto two separate nested elements, and replace the ad-hoc `currentlyRevealed` DOM-reference tracking with a single shared, ID-based `revealedBookId` state machine shared by the hover/focus and touch paths, with a DOM-mutation guard so a book removed from the DOM mid-reveal (filter/sort change) can never leave a phantom parted-neighbor or stuck state behind.
+**Goal:** Restructure the shelf-book reveal's transform architecture (splitting rotation and translation onto two separate nested elements, isolating rotation as its own animatable channel) and fix reveal-tracking correctness (replace the ad-hoc `currentlyRevealed` DOM-reference tracking with a single shared, ID-based `revealedBookId` state machine, with a DOM-mutation guard so a book removed from the DOM mid-reveal never leaves a phantom parted-neighbor or stuck state behind). Also fix the actual root cause of the reported sideways-slide (Task 5 — see below), once identified.
 
-**Architecture:** `.shelf-book` (the `<a>`) currently carries a combined `rotateY(...)` (rest angle or reveal angle) together with `translateY`/`translateZ`/`scale` in one CSS `transform` string. Per CSS's rightmost-function-first evaluation order, once the book has rotated ~90° the `translateZ` meant to push it "toward the viewer" is applied in the *already-rotated* local frame and visibly points sideways instead — this is the exact bug being reported. The fix (validated in the original design spec's own historical notes, which describe hitting and fixing this exact class of bug during brainstorming) is to give rotation its own nested element: `.shelf-book` keeps only translate/scale (a pure "move toward viewer" that is never itself rotated, so its local frame always matches the shelf's world frame), and a new child `.shelf-book-rotator` carries only `rotateY`. `shelf-physics.js` is updated to write its per-frame spring values to these two elements separately. Separately, the touch module's local `currentlyRevealed` (a DOM element reference, which can go stale if Blazor removes that element from the DOM during a filter/sort re-render) is replaced by a module-level `revealedBookId` (a string ID, looked up live via `data-book-id` whenever needed) shared between the hover/focus path and the touch path, so both paths enforce the same "at most one book revealed" invariant and a `MutationObserver` cleans up if the tracked book vanishes from the DOM without a normal collapse ever firing.
+**Correction (added after this plan's tasks 1-4 were implemented and independently re-verified, before merge):** this plan's original text below claimed the sideways-slide bug was caused by CSS transform function ORDER (rotateY applied before translateZ, in the "already-rotated local frame"). That mechanism is mathematically impossible for the transform order the shipped code actually used (`translateY(...) translateZ(...) rotateY(...) scale(...)` — the translations are written to the LEFT of the rotation, meaning `transform: A B C` composes as matrix `A·B·C` applied to a point as `A·(B·(C·point))`, so a translation written left of a rotation is applied AFTER rotation in the point-transform sense, adding its offset in the parent/world frame regardless of rotation angle). This was confirmed two independent ways after Tasks 1-4 shipped: a direct matrix derivation, and an empirical A/B measurement showing old (single combined transform) and new (split across `.shelf-book`/`.shelf-book-rotator`) code produce near-identical horizontal shift for a book at a fixed shelf position. Tasks 1-4 below are still worth doing (the state-machine fix in Task 3 is a real, independent bug fix), but they do NOT fix the user's originally-reported visual bug. **Task 5 identifies and fixes the actual cause**: `perspective-origin` defaults to 50%/50% of `.shelf-books` (the whole shelf row), so `translateZ` on a revealed book causes radial parallax AWAY from the row's horizontal center — magnitude scales with distance from center, which is exactly why the bug reads as "gets pushed to the right" (most affected books sit right of a row's center once the row is wider than its content, which is the normal case in the real app).
+
+**Architecture:** `.shelf-book` (the `<a>`) originally carried a combined `rotateY(...)` (rest angle or reveal angle) together with `translateY`/`translateZ`/`scale` in one CSS `transform` string. Tasks 1-2 give rotation its own nested element: `.shelf-book` keeps only translate/scale, and a new child `.shelf-book-rotator` carries only `rotateY` — `shelf-physics.js` writes its per-frame spring values to these two elements separately. This isolates rotation as an independently-animatable channel (useful in its own right for Task 3's state machine and any future per-channel tuning) but — per the correction above — does not change which direction `translateZ` points. Task 3 replaces the touch module's local `currentlyRevealed` (a DOM element reference, which can go stale if Blazor removes that element from the DOM during a filter/sort re-render) with a module-level `revealedBookId` (a string ID, looked up live via `data-book-id` whenever needed) shared between the hover/focus path and the touch path, so both paths enforce the same "at most one book revealed" invariant and a `MutationObserver` cleans up if the tracked book vanishes from the DOM without a normal collapse ever firing. Task 5 moves `perspective` from `.shelf-books` (the row) onto each `.shelf-book-slot` (per book) — the standard technique for a grid/row of independently-animated 3D objects, giving each book its own perspective vanishing point centered on itself rather than sharing one vanishing point across the whole row.
 
 **Tech Stack:** Blazor WebAssembly (.razor components), vanilla JS (`shelf-physics.js`, ES module), CSS (`app.css`), bUnit for component tests.
 
@@ -1012,4 +1014,110 @@ Read `documentation/Roadmap.md`'s existing "Library Rework — Phase 3" entry fo
 ```bash
 git add documentation/Roadmap.md
 git commit -m "Document Library Shelf Rework Phase A completion"
+```
+
+---
+
+### Task 5: Fix the actual sideways-slide bug (per-slot `perspective`)
+
+**Added after Tasks 1-4 shipped and went through a final whole-branch review**, which found that Tasks 1-4 do not fix the user's originally-reported bug (see the plan header's "Correction" section). This task fixes the real cause.
+
+**Files:**
+- Modify: `frontend/LuminaChronica.Client/wwwroot/Styles/app.css` (move `perspective` from `.shelf-books` to `.shelf-book-slot`)
+
+**Interfaces:** None — pure CSS, no new classes, no JS or Razor changes. `shelf-physics.js` and `ShelfBook.razor`/`ShelfRow.razor` are untouched by this task.
+
+**Context — the actual bug, confirmed empirically**: `.shelf-books` (the flex row containing all books in one shelf group) currently has `perspective: 60rem`. CSS `perspective` establishes a 3D viewing frustum whose vanishing point (`perspective-origin`, defaulting to `50% 50%`) is the CENTER of the element that has the `perspective` property — here, the center of the ENTIRE ROW, not any individual book. When a book's `translateZ` pushes it toward the viewer under this shared perspective, every point on that book is projected through a formula that scales apparent position OUTWARD from the row's center as depth increases (`screenX = originX + (trueX - originX) * perspective / (perspective - z)`) — a book sitting far from the row's horizontal center visibly shifts sideways, AWAY from center, as it comes forward. A book near center shows almost no shift. This was confirmed by direct measurement in a browser harness: a book 424px left of a 900px-wide row's center shifted ~31px further left on reveal; a book 424px right of center shifted ~23px further right; a book near center shifted under 1px. This exactly matches the user's complaint ("wird nach rechts geschoben") for books that happen to sit right of their row's center — which, in the real app, is most books in a typical row, since `.shelf-books`' width comes from the page layout, not from how many books happen to be in a given group, so groups usually don't fill the row edge-to-edge symmetrically.
+
+**The fix**: give each book its OWN perspective context, centered on itself, instead of sharing one context (and one off-center-for-most-books vanishing point) across the whole row. This is the standard technique for any grid/row of independently-animated 3D objects — each object gets `perspective` on its own immediate container, so its own vanishing point is always its own center, and `translateZ` on it always means "toward the viewer, with zero position-dependent skew" regardless of where that object sits in the larger layout.
+
+- [ ] **Step 1: Write a live-verification harness script BEFORE changing the CSS, to see the bug**
+
+This is CSS-only work with no bUnit coverage possible (bUnit doesn't render real layout/3D transforms) — verification is entirely live-browser, both before (confirming the bug reproduces) and after (confirming the fix). Start the dev server for this worktree (check `documentation/` or prior phase notes for the exact command/port if not already known) and, in a browser tab pointed at it, run a script that:
+1. Builds a synthetic `.shelf-books` row at a realistic width (at least 800-900px, matching the real app's typical content width — NOT shrunk to fit its books, since the bug's whole mechanism depends on the row being wider than its content) containing at least 3 books, with at least one positioned clearly left of the row's horizontal center and one clearly right of it.
+2. Imports the real `shelf-physics.js` from the dev server and calls `initShelfPhysics` on the row.
+3. For each test book, records `getBoundingClientRect()` before reveal, dispatches a `mouseenter`, drives the spring to full settle (drive `requestAnimationFrame` manually with a hand-incremented fake timestamp rather than real timers — a real-timer-based approach in this environment's automation tooling has previously caused background-tab timer throttling severe enough to blow past the tool's own call-timeout budget and contaminate later measurements with stale state from an abandoned run; see this plan's own Task 4 verification notes for why), then records the rect again.
+4. Confirms the CURRENT (unfixed) code shows a shift that increases with distance from the row's horizontal center, in the direction AWAY from center (negative shift for a book left of center, positive for a book right of center).
+
+Expected result at this step: reproduces the bug (confirms the harness itself is valid before you rely on it to confirm the fix).
+
+- [ ] **Step 2: Move `perspective` from `.shelf-books` to `.shelf-book-slot`**
+
+Find in `app.css`:
+```css
+.shelf-books {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding-bottom: var(--space-2);
+    perspective: 60rem;
+}
+
+.shelf-book-slot {
+    transform-style: preserve-3d;
+}
+```
+
+Replace with:
+```css
+.shelf-books {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding-bottom: var(--space-2);
+}
+
+/* perspective lives here, per book, NOT on .shelf-books (the whole row) --
+   see the corrected comment on .shelf-book (above, near the top of this
+   file's ShelfBook rules) for the full story. In short: perspective's
+   vanishing point (perspective-origin, default 50% 50%) is the center of
+   whichever element carries the perspective property. Sharing one
+   perspective across the whole row means every book's translateZ push
+   toward the viewer gets radially projected away from the ROW's center,
+   not its own -- a book far from the row's center visibly shifts
+   sideways on reveal, proportional to that distance. Giving each slot
+   its own perspective makes each book's own center its vanishing point,
+   so translateZ always means "toward the viewer" with zero position-
+   dependent skew, regardless of where the book sits in the row. */
+.shelf-book-slot {
+    transform-style: preserve-3d;
+    perspective: 60rem;
+}
+```
+
+- [ ] **Step 3: Re-run the live-verification harness from Step 1 against the fixed CSS**
+
+Reload the dev server (or just re-run the harness script against the now-changed `app.css` — restart `dotnet run` if it doesn't hot-reload CSS automatically) and re-run the exact same measurement. Expected result: all three test books (left/center/right of row center) now show approximately the SAME small residual shift (a few px at most, from `scale`'s composition — NOT scaling with distance from row center at all). If any book still shows a shift that grows with distance from center, the fix did not fully land — check for a leftover `perspective` declaration elsewhere (e.g. an inline style, or a `!important` rule) before concluding the CSS change was applied correctly.
+
+- [ ] **Step 4: Confirm the 3D fan-rotation and existing reveal behavior are unaffected**
+
+Using the same or a fresh harness: confirm a book's resting-state fan rotation (`--shelf-book-rest`) still renders correctly (a non-identity `matrix3d(...)` on the rotator, not flattened to 2D) — moving `perspective` to a lower level in the DOM tree (from `.shelf-books` to `.shelf-book-slot`, which is a child of `.shelf-books` and a parent of `.shelf-book`) must not break the `preserve-3d` chain, since `.shelf-book-slot` already had `transform-style: preserve-3d` and now ALSO establishes the perspective — both properties can coexist on the same element without conflict, but confirm it directly rather than assuming. Confirm neighbor-parting (`.shelf-book-slot`'s `translateX` on hover of an adjacent book) still displays correctly — parting is a 2D `translateX` on the slot itself, unaffected by whether perspective lives on the slot or its parent, but do a live look to be sure nothing about the slot's own 3D projection changed unexpectedly now that IT is the perspective root instead of a plain 3D participant.
+
+- [ ] **Step 5: Run the full test suite**
+
+Run: `dotnet test tests/frontend`
+Expected: PASS, 366/366 (this task makes no C#/Razor changes, so the count is unchanged from Task 4).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add frontend/LuminaChronica.Client/wwwroot/Styles/app.css
+git commit -m "Fix shelf-book sideways-shift on reveal: move perspective to per-book slot"
+```
+
+- [ ] **Step 7: Correct the Roadmap entry**
+
+Task 4's Roadmap entry (written before this bug was found) claims the transform-order fix resolved the user-reported sideways-slide and calls it "confirmed visually." That claim was wrong. Edit `documentation/Roadmap.md`'s "Library Shelf Rework — Phase A" entry (written by Task 4) to:
+- Correct the transform-order explanation to match this plan's header "Correction" section (translations were already unrotated/outermost in the old code; the split doesn't change translateZ's direction).
+- Note plainly that Tasks 1-4 alone did not fix the reported bug, and that Task 5 (this task) found and fixed the actual cause (`perspective-origin` scoped to the row instead of per-book).
+- Add the concrete measurement evidence from Steps 1 and 3 above (shift-vs-distance-from-center, before and after).
+- Keep the parts of the Task 4 entry that remain true and valuable as-is (the state-machine fix, the DOM-removal guard, the touch two-tap and keyboard-focus verification) — this correction is additive/corrective, not a full rewrite.
+
+- [ ] **Step 8: Commit the Roadmap correction**
+
+```bash
+git add documentation/Roadmap.md
+git commit -m "Correct Phase A Roadmap entry: sideways-slide was a perspective-origin bug, not transform order"
 ```
