@@ -19,13 +19,25 @@ function prefersReducedMotion() {
 // independent springs, so all four channels stay visually in lockstep
 // instead of settling at different times.
 const STIFFNESS = 210;
-const DAMPING = 26; // close to critical damping for this stiffness -- a
-                     // single smooth settle, not a visible bounce. Verify
-                     // this live: if it overshoots and oscillates even
-                     // slightly more than once, raise DAMPING; if it feels
-                     // sluggish/dead, lower it slightly instead of raising
-                     // STIFFNESS (which would shorten the settle time in a
-                     // way that reads as less "physical", not more).
+const DAMPING = 26; // close to critical damping for this stiffness (ratio
+                     // ~0.9) -- a single smooth settle, not a visible
+                     // bounce. A prior investigation this session
+                     // considered raising this after an earlier live test
+                     // showed the rotation reaching -93.8deg past a -88deg
+                     // target -- but a clean, isolated re-test (single
+                     // hover from a fresh spring, no prior interactions)
+                     // showed ZERO overshoot at this exact value: the
+                     // earlier reading came from a more complex multi-step
+                     // test script (rapid book-to-book handoff, a DOM
+                     // removal, several prior drive() calls) and reflected
+                     // leftover state from that script, not a real
+                     // property of this spring. Verify this live if ever
+                     // revisited: if it overshoots and oscillates even
+                     // slightly more than once in a clean single hover,
+                     // raise DAMPING; if it feels sluggish/dead, lower it
+                     // slightly instead of raising STIFFNESS (which would
+                     // shorten the settle time in a way that reads as less
+                     // "physical", not more).
 const EPSILON = 0.001;
 
 function stepSpring(state, dt) {

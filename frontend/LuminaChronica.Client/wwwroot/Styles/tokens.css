@@ -70,4 +70,18 @@
        without looking frantic." */
     --motion-skeleton: 1.6s;
     --motion-spinner: 1.1s;
+
+    /* Library shelf book reveal: a small set of CSS transitions (the
+       revealed cover's width/left resize, the lift-shadow growth) need to
+       stay roughly in sync with shelf-physics.js's own spring, which
+       settles in ~780ms for a hover from rest (measured live) -- not a
+       literal derived value (the spring's actual settle time is an
+       emergent property of its STIFFNESS/DAMPING constants, not this
+       token), just the closest of the three standard bands' neighbors
+       that avoids the "finishes early, then the book keeps turning on its
+       own" mismatch --motion-reveal's 320ms produced. Separate from the
+       three standard bands since those are tuned for CSS-only, fixed-
+       duration transitions, not for staying in step with a JS spring
+       that has no single fixed duration of its own. */
+    --motion-spring-sync: 700ms;
 }
