@@ -55,4 +55,18 @@ public class ShelfRowTests : BunitContext
 
         Assert.Equal(2, cut.FindAll(".shelf-book-slot").Count);
     }
+
+    [Fact]
+    public void ShelfRow_DoesNotRenderFavoriteButton()
+    {
+        // The shelf's own tiny favorite button was hard to click reliably --
+        // the reveal is still mid-3D-rotation when a real click lands, so a
+        // click meant for the button often missed. Favoriting stays
+        // reachable via the book detail page and the Raster (grid) view's
+        // BookCard, and the "Nur Favoriten" filter is unaffected either way
+        // (it's a server-side query param, not tied to this button at all).
+        var cut = Render<ShelfRow>(parameters => parameters.Add(p => p.Books, MakeBooks(1)));
+
+        Assert.Empty(cut.FindAll(".shelf-book-favorite"));
+    }
 }
