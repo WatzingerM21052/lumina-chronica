@@ -141,19 +141,28 @@ function findBookById(root, id) {
 // un-part it later even though it long ago stopped animating.
 const partedSlots = new Set();
 
-// One shared instance per shelf root (installed by whichever of
-// initShelfPhysics/initShelfTouch runs first -- guarded by
-// guardInstalled so a page with both hover AND touch capability, or a
-// re-entrant init call, never double-observes the same root). Watches
-// for the currently-revealed book's element disappearing from the DOM
-// without a normal collapse ever firing -- the only way that can happen
-// is a Blazor re-render (filter/sort/search change) removing it while
-// it's still revealed. When that happens, any of its neighbors that were
-// parted away are reset back to resting (there is no other way to find
-// "which slots were parted by this now-gone book" once it's gone, so
-// this resets every currently-parted slot rather than trying to
-// recompute which ones belonged to it) and revealedBookId is cleared so
-// the state machine's invariant (0 or 1 revealed) stays true.
+// One shared instance per shelf root. Root-aware, not a one-shot flag:
+// Library.razor tears down and rebuilds the ENTIRE .library-shelf element
+// (a new ElementReference) whenever the shelf reappears after not being
+// rendered -- a Grid<->List view-mode toggle, or the shelf temporarily
+// replaced by a loading/error/empty state -- and re-calls
+// initShelfPhysics/initShelfTouch on that new root each time. If `root`
+// differs from the previously-observed shelfRoot, disconnect the old
+// observer (it can never fire again anyway, its root is detached) and
+// attach a fresh one to the new root; any revealedBookId/partedSlots
+// state tracked against the old root is meaningless once that root is
+// gone, so both are cleared on migration too. Calling this again with
+// the SAME root (e.g. both init functions running back-to-back in the
+// same render) is a correct no-op.
+//
+// The observer itself watches for the currently-revealed book's element
+// disappearing from the DOM without a normal collapse ever firing -- the
+// only way that happens is a Blazor re-render (filter/sort/search change)
+// removing it while it's still revealed. When it does, every currently-
+// parted slot is reset back to resting (once the revealed book is gone
+// there is no way to recompute which neighbors it parted, so resetAllParts
+// resets all of them) and revealedBookId is cleared so the
+// 0-or-1-revealed invariant stays true.
 function ensureRevealGuard(root) {
     if (root === shelfRoot) return;
     if (revealGuardObserver) revealGuardObserver.disconnect();
@@ -336,6 +345,8 @@ function isTouchPrimary() {
 // `reducedMotion` branch in setRevealedState.
 export function initShelfTouch(root) {
     if (!root || !isTouchPrimary()) return;
+    if (root.classList.contains("shelf-touch-active")) return; // already initialized on this exact root
+    root.classList.add("shelf-touch-active");
     ensureRevealGuard(root);
 
     const reducedMotion = prefersReducedMotion();
@@ -424,6 +435,7 @@ export function initShelfTouch(root) {
 
 export function initShelfPhysics(root) {
     if (!root || prefersReducedMotion()) return;
+    if (root.classList.contains("shelf-physics-active")) return; // already initialized on this exact root
     ensureRevealGuard(root);
 
     root.classList.add("shelf-physics-active");
@@ -442,6 +454,14 @@ export function initShelfPhysics(root) {
     }
 
     function hideHoverBook(book) {
+        // Unconditional, not conditional on how it got revealed: since
+        // revealedBookId is shared with the touch path, the book this
+        // hides might have been revealed by a tap (which adds
+        // "is-revealed" for its own CSS pointer-events rule, see
+        // app.css), and this hover-side path is what ends up closing it
+        // if the same device also has a mouse and it leaves the book.
+        // Removing a class that was never added is a harmless no-op, so
+        // this is safe to call unconditionally rather than checking first.
         book.classList.remove("is-revealed");
         setRevealTarget(book, false);
         const slot = book.closest(".shelf-book-slot");
@@ -459,18 +479,30 @@ export function initShelfPhysics(root) {
         revealedBookId = null;
     }
 
-    root.addEventListener("mouseenter", (e) => {
-        const book = e.target.closest?.(".shelf-book");
-        if (!book || !root.contains(book)) return;
-        revealHoverBook(book);
-    }, true);
+    // Real hover only exists on non-touch-primary devices. On a
+    // touch-primary device, browsers synthesize mouseenter/mousemove/click
+    // compatibility events after every real tap -- if these listeners
+    // stayed active there, the synthesized mouseenter would set
+    // revealedBookId to the tapped book BEFORE initShelfTouch's click
+    // handler runs, making it misread the first real tap as a "second tap
+    // on an already-revealed book" and navigate immediately instead of
+    // revealing. Gating these two listeners (but not focusin/focusout,
+    // needed for keyboard parity even on a touch+keyboard device) is what
+    // keeps the two paths from fighting over the shared revealedBookId.
+    if (!isTouchPrimary()) {
+        root.addEventListener("mouseenter", (e) => {
+            const book = e.target.closest?.(".shelf-book");
+            if (!book || !root.contains(book)) return;
+            revealHoverBook(book);
+        }, true);
 
-    root.addEventListener("mouseleave", (e) => {
-        const book = e.target.closest?.(".shelf-book");
-        if (!book || !root.contains(book)) return;
-        if (e.relatedTarget && book.contains(e.relatedTarget)) return;
-        closeIfCurrentlyRevealed(book);
-    }, true);
+        root.addEventListener("mouseleave", (e) => {
+            const book = e.target.closest?.(".shelf-book");
+            if (!book || !root.contains(book)) return;
+            if (e.relatedTarget && book.contains(e.relatedTarget)) return;
+            closeIfCurrentlyRevealed(book);
+        }, true);
+    }
 
     root.addEventListener("focusin", (e) => {
         const book = e.target.closest?.(".shelf-book");

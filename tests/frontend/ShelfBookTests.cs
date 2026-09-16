@@ -69,9 +69,21 @@ public class ShelfBookTests : BunitContext
     {
         var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
 
-        var rotator = cut.Find(".shelf-book-rotator");
-        Assert.NotNull(rotator.QuerySelector(".shelf-book-spine"));
-        Assert.NotNull(rotator.QuerySelector(".shelf-book-cover"));
+        // Direct-child assertions, not just "somewhere under" -- shelf-physics.js's
+        // getRotator() uses a `:scope > .shelf-book-rotator` direct-child query, and
+        // a future change that nested the rotator one level deeper would silently
+        // break all rotation animation (getRotator() would return null everywhere)
+        // without this test catching it.
+        var anchor = cut.Find("a.shelf-book");
+        var rotatorChildren = anchor.Children;
+        Assert.Single(rotatorChildren);
+        var rotator = rotatorChildren[0];
+        Assert.Contains("shelf-book-rotator", rotator.ClassList);
+
+        var rotatorGrandchildren = rotator.Children;
+        Assert.Equal(2, rotatorGrandchildren.Length);
+        Assert.Contains("shelf-book-spine", rotatorGrandchildren[0].ClassList);
+        Assert.Contains("shelf-book-cover", rotatorGrandchildren[1].ClassList);
     }
 
     [Fact]
