@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
@@ -66,6 +67,48 @@ public class LibraryPageTests : BunitContext
         // BookCard variant is gone now that this is a real grid, not a
         // dense list; the grid gives cards room to show their full cover.
         Assert.All(cards, card => Assert.Contains("book-card-normal", card.ClassList));
+    }
+
+    [Fact]
+    public void Library_GridViewMode_WrapsShelfRowsInACabinet()
+    {
+        // Default sort/order on first load ("createdAt"/"desc", no genre or
+        // tag filter narrowing to a single group) routes LibraryShelfGrouping
+        // into GroupByRecency. One book created today lands in "Diese Woche";
+        // one created decades ago lands in "Älter" -- two distinct groups,
+        // which is what this test needs to exercise the multi-level cabinet.
+        var today = DateTime.UtcNow.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        UseApiResponse("""
+            {"success":true,"data":{"items":[
+                {"id":1,"title":"Dune","author":"Frank Herbert","coverUrl":null,"genre":"scifi","language":"en","visibility":"PRIVATE","createdAt":"__TODAY__"},
+                {"id":2,"title":"The Hobbit","author":"J.R.R. Tolkien","coverUrl":null,"genre":"fantasy","language":"en","visibility":"PRIVATE","createdAt":"2000-01-01"}
+            ],"total":2,"page":1,"pageSize":20}}
+            """.Replace("__TODAY__", today));
+
+        var cut = Render<Library>();
+
+        // Two distinct recency buckets must produce exactly two shelf-row
+        // groups on the page, all living inside the one cabinet -- not just
+        // "the cabinet contains 2", which would still pass if a stray group
+        // ever rendered outside it. Anchoring the document-wide count and
+        // then asserting the cabinet-scoped count matches it is what
+        // actually proves "every one of them is a descendant of the
+        // cabinet".
+        var allGroups = cut.FindAll(".shelf-row-group");
+        Assert.Equal(2, allGroups.Count);
+
+        var cabinet = cut.Find(".shelf-cabinet");
+        var groupsInCabinet = cabinet.QuerySelectorAll(".shelf-row-group");
+        Assert.Equal(allGroups.Count, groupsInCabinet.Length);
+
+        // The cabinet's last element child must specifically be a
+        // .shelf-row-group -- this guards the ":last-child" CSS rule (see
+        // app.css) that rounds only the bottom-most shelf level's lip. If a
+        // future change ever appends a non-ShelfRow sibling inside
+        // .shelf-cabinet (e.g. decorative set-dressing), this assertion
+        // fails loudly instead of silently un-rounding the cabinet's bottom
+        // edge.
+        Assert.Contains("shelf-row-group", cabinet.Children[^1].ClassList);
     }
 
     [Fact]

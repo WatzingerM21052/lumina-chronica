@@ -1593,29 +1593,122 @@ select:focus-visible,
 }
 
 .shelf-row-group {
-    margin-top: var(--space-3);
-}
-.shelf-row-group:first-child {
     margin-top: 0;
 }
 
 .shelf-plaque {
+    position: relative;
+    /* Establishes its own stacking context so the ::before brass-texture
+       overlay's z-index: -1 (below) scopes to this element, matching the
+       same technique already used by .goal-ring (Statistics) and
+       .shelf-compartment (Library Rework Phase 3) elsewhere in this file. */
+    isolation: isolate;
     display: inline-block;
-    background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white), color-mix(in srgb, var(--color-primary) 75%, black));
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 88%, white), color-mix(in srgb, var(--color-primary) 70%, black));
     color: var(--color-bg-dark);
     font-family: var(--font-family-display);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    padding: 0.2rem 0.8rem;
-    border-radius: 0.15rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    padding: 0.3rem 0.9rem;
+    border-radius: 0.1rem;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 40%, black);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+    margin-top: var(--space-2);
     margin-bottom: var(--space-2);
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
+}
+
+/* Reuses the exact established brass-texture.webp compositing technique
+   from .goal-ring::before (Statistics) -- cross-feature reuse of an
+   existing generic texture asset, not Statistics-specific content. If
+   the asset is ever missing, this simply fails to paint and the plain
+   gradient background above still renders correctly with no layout
+   break, same fallback behavior as every other texture overlay on this
+   page. */
+.shelf-plaque::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url("../images/statistics/brass-texture.webp");
+    background-size: cover;
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+/* Wraps all of a Grid-view page's ShelfRows in one continuous cabinet
+   silhouette (Library Shelf Cabinet phase) -- individual .shelf-compartment
+   rows (below) lose their own external rounding/shadow and become flat
+   internal "shelf levels" inside this one frame instead of independent
+   floating boxes. isolation: isolate scopes the ::before/::after posts'
+   z-index: 1 so they paint above this element's own background but stay
+   correctly ordered relative to this element's own stacking context, not
+   some ancestor's. */
+.shelf-cabinet {
+    position: relative;
+    isolation: isolate;
+    border-radius: var(--radius-lg, var(--radius));
+    padding: 0.6rem 1.6rem;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-dark) 88%, black), color-mix(in srgb, var(--color-bg-dark) 96%, black));
+    /* The two inset shadows (no blur, 6px offset) read as solid trim
+       bands across the full width -- a plain-CSS stand-in for a crown
+       moulding at the top and a base moulding at the bottom, without any
+       new image asset. */
+    box-shadow:
+        0 10px 24px rgba(0, 0, 0, 0.45),
+        inset 0 6px 0 color-mix(in srgb, var(--color-primary) 30%, var(--color-bg-dark)),
+        inset 0 -6px 0 color-mix(in srgb, var(--color-primary) 30%, var(--color-bg-dark));
+}
+
+/* Left/right posts. Two background layers on the same pseudo-element
+   (a gradient bevel + the existing wood-grain texture asset, blended
+   together via background-blend-mode) rather than a third element --
+   :before/:after are the only two pseudo-elements available per real
+   element, and this cabinet needs exactly two posts. z-index: 1 (not the
+   more common -1) since these must paint ABOVE .shelf-cabinet's own
+   background/box-shadow trim, not behind it -- they're a foreground
+   architectural feature, unlike the low-opacity texture overlays used
+   elsewhere on this page (.shelf-compartment::before,
+   .shelf-book-spine::before) which sit behind their host's content.
+   Clearance from the post's inner edge to the first book: cabinet
+   padding (1.6rem) minus post width (1.4rem) plus compartment padding
+   (var(--space-3), 1.5rem currently) = 1.7rem / ~27px today. The posts
+   unconditionally occlude book content at this z-index (no descendant
+   z-index, including .shelf-book-slot's own z-index: 5 on reveal, can
+   escape past them) -- this clearance must stay positive, so a future
+   change to .shelf-cabinet's padding or these posts' width needs a
+   sanity check against a book's own reveal/neighbor-parting excursion
+   (currently a few px at most) before shrinking it. */
+.shelf-cabinet::before,
+.shelf-cabinet::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1.4rem;
+    background-image:
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--color-bg-dark) 55%, black) 0%,
+            color-mix(in srgb, var(--color-primary) 25%, var(--color-bg-dark)) 45%,
+            color-mix(in srgb, var(--color-bg-dark) 55%, black) 100%),
+        url("../images/library/shelf-wood-texture.webp");
+    background-size: cover, cover;
+    background-blend-mode: overlay;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6);
+    z-index: 1;
+    pointer-events: none;
+}
+.shelf-cabinet::before {
+    left: 0;
+    border-radius: var(--radius-lg, var(--radius)) 0 0 var(--radius-lg, var(--radius));
+}
+.shelf-cabinet::after {
+    right: 0;
+    border-radius: 0 var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius)) 0;
 }
 
 .shelf-compartment {
     background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-dark) 90%, black), var(--color-bg-dark));
-    border-radius: var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius)) 0.15rem 0.15rem;
     box-shadow: inset 0 10px 18px rgba(0, 0, 0, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
     padding: var(--space-3) var(--space-3) 0;
     position: relative;
@@ -1641,7 +1734,6 @@ select:focus-visible,
     position: absolute;
     inset: 0;
     z-index: -1;
-    border-radius: var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius)) 0.15rem 0.15rem;
     background-image: url("../images/library/shelf-wood-texture.webp");
     background-size: cover;
     opacity: 0.15;
@@ -1692,8 +1784,23 @@ select:focus-visible,
 .shelf-lip {
     height: 1rem;
     background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 85%, white) 0%, var(--color-primary) 45%, color-mix(in srgb, var(--color-primary) 70%, black) 100%);
-    border-radius: 0 0 var(--radius) var(--radius);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Only the last shelf level's lip sits at .shelf-cabinet's own external
+   bottom edge and needs matching rounding -- every other level's lip is
+   now an internal divider between two levels (see .shelf-row-group's
+   margin-top: 0 above) and must stay flat/square, not rounded.
+   Depends on .shelf-cabinet containing ONLY .shelf-row-group children --
+   if a future change ever appends anything else inside .shelf-cabinet
+   (e.g. decorative set-dressing, deferred per the design spec), this
+   selector's `:last-child` would stop matching the last actual shelf
+   level, silently un-rounding the cabinet's bottom edge with no test
+   failure to catch it (see LibraryPageTests.cs's cabinet test, which
+   asserts .shelf-cabinet's last element child specifically -- extend
+   that assertion if this container's contents ever change). */
+.shelf-row-group:last-child .shelf-lip {
+    border-radius: 0 0 var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius));
 }
 
 .book-detail {

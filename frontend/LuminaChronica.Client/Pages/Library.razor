@@ -90,10 +90,12 @@ else
     @if (_viewMode == LibraryViewMode.Grid)
     {
         <div class="library-shelf" @ref="_shelfRef">
-            @foreach (var group in LibraryShelfGrouping.Group(_result.Items, _sort, _genreFilters, _tagFilters))
-            {
-                <ShelfRow @key="group.Label" Label="@group.Label" Books="group.Books" />
-            }
+            <div class="shelf-cabinet">
+                @foreach (var group in LibraryShelfGrouping.Group(_result.Items, _sort, _genreFilters, _tagFilters))
+                {
+                    <ShelfRow @key="group.Label" Label="@group.Label" Books="group.Books" />
+                }
+            </div>
         </div>
     }
     else
