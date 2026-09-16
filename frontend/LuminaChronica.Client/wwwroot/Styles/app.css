@@ -1616,7 +1616,6 @@ select:focus-visible,
     margin-top: var(--space-2);
     margin-bottom: var(--space-2);
     letter-spacing: 0.05em;
-    text-transform: uppercase;
 }
 
 /* Reuses the exact established brass-texture.webp compositing technique
@@ -1670,7 +1669,16 @@ select:focus-visible,
    background/box-shadow trim, not behind it -- they're a foreground
    architectural feature, unlike the low-opacity texture overlays used
    elsewhere on this page (.shelf-compartment::before,
-   .shelf-book-spine::before) which sit behind their host's content. */
+   .shelf-book-spine::before) which sit behind their host's content.
+   Clearance from the post's inner edge to the first book: cabinet
+   padding (1.6rem) minus post width (1.4rem) plus compartment padding
+   (var(--space-3), 1.5rem currently) = 1.7rem / ~27px today. The posts
+   unconditionally occlude book content at this z-index (no descendant
+   z-index, including .shelf-book-slot's own z-index: 5 on reveal, can
+   escape past them) -- this clearance must stay positive, so a future
+   change to .shelf-cabinet's padding or these posts' width needs a
+   sanity check against a book's own reveal/neighbor-parting excursion
+   (currently a few px at most) before shrinking it. */
 .shelf-cabinet::before,
 .shelf-cabinet::after {
     content: "";
@@ -1782,7 +1790,15 @@ select:focus-visible,
 /* Only the last shelf level's lip sits at .shelf-cabinet's own external
    bottom edge and needs matching rounding -- every other level's lip is
    now an internal divider between two levels (see .shelf-row-group's
-   margin-top: 0 above) and must stay flat/square, not rounded. */
+   margin-top: 0 above) and must stay flat/square, not rounded.
+   Depends on .shelf-cabinet containing ONLY .shelf-row-group children --
+   if a future change ever appends anything else inside .shelf-cabinet
+   (e.g. decorative set-dressing, deferred per the design spec), this
+   selector's `:last-child` would stop matching the last actual shelf
+   level, silently un-rounding the cabinet's bottom edge with no test
+   failure to catch it (see LibraryPageTests.cs's cabinet test, which
+   asserts .shelf-cabinet's last element child specifically -- extend
+   that assertion if this container's contents ever change). */
 .shelf-row-group:last-child .shelf-lip {
     border-radius: 0 0 var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius));
 }
