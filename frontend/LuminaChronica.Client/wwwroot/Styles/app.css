@@ -1613,6 +1613,68 @@ select:focus-visible,
     letter-spacing: 0.03em;
 }
 
+/* Wraps all of a Grid-view page's ShelfRows in one continuous cabinet
+   silhouette (Library Shelf Cabinet phase) -- individual .shelf-compartment
+   rows (below) lose their own external rounding/shadow and become flat
+   internal "shelf levels" inside this one frame instead of independent
+   floating boxes. isolation: isolate scopes the ::before/::after posts'
+   z-index: 1 so they paint above this element's own background but stay
+   correctly ordered relative to this element's own stacking context, not
+   some ancestor's. */
+.shelf-cabinet {
+    position: relative;
+    isolation: isolate;
+    border-radius: var(--radius-lg, var(--radius));
+    padding: 0.6rem 1.6rem;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-dark) 88%, black), color-mix(in srgb, var(--color-bg-dark) 96%, black));
+    /* The two inset shadows (no blur, 6px offset) read as solid trim
+       bands across the full width -- a plain-CSS stand-in for a crown
+       moulding at the top and a base moulding at the bottom, without any
+       new image asset. */
+    box-shadow:
+        0 10px 24px rgba(0, 0, 0, 0.45),
+        inset 0 6px 0 color-mix(in srgb, var(--color-primary) 30%, var(--color-bg-dark)),
+        inset 0 -6px 0 color-mix(in srgb, var(--color-primary) 30%, var(--color-bg-dark));
+}
+
+/* Left/right posts. Two background layers on the same pseudo-element
+   (a gradient bevel + the existing wood-grain texture asset, blended
+   together via background-blend-mode) rather than a third element --
+   :before/:after are the only two pseudo-elements available per real
+   element, and this cabinet needs exactly two posts. z-index: 1 (not the
+   more common -1) since these must paint ABOVE .shelf-cabinet's own
+   background/box-shadow trim, not behind it -- they're a foreground
+   architectural feature, unlike the low-opacity texture overlays used
+   elsewhere on this page (.shelf-compartment::before,
+   .shelf-book-spine::before) which sit behind their host's content. */
+.shelf-cabinet::before,
+.shelf-cabinet::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1.4rem;
+    background-image:
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--color-bg-dark) 55%, black) 0%,
+            color-mix(in srgb, var(--color-primary) 25%, var(--color-bg-dark)) 45%,
+            color-mix(in srgb, var(--color-bg-dark) 55%, black) 100%),
+        url("../images/library/shelf-wood-texture.webp");
+    background-size: cover, cover;
+    background-blend-mode: overlay;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6);
+    z-index: 1;
+    pointer-events: none;
+}
+.shelf-cabinet::before {
+    left: 0;
+    border-radius: var(--radius-lg, var(--radius)) 0 0 var(--radius-lg, var(--radius));
+}
+.shelf-cabinet::after {
+    right: 0;
+    border-radius: 0 var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius)) 0;
+}
+
 .shelf-compartment {
     background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-dark) 90%, black), var(--color-bg-dark));
     border-radius: var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius)) 0.15rem 0.15rem;

@@ -69,6 +69,21 @@ public class LibraryPageTests : BunitContext
     }
 
     [Fact]
+    public void Library_GridViewMode_WrapsShelfRowsInACabinet()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{"items":[
+                {"id":1,"title":"Dune","author":"Frank Herbert","coverUrl":null,"genre":"scifi","language":"en","visibility":"PRIVATE","createdAt":"2026-01-01"}
+            ],"total":1,"page":1,"pageSize":20}}
+            """);
+
+        var cut = Render<Library>();
+
+        var cabinet = cut.Find(".shelf-cabinet");
+        Assert.NotEmpty(cabinet.QuerySelectorAll(".shelf-row-group"));
+    }
+
+    [Fact]
     public void Library_TagMultiSelect_SelectingAPill_ReloadsWithTagInQueryString()
     {
         var capturedRequests = new List<HttpRequestMessage>();
