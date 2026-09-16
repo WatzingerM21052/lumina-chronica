@@ -5,8 +5,8 @@ namespace LuminaChronica.Client.Tests;
 
 public class LibraryShelfGroupingTests
 {
-    private static Book MakeBook(int id, string title, string? author = null, string createdAt = "2026-01-01T00:00:00Z") =>
-        new() { Id = id, Title = title, Author = author, CreatedAt = createdAt };
+    private static Book MakeBook(int id, string title, string? author = null, string createdAt = "2026-01-01T00:00:00Z", string? genre = null) =>
+        new() { Id = id, Title = title, Author = author, CreatedAt = createdAt, Genre = genre };
 
     [Fact]
     public void Group_EmptyList_ReturnsEmpty()
@@ -99,5 +99,70 @@ public class LibraryShelfGroupingTests
         var result = LibraryShelfGrouping.Group(books, "createdAt", [], []);
 
         Assert.DoesNotContain(result, g => g.Books.Count == 0);
+    }
+
+    [Fact]
+    public void Group_SortedByGenre_GroupsByGenreLabel()
+    {
+        var books = new List<Book>
+        {
+            MakeBook(1, "A", genre: "Fantasy"),
+            MakeBook(2, "B", genre: "Fantasy"),
+            MakeBook(3, "C", genre: "Krimi"),
+        };
+
+        var result = LibraryShelfGrouping.Group(books, "genre", [], []);
+
+        Assert.Equal(2, result.Count);
+        var fantasy = Assert.Single(result, g => g.Label == "Fantasy");
+        Assert.Equal(2, fantasy.Books.Count);
+        var krimi = Assert.Single(result, g => g.Label == "Krimi");
+        Assert.Single(krimi.Books);
+    }
+
+    [Fact]
+    public void Group_SortedByGenre_MissingGenreGetsFallbackLabel()
+    {
+        var books = new List<Book> { MakeBook(1, "NoGenre", genre: null) };
+
+        var result = LibraryShelfGrouping.Group(books, "genre", [], []);
+
+        var group = Assert.Single(result);
+        Assert.Equal("Ohne Genre", group.Label);
+    }
+
+    [Fact]
+    public void Group_SingleGenreFilterActive_TakesPrecedenceOverGenreSort()
+    {
+        // A single active genre filter already narrows the whole result set
+        // to one genre -- grouping by genre on top of that would just be
+        // one group again, so the existing single-genre-filter short
+        // circuit (tested above) must still win regardless of _sort.
+        var books = new List<Book> { MakeBook(1, "A", genre: "Fantasy"), MakeBook(2, "B", genre: "Fantasy") };
+
+        var result = LibraryShelfGrouping.Group(books, "genre", ["Fantasy"], []);
+
+        var group = Assert.Single(result);
+        Assert.Equal("Fantasy", group.Label);
+    }
+
+    [Fact]
+    public void Group_SingleTagFilterActive_DoesNotOverrideGenreSort()
+    {
+        // Unlike a single genre filter, a single tag filter can span many
+        // genres -- so it must NOT collapse an explicit sort=genre into one
+        // tag-labeled group. This is the fix for the precedence bug found
+        // in review: sortKey == "genre" must win over the tag shortcut.
+        var books = new List<Book>
+        {
+            MakeBook(1, "A", genre: "Fantasy"),
+            MakeBook(2, "B", genre: "Krimi"),
+        };
+
+        var result = LibraryShelfGrouping.Group(books, "genre", [], ["Lieblingsbücher"]);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, g => g.Label == "Fantasy");
+        Assert.Contains(result, g => g.Label == "Krimi");
     }
 }

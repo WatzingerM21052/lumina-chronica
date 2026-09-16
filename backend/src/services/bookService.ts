@@ -24,6 +24,7 @@ const SORT_COLUMNS: Record<string, string> = {
     createdAt: "created_at",
     title: "title",
     author: "author",
+    genre: "genre",
 };
 
 function r2BookKey(bookId: number, ext: string): string {
