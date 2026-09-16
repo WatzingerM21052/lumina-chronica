@@ -63,7 +63,7 @@
 
     <div class="library-view-toggle">
         <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Regal</button>
-        <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Liste</button>
+        <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Raster</button>
     </div>
 </div>
 
@@ -98,10 +98,10 @@ else
     }
     else
     {
-        <div class="library-list">
+        <div class="library-raster">
             @foreach (var book in _result.Items)
             {
-                <BookCard Book="book" Size="BookCardSize.Small" />
+                <BookCard Book="book" />
             }
         </div>
     }

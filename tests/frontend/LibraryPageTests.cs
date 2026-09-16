@@ -47,7 +47,7 @@ public class LibraryPageTests : BunitContext
     }
 
     [Fact]
-    public void Library_ListViewMode_StillRendersOriginalBookCardComponent()
+    public void Library_RasterViewMode_RendersBookCardsInAResponsiveGrid()
     {
         UseApiResponse("""
             {"success":true,"data":{"items":[
@@ -57,10 +57,15 @@ public class LibraryPageTests : BunitContext
             """);
 
         var cut = Render<Library>();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Liste").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
 
-        Assert.NotEmpty(cut.FindAll(".library-list"));
-        Assert.Equal(2, cut.FindAll("a.book-card").Count);
+        Assert.NotEmpty(cut.FindAll(".library-raster"));
+        var cards = cut.FindAll("a.book-card");
+        Assert.Equal(2, cards.Count);
+        // Normal (not Small) size -- the old list view's compact horizontal
+        // BookCard variant is gone now that this is a real grid, not a
+        // dense list; the grid gives cards room to show their full cover.
+        Assert.All(cards, card => Assert.Contains("book-card-normal", card.ClassList));
     }
 
     [Fact]
