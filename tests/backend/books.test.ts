@@ -144,6 +144,20 @@ describe("GET /api/books", () => {
         expect(json.data.items.map((b: { title: string }) => b.title).sort()).toEqual(["Dragon Riders", "Dragon Tales"]);
     });
 
+    it("sorts by genre", async () => {
+        await uploadBook(tokenA, { title: "Zebra Book", genre: "scifi" });
+        await uploadBook(tokenA, { title: "Apple Book", genre: "fantasy" });
+        await uploadBook(tokenA, { title: "Mango Book", genre: "history" });
+
+        const ascRes = await app.request("/api/books?sort=genre&order=asc", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const ascJson = await readJson(ascRes);
+        expect(ascJson.data.items.map((b: { genre: string }) => b.genre)).toEqual(["fantasy", "history", "scifi"]);
+
+        const descRes = await app.request("/api/books?sort=genre&order=desc", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const descJson = await readJson(descRes);
+        expect(descJson.data.items.map((b: { genre: string }) => b.genre)).toEqual(["scifi", "history", "fantasy"]);
+    });
+
     it("filters by multiple comma-separated tags/genres (OR semantics)", async () => {
         await uploadBook(tokenA, { title: "Dragon Tales", genre: "fantasy", tags: "Fantasy" });
         await uploadBook(tokenA, { title: "Space Odyssey", genre: "scifi", tags: "Science Fiction" });

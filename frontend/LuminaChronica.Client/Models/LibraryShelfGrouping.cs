@@ -22,7 +22,13 @@ public static class LibraryShelfGrouping
             return [new BookGroup(genreFilters[0], books.ToList())];
         }
 
-        if (tagFilters.Count == 1)
+        // Unlike the single-genre-filter shortcut above, a single active TAG
+        // filter does NOT imply every shown book shares one genre -- a tag
+        // like "Lieblingsbücher" can span many genres. Collapsing to one
+        // "tag" group would silently defeat an explicit sort=genre choice
+        // (the entire point of that sort), so this shortcut only applies
+        // when the user hasn't asked to group by genre.
+        if (tagFilters.Count == 1 && sortKey != "genre")
         {
             return [new BookGroup(tagFilters[0], books.ToList())];
         }
@@ -30,8 +36,19 @@ public static class LibraryShelfGrouping
         return sortKey switch
         {
             "title" or "author" => GroupAlphabetically(books, sortKey),
+            "genre" => GroupByGenre(books),
             _ => GroupByRecency(books),
         };
+    }
+
+    private static List<BookGroup> GroupByGenre(IReadOnlyList<Book> books)
+    {
+        return books
+            .GroupBy(b => string.IsNullOrWhiteSpace(b.Genre) ? "Ohne Genre" : b.Genre)
+            .Select(g => new BookGroup(g.Key, g.ToList()))
+            .OrderBy(g => g.Label == "Ohne Genre" ? 1 : 0)
+            .ThenBy(g => g.Label, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static List<BookGroup> GroupAlphabetically(IReadOnlyList<Book> books, string sortKey)

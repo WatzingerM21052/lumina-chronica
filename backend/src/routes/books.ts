@@ -47,7 +47,7 @@ export const booksRoute = new Hono<AppEnv>();
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
-const SORTABLE_FIELDS = new Set(["createdAt", "title", "author"]);
+const SORTABLE_FIELDS = new Set(["createdAt", "title", "author", "genre"]);
 
 function parseTags(raw: unknown): string[] {
     if (typeof raw !== "string" || !raw.trim()) return [];
