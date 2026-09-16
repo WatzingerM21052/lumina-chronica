@@ -57,6 +57,36 @@ public class ShelfBookTests : BunitContext
     }
 
     [Fact]
+    public void ShelfBook_RootAnchor_HasDataBookIdAttribute()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        Assert.Equal("1", cut.Find("a.shelf-book").GetAttribute("data-book-id"));
+    }
+
+    [Fact]
+    public void ShelfBook_SpineAndCover_AreWrappedInRotator()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        // Direct-child assertions, not just "somewhere under" -- shelf-physics.js's
+        // getRotator() uses a `:scope > .shelf-book-rotator` direct-child query, and
+        // a future change that nested the rotator one level deeper would silently
+        // break all rotation animation (getRotator() would return null everywhere)
+        // without this test catching it.
+        var anchor = cut.Find("a.shelf-book");
+        var rotatorChildren = anchor.Children;
+        Assert.Single(rotatorChildren);
+        var rotator = rotatorChildren[0];
+        Assert.Contains("shelf-book-rotator", rotator.ClassList);
+
+        var rotatorGrandchildren = rotator.Children;
+        Assert.Equal(2, rotatorGrandchildren.Length);
+        Assert.Contains("shelf-book-spine", rotatorGrandchildren[0].ClassList);
+        Assert.Contains("shelf-book-cover", rotatorGrandchildren[1].ClassList);
+    }
+
+    [Fact]
     public void ShelfBook_SpineAndCoverTitleText_AreAriaHidden()
     {
         var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));

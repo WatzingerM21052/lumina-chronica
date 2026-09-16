@@ -1312,15 +1312,26 @@ select:focus-visible,
 }
 
 /* ShelfBook: books stand spine-out at rest, rotate ~90 deg on hover/
-   focus to reveal the cover. Two load-bearing rules learned from live
-   3D-transform validation during design (see plan Global Constraints):
-   (1) every element between the perspective-establishing ancestor
-   (.shelf-books, see ShelfRow) and this element needs
-   transform-style: preserve-3d, or the rotation flattens into a 2D
-   distortion; (2) the hover transform lists rotateY before translateY/
-   translateZ -- rotate in the book's own local frame first, then move
-   toward the viewer in the resulting world frame. Reversing this order
-   was tried and visibly failed (the book appeared to slide sideways). */
+   focus to reveal the cover. Load-bearing rule: every element between
+   the perspective-establishing ancestor (.shelf-book-slot, see below) and
+   this element needs transform-style: preserve-3d, or the rotation
+   flattens into a 2D distortion.
+   Rotation lives on the nested .shelf-book-rotator child (see its own
+   rule below), not on .shelf-book itself -- this element only ever
+   carries translate/scale. This split does NOT change which direction
+   translateZ points (a translation written to the left of a rotation in
+   a CSS transform list is applied in the parent/world frame either way,
+   regardless of which element carries the rotation), so it does not by
+   itself fix any translateZ-direction issue. Its actual purpose is
+   isolating rotation as its own animatable channel so shelf-physics.js
+   can drive it independently of translate/scale (see that file's
+   applyTransform). The actual sideways-shift bug this rework set out to
+   fix was a SEPARATE issue, since fixed: .shelf-books' perspective was
+   shared across the whole row, so its default perspective-origin (50% of
+   the WHOLE ROW's width) meant translateZ on a revealed book radially
+   magnified its position away from the row's center rather than purely
+   toward the viewer -- see .shelf-book-slot's own `perspective` rule
+   (below, in this file) for the actual fix (perspective moved per-book). */
 .shelf-book {
     display: block;
     width: 3.25rem;
@@ -1328,6 +1339,37 @@ select:focus-visible,
     position: relative;
     text-decoration: none;
     cursor: pointer;
+    transform-style: preserve-3d;
+    transform-origin: bottom center;
+    transition: transform var(--motion-reveal) var(--ease-standard);
+}
+
+/* Carries ONLY the rotation (rest angle, or the reveal rotation on hover/
+   focus/touch) -- .shelf-book itself carries only translate/scale (see
+   its own rule above and the hover-fallback rule below). This split
+   isolates rotation as its own animatable channel so shelf-physics.js
+   can drive it independently every spring frame (see that file's
+   applyTransform/getRotator). It does NOT change which direction
+   translateZ points on .shelf-book -- see the corrected comment on
+   .shelf-book above for why the originally-assumed transform-order bug
+   was never real, and where the actual sideways-shift bug lived instead
+   (perspective-origin, not transform order -- since fixed, see
+   .shelf-book-slot's `perspective` rule below). Needs its own
+   transform-style: preserve-3d (same "every ancestor in the chain" rule
+   noted on .shelf-book above) and its own copy of the bottom-center
+   transform-origin, since it's now the element that actually rotates --
+   .shelf-book keeps its own copy too (transform-origin is not an
+   inherited CSS property), since .shelf-book still receives `scale(...)`
+   on reveal (see the hover-fallback rule below) and must keep anchoring
+   that scale at the book's base, not its center, to look identical to
+   today. position: absolute; inset: 0 makes it fill .shelf-book's box
+   exactly as .shelf-book-spine/.shelf-book-cover did when they were
+   direct children of .shelf-book (their own `position: absolute; inset:
+   0` rule, unchanged, now resolves against this element instead). */
+.shelf-book-rotator {
+    display: block;
+    position: absolute;
+    inset: 0;
     transform-style: preserve-3d;
     transform-origin: bottom center;
     transform: rotateY(var(--shelf-book-rest));
@@ -1522,7 +1564,13 @@ select:focus-visible,
 .shelf-book:hover,
 .shelf-book:focus-visible,
 .shelf-book:has(:focus-visible) {
-    transform: translateY(-1.4rem) translateZ(3.6rem) rotateY(-88deg) scale(1.08);
+    transform: translateY(-1.4rem) translateZ(3.6rem) scale(1.08);
+}
+
+.shelf-book:hover .shelf-book-rotator,
+.shelf-book:focus-visible .shelf-book-rotator,
+.shelf-book:has(:focus-visible) .shelf-book-rotator {
+    transform: rotateY(-88deg);
 }
 
 /* Added by shelf-physics.js (Phase 2) once it takes over the reveal
@@ -1533,12 +1581,14 @@ select:focus-visible,
    in which case Phase 1's plain CSS transition -- itself already
    reduced-motion-aware -- remains the only mechanism). */
 .shelf-physics-active .shelf-book,
+.shelf-physics-active .shelf-book-rotator,
 .shelf-physics-active .shelf-book-slot {
     transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .shelf-book {
+    .shelf-book,
+    .shelf-book-rotator {
         transition: none;
     }
 }
@@ -1605,11 +1655,23 @@ select:focus-visible,
     gap: var(--space-2);
     flex-wrap: wrap;
     padding-bottom: var(--space-2);
-    perspective: 60rem;
 }
 
+/* perspective lives here, per book, NOT on .shelf-books (the whole row) --
+   see the corrected comment on .shelf-book (above, near the top of this
+   file's ShelfBook rules) for the full story. In short: perspective's
+   vanishing point (perspective-origin, default 50% 50%) is the center of
+   whichever element carries the perspective property. Sharing one
+   perspective across the whole row means every book's translateZ push
+   toward the viewer gets radially projected away from the ROW's center,
+   not its own -- a book far from the row's center visibly shifts
+   sideways on reveal, proportional to that distance. Giving each slot
+   its own perspective makes each book's own center its vanishing point,
+   so translateZ always means "toward the viewer" with zero position-
+   dependent skew, regardless of where the book sits in the row. */
 .shelf-book-slot {
     transform-style: preserve-3d;
+    perspective: 60rem;
 }
 
 /* .shelf-book-slot establishes its own stacking context via
