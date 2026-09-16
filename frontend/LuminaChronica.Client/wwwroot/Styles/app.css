@@ -1449,6 +1449,20 @@ select:focus-visible,
        bounding box in the DOM, so without this the favorite button
        inside it could be spuriously clickable while barely visible. */
     pointer-events: none;
+    /* At rest this face shares .shelf-book's own narrow spine-thickness
+       footprint (inset: 0 from the shared .shelf-book-spine,
+       .shelf-book-cover rule above) -- correct there, since it's an
+       edge-on sliver mimicking the book's physical thickness. But real
+       cover art is roughly as wide as it is tall (this app's own
+       established book-cover ratio is 2:3, see .book-card-cover
+       elsewhere in this file), so displaying it inside that same narrow
+       box made object-fit: cover crop away most of the image. On
+       reveal (below), left/width widen this face to a real 2:3-ish
+       cover shape; transitioning left/width here (separately from the
+       transform property .shelf-book-rotator/.shelf-book already
+       transition) lets this resize animate too, even though it isn't
+       part of shelf-physics.js's spring-driven transform. */
+    transition: width var(--motion-reveal) var(--ease-standard), left var(--motion-reveal) var(--ease-standard);
 }
 
 .shelf-book:hover .shelf-book-cover,
@@ -1456,6 +1470,22 @@ select:focus-visible,
 .shelf-book:has(:focus-visible) .shelf-book-cover,
 .shelf-book.is-revealed .shelf-book-cover {
     pointer-events: auto;
+    /* 6.3rem / 9.5rem (this face's unchanged height) ~= 2/3, matching
+       this app's established book-cover aspect ratio elsewhere
+       (.book-card-cover). left/right together with width position this
+       symmetrically around .shelf-book-rotator's own 3.25rem-wide box
+       (-1.525rem = (3.25rem - 6.3rem) / 2) rather than growing from one
+       edge, so the widened cover reads as centered on the spine it
+       pulled out from. This only resizes .shelf-book-cover itself
+       (position: absolute, so it doesn't affect .shelf-book's own
+       layout box or push neighboring books in the flex row) -- the
+       existing z-index: 5 lift on a revealed book's .shelf-book-slot
+       (below) already lets it paint over neighboring slots it now
+       visually overlaps more than before, matching the reference
+       mockups' own "pulled book covers part of its neighbors" look. */
+    left: -1.525rem;
+    right: auto;
+    width: 6.3rem;
 }
 
 .shelf-book-cover img {
@@ -1587,7 +1617,15 @@ select:focus-visible,
 
 @media (prefers-reduced-motion: reduce) {
     .shelf-book,
-    .shelf-book-rotator {
+    .shelf-book-rotator,
+    /* .shelf-book-cover's own width/left transition (added for the
+       cover-image aspect-ratio fix, see its rule above) isn't driven by
+       shelf-physics.js at all, so it isn't covered by that module's own
+       reduced-motion no-op -- it needs its own carve-out here, same as
+       .shelf-book/.shelf-book-rotator, so a reduced-motion reveal snaps
+       to its final wider size instantly instead of still visibly easing
+       while the rotation/scale next to it correctly snaps. */
+    .shelf-book-cover {
         transition: none;
     }
 }
