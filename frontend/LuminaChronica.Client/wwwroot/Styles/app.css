@@ -1655,11 +1655,23 @@ select:focus-visible,
     gap: var(--space-2);
     flex-wrap: wrap;
     padding-bottom: var(--space-2);
-    perspective: 60rem;
 }
 
+/* perspective lives here, per book, NOT on .shelf-books (the whole row) --
+   see the corrected comment on .shelf-book (above, near the top of this
+   file's ShelfBook rules) for the full story. In short: perspective's
+   vanishing point (perspective-origin, default 50% 50%) is the center of
+   whichever element carries the perspective property. Sharing one
+   perspective across the whole row means every book's translateZ push
+   toward the viewer gets radially projected away from the ROW's center,
+   not its own -- a book far from the row's center visibly shifts
+   sideways on reveal, proportional to that distance. Giving each slot
+   its own perspective makes each book's own center its vanishing point,
+   so translateZ always means "toward the viewer" with zero position-
+   dependent skew, regardless of where the book sits in the row. */
 .shelf-book-slot {
     transform-style: preserve-3d;
+    perspective: 60rem;
 }
 
 /* .shelf-book-slot establishes its own stacking context via
