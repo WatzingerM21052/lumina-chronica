@@ -507,6 +507,17 @@ export function initShelfPhysics(root) {
     root.addEventListener("focusin", (e) => {
         const book = e.target.closest?.(".shelf-book");
         if (!book || !root.contains(book)) return;
+        // :focus-visible (not just "focused") is deliberate: a touch tap's
+        // programmatic focus does not match :focus-visible in modern
+        // browsers, only real keyboard navigation does. Without this
+        // check, a touch device's tap-triggered focus would write to the
+        // shared revealedBookId here, then get misread as a "second tap"
+        // by initShelfTouch's click handler -- the exact bug the
+        // mouseenter/mouseleave touch-primary gate above already fixes
+        // for hover, reopened through this separate event path. This also
+        // matches the existing CSS fallback rule (.shelf-book:focus-visible
+        // in app.css), which never revealed on plain focus either.
+        if (!book.matches(":focus-visible")) return;
         revealHoverBook(book);
     });
 

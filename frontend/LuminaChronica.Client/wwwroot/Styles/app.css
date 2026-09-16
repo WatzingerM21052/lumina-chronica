@@ -1313,7 +1313,7 @@ select:focus-visible,
 
 /* ShelfBook: books stand spine-out at rest, rotate ~90 deg on hover/
    focus to reveal the cover. Load-bearing rule: every element between
-   the perspective-establishing ancestor (.shelf-books, see ShelfRow) and
+   the perspective-establishing ancestor (.shelf-book-slot, see below) and
    this element needs transform-style: preserve-3d, or the rotation
    flattens into a 2D distortion.
    Rotation lives on the nested .shelf-book-rotator child (see its own

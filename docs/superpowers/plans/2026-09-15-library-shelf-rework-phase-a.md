@@ -160,6 +160,8 @@ Replace with (only two changes: the new `data-book-id` attribute on the `<a>`, a
 </a>
 ```
 
+**Note (added after the fact): this step's comment text below describes a transform-order bug theory that was later found to be incorrect — see the plan header's "Correction" section and Task 5. It's left as originally written here since Task 1's actual code change (the DOM/CSS split itself) is still correct and this note is just to stop a future reader from copying stale reasoning.**
+
 - [ ] **Step 4: Update `app.css`'s `.shelf-book` rule and add `.shelf-book-rotator`**
 
 Find the `.shelf-book` rule (around line 1324, immediately after the comment block explaining the two load-bearing 3D rules):
