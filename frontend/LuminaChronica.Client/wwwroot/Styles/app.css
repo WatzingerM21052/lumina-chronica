@@ -99,6 +99,22 @@ h3 {
     gap: var(--space-3);
 }
 
+/* Library page's "Raster" view: a grid of BookCards. Deliberately NOT
+   .catalog-grid above -- that class relies on grid's default stretch
+   sizing, which works for CatalogCard (no fixed width, so it fills
+   whatever column width `1fr` computes) but not BookCard, whose sizes
+   (.book-card-normal etc., BookCard.razor.css) are all fixed-width. A
+   fixed-width item can't stretch, so reusing .catalog-grid would leave
+   each BookCard flush-left in a wider-than-it column with inconsistent-
+   looking gaps on wide viewports. Fixed 10rem columns (matching
+   .book-card-normal's own width) avoid the mismatch entirely and give a
+   uniform, evenly-gapped grid regardless of viewport width. */
+.library-raster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 10rem);
+    gap: var(--space-3);
+}
+
 /* Shared skeleton-loading shimmer (PublicProfile's hero, Discover's book
    grid) -- a plain shape; a page's own scoped CSS sizes/positions it. */
 .skeleton-shape {
@@ -1292,23 +1308,6 @@ select:focus-visible,
     flex-direction: column;
     gap: var(--space-1);
     width: 10rem;
-}
-
-.library-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-}
-
-.library-list .book-card {
-    flex-direction: row;
-    align-items: center;
-    width: auto;
-}
-
-.library-list .book-card-cover {
-    width: 3rem;
-    flex-shrink: 0;
 }
 
 /* ShelfBook: books stand spine-out at rest, rotate ~90 deg on hover/
