@@ -1325,14 +1325,13 @@ select:focus-visible,
    itself fix any translateZ-direction issue. Its actual purpose is
    isolating rotation as its own animatable channel so shelf-physics.js
    can drive it independently of translate/scale (see that file's
-   applyTransform). A separate, still-open issue causes the pulled-out
-   book to visibly shift sideways for books far from the shelf row's
-   horizontal center: .shelf-books' perspective-origin defaults to 50%
-   of the WHOLE ROW's width, so translateZ on a revealed book radially
-   magnifies its position away from the row's center rather than purely
-   toward the viewer. Fixing that means moving perspective from the row
-   onto each .shelf-book-slot individually -- tracked as separate
-   follow-up work, not fixed by this rule. */
+   applyTransform). The actual sideways-shift bug this rework set out to
+   fix was a SEPARATE issue, since fixed: .shelf-books' perspective was
+   shared across the whole row, so its default perspective-origin (50% of
+   the WHOLE ROW's width) meant translateZ on a revealed book radially
+   magnified its position away from the row's center rather than purely
+   toward the viewer -- see .shelf-book-slot's own `perspective` rule
+   (below, in this file) for the actual fix (perspective moved per-book). */
 .shelf-book {
     display: block;
     width: 3.25rem;
@@ -1353,8 +1352,9 @@ select:focus-visible,
    applyTransform/getRotator). It does NOT change which direction
    translateZ points on .shelf-book -- see the corrected comment on
    .shelf-book above for why the originally-assumed transform-order bug
-   was never real, and where the actual sideways-shift bug lives instead
-   (perspective-origin, not transform order). Needs its own
+   was never real, and where the actual sideways-shift bug lived instead
+   (perspective-origin, not transform order -- since fixed, see
+   .shelf-book-slot's `perspective` rule below). Needs its own
    transform-style: preserve-3d (same "every ancestor in the chain" rule
    noted on .shelf-book above) and its own copy of the bottom-center
    transform-origin, since it's now the element that actually rotates --
