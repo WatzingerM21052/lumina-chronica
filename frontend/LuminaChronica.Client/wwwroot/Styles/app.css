@@ -1597,17 +1597,44 @@ select:focus-visible,
 }
 
 .shelf-plaque {
+    position: relative;
+    /* Establishes its own stacking context so the ::before brass-texture
+       overlay's z-index: -1 (below) scopes to this element, matching the
+       same technique already used by .goal-ring (Statistics) and
+       .shelf-compartment (Library Rework Phase 3) elsewhere in this file. */
+    isolation: isolate;
     display: inline-block;
-    background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white), color-mix(in srgb, var(--color-primary) 75%, black));
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 88%, white), color-mix(in srgb, var(--color-primary) 70%, black));
     color: var(--color-bg-dark);
     font-family: var(--font-family-display);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    padding: 0.2rem 0.8rem;
-    border-radius: 0.15rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    padding: 0.3rem 0.9rem;
+    border-radius: 0.1rem;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 40%, black);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+    margin-top: var(--space-2);
     margin-bottom: var(--space-2);
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Reuses the exact established brass-texture.webp compositing technique
+   from .goal-ring::before (Statistics) -- cross-feature reuse of an
+   existing generic texture asset, not Statistics-specific content. If
+   the asset is ever missing, this simply fails to paint and the plain
+   gradient background above still renders correctly with no layout
+   break, same fallback behavior as every other texture overlay on this
+   page. */
+.shelf-plaque::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url("../images/statistics/brass-texture.webp");
+    background-size: cover;
+    opacity: 0.2;
+    pointer-events: none;
 }
 
 /* Wraps all of a Grid-view page's ShelfRows in one continuous cabinet
