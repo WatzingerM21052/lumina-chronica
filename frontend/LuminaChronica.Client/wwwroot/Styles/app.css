@@ -1383,6 +1383,26 @@ select:focus-visible,
     backface-visibility: hidden;
     box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
     overflow: hidden;
+    /* A fixed shadow reads as flat -- growing/softening it on reveal
+       (below) sells the "lifting off the shelf" depth cue that
+       .shelf-book's own translateZ/scale (shelf-physics.js) already
+       moves, but couldn't visually communicate on its own since a
+       static shadow never responds to that lift. --motion-spring-sync
+       (not the shorter --motion-reveal used elsewhere in this file) so
+       this stays roughly in step with shelf-physics.js's own spring --
+       see that token's own comment in tokens.css for why. */
+    transition: box-shadow var(--motion-spring-sync) var(--ease-standard);
+}
+
+.shelf-book:hover .shelf-book-spine,
+.shelf-book:hover .shelf-book-cover,
+.shelf-book:focus-visible .shelf-book-spine,
+.shelf-book:focus-visible .shelf-book-cover,
+.shelf-book:has(:focus-visible) .shelf-book-spine,
+.shelf-book:has(:focus-visible) .shelf-book-cover,
+.shelf-book.is-revealed .shelf-book-spine,
+.shelf-book.is-revealed .shelf-book-cover {
+    box-shadow: 4px 10px 18px rgba(0, 0, 0, 0.55);
 }
 
 /* Subtle leather grain overlay (Library Rework Phase 3), same established
@@ -1461,8 +1481,52 @@ select:focus-visible,
        cover shape; transitioning left/width here (separately from the
        transform property .shelf-book-rotator/.shelf-book already
        transition) lets this resize animate too, even though it isn't
-       part of shelf-physics.js's spring-driven transform. */
-    transition: width var(--motion-reveal) var(--ease-standard), left var(--motion-reveal) var(--ease-standard);
+       part of shelf-physics.js's spring-driven transform.
+       --motion-spring-sync (not --motion-reveal) for the same reason as
+       the lift-shadow transition above: see that token's own comment in
+       tokens.css for why this needs to stay in step with the spring
+       instead of using the shorter, fixed reveal duration used
+       elsewhere. */
+    transition: width var(--motion-spring-sync) var(--ease-standard), left var(--motion-spring-sync) var(--ease-standard);
+}
+
+/* A visible slice of the page-block, as if peeking out from inside the
+   cover near the spine -- makes the revealed cover read as an actual
+   bound book rather than a flat card. Deliberately a flat 2D decoration
+   painted directly on .shelf-book-cover's own (already correctly
+   positioned/sized) face, NOT a separate 3D-rotated element: an earlier
+   attempt at a true third "fore-edge" face (rotated to sit between the
+   spine and cover faces) hit CSS's well-known lack of true per-pixel
+   z-buffering for overlapping transform-style: preserve-3d elements --
+   it intermittently painted on top of (ghosted over) the spine face at
+   some rotation angles, a browser depth-sorting limitation rather than
+   a wrong number to tune. This approach has no such risk: it's flat
+   content on one already-correct face, not competing 3D geometry.
+   left: 0 is the cover's own left edge, the side nearer the spine
+   (confirmed live: as the book rotates from spine to cover, the cover
+   swings into view from that side). The repeating-linear-gradient
+   stripes are individual page edges, not a texture image. Paints above
+   the cover's own ::before leather-texture overlay and its real cover
+   image (default stacking: an ::after pseudo-element paints after the
+   element's other children) -- deliberately overlaps a thin sliver of
+   the actual cover art at that edge, matching how this looks on a real
+   book viewed at a slight angle. */
+.shelf-book-cover::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0.4rem;
+    background: repeating-linear-gradient(
+        to bottom,
+        #efe6d3 0,
+        #efe6d3 2px,
+        #ddd0b3 2px,
+        #ddd0b3 3px
+    );
+    box-shadow: inset 2px 0 3px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
 }
 
 .shelf-book:hover .shelf-book-cover,
@@ -1625,7 +1689,11 @@ select:focus-visible,
        .shelf-book/.shelf-book-rotator, so a reduced-motion reveal snaps
        to its final wider size instantly instead of still visibly easing
        while the rotation/scale next to it correctly snaps. */
-    .shelf-book-cover {
+    .shelf-book-cover,
+    /* Same reasoning as .shelf-book-cover above -- the new lift-shadow
+       transition on .shelf-book-spine/.shelf-book-cover isn't driven by
+       shelf-physics.js either, so it needs the same explicit carve-out. */
+    .shelf-book-spine {
         transition: none;
     }
 }
