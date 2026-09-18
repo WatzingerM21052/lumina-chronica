@@ -1495,12 +1495,94 @@ select:focus-visible,
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.05em;
-    color: color-mix(in srgb, var(--color-text-on-dark) 85%, transparent);
+    color: var(--color-accent-text);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     max-height: 90%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Kapitalband: the small woven two-tone band at the top and bottom of a
+   hardcover spine, where the page block meets the binding. Fixed red/
+   gold regardless of theme -- this is the book's own physical
+   decoration, not app UI chrome, so it doesn't participate in the
+   palette/theme system the way the leather color does. */
+.shelf-book-headband {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0.22rem;
+    background: repeating-linear-gradient(45deg, #7a1f1f 0, #7a1f1f 2px, var(--color-gold-accent) 2px, var(--color-gold-accent) 4px);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+    z-index: 2;
+}
+.shelf-book-headband-top { top: 0; border-radius: 0.15rem 0.15rem 0 0; }
+.shelf-book-headband-bottom { bottom: 0; border-radius: 0 0 0.15rem 0.15rem; }
+
+/* Erhabene Buende: 4 evenly-spaced raised ridges across the spine --
+   the cords-under-leather look of a fine binding. One
+   repeating-linear-gradient layer, no extra DOM nodes needed for the
+   ridges themselves (the wrapping span exists only to position it
+   between the headbands). */
+.shelf-book-spine-bands {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(20% - 5px),
+        rgba(0, 0, 0, 0.35) calc(20% - 5px),
+        rgba(0, 0, 0, 0.45) calc(20% - 2px),
+        rgba(255, 220, 150, 0.25) calc(20% - 2px),
+        rgba(255, 220, 150, 0.3) 20%,
+        transparent 20%
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+
+.shelf-book-spine-author {
+    writing-mode: vertical-rl;
+    color: var(--color-accent-text);
+    font-size: 0.42rem;
+    font-style: italic;
+    position: relative;
+    z-index: 2;
+}
+
+/* Gold double-rule frame, inset from the board edge -- classic
+   fine-binding decoration. Two concentric borders with a hairline gap,
+   drawn via one element's border + outline so it needs no extra DOM
+   nodes beyond itself. */
+.shelf-book-gilt-frame {
+    position: absolute;
+    inset: 0.32rem;
+    border: 1px solid color-mix(in srgb, var(--color-gold-accent) 55%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--color-gold-accent) 30%, transparent);
+    outline-offset: 2px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Lesebaendchen: a thin ribbon bookmark on the fore-edge (pages) face,
+   overhanging the bottom by a small V-notch -- deliberately subtle
+   (verified live it should barely peek past the bottom edge, not read
+   as a large tab). Positioned near the spine-side edge of this face,
+   where a real ribbon would be bound in. */
+.shelf-book-ribbon {
+    position: absolute;
+    left: 0.35rem;
+    top: 0;
+    width: 0.32rem;
+    height: calc(100% + 0.5rem);
+    background: linear-gradient(90deg, #7a1f1f, #a8342c 40%, #7a1f1f);
+    clip-path: polygon(0 0, 100% 0, 100% 92%, 50% 100%, 0 92%);
+    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.4);
+    z-index: 1;
 }
 
 /* True box geometry: each face's translateZ is half of the dimension it
@@ -1590,7 +1672,7 @@ select:focus-visible,
     line-height: 1.2;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
-.shelf-book-cover-title { font-weight: 600; }
+.shelf-book-cover-title { font-weight: 600; color: var(--color-accent-text); }
 .shelf-book-cover-author { font-size: 0.6rem; opacity: 0.85; }
 
 .shelf-book-favorite {
