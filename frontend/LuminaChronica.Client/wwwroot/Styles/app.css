@@ -1673,18 +1673,20 @@ select:focus-visible,
 @media (prefers-reduced-motion: reduce) {
     .shelf-book,
     .shelf-book-rotator,
-    /* .shelf-book-cover's own width/left transition (added for the
-       cover-image aspect-ratio fix, see its rule above) isn't driven by
-       shelf-physics.js at all, so it isn't covered by that module's own
-       reduced-motion no-op -- it needs its own carve-out here, same as
-       .shelf-book/.shelf-book-rotator, so a reduced-motion reveal snaps
-       to its final wider size instantly instead of still visibly easing
-       while the rotation/scale next to it correctly snaps. */
+    /* The lift-shadow (box-shadow) transition on all 6 box faces
+       (.shelf-book-spine/-cover/-back/-pages/-top/-bottom, see their
+       shared rule above) isn't driven by shelf-physics.js at all, so
+       it isn't covered by that module's own reduced-motion no-op -- it
+       needs its own carve-out here, same as .shelf-book/.shelf-book-
+       rotator, so a reduced-motion reveal snaps its shadow instantly
+       instead of still visibly easing while the rotation/scale next to
+       it correctly snaps. */
+    .shelf-book-spine,
     .shelf-book-cover,
-    /* Same reasoning as .shelf-book-cover above -- the new lift-shadow
-       transition on .shelf-book-spine/.shelf-book-cover isn't driven by
-       shelf-physics.js either, so it needs the same explicit carve-out. */
-    .shelf-book-spine {
+    .shelf-book-back,
+    .shelf-book-pages,
+    .shelf-book-top,
+    .shelf-book-bottom {
         transition: none;
     }
 }
