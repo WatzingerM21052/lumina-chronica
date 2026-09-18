@@ -238,14 +238,29 @@ Replace the shared face rule (currently `.shelf-book-spine, .shelf-book-cover { 
     transform: rotateY(-90deg) translateZ(3.15rem);
 }
 
+/* translateZ(-1.625rem) is listed LEFT of rotateX -- a translate to the
+   left of a rotation in a CSS transform list applies in the parent/
+   world frame, AFTER the rotation, not along the rotated face's own
+   local axis. Without it (an earlier version of this plan omitted it,
+   relying only on transform-origin), hand-tracing the transformed
+   corners shows the face lands at z in [0, +3.25rem] instead of the
+   box's actual z in [-1.625rem, +1.625rem] (the range every other face
+   shares) -- a full T/2 offset toward the viewer, so the box doesn't
+   actually close. With this translateZ, the corners land at exactly
+   z = -1.625rem and z = +1.625rem, matching cover/back's plane
+   positions. Re-derive by hand (or re-verify live) if this ever moves
+   again -- this is exactly the class of bug a live "looks fine" check
+   can miss (the top/bottom faces are barely visible from a level
+   camera angle regardless of whether this offset is correct), caught
+   only by tracing the actual transformed coordinates. */
 .shelf-book-top {
     transform-origin: top center;
-    transform: rotateX(90deg);
+    transform: translateZ(-1.625rem) rotateX(90deg);
 }
 
 .shelf-book-bottom {
     transform-origin: bottom center;
-    transform: rotateX(-90deg);
+    transform: translateZ(-1.625rem) rotateX(-90deg);
 }
 ```
 
