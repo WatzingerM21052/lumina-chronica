@@ -559,9 +559,17 @@ Add to `app.css`, near the other `.shelf-book-*` rules:
 }
 ```
 
-- [ ] **Step 5: Update spine/cover title color to the gold accent token**
+- [ ] **Step 5: Update spine/cover title color to the gold accent token, and fix stacking so text/image stay above the new decorative overlays**
 
-Find `.shelf-book-spine-title { ... color: color-mix(in srgb, var(--color-text-on-dark) 85%, transparent); ... }` and `.shelf-book-cover-title, .shelf-book-cover-author { ... }` (which currently inherit `color: var(--color-text-on-dark)` from `.shelf-book-cover`'s own rule). Change both title colors to `var(--color-accent-text)` — embossed-gold lettering on leather, matching the gilt frame and spine bands added in this task, verified live to read as premium rather than gaudy against the leather backgrounds.
+Caught by this task's own reviewer, hand-verified: `.shelf-book-spine-bands` (`z-index: 1`, added in Step 4) and `.shelf-book-gilt-frame` (`z-index: 1`, added in Step 4) will paint OVER any sibling that lacks an explicit `z-index` of its own — `position: relative` alone is not enough; per stacking-context rules a `z-index: auto` element paints below a sibling with a positive `z-index`, regardless of DOM order. `.shelf-book-spine-title`, `.shelf-book-cover-title`, `.shelf-book-cover-author`, and `.shelf-book-cover img` are all pre-existing elements with no explicit `z-index`, so all four are currently at risk of being visually obscured by the two new overlays added in this task.
+
+Find `.shelf-book-spine-title { ... color: color-mix(in srgb, var(--color-text-on-dark) 85%, transparent); ... }` and add `position: relative; z-index: 2;` to it (the same pattern `.shelf-book-spine-author`, Step 4, already uses). Change its color to `var(--color-accent-text)` in the same edit.
+
+Find `.shelf-book-cover-title, .shelf-book-cover-author { position: relative; ... }` and add `z-index: 2;` to that shared rule (it already has `position: relative`, just needed the explicit z-index). Change `.shelf-book-cover-title`'s color to `var(--color-accent-text)` in the same edit (it already has an inline `color: var(--color-accent-text)` override in some versions of this file — if so, this step is only the z-index addition).
+
+Find `.shelf-book-cover img { position: absolute; inset: 0; ... }` and add `z-index: 1;` to it — this keeps the real cover photo level with (not below) the gilt frame's own `z-index: 1`, so they paint in DOM order relative to each other (the frame is declared as the cover's first child per Step 3, so with equal z-index the image, declared later in the markup, paints on top — correct, since a real cover photo should never be hidden behind a decorative frame border).
+
+Embossed-gold lettering matches the gilt frame and spine bands added in this task, verified live to read as premium rather than gaudy against the leather backgrounds — but the stacking fix above must land first, or the text/image will render invisible or partially obscured regardless of color.
 
 - [ ] **Step 6: Run the full frontend test suite**
 
