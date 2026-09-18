@@ -1382,13 +1382,46 @@ select:focus-visible,
 .shelf-book-top,
 .shelf-book-bottom {
     position: absolute;
-    inset: 0;
     border-radius: 0.15rem;
     backface-visibility: hidden;
     box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
     overflow: hidden;
     transition: box-shadow var(--motion-spring-sync) var(--ease-standard);
 }
+
+/* Explicit per-face sizing (controller fix, 2026-09-18): the shared rule
+   above deliberately no longer sets `inset: 0` -- that pinned every face
+   to .shelf-book's own 3.25rem-wide box regardless of which dimension the
+   face is actually meant to span, so .shelf-book-cover/-back never
+   reached their intended W=6.3rem width and .shelf-book-top/-bottom never
+   got their W x T (6.3rem x 3.25rem) footprint. Each pair below sizes to
+   the same T=3.25rem/W=6.3rem/H=9.5rem box the translateZ formula (see
+   the comment on .shelf-book-cover below) assumes. */
+.shelf-book-cover,
+.shelf-book-back {
+    left: 0;
+    top: 0;
+    width: 6.3rem;
+    height: 9.5rem;
+}
+
+.shelf-book-spine,
+.shelf-book-pages {
+    left: 1.525rem;
+    top: 0;
+    width: 3.25rem;
+    height: 9.5rem;
+}
+
+.shelf-book-top,
+.shelf-book-bottom {
+    left: 0;
+    width: 6.3rem;
+    height: 3.25rem;
+}
+
+.shelf-book-top { top: 0; }
+.shelf-book-bottom { bottom: 0; }
 
 .shelf-book:hover .shelf-book-spine,
 .shelf-book:hover .shelf-book-cover,
