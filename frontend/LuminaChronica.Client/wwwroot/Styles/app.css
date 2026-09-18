@@ -1495,8 +1495,13 @@ select:focus-visible,
        both its own left and right in this local coordinate frame, so
        both edges get a similar, symmetric inset shadow (unlike cover/
        back's asymmetric left-strong/right-weak below). Third layer
-       repeats the shared rule's rest-state outer shadow, since this
-       more specific rule would otherwise replace it outright. */
+       repeats the shared rule's rest-state outer shadow: this rule and
+       the shared 6-face rule above both match via a single class
+       selector here (equal (0,1,0) specificity), so this rule's
+       box-shadow wins only because it comes later in the file --
+       and since a more-specific-or-tied box-shadow fully replaces
+       (does not layer with) the shared rule's, the outer shadow must
+       be repeated here or it would vanish at rest. */
     box-shadow:
         inset 0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
         inset -0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
@@ -1597,8 +1602,13 @@ select:focus-visible,
     /* Hinge-groove shading: left edge borders the spine (the book's real
        hinge) so it gets the stronger inset shadow; right edge borders
        the fore-edge/pages face so it gets a weaker one. Third layer
-       repeats the shared rule's rest-state outer shadow, since this
-       more specific rule would otherwise replace it outright. */
+       repeats the shared rule's rest-state outer shadow: this rule and
+       the shared 6-face rule above both match via a single class
+       selector here (equal (0,1,0) specificity), so this rule's
+       box-shadow wins only because it comes later in the file --
+       and since a more-specific-or-tied box-shadow fully replaces
+       (does not layer with) the shared rule's, the outer shadow must
+       be repeated here or it would vanish at rest. */
     box-shadow:
         inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
         inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
@@ -1623,14 +1633,21 @@ select:focus-visible,
 }
 
 /* Hover-state overrides for the three leather faces' hinge-groove
-   box-shadow above: a more specific selector's box-shadow fully
-   replaces (does not layer with) the shared rule's box-shadow, so
-   without these overrides the per-element rest-state rules above
-   (which have no :hover condition) would win even on hover/reveal,
-   permanently freezing the outer shadow at its rest-state size instead
-   of growing per Step 1's shared hover rule. These keep the same inset
-   seam layers but swap the third layer to the hover outer shadow, and
-   must stay AFTER the per-element rest-state rules above to win. */
+   box-shadow above. The per-element rest-state rules above (a single
+   class selector, (0,1,0) specificity) are NOT what wins on hover --
+   Step 1's shared hover/focus/revealed rule (`.shelf-book:hover
+   .shelf-book-cover, ...`, three chained class-level selectors =
+   (0,3,0)) beats them outright on specificity alone, no tie, no source
+   order involved. So without this block, hovering would fall straight
+   through to that shared hover rule's box-shadow -- which is just the
+   plain outer glow, no inset layers -- deleting the hinge-groove seam
+   shadow entirely on hover rather than merely freezing it at its
+   rest-state size. This block's selectors have the exact same form as
+   Step 1's shared hover rule, so they're ALSO (0,3,0) -- a genuine
+   specificity tie with that rule. That tie is what source order
+   resolves: this block keeps the inset seam layers and swaps only the
+   third (outer-shadow) layer to the hover value, and must stay AFTER
+   Step 1's shared hover rule in the file to win that tie. */
 .shelf-book:hover .shelf-book-cover,
 .shelf-book:focus-visible .shelf-book-cover,
 .shelf-book:has(:focus-visible) .shelf-book-cover,
