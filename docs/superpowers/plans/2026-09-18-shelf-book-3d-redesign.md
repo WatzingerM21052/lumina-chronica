@@ -1002,6 +1002,133 @@ git commit -m "docs: Roadmap entry for shelf book 3D redesign"
 
 ---
 
+## Final Whole-Branch Review Fix Wave
+
+The final review (most capable model, independently re-derived the box geometry by hand rather than trusting task reviews) confirmed no Critical issues and that the geometry/rotation-convention/test-count work across all prior tasks is genuinely correct. It found two Important items and several Minor ones. This wave fixes all of them in one pass, per this project's own SDD process (one fix dispatch, one scoped re-review, no second wave).
+
+**Files:**
+- Modify: `frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor`
+- Modify: `frontend/LuminaChronica.Client/wwwroot/Styles/app.css`
+- Modify: `frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor.cs`
+- Modify: `frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js`
+- Modify: `docs/superpowers/specs/2026-09-18-shelf-book-3d-redesign-design.md`
+- Modify: `documentation/Roadmap.md`
+
+- [ ] **Step 1 (Important — user decided): make the ribbon bookmark actually visible**
+
+The reviewer found the ribbon can never render: `.shelf-book-pages`' `overflow: hidden` clips its overhang, AND `.shelf-book-pages` (`rotateY(90deg)` local rotation) is back-facing at every angle the rest(90°)→reveal(4°) sweep ever reaches (its normal is 94°-182.8° from the camera throughout, never within 90°). The user chose to make it visible rather than drop the claim. The fix: move the ribbon onto `.shelf-book-cover` instead — the face that's actually visible on reveal — positioned near its spine-side (left) edge, sized to fit fully within the cover's own height (no overhang, so `overflow: hidden` can no longer clip it).
+
+In `ShelfBook.razor`, remove the ribbon from inside `.shelf-book-pages`:
+```razor
+        <span class="shelf-book-pages" aria-hidden="true">
+            <span class="shelf-book-ribbon" aria-hidden="true"></span>
+        </span>
+```
+becomes:
+```razor
+        <span class="shelf-book-pages" aria-hidden="true"></span>
+```
+
+Add it inside `.shelf-book-cover` instead, as the first child (before the gilt-frame span, so the frame's own border still paints above it if they ever overlap — same reasoning as gilt-frame's own placement):
+```razor
+            <span class="shelf-book-ribbon" aria-hidden="true"></span>
+            <span class="shelf-book-gilt-frame" aria-hidden="true"></span>
+```
+
+In `app.css`, replace the `.shelf-book-ribbon` rule:
+```css
+.shelf-book-ribbon {
+    position: absolute;
+    left: 0.35rem;
+    top: 0;
+    width: 0.32rem;
+    height: calc(100% + 0.5rem);
+    background: linear-gradient(90deg, #7a1f1f, #a8342c 40%, #7a1f1f);
+    clip-path: polygon(0 0, 100% 0, 100% 92%, 50% 100%, 0 92%);
+    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.4);
+    z-index: 1;
+}
+```
+with:
+```css
+/* Lesebaendchen: a thin ribbon bookmark, drawn on the COVER face (not
+   the fore-edge/pages face -- pages is back-facing at every angle this
+   book's rest(90deg)-to-reveal(4deg) sweep reaches, so anything drawn
+   there is structurally invisible; caught by the final whole-branch
+   review, not by any live check, since nobody had reason to rotate the
+   book past where the interaction ever takes it). Positioned near the
+   cover's spine-side (left) edge, where a real ribbon bound into the
+   spine would drape down over the front cover. Sized to fit within the
+   cover's own height (no overhang past 100%) so the shared face rule's
+   `overflow: hidden` can't clip it -- trades a small amount of realism
+   (a real ribbon usually pokes out past the book's bottom edge) for
+   something that unconditionally renders. */
+.shelf-book-ribbon {
+    position: absolute;
+    left: 0.4rem;
+    top: 0.3rem;
+    width: 0.28rem;
+    height: 88%;
+    background: linear-gradient(90deg, #7a1f1f, #a8342c 40%, #7a1f1f);
+    clip-path: polygon(0 0, 100% 0, 100% 92%, 50% 100%, 0 92%);
+    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.4);
+    z-index: 1;
+}
+```
+
+- [ ] **Step 2 (Important): revise the design spec to match what actually shipped**
+
+`docs/superpowers/specs/2026-09-18-shelf-book-3d-redesign-design.md` was written before the rotation-direction mirror-flip and the spine redesign addenda, and was never updated — it now asserts things that are no longer true (inverted rotation signs, ridges/spine-author as shipped when both were removed), while its own geometry table caption claims "this table is what production actually implements." Add a new section at the end of the spec (after the existing "Global Constraints" section):
+
+```markdown
+## Revision (post-implementation)
+
+This spec was written before several rounds of live user feedback changed the shipped result. The sections above are left as originally written (for historical context — see the plan's own addenda for exactly what changed and why), but the following are no longer accurate as descriptions of production:
+
+- **Rotation sign convention is inverted from what's written above.** The Face geometry table's `.shelf-book-spine`/`.shelf-book-pages` rows, and the Rotation angle convention section's `RestRotation`/`REVEALED_ROTATE_Y_DEG`/CSS fallback values, all shipped with the opposite sign (rest ≈ +90° + jitter, revealed ≈ +4°, spine `rotateY(90deg)`, pages `rotateY(-90deg)`) after a user-requested reversal of the hover-reveal spin direction. See the plan's "Task 1 Addendum" for the actual shipped values and the reasoning.
+- **Raised spine bands ("Erhabene Bünde") and the spine author line were both removed.** Live user feedback found the ridges didn't look good and the author line crowded the title; both were dropped entirely rather than refined. See the plan's "Task 2 Addendum" for what replaced them (a herringbone-weave headband with no ridges, title-only on the spine in a fixed cream color).
+- **The ribbon bookmark moved from the fore-edge (`.shelf-book-pages`) face to the cover face.** The original placement was structurally invisible — the pages face never faces the camera at any angle this book's interaction reaches. See the plan's "Final Whole-Branch Review Fix Wave" section.
+- Corners, shadows, and a seam "hinge groove" between the leather faces were softened/added after "klobig" (clunky) feedback — not covered by this spec at all, see the plan's "Task 1 Addendum 2".
+
+The plan file (`docs/superpowers/plans/2026-09-18-shelf-book-3d-redesign.md`) is the authoritative record of what shipped; treat this spec as the original design rationale, not a live description of production.
+```
+
+- [ ] **Step 3 (Minor): protect the favorite button, borrowed badge, and progress bar from the cover image's z-index**
+
+Task 2's fix gave `.shelf-book-cover-title`/`-cover-author` `z-index: 2` to stay above the cover image's `z-index: 1`, but missed three sibling overlays that need the same protection: `.shelf-book-favorite`, `.shelf-book-borrowed-badge`, `.shelf-book-progress`. These are all `position: relative` today with no explicit `z-index`, so a real cover image now paints above them — currently invisible only because the one call site (`ShelfRow.razor`) happens to pass `ShowFavorite="false"` and no `OwnerUsername`/`ProgressPercentage`, but `ShowFavorite` defaults to `true` on the component itself, so the next usage site would silently get an invisible, unclickable favorite star. Find each of `.shelf-book-favorite`, `.shelf-book-borrowed-badge`, `.shelf-book-progress` in `app.css` and add `z-index: 2;` to each (they already have `position: relative`).
+
+- [ ] **Step 4 (Minor): fix the stale pre-softening shadow value on the paper faces**
+
+Task 1 Addendum 2 softened the shared rest-state box-shadow from `1px 2px 4px rgba(0, 0, 0, 0.4)` to `0 2px 5px rgba(0, 0, 0, 0.35)` everywhere EXCEPT `.shelf-book-pages, .shelf-book-top, .shelf-book-bottom`'s own dedicated rule, which still ends in the old `1px 2px 4px rgba(0, 0, 0, 0.4)` value as its trailing outer-shadow layer (alongside its own unrelated page-bulge inset layers, which are correct and unchanged). Find that rule and update just the trailing layer to `0 2px 5px rgba(0, 0, 0, 0.35)`, keeping the two `inset` bulge layers above it exactly as they are.
+
+- [ ] **Step 5 (Minor): fix stale comments**
+
+In `ShelfBook.razor.cs`, find the tint-related comment that says the tint is "Deliberately scoped to the two face spans (`.shelf-book-spine`/`.shelf-book-cover`)" and update it to include `.shelf-book-back`, which carries the same `has-cover-tint`/`TintStyle` binding (added in Task 1). Find the equivalent comment block in `app.css` near `.has-cover-tint` and make the same correction.
+
+In `shelf-physics.js`, find the `DAMPING` comment that references "the rotation reaching -93.8deg past a -88deg target" — `-88deg` was the old `REVEALED_ROTATE_Y_DEG` value before the Task 1 Addendum sign-flip and no longer appears anywhere in this file. Update the comment to note the investigation used the pre-mirror-flip convention (the actual finding — no real overshoot at this `DAMPING` value — is still accurate and doesn't need to change, just the stale angle numbers in the historical anecdote).
+
+- [ ] **Step 5b (Minor): fix the ribbon's location claim in the already-committed Roadmap entry**
+
+`documentation/Roadmap.md`'s "Library Shelf: true 3D book geometry" entry currently says "a ribbon bookmark on the fore-edge stayed" — written before Step 1 of this fix wave moved it to the cover (and before the final review discovered the fore-edge placement was never actually visible in the first place). Find that sentence and change "a ribbon bookmark on the fore-edge stayed" to "a ribbon bookmark (moved from the fore-edge to the cover face during final review — the fore-edge face is never actually camera-facing in this interaction, so anything placed there was invisible) stayed".
+
+- [ ] **Step 6: run the full frontend test suite**
+
+Run: `dotnet test tests/frontend/LuminaChronica.Client.Tests.csproj`
+Expected: PASS, 378/378 (Step 1's markup move doesn't change which elements exist, just which face they're inside — no test asserts the ribbon's specific parent face by class name beyond `.shelf-book-cover` vs `.shelf-book-pages`; check `ShelfBook_RendersRibbonOnPagesFace` specifically, since its NAME and its query (`cut.Find(".shelf-book-pages").QuerySelector(".shelf-book-ribbon")`) both need updating to target `.shelf-book-cover` instead, or the test will now correctly fail — this is a required test update, not just a suite run).
+
+- [ ] **Step 7: live-verify in a browser**
+
+Confirm: the ribbon is now visible on the revealed cover, positioned near the spine-side edge, reading as a small tasteful ribbon rather than a large tab; the favorite button (if `ShowFavorite` is ever `true` at a real call site) still renders and is clickable; no visual regression on the pages/top/bottom paper faces (they're never visible anyway, so this is a formality, not something to spend time hunting for).
+
+- [ ] **Step 8: commit**
+
+```bash
+git add frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor.cs frontend/LuminaChronica.Client/wwwroot/Styles/app.css frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js docs/superpowers/specs/2026-09-18-shelf-book-3d-redesign-design.md tests/frontend/ShelfBookTests.cs documentation/Roadmap.md
+git commit -m "fix: address final whole-branch review findings (ribbon visibility, spec drift, z-index gaps, stale comments)"
+```
+
+---
+
 ## Self-Review Notes
 
 - **Spec coverage**: 6-face geometry (Task 1), headband/spine-bands/gilt-frame/ribbon/spine-author (Task 2), rotation angle rebase (Task 1), removal of old cover-resize hack and old page-strip (Task 1), live-verification requirement (every task), Roadmap entry (Task 3), page-block texture explicitly deferred with a ready prompt (spec's own section, referenced in Task 3's Roadmap text) — all covered.
