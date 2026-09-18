@@ -1562,12 +1562,12 @@ select:focus-visible,
 
 .shelf-book-top {
     transform-origin: top center;
-    transform: rotateX(90deg);
+    transform: translateZ(-1.625rem) rotateX(90deg);
 }
 
 .shelf-book-bottom {
     transform-origin: bottom center;
-    transform: rotateX(-90deg);
+    transform: translateZ(-1.625rem) rotateX(-90deg);
 }
 
 .shelf-book-cover img {
