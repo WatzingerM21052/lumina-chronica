@@ -106,13 +106,53 @@ Replace the shared face rule (currently `.shelf-book-spine, .shelf-book-cover { 
 .shelf-book-top,
 .shelf-book-bottom {
     position: absolute;
-    inset: 0;
     border-radius: 0.15rem;
     backface-visibility: hidden;
     box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
     overflow: hidden;
     transition: box-shadow var(--motion-spring-sync) var(--ease-standard);
 }
+
+/* Per-face footprint -- deliberately NOT a shared `inset: 0`. .shelf-book
+   itself (and .shelf-book-rotator, inset: 0 within it) is only T=3.25rem
+   wide, matching the spine/pages faces' own size, but the cover/back
+   faces are the wider W=6.3rem dimension and the top/bottom faces are
+   W wide x T tall -- a real box's faces are not all the same size. Each
+   group's `left`/`top` centers it on the SAME box center as the others
+   (cover/back's own center, at local x=3.15rem, is where spine/pages'
+   translateZ and top/bottom's rotation both pivot from), which is what
+   makes the translateZ formula below share edges exactly instead of
+   leaving a gap or overlap. This replaces the old code's shared
+   `inset: 0` + a hover-only width/left resize on `.shelf-book-cover`
+   alone -- with true per-face sizing, no element needs to resize on
+   reveal; rotation's own perspective foreshortening does that instead. */
+.shelf-book-cover,
+.shelf-book-back {
+    left: 0;
+    top: 0;
+    width: 6.3rem;
+    height: 9.5rem;
+}
+
+.shelf-book-spine,
+.shelf-book-pages {
+    /* (6.3rem - 3.25rem) / 2 -- centers this narrower face on the wider
+       cover/back faces' own center. */
+    left: 1.525rem;
+    top: 0;
+    width: 3.25rem;
+    height: 9.5rem;
+}
+
+.shelf-book-top,
+.shelf-book-bottom {
+    left: 0;
+    width: 6.3rem;
+    height: 3.25rem;
+}
+
+.shelf-book-top { top: 0; }
+.shelf-book-bottom { bottom: 0; }
 
 .shelf-book:hover .shelf-book-spine,
 .shelf-book:hover .shelf-book-cover,
@@ -198,14 +238,29 @@ Replace the shared face rule (currently `.shelf-book-spine, .shelf-book-cover { 
     transform: rotateY(-90deg) translateZ(3.15rem);
 }
 
+/* translateZ(-1.625rem) is listed LEFT of rotateX -- a translate to the
+   left of a rotation in a CSS transform list applies in the parent/
+   world frame, AFTER the rotation, not along the rotated face's own
+   local axis. Without it (an earlier version of this plan omitted it,
+   relying only on transform-origin), hand-tracing the transformed
+   corners shows the face lands at z in [0, +3.25rem] instead of the
+   box's actual z in [-1.625rem, +1.625rem] (the range every other face
+   shares) -- a full T/2 offset toward the viewer, so the box doesn't
+   actually close. With this translateZ, the corners land at exactly
+   z = -1.625rem and z = +1.625rem, matching cover/back's plane
+   positions. Re-derive by hand (or re-verify live) if this ever moves
+   again -- this is exactly the class of bug a live "looks fine" check
+   can miss (the top/bottom faces are barely visible from a level
+   camera angle regardless of whether this offset is correct), caught
+   only by tracing the actual transformed coordinates. */
 .shelf-book-top {
     transform-origin: top center;
-    transform: rotateX(90deg);
+    transform: translateZ(-1.625rem) rotateX(90deg);
 }
 
 .shelf-book-bottom {
     transform-origin: bottom center;
-    transform: rotateX(-90deg);
+    transform: translateZ(-1.625rem) rotateX(-90deg);
 }
 ```
 
@@ -313,6 +368,98 @@ Run the app locally (`dotnet run --urls http://localhost:5289` in `frontend/Lumi
 ```bash
 git add frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor.cs frontend/LuminaChronica.Client/wwwroot/Styles/app.css frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js tests/frontend/ShelfBookTests.cs
 git commit -m "feat: true 6-face box geometry for shelf book (fixes T-shape)"
+```
+
+---
+
+## Task 1 Addendum: reverse the hover-reveal spin direction
+
+User feedback after living with Task 1's live build: the book currently spins the wrong way on reveal ("dreht sich gerade nach rechts, sollte aber nach links drehen"). This is a pure left-right mirror of the rotation, not a geometry defect — the box itself (faces, sizing, Z-offsets) is unaffected and stays exactly as Task 1 shipped it.
+
+**Why this flips the spin direction**: the rotator sweeps from its rest angle to its revealed angle along the *shortest* path, and that path's direction (increasing vs decreasing `rotateY`) is fixed once you know which local rotation the spine face carries. Mirroring which physical side the spine occupies (swap its local `rotateY(90deg)` for `rotateY(-90deg)`, and swap pages' the other way) changes that shortest path from increasing to decreasing `rotateY`, without changing which face is visible at rest or on reveal.
+
+**Files:**
+- Modify: `frontend/LuminaChronica.Client/wwwroot/Styles/app.css` (the `.shelf-book-spine`/`.shelf-book-pages` transform rules, and the reduced-motion/no-JS fallback rule)
+- Modify: `frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor.cs:41`
+- Modify: `frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js:65`
+
+- [ ] **Step 1: Mirror the spine/pages local rotation in `app.css`**
+
+Change:
+```css
+.shelf-book-spine {
+    transform: rotateY(90deg) translateZ(3.15rem);
+```
+to:
+```css
+.shelf-book-spine {
+    transform: rotateY(-90deg) translateZ(3.15rem);
+```
+
+And change:
+```css
+.shelf-book-pages {
+    transform: rotateY(-90deg) translateZ(3.15rem);
+}
+```
+to:
+```css
+.shelf-book-pages {
+    transform: rotateY(90deg) translateZ(3.15rem);
+}
+```
+
+- [ ] **Step 2: Flip the rest/reveal angle signs to match**
+
+`ShelfBook.razor.cs:41`, change:
+```csharp
+private double RestRotation => -90 - (Book.Id % 7) * 0.47;
+```
+to:
+```csharp
+private double RestRotation => 90 + (Book.Id % 7) * 0.47;
+```
+
+`shelf-physics.js:65`, change:
+```js
+const REVEALED_ROTATE_Y_DEG = -4;
+```
+to:
+```js
+const REVEALED_ROTATE_Y_DEG = 4;
+```
+
+`app.css`'s reduced-motion/no-JS fallback rule, change:
+```css
+.shelf-book:hover .shelf-book-rotator,
+.shelf-book:focus-visible .shelf-book-rotator,
+.shelf-book:has(:focus-visible) .shelf-book-rotator {
+    transform: rotateY(-4deg);
+}
+```
+to:
+```css
+.shelf-book:hover .shelf-book-rotator,
+.shelf-book:focus-visible .shelf-book-rotator,
+.shelf-book:has(:focus-visible) .shelf-book-rotator {
+    transform: rotateY(4deg);
+}
+```
+
+- [ ] **Step 3: Run the full frontend test suite**
+
+Run: `dotnet test tests/frontend/LuminaChronica.Client.Tests.csproj`
+Expected: PASS, 380/380 (this is a pure sign flip — no test asserts on rotation direction, only on the numeric magnitude of `RestRotation`'s band via `ShelfBook_RestRotation_IsWithinPureSpineBand`, which asserts `InRange(restDeg, -93, -90)`. That assertion is now WRONG for the mirrored positive-angle convention and must be updated to `InRange(restDeg, 90, 93)` in the same step — update it before running, not after seeing it fail for the wrong reason).
+
+- [ ] **Step 4: Live-verify in a browser**
+
+Confirm: the book still shows spine-only at rest and reveals the cover on hover (unchanged from Task 1) — only the *direction* of the sweep should visibly differ. Compare against the pre-fix behavior if possible (e.g. a quick before/after) to confirm the spin genuinely reversed rather than staying the same.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/LuminaChronica.Client/wwwroot/Styles/app.css frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor.cs frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js tests/frontend/ShelfBookTests.cs
+git commit -m "fix: reverse shelf book hover-reveal spin direction"
 ```
 
 ---
@@ -504,9 +651,17 @@ Add to `app.css`, near the other `.shelf-book-*` rules:
 }
 ```
 
-- [ ] **Step 5: Update spine/cover title color to the gold accent token**
+- [ ] **Step 5: Update spine/cover title color to the gold accent token, and fix stacking so text/image stay above the new decorative overlays**
 
-Find `.shelf-book-spine-title { ... color: color-mix(in srgb, var(--color-text-on-dark) 85%, transparent); ... }` and `.shelf-book-cover-title, .shelf-book-cover-author { ... }` (which currently inherit `color: var(--color-text-on-dark)` from `.shelf-book-cover`'s own rule). Change both title colors to `var(--color-accent-text)` — embossed-gold lettering on leather, matching the gilt frame and spine bands added in this task, verified live to read as premium rather than gaudy against the leather backgrounds.
+Caught by this task's own reviewer, hand-verified: `.shelf-book-spine-bands` (`z-index: 1`, added in Step 4) and `.shelf-book-gilt-frame` (`z-index: 1`, added in Step 4) will paint OVER any sibling that lacks an explicit `z-index` of its own — `position: relative` alone is not enough; per stacking-context rules a `z-index: auto` element paints below a sibling with a positive `z-index`, regardless of DOM order. `.shelf-book-spine-title`, `.shelf-book-cover-title`, `.shelf-book-cover-author`, and `.shelf-book-cover img` are all pre-existing elements with no explicit `z-index`, so all four are currently at risk of being visually obscured by the two new overlays added in this task.
+
+Find `.shelf-book-spine-title { ... color: color-mix(in srgb, var(--color-text-on-dark) 85%, transparent); ... }` and add `position: relative; z-index: 2;` to it (the same pattern `.shelf-book-spine-author`, Step 4, already uses). Change its color to `var(--color-accent-text)` in the same edit.
+
+Find `.shelf-book-cover-title, .shelf-book-cover-author { position: relative; ... }` and add `z-index: 2;` to that shared rule (it already has `position: relative`, just needed the explicit z-index). Change `.shelf-book-cover-title`'s color to `var(--color-accent-text)` in the same edit (it already has an inline `color: var(--color-accent-text)` override in some versions of this file — if so, this step is only the z-index addition).
+
+Find `.shelf-book-cover img { position: absolute; inset: 0; ... }` and add `z-index: 1;` to it — this keeps the real cover photo level with (not below) the gilt frame's own `z-index: 1`, so they paint in DOM order relative to each other (the frame is declared as the cover's first child per Step 3, so with equal z-index the image, declared later in the markup, paints on top — correct, since a real cover photo should never be hidden behind a decorative frame border).
+
+Embossed-gold lettering matches the gilt frame and spine bands added in this task, verified live to read as premium rather than gaudy against the leather backgrounds — but the stacking fix above must land first, or the text/image will render invisible or partially obscured regardless of color.
 
 - [ ] **Step 6: Run the full frontend test suite**
 
