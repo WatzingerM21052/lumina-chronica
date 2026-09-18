@@ -106,13 +106,53 @@ Replace the shared face rule (currently `.shelf-book-spine, .shelf-book-cover { 
 .shelf-book-top,
 .shelf-book-bottom {
     position: absolute;
-    inset: 0;
     border-radius: 0.15rem;
     backface-visibility: hidden;
     box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
     overflow: hidden;
     transition: box-shadow var(--motion-spring-sync) var(--ease-standard);
 }
+
+/* Per-face footprint -- deliberately NOT a shared `inset: 0`. .shelf-book
+   itself (and .shelf-book-rotator, inset: 0 within it) is only T=3.25rem
+   wide, matching the spine/pages faces' own size, but the cover/back
+   faces are the wider W=6.3rem dimension and the top/bottom faces are
+   W wide x T tall -- a real box's faces are not all the same size. Each
+   group's `left`/`top` centers it on the SAME box center as the others
+   (cover/back's own center, at local x=3.15rem, is where spine/pages'
+   translateZ and top/bottom's rotation both pivot from), which is what
+   makes the translateZ formula below share edges exactly instead of
+   leaving a gap or overlap. This replaces the old code's shared
+   `inset: 0` + a hover-only width/left resize on `.shelf-book-cover`
+   alone -- with true per-face sizing, no element needs to resize on
+   reveal; rotation's own perspective foreshortening does that instead. */
+.shelf-book-cover,
+.shelf-book-back {
+    left: 0;
+    top: 0;
+    width: 6.3rem;
+    height: 9.5rem;
+}
+
+.shelf-book-spine,
+.shelf-book-pages {
+    /* (6.3rem - 3.25rem) / 2 -- centers this narrower face on the wider
+       cover/back faces' own center. */
+    left: 1.525rem;
+    top: 0;
+    width: 3.25rem;
+    height: 9.5rem;
+}
+
+.shelf-book-top,
+.shelf-book-bottom {
+    left: 0;
+    width: 6.3rem;
+    height: 3.25rem;
+}
+
+.shelf-book-top { top: 0; }
+.shelf-book-bottom { bottom: 0; }
 
 .shelf-book:hover .shelf-book-spine,
 .shelf-book:hover .shelf-book-cover,
