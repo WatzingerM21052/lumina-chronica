@@ -38,7 +38,7 @@ public partial class ShelfBook : ComponentBase, IDisposable
     // residues), so it would NOT actually decorrelate; only a different
     // modulus does. The multiplier is reduced to keep the same ~2.8deg
     // resting band as before despite the wider 7-cycle.
-    private double RestRotation => -9.5 - (Book.Id % 7) * 0.47;
+    private double RestRotation => -90 - (Book.Id % 7) * 0.47;
 
     private string AccessibleLabel => string.IsNullOrWhiteSpace(Book.Author)
         ? Book.Title
