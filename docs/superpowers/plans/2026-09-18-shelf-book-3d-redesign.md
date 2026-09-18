@@ -837,6 +837,127 @@ git commit -m "fix: spine redesign — herringbone headband, drop ridges/author,
 
 ---
 
+## Task 1 Addendum 2: softer corners/shadows and a seam "hinge groove" between faces
+
+User feedback after living with the spine redesign: the book looked good but "klobig" (clunky) — specifically the rounded corners felt sharp/heavy, the drop shadow felt hard-edged, and the seam where cover meets spine (and back meets spine) read as two flat panels butted together rather than a bound book's soft rounded hinge. Confirmed live via a side-by-side browser comparison (sharp vs. rounder corners/softer shadow; with vs. without a seam-groove shadow at 60° where the seam is clearly visible) before being written here. The rest-state (pure spine only, no rotation) is unaffected — this only changes shading/corner treatment, not geometry or angles.
+
+**Explicitly not in scope**: box geometry (transforms, translateZ, rotateX/Y, all Task 1/Task 1 Addendum work) is untouched. `.shelf-book-pages`/`-top`/`-bottom` (the paper page-block faces) keep their existing bulge-shadow treatment unchanged — the "hinge groove" is a leather-cover effect, applied only to `.shelf-book-cover`, `.shelf-book-back`, `.shelf-book-spine`.
+
+**Files:**
+- Modify: `frontend/LuminaChronica.Client/wwwroot/Styles/app.css`
+- Modify: `frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js:68`
+
+- [ ] **Step 1: Round the corners and soften the base/hover drop shadow**
+
+Find the shared 6-face rule:
+```css
+.shelf-book-spine,
+.shelf-book-cover,
+.shelf-book-back,
+.shelf-book-pages,
+.shelf-book-top,
+.shelf-book-bottom {
+    position: absolute;
+    border-radius: 0.15rem;
+    backface-visibility: hidden;
+    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    transition: box-shadow var(--motion-spring-sync) var(--ease-standard);
+}
+```
+Change `border-radius: 0.15rem;` to `border-radius: 0.22rem;` and `box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);` to `box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);` (same rule, just those two values).
+
+Find the shared hover/focus/revealed rule (the long `.shelf-book:hover .shelf-book-spine, ...` selector list ending in `box-shadow: 4px 10px 18px rgba(0, 0, 0, 0.55);`) and change that box-shadow value to `2px 14px 28px -4px rgba(0, 0, 0, 0.5);` (larger blur, negative spread so it diffuses rather than growing a hard-edged block).
+
+Find `.shelf-book-headband-top { top: 0; border-radius: 0.15rem 0.15rem 0 0; }` and `.shelf-book-headband-bottom { bottom: 0; border-radius: 0 0 0.15rem 0.15rem; }` and update both `0.15rem` values to `0.22rem`, matching the new face corner radius so the headband's own rounded ends still align with the spine's corners.
+
+- [ ] **Step 2: Add the seam "hinge groove" shadow to the three leather faces**
+
+A more specific CSS rule's `box-shadow` fully replaces the shared rule's `box-shadow` for that element — it does not layer on top. So each rule below repeats the shared rule's own outer drop-shadow as an explicit trailing layer, exactly matching the established pattern already used nearby in this file for `.shelf-book-pages, .shelf-book-top, .shelf-book-bottom` (which does the same thing: inset "shape" layers plus a trailing outer-shadow layer, in one `box-shadow` declaration). Because the outer shadow differs between rest and hover, each face below needs its inset layers repeated in BOTH its own rule and the shared hover-selector list's per-face override.
+
+Find `.shelf-book-cover { transform: translateZ(1.625rem); ... pointer-events: none; }` and add (left edge — where the cover borders the spine, the book's real hinge — gets the stronger inset shadow; right edge — the fore-edge side, bordering the pages face — gets a weaker one; the third layer is the shared rule's own rest-state outer shadow from Step 1, repeated here since this more specific rule would otherwise drop it):
+```css
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        0 2px 5px rgba(0, 0, 0, 0.35);
+```
+
+Find `.shelf-book-back { transform: rotateY(180deg) translateZ(1.625rem); }` and give it the identical box-shadow value (the back cover has the same spine-hinge-on-left, fore-edge-on-right relationship as the front cover):
+```css
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        0 2px 5px rgba(0, 0, 0, 0.35);
+```
+
+Find `.shelf-book-spine { transform: rotateY(-90deg) translateZ(3.15rem); ... isolation: isolate; }` and add (spine borders a leather face on both its own left and right in this local coordinate frame, so both edges get a similar, symmetric treatment, unlike cover/back's asymmetric left-strong/right-weak; third layer is again the repeated rest-state outer shadow):
+```css
+    box-shadow:
+        inset 0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        inset -0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        0 2px 5px rgba(0, 0, 0, 0.35);
+```
+
+Now find the shared hover/focus/revealed selector list from Step 1 (the one whose `box-shadow` you just changed to `2px 14px 28px -4px rgba(0, 0, 0, 0.5);`) — since `.shelf-book-cover`/`-back`/`-spine` now have their OWN `box-shadow` (more specific than the shared rule, so the shared hover rule's value no longer applies to them at all once matched by an equally-or-more-specific selector — but the shared hover selector list uses the SAME specificity class-selector form, so cascade ORDER decides, and since Step 1's shared hover rule appears BEFORE these per-element rules in the file, these per-element rules' box-shadow — with no `:hover` condition — would incorrectly apply even on hover, permanently freezing the inset seam shadows' companion outer-shadow at the REST value instead of growing on hover). Fix this by adding three new hover-state overrides for cover/back/spine specifically, placed AFTER the per-element rules above (so they win), keeping the same inset layers but swapping the third layer to the hover outer shadow:
+```css
+.shelf-book:hover .shelf-book-cover,
+.shelf-book:focus-visible .shelf-book-cover,
+.shelf-book:has(:focus-visible) .shelf-book-cover,
+.shelf-book.is-revealed .shelf-book-cover,
+.shelf-book:hover .shelf-book-back,
+.shelf-book:focus-visible .shelf-book-back,
+.shelf-book:has(:focus-visible) .shelf-book-back,
+.shelf-book.is-revealed .shelf-book-back {
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        2px 14px 28px -4px rgba(0, 0, 0, 0.5);
+}
+
+.shelf-book:hover .shelf-book-spine,
+.shelf-book:focus-visible .shelf-book-spine,
+.shelf-book:has(:focus-visible) .shelf-book-spine,
+.shelf-book.is-revealed .shelf-book-spine {
+    box-shadow:
+        inset 0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        inset -0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        2px 14px 28px -4px rgba(0, 0, 0, 0.5);
+}
+```
+Verify this reasoning live in Step 5 regardless — CSS cascade specificity/order edge cases like this are exactly the kind of thing worth confirming by eye, not just by re-reading the rule.
+
+- [ ] **Step 3: Reduce the reveal scale (less of a "pop")**
+
+`shelf-physics.js:68`, change:
+```js
+const REVEALED_SCALE = 1.08;
+```
+to:
+```js
+const REVEALED_SCALE = 1.05;
+```
+
+`app.css`'s reduced-motion/no-JS fallback rule, change `transform: translateY(-1.4rem) translateZ(3.6rem) scale(1.08);` to `transform: translateY(-1.4rem) translateZ(3.6rem) scale(1.05);`.
+
+- [ ] **Step 4: Run the full frontend test suite**
+
+Run: `dotnet test tests/frontend/LuminaChronica.Client.Tests.csproj`
+Expected: PASS, 378/378 (no test asserts on box-shadow/border-radius/scale values — this whole step is visual-only, verified live in Step 5, not by the test suite).
+
+- [ ] **Step 5: Live-verify in a browser**
+
+Confirm: corners read as softly rounded, not sharp; the drop shadow underneath a revealed book looks diffuse rather than hard-edged; rotate a book to roughly a 45-60° angle (or inspect mid-transition) and confirm the seam between spine and cover (and spine and back) now shows a soft shadowed groove instead of a flat hard line; the reveal's scale-up feels like a gentle lift, not a pop; confirm the outer drop-shadow is still visible on cover/back/spine after Step 2's box-shadow addition (this is the specific risk called out in Step 2 — verify it wasn't accidentally dropped).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add frontend/LuminaChronica.Client/wwwroot/Styles/app.css frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js
+git commit -m "fix: soften shelf book corners/shadows, add seam hinge-groove shading"
+```
+
+---
+
 ## Task 3: Roadmap entry and final whole-branch verification
 
 **Files:**
