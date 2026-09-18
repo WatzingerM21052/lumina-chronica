@@ -1556,21 +1556,34 @@ select:focus-visible,
     z-index: 1;
 }
 
-/* Lesebaendchen: a thin ribbon bookmark on the fore-edge (pages) face,
-   overhanging the bottom by a small V-notch -- deliberately subtle
-   (verified live it should barely peek past the bottom edge, not read
-   as a large tab). Positioned near the spine-side edge of this face,
-   where a real ribbon would be bound in. */
+/* Lesebaendchen: a thin ribbon bookmark, drawn on the COVER face (not
+   the fore-edge/pages face -- pages is back-facing at every angle this
+   book's rest(90deg)-to-reveal(4deg) sweep reaches, so anything drawn
+   there is structurally invisible; caught by the final whole-branch
+   review, not by any live check, since nobody had reason to rotate the
+   book past where the interaction ever takes it). Positioned near the
+   cover's spine-side (left) edge, where a real ribbon bound into the
+   spine would drape down over the front cover. Sized to fit within the
+   cover's own height (no overhang past 100%) so the shared face rule's
+   `overflow: hidden` can't clip it -- trades a small amount of realism
+   (a real ribbon usually pokes out past the book's bottom edge) for
+   something that unconditionally renders. */
 .shelf-book-ribbon {
     position: absolute;
-    left: 0.35rem;
-    top: 0;
-    width: 0.32rem;
-    height: calc(100% + 0.5rem);
+    left: 0.4rem;
+    top: 0.3rem;
+    width: 0.28rem;
+    height: 88%;
     background: linear-gradient(90deg, #7a1f1f, #a8342c 40%, #7a1f1f);
     clip-path: polygon(0 0, 100% 0, 100% 92%, 50% 100%, 0 92%);
     box-shadow: 1px 0 2px rgba(0, 0, 0, 0.4);
-    z-index: 1;
+    /* z-index 2, not the brief's literal 1: .shelf-book-cover img is also
+       z-index 1 and comes later in the DOM, so an equal z-index would let
+       the img win ties and paint over the ribbon on any book with a real
+       cover (only invisible-by-luck on placeholder books, which have no
+       z-index at all). Same fix as this wave's Step 3 for the sibling
+       overlays -- found during self-review, not in the original brief. */
+    z-index: 2;
 }
 
 /* True box geometry: each face's translateZ is half of the dimension it
@@ -1682,7 +1695,7 @@ select:focus-visible,
     box-shadow:
         inset 0 0.6rem 0.6rem -0.4rem rgba(0, 0, 0, 0.35),
         inset 0 -0.6rem 0.6rem -0.4rem rgba(0, 0, 0, 0.35),
-        1px 2px 4px rgba(0, 0, 0, 0.4);
+        0 2px 5px rgba(0, 0, 0, 0.35);
     pointer-events: none;
 }
 
@@ -1727,6 +1740,7 @@ select:focus-visible,
 
 .shelf-book-favorite {
     position: relative;
+    z-index: 2;
     align-self: flex-end;
     background: none;
     border: none;
@@ -1740,6 +1754,7 @@ select:focus-visible,
 
 .shelf-book-borrowed-badge {
     position: relative;
+    z-index: 2;
     font-size: 0.55rem;
     background: rgba(0, 0, 0, 0.5);
     padding: 0.1rem 0.3rem;
@@ -1749,6 +1764,7 @@ select:focus-visible,
 
 .shelf-book-progress {
     position: relative;
+    z-index: 2;
     height: 0.2rem;
     background: rgba(255, 255, 255, 0.25);
     border-radius: 0.1rem;
@@ -1786,7 +1802,7 @@ select:focus-visible,
 /* Cover-derived spine tint (Library Rework Phase 3): when ShelfBook.razor.cs
    successfully extracted a color from the book's actual cover image, it
    sets --shelf-book-tint and adds this class directly on each face span
-   (.shelf-book-spine/.shelf-book-cover), NOT on the .shelf-book anchor --
+   (.shelf-book-spine/.shelf-book-cover/.shelf-book-back), NOT on the .shelf-book anchor --
    shelf-physics.js (Phase 2) writes the anchor's style.transform every rAF
    frame during the spring animation and its classList (is-revealed) on the
    touch-reveal path; putting this tint's class/style on the anchor too

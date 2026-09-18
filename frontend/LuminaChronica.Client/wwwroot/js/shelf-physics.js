@@ -24,7 +24,10 @@ const DAMPING = 26; // close to critical damping for this stiffness (ratio
                      // bounce. A prior investigation this session
                      // considered raising this after an earlier live test
                      // showed the rotation reaching -93.8deg past a -88deg
-                     // target -- but a clean, isolated re-test (single
+                     // target (numbers from the pre-mirror-flip rotation
+                     // convention, before the Task 1 Addendum sign-flip --
+                     // no longer the sign this file uses, but the finding
+                     // below is unaffected) -- but a clean, isolated re-test (single
                      // hover from a fresh spring, no prior interactions)
                      // showed ZERO overshoot at this exact value: the
                      // earlier reading came from a more complex multi-step

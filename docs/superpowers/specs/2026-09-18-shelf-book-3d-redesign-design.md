@@ -98,3 +98,14 @@ This phase ships correctly without it (CSS gradient placeholder, already verifie
 - No new CSS custom properties/color tokens beyond what's needed for the headband/gilt-frame colors — reuse the shelf's existing gold/accent tokens.
 - All existing frontend tests must stay green; this phase adds coverage for new DOM structure, never removes coverage.
 - `ShelfBook.razor.cs`'s `RestRotation` and `shelf-physics.js`'s `REVEALED_ROTATE_Y_DEG`/fallback CSS rule must be changed together, in the same change — a mismatch between them would make the JS-driven and no-JS/reduced-motion resting states visibly disagree.
+
+## Revision (post-implementation)
+
+This spec was written before several rounds of live user feedback changed the shipped result. The sections above are left as originally written (for historical context — see the plan's own addenda for exactly what changed and why), but the following are no longer accurate as descriptions of production:
+
+- **Rotation sign convention is inverted from what's written above.** The Face geometry table's `.shelf-book-spine`/`.shelf-book-pages` rows, and the Rotation angle convention section's `RestRotation`/`REVEALED_ROTATE_Y_DEG`/CSS fallback values, all shipped with the opposite sign (rest ≈ +90° + jitter, revealed ≈ +4°, spine `rotateY(90deg)`, pages `rotateY(-90deg)`) after a user-requested reversal of the hover-reveal spin direction. See the plan's "Task 1 Addendum" for the actual shipped values and the reasoning.
+- **Raised spine bands ("Erhabene Bünde") and the spine author line were both removed.** Live user feedback found the ridges didn't look good and the author line crowded the title; both were dropped entirely rather than refined. See the plan's "Task 2 Addendum" for what replaced them (a herringbone-weave headband with no ridges, title-only on the spine in a fixed cream color).
+- **The ribbon bookmark moved from the fore-edge (`.shelf-book-pages`) face to the cover face.** The original placement was structurally invisible — the pages face never faces the camera at any angle this book's interaction reaches. See the plan's "Final Whole-Branch Review Fix Wave" section.
+- Corners, shadows, and a seam "hinge groove" between the leather faces were softened/added after "klobig" (clunky) feedback — not covered by this spec at all, see the plan's "Task 1 Addendum 2".
+
+The plan file (`docs/superpowers/plans/2026-09-18-shelf-book-3d-redesign.md`) is the authoritative record of what shipped; treat this spec as the original design rationale, not a live description of production.
