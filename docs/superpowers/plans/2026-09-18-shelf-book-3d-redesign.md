@@ -681,6 +681,162 @@ git commit -m "feat: hardcover binding details on shelf book (headband, spine ba
 
 ---
 
+## Task 2 Addendum: spine redesign (headband, ridges, author, title color)
+
+User feedback after living with Task 2's live build:
+1. The headband's diagonal red/gold stripe pattern reads as hazard/warning tape, not a woven textile band.
+2. The raised spine-bands ridges "don't look good" — drop them entirely rather than refine them.
+3. The spine looked flat/monotonous without a visible leather texture — the leather-grain `::before` overlay (already present from before this redesign) needs to actually be visible/effective on the spine.
+4. Showing the author under the title on the spine was reconsidered — drop it, since the title reads better with the extra vertical room (the front cover, loaded from the real DB cover image, is already the primary place for full metadata).
+5. The spine title's color (`var(--color-accent-text)`) had poor contrast against lighter-palette spines — compared live against two alternatives (a lighter cream, and gold with a dark outline) across light/mid/dark leather tones; cream won clearly (only option that stayed legible across all three).
+
+All of this was iterated and confirmed in a live-rendered browser comparison before being written here (herringbone weave vs. the original diagonal stripe; cream vs. gold vs. gold+outline title color across three leather lightness levels) — not a from-scratch guess.
+
+**Explicitly not in scope**: the 5-variant palette/tint color system (`.shelf-book-palette-0..4`, cover-derived tint) is unchanged — only the spine's decorative elements and title treatment change, not which leather color each book gets.
+
+**Files:**
+- Modify: `frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor`
+- Modify: `frontend/LuminaChronica.Client/wwwroot/Styles/app.css`
+- Modify: `tests/frontend/ShelfBookTests.cs`
+
+- [ ] **Step 1: Update tests first (TDD)**
+
+In `tests/frontend/ShelfBookTests.cs`, **delete** these two tests entirely (spine author is being removed):
+```csharp
+    [Fact]
+    public void ShelfBook_WithAuthor_RendersSpineAuthor()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        Assert.Equal("J.R.R. Tolkien", cut.Find(".shelf-book-spine-author").TextContent);
+        Assert.Equal("true", cut.Find(".shelf-book-spine-author").GetAttribute("aria-hidden"));
+    }
+
+    [Fact]
+    public void ShelfBook_NoAuthor_DoesNotRenderSpineAuthor()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, new Book { Id = 2, Title = "Anonymous Work" }));
+
+        Assert.Empty(cut.FindAll(".shelf-book-spine-author"));
+    }
+```
+
+Replace `ShelfBook_RendersHeadbandAndSpineBandsOnSpine` (which asserted both headband and spine-bands) with a headband-only version, since spine-bands is being removed:
+```csharp
+    [Fact]
+    public void ShelfBook_RendersHeadbandOnSpine()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        var spine = cut.Find(".shelf-book-spine");
+        Assert.Equal(2, spine.QuerySelectorAll(".shelf-book-headband").Length);
+        Assert.Empty(spine.QuerySelectorAll(".shelf-book-spine-bands"));
+    }
+```
+
+- [ ] **Step 2: Run the test suite to verify the new/changed tests fail against the current code**
+
+Run: `dotnet test tests/frontend/LuminaChronica.Client.Tests.csproj --filter "ShelfBook_RendersHeadbandOnSpine"`
+Expected: FAIL (`.shelf-book-spine-bands` still renders today, so `Assert.Empty` fails).
+
+- [ ] **Step 3: Remove spine-bands and spine-author markup in `ShelfBook.razor`**
+
+Find:
+```razor
+        <span class="shelf-book-spine @(_spineTint is not null ? "has-cover-tint" : "")" style="@TintStyle">
+            <span class="shelf-book-spine-bands" aria-hidden="true"></span>
+            <span class="shelf-book-spine-title" aria-hidden="true">@Book.Title</span>
+            @if (!string.IsNullOrWhiteSpace(Book.Author))
+            {
+                <span class="shelf-book-spine-author" aria-hidden="true">@Book.Author</span>
+            }
+            <span class="shelf-book-headband shelf-book-headband-top" aria-hidden="true"></span>
+            <span class="shelf-book-headband shelf-book-headband-bottom" aria-hidden="true"></span>
+        </span>
+```
+Replace with:
+```razor
+        <span class="shelf-book-spine @(_spineTint is not null ? "has-cover-tint" : "")" style="@TintStyle">
+            <span class="shelf-book-spine-title" aria-hidden="true">@Book.Title</span>
+            <span class="shelf-book-headband shelf-book-headband-top" aria-hidden="true"></span>
+            <span class="shelf-book-headband shelf-book-headband-bottom" aria-hidden="true"></span>
+        </span>
+```
+
+- [ ] **Step 4: Rewrite the spine CSS in `app.css`**
+
+Replace the `.shelf-book-spine` rule (currently `transform`/`display`/`align-items`/`justify-content`/`writing-mode`/`isolation`) — add fixed top/bottom padding so the title block has guaranteed clearance from the headbands instead of relying on pure centering:
+```css
+.shelf-book-spine {
+    transform: rotateY(-90deg) translateZ(3.15rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0;
+    writing-mode: vertical-rl;
+    isolation: isolate;
+}
+```
+
+Replace `.shelf-book-spine-title` (color changes from the theme token to a fixed cream, and `max-height` accounts for the new padding instead of a flat percentage):
+```css
+.shelf-book-spine-title {
+    position: relative;
+    z-index: 2;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: #f0e0b8;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.4);
+    max-height: calc(100% - 1.1rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+```
+
+Replace `.shelf-book-headband`'s `background` (herringbone weave instead of the diagonal-stripe pattern — two opposing fine zigzag layers over a solid red base, verified live to no longer read as hazard tape) and bump its height slightly:
+```css
+.shelf-book-headband {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0.26rem;
+    background:
+        repeating-linear-gradient(60deg, transparent 0, transparent 0.06rem, rgba(0, 0, 0, 0.35) 0.06rem, rgba(0, 0, 0, 0.35) 0.09rem, transparent 0.09rem, transparent 0.18rem),
+        repeating-linear-gradient(-60deg, transparent 0, transparent 0.06rem, rgba(255, 255, 255, 0.18) 0.06rem, rgba(255, 255, 255, 0.18) 0.09rem, transparent 0.09rem, transparent 0.18rem),
+        linear-gradient(90deg, #7a1f1f, #8f2a28 50%, #7a1f1f);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+    z-index: 2;
+}
+```
+(`.shelf-book-headband-top`/`-bottom` positioning rules are unchanged.)
+
+**Delete** the `.shelf-book-spine-bands` rule and its explanatory comment entirely, and **delete** the `.shelf-book-spine-author` rule entirely.
+
+- [ ] **Step 5: Verify the leather-grain texture is actually visible**
+
+`.shelf-book-spine::before` (pre-existing, from before this whole redesign) already applies `book-leather-texture.webp` at `opacity: 0.18`. Confirm this file exists at `frontend/LuminaChronica.Client/wwwroot/images/library/book-leather-texture.webp` and actually loads (check the Network tab / no 404) during Step 7's live check — the user's "looks flat" feedback may mean this asset isn't loading, not that the technique is wrong. If it's missing, that's a separate asset problem to flag back to the controller, not something to newly invent in this step.
+
+- [ ] **Step 6: Run the full frontend test suite**
+
+Run: `dotnet test tests/frontend/LuminaChronica.Client.Tests.csproj`
+Expected: PASS, 378/378 (Task 2 ended at 380; this step deletes 2 spine-author tests and replaces 1 test 1-for-1 with a renamed version — net −2, not −1: 380 − 2 = 378).
+
+- [ ] **Step 7: Live-verify in a browser**
+
+Confirm: no more diagonal red/gold stripe (herringbone texture instead); no ridges on the spine; no author text on the spine (title only); title reads clearly in cream against at least two different palette colors (not just one); leather texture is actually visible (not flat); title has visible clearance from both headbands, not crowding them, for both a short and a long (truncated) title.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor frontend/LuminaChronica.Client/wwwroot/Styles/app.css tests/frontend/ShelfBookTests.cs
+git commit -m "fix: spine redesign — herringbone headband, drop ridges/author, cream title"
+```
+
+---
+
 ## Task 3: Roadmap entry and final whole-branch verification
 
 **Files:**
