@@ -372,6 +372,98 @@ git commit -m "feat: true 6-face box geometry for shelf book (fixes T-shape)"
 
 ---
 
+## Task 1 Addendum: reverse the hover-reveal spin direction
+
+User feedback after living with Task 1's live build: the book currently spins the wrong way on reveal ("dreht sich gerade nach rechts, sollte aber nach links drehen"). This is a pure left-right mirror of the rotation, not a geometry defect — the box itself (faces, sizing, Z-offsets) is unaffected and stays exactly as Task 1 shipped it.
+
+**Why this flips the spin direction**: the rotator sweeps from its rest angle to its revealed angle along the *shortest* path, and that path's direction (increasing vs decreasing `rotateY`) is fixed once you know which local rotation the spine face carries. Mirroring which physical side the spine occupies (swap its local `rotateY(90deg)` for `rotateY(-90deg)`, and swap pages' the other way) changes that shortest path from increasing to decreasing `rotateY`, without changing which face is visible at rest or on reveal.
+
+**Files:**
+- Modify: `frontend/LuminaChronica.Client/wwwroot/Styles/app.css` (the `.shelf-book-spine`/`.shelf-book-pages` transform rules, and the reduced-motion/no-JS fallback rule)
+- Modify: `frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor.cs:41`
+- Modify: `frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js:65`
+
+- [ ] **Step 1: Mirror the spine/pages local rotation in `app.css`**
+
+Change:
+```css
+.shelf-book-spine {
+    transform: rotateY(90deg) translateZ(3.15rem);
+```
+to:
+```css
+.shelf-book-spine {
+    transform: rotateY(-90deg) translateZ(3.15rem);
+```
+
+And change:
+```css
+.shelf-book-pages {
+    transform: rotateY(-90deg) translateZ(3.15rem);
+}
+```
+to:
+```css
+.shelf-book-pages {
+    transform: rotateY(90deg) translateZ(3.15rem);
+}
+```
+
+- [ ] **Step 2: Flip the rest/reveal angle signs to match**
+
+`ShelfBook.razor.cs:41`, change:
+```csharp
+private double RestRotation => -90 - (Book.Id % 7) * 0.47;
+```
+to:
+```csharp
+private double RestRotation => 90 + (Book.Id % 7) * 0.47;
+```
+
+`shelf-physics.js:65`, change:
+```js
+const REVEALED_ROTATE_Y_DEG = -4;
+```
+to:
+```js
+const REVEALED_ROTATE_Y_DEG = 4;
+```
+
+`app.css`'s reduced-motion/no-JS fallback rule, change:
+```css
+.shelf-book:hover .shelf-book-rotator,
+.shelf-book:focus-visible .shelf-book-rotator,
+.shelf-book:has(:focus-visible) .shelf-book-rotator {
+    transform: rotateY(-4deg);
+}
+```
+to:
+```css
+.shelf-book:hover .shelf-book-rotator,
+.shelf-book:focus-visible .shelf-book-rotator,
+.shelf-book:has(:focus-visible) .shelf-book-rotator {
+    transform: rotateY(4deg);
+}
+```
+
+- [ ] **Step 3: Run the full frontend test suite**
+
+Run: `dotnet test tests/frontend/LuminaChronica.Client.Tests.csproj`
+Expected: PASS, 380/380 (this is a pure sign flip — no test asserts on rotation direction, only on the numeric magnitude of `RestRotation`'s band via `ShelfBook_RestRotation_IsWithinPureSpineBand`, which asserts `InRange(restDeg, -93, -90)`. That assertion is now WRONG for the mirrored positive-angle convention and must be updated to `InRange(restDeg, 90, 93)` in the same step — update it before running, not after seeing it fail for the wrong reason).
+
+- [ ] **Step 4: Live-verify in a browser**
+
+Confirm: the book still shows spine-only at rest and reveals the cover on hover (unchanged from Task 1) — only the *direction* of the sweep should visibly differ. Compare against the pre-fix behavior if possible (e.g. a quick before/after) to confirm the spin genuinely reversed rather than staying the same.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/LuminaChronica.Client/wwwroot/Styles/app.css frontend/LuminaChronica.Client/Components/ShelfBook/ShelfBook.razor.cs frontend/LuminaChronica.Client/wwwroot/js/shelf-physics.js tests/frontend/ShelfBookTests.cs
+git commit -m "fix: reverse shelf book hover-reveal spin direction"
+```
+
+---
+
 ## Task 2: Hardcover binding details (headband, spine bands, gilt frame, ribbon, spine author)
 
 **Files:**
