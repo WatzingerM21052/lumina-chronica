@@ -1555,38 +1555,7 @@ select:focus-visible,
     pointer-events: none;
     /* z-index 2, not 1: .shelf-book-cover img is also z-index 1 and comes
        later in the DOM, so an equal z-index let the img win ties and paint
-       over this frame on any book with a real cover -- the same tie-break
-       bug found and fixed on .shelf-book-ribbon in this same session. */
-    z-index: 2;
-}
-
-/* Lesebaendchen: a thin ribbon bookmark, drawn on the COVER face (not
-   the fore-edge/pages face -- pages is back-facing at every angle this
-   book's rest(90deg)-to-reveal(4deg) sweep reaches, so anything drawn
-   there is structurally invisible; caught by the final whole-branch
-   review, not by any live check, since nobody had reason to rotate the
-   book past where the interaction ever takes it). Positioned near the
-   cover's spine-side (left) edge, where a real ribbon bound into the
-   spine would drape down over the front cover. Sized to fit within the
-   cover's own height (no overhang past 100%) so the shared face rule's
-   `overflow: hidden` can't clip it -- trades a small amount of realism
-   (a real ribbon usually pokes out past the book's bottom edge) for
-   something that unconditionally renders. */
-.shelf-book-ribbon {
-    position: absolute;
-    left: 0.4rem;
-    top: 0.3rem;
-    width: 0.28rem;
-    height: 88%;
-    background: linear-gradient(90deg, #7a1f1f, #a8342c 40%, #7a1f1f);
-    clip-path: polygon(0 0, 100% 0, 100% 92%, 50% 100%, 0 92%);
-    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.4);
-    /* z-index 2, not the brief's literal 1: .shelf-book-cover img is also
-       z-index 1 and comes later in the DOM, so an equal z-index would let
-       the img win ties and paint over the ribbon on any book with a real
-       cover (only invisible-by-luck on placeholder books, which have no
-       z-index at all). Same fix as this wave's Step 3 for the sibling
-       overlays -- found during self-review, not in the original brief. */
+       over this frame on any book with a real cover. */
     z-index: 2;
 }
 

@@ -140,14 +140,6 @@ public class ShelfBookTests : BunitContext
     }
 
     [Fact]
-    public void ShelfBook_RendersRibbonOnCoverFace()
-    {
-        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
-
-        Assert.NotNull(cut.Find(".shelf-book-cover").QuerySelector(".shelf-book-ribbon"));
-    }
-
-    [Fact]
     public void ShelfBook_FavoriteToggle_CallsPostAndFlipsVisualState()
     {
         HttpRequestMessage? capturedRequest = null;

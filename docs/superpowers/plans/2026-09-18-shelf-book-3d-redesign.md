@@ -1129,6 +1129,12 @@ git commit -m "fix: address final whole-branch review findings (ribbon visibilit
 
 ---
 
+## Post-Wave Follow-Up: ribbon removed entirely
+
+After the fix wave above made the ribbon visible on the cover (and the controller live-verified it against a real uploaded cover image, confirming the z-index fix genuinely worked), the user looked at it live and said it "looks odd" and asked for it to be removed rather than kept. Removed: the `.shelf-book-ribbon` span from `ShelfBook.razor`'s cover face, the `.shelf-book-ribbon` rule from `app.css` (and the now-dangling "same tie-break bug found and fixed on .shelf-book-ribbon" cross-reference in the neighboring `.shelf-book-gilt-frame` comment), the `ShelfBook_RendersRibbonOnCoverFace` test, and the ribbon mentions in `documentation/Roadmap.md` and the design spec's revision note (both updated to describe the ribbon as added-then-removed, not shipped). Test suite: 377/377 (378 minus the one deleted test). No live-browser re-check needed beyond confirming the element is gone — its removal is the kind of change a screenshot can't get wrong.
+
+---
+
 ## Self-Review Notes
 
 - **Spec coverage**: 6-face geometry (Task 1), headband/spine-bands/gilt-frame/ribbon/spine-author (Task 2), rotation angle rebase (Task 1), removal of old cover-resize hack and old page-strip (Task 1), live-verification requirement (every task), Roadmap entry (Task 3), page-block texture explicitly deferred with a ready prompt (spec's own section, referenced in Task 3's Roadmap text) — all covered.
