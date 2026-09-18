@@ -96,11 +96,11 @@ public class ShelfBookTests : BunitContext
     [InlineData(13)]
     public void ShelfBook_RestRotation_IsWithinPureSpineBand(int bookId)
     {
-        // -90deg is where the spine face (now rotateY(90deg) locally)
+        // 90deg is where the spine face (now rotateY(-90deg) locally)
         // faces the camera dead-on with zero cover-edge visible -- the
         // whole point of this rebase (see the design spec's "Rotation
         // angle convention" section). The jitter band must stay small
-        // enough that no book's rest angle drifts far enough from -90
+        // enough that no book's rest angle drifts far enough from 90
         // to show a visible cover sliver at rest.
         var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, new Book { Id = bookId, Title = "Test" }));
 
@@ -109,7 +109,7 @@ public class ShelfBookTests : BunitContext
         Assert.True(match.Success, $"style did not contain --shelf-book-rest: {style}");
         var restDeg = double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
 
-        Assert.InRange(restDeg, -93, -90);
+        Assert.InRange(restDeg, 90, 93);
     }
 
     [Fact]

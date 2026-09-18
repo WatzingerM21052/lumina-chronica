@@ -1479,7 +1479,7 @@ select:focus-visible,
 }
 
 .shelf-book-spine {
-    transform: rotateY(90deg) translateZ(3.15rem);
+    transform: rotateY(-90deg) translateZ(3.15rem);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1641,7 +1641,7 @@ select:focus-visible,
 }
 
 .shelf-book-pages {
-    transform: rotateY(-90deg) translateZ(3.15rem);
+    transform: rotateY(90deg) translateZ(3.15rem);
 }
 
 .shelf-book-top {
@@ -1773,7 +1773,7 @@ select:focus-visible,
 .shelf-book:hover .shelf-book-rotator,
 .shelf-book:focus-visible .shelf-book-rotator,
 .shelf-book:has(:focus-visible) .shelf-book-rotator {
-    transform: rotateY(-4deg);
+    transform: rotateY(4deg);
 }
 
 /* Added by shelf-physics.js (Phase 2) once it takes over the reveal

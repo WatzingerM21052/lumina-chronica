@@ -62,7 +62,7 @@ function isSettled(state) {
 // user's browser-level accessibility font-size setting still changes it,
 // and hardcoding 16 would silently disagree with Phase 1's CSS (which
 // uses `rem` and therefore already scales correctly) for any such user.
-const REVEALED_ROTATE_Y_DEG = -4;
+const REVEALED_ROTATE_Y_DEG = 4;
 const REVEALED_TRANSLATE_Y_REM = -1.4;
 const REVEALED_TRANSLATE_Z_REM = 3.6;
 const REVEALED_SCALE = 1.08;
