@@ -65,7 +65,7 @@ function isSettled(state) {
 const REVEALED_ROTATE_Y_DEG = 4;
 const REVEALED_TRANSLATE_Y_REM = -1.4;
 const REVEALED_TRANSLATE_Z_REM = 3.6;
-const REVEALED_SCALE = 1.08;
+const REVEALED_SCALE = 1.05;
 
 // getComputedStyle forces a synchronous style/layout read -- cheap once,
 // wasteful if called on every rAF frame for every active book. The root

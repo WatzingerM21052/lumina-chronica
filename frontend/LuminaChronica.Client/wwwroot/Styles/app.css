@@ -1382,9 +1382,9 @@ select:focus-visible,
 .shelf-book-top,
 .shelf-book-bottom {
     position: absolute;
-    border-radius: 0.15rem;
+    border-radius: 0.22rem;
     backface-visibility: hidden;
-    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
     overflow: hidden;
     transition: box-shadow var(--motion-spring-sync) var(--ease-standard);
 }
@@ -1447,7 +1447,7 @@ select:focus-visible,
 .shelf-book.is-revealed .shelf-book-pages,
 .shelf-book.is-revealed .shelf-book-top,
 .shelf-book.is-revealed .shelf-book-bottom {
-    box-shadow: 4px 10px 18px rgba(0, 0, 0, 0.55);
+    box-shadow: 2px 14px 28px -4px rgba(0, 0, 0, 0.5);
 }
 
 /* Subtle leather grain overlay (Library Rework Phase 3), same established
@@ -1491,6 +1491,16 @@ select:focus-visible,
        behind its own children, instead of escaping to the nearest
        positioned ancestor and painting in the wrong place. */
     isolation: isolate;
+    /* Hinge-groove shading: the spine borders a leather cover face on
+       both its own left and right in this local coordinate frame, so
+       both edges get a similar, symmetric inset shadow (unlike cover/
+       back's asymmetric left-strong/right-weak below). Third layer
+       repeats the shared rule's rest-state outer shadow, since this
+       more specific rule would otherwise replace it outright. */
+    box-shadow:
+        inset 0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        inset -0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
 .shelf-book-spine-title {
@@ -1524,8 +1534,8 @@ select:focus-visible,
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 -1px 1px rgba(255, 255, 255, 0.1);
     z-index: 2;
 }
-.shelf-book-headband-top { top: 0; border-radius: 0.15rem 0.15rem 0 0; }
-.shelf-book-headband-bottom { bottom: 0; border-radius: 0 0 0.15rem 0.15rem; }
+.shelf-book-headband-top { top: 0; border-radius: 0.22rem 0.22rem 0 0; }
+.shelf-book-headband-bottom { bottom: 0; border-radius: 0 0 0.22rem 0.22rem; }
 
 /* Gold double-rule frame, inset from the board edge -- classic
    fine-binding decoration. Two concentric borders with a hairline gap,
@@ -1584,6 +1594,15 @@ select:focus-visible,
        clicks against its untransformed layout box -- keep the same
        guard rather than re-litigating that quirk. */
     pointer-events: none;
+    /* Hinge-groove shading: left edge borders the spine (the book's real
+       hinge) so it gets the stronger inset shadow; right edge borders
+       the fore-edge/pages face so it gets a weaker one. Third layer
+       repeats the shared rule's rest-state outer shadow, since this
+       more specific rule would otherwise replace it outright. */
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
 .shelf-book:hover .shelf-book-cover,
@@ -1595,6 +1614,45 @@ select:focus-visible,
 
 .shelf-book-back {
     transform: rotateY(180deg) translateZ(1.625rem);
+    /* Same spine-hinge-on-left, fore-edge-on-right relationship as
+       .shelf-book-cover above -- identical hinge-groove shading. */
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+/* Hover-state overrides for the three leather faces' hinge-groove
+   box-shadow above: a more specific selector's box-shadow fully
+   replaces (does not layer with) the shared rule's box-shadow, so
+   without these overrides the per-element rest-state rules above
+   (which have no :hover condition) would win even on hover/reveal,
+   permanently freezing the outer shadow at its rest-state size instead
+   of growing per Step 1's shared hover rule. These keep the same inset
+   seam layers but swap the third layer to the hover outer shadow, and
+   must stay AFTER the per-element rest-state rules above to win. */
+.shelf-book:hover .shelf-book-cover,
+.shelf-book:focus-visible .shelf-book-cover,
+.shelf-book:has(:focus-visible) .shelf-book-cover,
+.shelf-book.is-revealed .shelf-book-cover,
+.shelf-book:hover .shelf-book-back,
+.shelf-book:focus-visible .shelf-book-back,
+.shelf-book:has(:focus-visible) .shelf-book-back,
+.shelf-book.is-revealed .shelf-book-back {
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        2px 14px 28px -4px rgba(0, 0, 0, 0.5);
+}
+
+.shelf-book:hover .shelf-book-spine,
+.shelf-book:focus-visible .shelf-book-spine,
+.shelf-book:has(:focus-visible) .shelf-book-spine,
+.shelf-book.is-revealed .shelf-book-spine {
+    box-shadow:
+        inset 0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        inset -0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        2px 14px 28px -4px rgba(0, 0, 0, 0.5);
 }
 
 .shelf-book-pages,
@@ -1738,7 +1796,7 @@ select:focus-visible,
 .shelf-book:hover,
 .shelf-book:focus-visible,
 .shelf-book:has(:focus-visible) {
-    transform: translateY(-1.4rem) translateZ(3.6rem) scale(1.08);
+    transform: translateY(-1.4rem) translateZ(3.6rem) scale(1.05);
 }
 
 .shelf-book:hover .shelf-book-rotator,
