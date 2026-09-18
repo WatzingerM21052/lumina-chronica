@@ -122,31 +122,13 @@ public class ShelfBookTests : BunitContext
     }
 
     [Fact]
-    public void ShelfBook_WithAuthor_RendersSpineAuthor()
-    {
-        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
-
-        Assert.Equal("J.R.R. Tolkien", cut.Find(".shelf-book-spine-author").TextContent);
-        Assert.Equal("true", cut.Find(".shelf-book-spine-author").GetAttribute("aria-hidden"));
-    }
-
-    [Fact]
-    public void ShelfBook_NoAuthor_DoesNotRenderSpineAuthor()
-    {
-        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, new Book { Id = 2, Title = "Anonymous Work" }));
-
-        Assert.Empty(cut.FindAll(".shelf-book-spine-author"));
-    }
-
-    [Fact]
-    public void ShelfBook_RendersHeadbandAndSpineBandsOnSpine()
+    public void ShelfBook_RendersHeadbandOnSpine()
     {
         var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
 
         var spine = cut.Find(".shelf-book-spine");
-        Assert.NotEmpty(spine.QuerySelectorAll(".shelf-book-headband"));
         Assert.Equal(2, spine.QuerySelectorAll(".shelf-book-headband").Length);
-        Assert.NotNull(spine.QuerySelector(".shelf-book-spine-bands"));
+        Assert.Empty(spine.QuerySelectorAll(".shelf-book-spine-bands"));
     }
 
     [Fact]

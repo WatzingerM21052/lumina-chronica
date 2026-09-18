@@ -1481,8 +1481,10 @@ select:focus-visible,
 .shelf-book-spine {
     transform: rotateY(-90deg) translateZ(3.15rem);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 0.55rem 0;
     writing-mode: vertical-rl;
     /* Establishes its own stacking context so the ::before leather-texture
        overlay's z-index: -1 (above) scopes to this element and paints
@@ -1497,9 +1499,9 @@ select:focus-visible,
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.05em;
-    color: var(--color-accent-text);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    max-height: 90%;
+    color: #f0e0b8;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.4);
+    max-height: calc(100% - 1.1rem);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1514,47 +1516,16 @@ select:focus-visible,
     position: absolute;
     left: 0;
     right: 0;
-    height: 0.22rem;
-    background: repeating-linear-gradient(45deg, #7a1f1f 0, #7a1f1f 2px, var(--color-gold-accent) 2px, var(--color-gold-accent) 4px);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+    height: 0.26rem;
+    background:
+        repeating-linear-gradient(60deg, transparent 0, transparent 0.06rem, rgba(0, 0, 0, 0.35) 0.06rem, rgba(0, 0, 0, 0.35) 0.09rem, transparent 0.09rem, transparent 0.18rem),
+        repeating-linear-gradient(-60deg, transparent 0, transparent 0.06rem, rgba(255, 255, 255, 0.18) 0.06rem, rgba(255, 255, 255, 0.18) 0.09rem, transparent 0.09rem, transparent 0.18rem),
+        linear-gradient(90deg, #7a1f1f, #8f2a28 50%, #7a1f1f);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 -1px 1px rgba(255, 255, 255, 0.1);
     z-index: 2;
 }
 .shelf-book-headband-top { top: 0; border-radius: 0.15rem 0.15rem 0 0; }
 .shelf-book-headband-bottom { bottom: 0; border-radius: 0 0 0.15rem 0.15rem; }
-
-/* Erhabene Buende: 4 evenly-spaced raised ridges across the spine --
-   the cords-under-leather look of a fine binding. One
-   repeating-linear-gradient layer, no extra DOM nodes needed for the
-   ridges themselves (the wrapping span exists only to position it
-   between the headbands). */
-.shelf-book-spine-bands {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0.5rem;
-    bottom: 0.5rem;
-    background: repeating-linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent calc(20% - 5px),
-        rgba(0, 0, 0, 0.35) calc(20% - 5px),
-        rgba(0, 0, 0, 0.45) calc(20% - 2px),
-        rgba(255, 220, 150, 0.25) calc(20% - 2px),
-        rgba(255, 220, 150, 0.3) 20%,
-        transparent 20%
-    );
-    pointer-events: none;
-    z-index: 1;
-}
-
-.shelf-book-spine-author {
-    writing-mode: vertical-rl;
-    color: var(--color-accent-text);
-    font-size: 0.42rem;
-    font-style: italic;
-    position: relative;
-    z-index: 2;
-}
 
 /* Gold double-rule frame, inset from the board edge -- classic
    fine-binding decoration. Two concentric borders with a hairline gap,

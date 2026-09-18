@@ -11,12 +11,7 @@
    data-book-id="@Book.Id">
     <span class="shelf-book-rotator">
         <span class="shelf-book-spine @(_spineTint is not null ? "has-cover-tint" : "")" style="@TintStyle">
-            <span class="shelf-book-spine-bands" aria-hidden="true"></span>
             <span class="shelf-book-spine-title" aria-hidden="true">@Book.Title</span>
-            @if (!string.IsNullOrWhiteSpace(Book.Author))
-            {
-                <span class="shelf-book-spine-author" aria-hidden="true">@Book.Author</span>
-            }
             <span class="shelf-book-headband shelf-book-headband-top" aria-hidden="true"></span>
             <span class="shelf-book-headband shelf-book-headband-bottom" aria-hidden="true"></span>
         </span>
