@@ -278,6 +278,89 @@ public class LibraryPageTests : BunitContext
     }
 
     [Fact]
+    public void Library_LoadAllBooksAsync_MidLoopFetchFailure_SetsErrorMessage_WithoutPartialRendering()
+    {
+        // Design spec's "Fehlerfall im Loop" test, never implemented until
+        // now: page 1 of the fetch-all loop succeeds (100 books, but
+        // total=125 forces a page 2 request), and page 2 then fails. Per
+        // LoadAllBooksAsync's early return (before _allItems is ever
+        // assigned), the 100 successfully-fetched page-1 books must NOT
+        // leak into the rendered page -- only _errorMessage should show.
+        var page1Books = string.Join(",", Enumerable.Range(1, 100).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books" && r.RequestUri.Query.Contains("page=2"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":false,"error":{"code":"SERVER_ERROR","message":"Bibliothek konnte nicht geladen werden (Seite 2)."}}"""))
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books",
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{page1Books}}}],"total":125,"page":1,"pageSize":100}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        var cut = Render<Library>();
+
+        Assert.Contains("Bibliothek konnte nicht geladen werden (Seite 2).", cut.Markup);
+        Assert.DoesNotContain("Book 1<", cut.Markup);
+        Assert.Empty(cut.FindAll("a.shelf-book"));
+    }
+
+    [Fact]
+    public void Library_Reload_DoesNotResetRasterPage_UntilTheNewFetchActuallyCompletes()
+    {
+        // Regression test for the "reset-before-fetch instead of
+        // reset-after-fetch" bug: LoadAllBooksAsync used to set
+        // _rasterPage = 1 / _visibleBookCount = InitialVisibleBookCount at
+        // the *top* of the method, before the fetch even started. That's
+        // only observable while a reload's fetch is still pending (a fully
+        // synchronous mock response settles to the same end state either
+        // way) -- so this uses a handler whose second /api/books request
+        // hangs until the test explicitly completes it, mirroring
+        // Library_ReloadInFlight_KeepsShowingPreviousResults_... below.
+        var oldBooks = string.Join(",", Enumerable.Range(1, 45).Select(i =>
+            $$"""{"id":{{i}},"title":"Old Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var handler = new PendingSecondBooksRequestHttpMessageHandler(
+            """{"success":true,"data":{"tags":[],"genres":[]}}""",
+            $$$"""{"success":true,"data":{"items":[{{{oldBooks}}}],"total":45,"page":1,"pageSize":100}}""");
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        // DefaultRasterPageSize = 20 -> ceil(45/20) = 3 pages. Move away
+        // from page 1 before triggering the reload.
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter →").Click();
+        Assert.Contains("Old Book 21", cut.Markup); // now on page 2
+
+        // Trigger a reload; the second /api/books request now hangs.
+        cut.Find("input[type=checkbox]").Change(true);
+
+        // While the new fetch is still pending, the raster page must NOT
+        // have snapped back to 1 yet -- with the old buggy reset-before-
+        // fetch code, this would already have happened at this point (the
+        // still-displayed OLD data jumping to its own page 1 before the new
+        // data even arrived).
+        Assert.Contains("Old Book 21", cut.Markup);
+        Assert.DoesNotContain("Old Book 1<", cut.Markup);
+
+        var newBooks = string.Join(",", Enumerable.Range(1, 45).Select(i =>
+            $$"""{"id":{{i}},"title":"New Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        handler.SecondBooksResponse.SetResult(RoutedFakeHttpMessageHandler.JsonResponse(
+            $$$"""{"success":true,"data":{"items":[{{{newBooks}}}],"total":45,"page":1,"pageSize":100}}"""));
+
+        // Once the new fetch actually completes, the raster page must be
+        // back on page 1 -- for the NEW data.
+        cut.WaitForAssertion(() => Assert.Contains("New Book 1<", cut.Markup), TimeSpan.FromSeconds(2));
+        Assert.DoesNotContain("New Book 21", cut.Markup); // page 1 only
+    }
+
+    [Fact]
     public void Library_GridView_KeepsACategoryWithMoreThan20BooksAsOneContinuousGroup()
     {
         // Regression test for the bug this task fixes: the shelf (Regal)
@@ -481,6 +564,34 @@ public class LibraryPageTests : BunitContext
             // Every subsequent /api/books request hangs forever -- lets a
             // test observe what's on screen while a reload is still pending.
             return new TaskCompletionSource<HttpResponseMessage>().Task;
+        }
+    }
+
+    // Unlike FirstRequestThenHangingHttpMessageHandler (which hangs forever),
+    // this exposes the second /api/books request's response as a
+    // TaskCompletionSource the test can complete on demand -- needed to
+    // observe state both *while* a reload is pending and *after* it
+    // resolves, within the same test.
+    private sealed class PendingSecondBooksRequestHttpMessageHandler(string facetsJson, string firstBooksJson) : HttpMessageHandler
+    {
+        private int _booksRequestCount;
+
+        public TaskCompletionSource<HttpResponseMessage> SecondBooksResponse { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/facets"))
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(facetsJson));
+            }
+
+            if (Interlocked.Increment(ref _booksRequestCount) == 1)
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(firstBooksJson));
+            }
+
+            return SecondBooksResponse.Task;
         }
     }
 }

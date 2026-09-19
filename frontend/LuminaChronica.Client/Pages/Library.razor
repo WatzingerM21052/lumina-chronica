@@ -397,8 +397,6 @@ else
     private async Task LoadAllBooksAsync()
     {
         _errorMessage = null;
-        _rasterPage = 1;
-        _visibleBookCount = InitialVisibleBookCount;
 
         var query = new List<string> { $"sort={_sort}", $"order={_order}", $"pageSize={FetchPageSize}" };
         if (!string.IsNullOrWhiteSpace(_searchTerm)) query.Add($"search={Uri.EscapeDataString(_searchTerm)}");
@@ -431,7 +429,22 @@ else
             page++;
         }
 
-        _allItems = items;
+        // Dedupe by Id before assigning: a backend page query with no
+        // secondary sort-key tiebreaker could in principle return the same
+        // row across two page fetches if the primary sort column ties,
+        // which would otherwise violate ShelfRow's @key="book.Id"
+        // uniqueness within a shelf group.
+        _allItems = items.DistinctBy(b => b.Id).ToList();
+
+        // Reset only on success, together with _allItems, and only here --
+        // not at the top of this method -- so a reload keeps showing the
+        // previous results (and the previous reveal/page position) for as
+        // long as the new fetch is in flight, and only snaps back to the
+        // initial batch/page once the new result set is actually what's
+        // about to be shown. On failure (the early return above), none of
+        // this runs, leaving whatever was already on screen untouched.
+        _rasterPage = 1;
+        _visibleBookCount = InitialVisibleBookCount;
     }
 
     public async ValueTask DisposeAsync()
