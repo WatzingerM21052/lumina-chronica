@@ -65,7 +65,7 @@ public class ShelfBookTests : BunitContext
     }
 
     [Fact]
-    public void ShelfBook_SpineAndCover_AreWrappedInRotator()
+    public void ShelfBook_AllSixFaces_AreDirectChildrenOfRotatorInOrder()
     {
         var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
 
@@ -80,10 +80,36 @@ public class ShelfBookTests : BunitContext
         var rotator = rotatorChildren[0];
         Assert.Contains("shelf-book-rotator", rotator.ClassList);
 
-        var rotatorGrandchildren = rotator.Children;
-        Assert.Equal(2, rotatorGrandchildren.Length);
-        Assert.Contains("shelf-book-spine", rotatorGrandchildren[0].ClassList);
-        Assert.Contains("shelf-book-cover", rotatorGrandchildren[1].ClassList);
+        var faces = rotator.Children;
+        Assert.Equal(6, faces.Length);
+        Assert.Contains("shelf-book-spine", faces[0].ClassList);
+        Assert.Contains("shelf-book-cover", faces[1].ClassList);
+        Assert.Contains("shelf-book-back", faces[2].ClassList);
+        Assert.Contains("shelf-book-pages", faces[3].ClassList);
+        Assert.Contains("shelf-book-top", faces[4].ClassList);
+        Assert.Contains("shelf-book-bottom", faces[5].ClassList);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(7)]
+    [InlineData(13)]
+    public void ShelfBook_RestRotation_IsWithinPureSpineBand(int bookId)
+    {
+        // 90deg is where the spine face (now rotateY(-90deg) locally)
+        // faces the camera dead-on with zero cover-edge visible -- the
+        // whole point of this rebase (see the design spec's "Rotation
+        // angle convention" section). The jitter band must stay small
+        // enough that no book's rest angle drifts far enough from 90
+        // to show a visible cover sliver at rest.
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, new Book { Id = bookId, Title = "Test" }));
+
+        var style = cut.Find("a.shelf-book").GetAttribute("style") ?? "";
+        var match = System.Text.RegularExpressions.Regex.Match(style, @"--shelf-book-rest:\s*(-?[\d.]+)deg");
+        Assert.True(match.Success, $"style did not contain --shelf-book-rest: {style}");
+        var restDeg = double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.InRange(restDeg, 90, 93);
     }
 
     [Fact]
@@ -93,6 +119,24 @@ public class ShelfBookTests : BunitContext
 
         Assert.Equal("true", cut.Find(".shelf-book-spine-title").GetAttribute("aria-hidden"));
         Assert.Equal("true", cut.Find(".shelf-book-cover-title").GetAttribute("aria-hidden"));
+    }
+
+    [Fact]
+    public void ShelfBook_RendersHeadbandOnSpine()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        var spine = cut.Find(".shelf-book-spine");
+        Assert.Equal(2, spine.QuerySelectorAll(".shelf-book-headband").Length);
+        Assert.Empty(spine.QuerySelectorAll(".shelf-book-spine-bands"));
+    }
+
+    [Fact]
+    public void ShelfBook_RendersGiltFrameOnCover()
+    {
+        var cut = Render<ShelfBook>(parameters => parameters.Add(p => p.Book, MakeBook()));
+
+        Assert.NotNull(cut.Find(".shelf-book-cover").QuerySelector(".shelf-book-gilt-frame"));
     }
 
     [Fact]

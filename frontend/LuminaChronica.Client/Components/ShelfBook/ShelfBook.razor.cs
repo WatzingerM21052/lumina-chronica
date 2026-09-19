@@ -38,23 +38,23 @@ public partial class ShelfBook : ComponentBase, IDisposable
     // residues), so it would NOT actually decorrelate; only a different
     // modulus does. The multiplier is reduced to keep the same ~2.8deg
     // resting band as before despite the wider 7-cycle.
-    private double RestRotation => -9.5 - (Book.Id % 7) * 0.47;
+    private double RestRotation => 90 + (Book.Id % 7) * 0.47;
 
     private string AccessibleLabel => string.IsNullOrWhiteSpace(Book.Author)
         ? Book.Title
         : $"{Book.Title}, {Book.Author}";
 
     // Cover-derived tint (Library Rework Phase 3), applied only when a real
-    // cover-derived color is available. Deliberately scoped to the two face
-    // spans (.shelf-book-spine/.shelf-book-cover) rather than the .shelf-book
-    // anchor itself: shelf-physics.js (Phase 2) writes directly to the
+    // cover-derived color is available. Deliberately scoped to the three face
+    // spans (.shelf-book-spine/.shelf-book-cover/.shelf-book-back) rather than
+    // the .shelf-book anchor itself: shelf-physics.js (Phase 2) writes directly to the
     // anchor's style.transform every rAF frame during the spring animation
     // and to its classList (is-revealed) on the touch-reveal path. Putting
     // this tint's class/style on the anchor too meant Blazor's async
     // re-render (once cover load + extraction complete) called setAttribute
     // on the anchor's class/style -- which replaces the whole attribute --
     // wiping out shelf-physics.js's JS-owned is-revealed class and
-    // transform. The two face spans are never touched by shelf-physics.js,
+    // transform. The three face spans are never touched by shelf-physics.js,
     // so this is safe there. app.css's .has-cover-tint rule is what
     // actually consumes this custom property -- when _spineTint is null (no
     // cover, or extraction failed), neither the class nor this style is

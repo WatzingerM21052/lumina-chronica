@@ -1376,33 +1376,78 @@ select:focus-visible,
 }
 
 .shelf-book-spine,
-.shelf-book-cover {
+.shelf-book-cover,
+.shelf-book-back,
+.shelf-book-pages,
+.shelf-book-top,
+.shelf-book-bottom {
     position: absolute;
-    inset: 0;
-    border-radius: 0.15rem 0.3rem 0.3rem 0.15rem;
+    border-radius: 0.22rem;
     backface-visibility: hidden;
-    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
     overflow: hidden;
-    /* A fixed shadow reads as flat -- growing/softening it on reveal
-       (below) sells the "lifting off the shelf" depth cue that
-       .shelf-book's own translateZ/scale (shelf-physics.js) already
-       moves, but couldn't visually communicate on its own since a
-       static shadow never responds to that lift. --motion-spring-sync
-       (not the shorter --motion-reveal used elsewhere in this file) so
-       this stays roughly in step with shelf-physics.js's own spring --
-       see that token's own comment in tokens.css for why. */
     transition: box-shadow var(--motion-spring-sync) var(--ease-standard);
 }
 
+/* Explicit per-face sizing (controller fix, 2026-09-18): the shared rule
+   above deliberately no longer sets `inset: 0` -- that pinned every face
+   to .shelf-book's own 3.25rem-wide box regardless of which dimension the
+   face is actually meant to span, so .shelf-book-cover/-back never
+   reached their intended W=6.3rem width and .shelf-book-top/-bottom never
+   got their W x T (6.3rem x 3.25rem) footprint. Each pair below sizes to
+   the same T=3.25rem/W=6.3rem/H=9.5rem box the translateZ formula (see
+   the comment on .shelf-book-cover below) assumes. */
+.shelf-book-cover,
+.shelf-book-back {
+    left: 0;
+    top: 0;
+    width: 6.3rem;
+    height: 9.5rem;
+}
+
+.shelf-book-spine,
+.shelf-book-pages {
+    left: 1.525rem;
+    top: 0;
+    width: 3.25rem;
+    height: 9.5rem;
+}
+
+.shelf-book-top,
+.shelf-book-bottom {
+    left: 0;
+    width: 6.3rem;
+    height: 3.25rem;
+}
+
+.shelf-book-top { top: 0; }
+.shelf-book-bottom { bottom: 0; }
+
 .shelf-book:hover .shelf-book-spine,
 .shelf-book:hover .shelf-book-cover,
+.shelf-book:hover .shelf-book-back,
+.shelf-book:hover .shelf-book-pages,
+.shelf-book:hover .shelf-book-top,
+.shelf-book:hover .shelf-book-bottom,
 .shelf-book:focus-visible .shelf-book-spine,
 .shelf-book:focus-visible .shelf-book-cover,
+.shelf-book:focus-visible .shelf-book-back,
+.shelf-book:focus-visible .shelf-book-pages,
+.shelf-book:focus-visible .shelf-book-top,
+.shelf-book:focus-visible .shelf-book-bottom,
 .shelf-book:has(:focus-visible) .shelf-book-spine,
 .shelf-book:has(:focus-visible) .shelf-book-cover,
+.shelf-book:has(:focus-visible) .shelf-book-back,
+.shelf-book:has(:focus-visible) .shelf-book-pages,
+.shelf-book:has(:focus-visible) .shelf-book-top,
+.shelf-book:has(:focus-visible) .shelf-book-bottom,
 .shelf-book.is-revealed .shelf-book-spine,
-.shelf-book.is-revealed .shelf-book-cover {
-    box-shadow: 4px 10px 18px rgba(0, 0, 0, 0.55);
+.shelf-book.is-revealed .shelf-book-cover,
+.shelf-book.is-revealed .shelf-book-back,
+.shelf-book.is-revealed .shelf-book-pages,
+.shelf-book.is-revealed .shelf-book-top,
+.shelf-book.is-revealed .shelf-book-bottom {
+    box-shadow: 2px 14px 28px -4px rgba(0, 0, 0, 0.5);
 }
 
 /* Subtle leather grain overlay (Library Rework Phase 3), same established
@@ -1421,7 +1466,8 @@ select:focus-visible,
    simply fails to paint -- each face's existing gradient still renders
    correctly with no layout break. */
 .shelf-book-spine::before,
-.shelf-book-cover::before {
+.shelf-book-cover::before,
+.shelf-book-back::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -1433,100 +1479,126 @@ select:focus-visible,
 }
 
 .shelf-book-spine {
+    transform: rotateY(-90deg) translateZ(3.15rem);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 0.55rem 0;
     writing-mode: vertical-rl;
     /* Establishes its own stacking context so the ::before leather-texture
        overlay's z-index: -1 (above) scopes to this element and paints
        behind its own children, instead of escaping to the nearest
        positioned ancestor and painting in the wrong place. */
     isolation: isolate;
+    /* Hinge-groove shading: the spine borders a leather cover face on
+       both its own left and right in this local coordinate frame, so
+       both edges get a similar, symmetric inset shadow (unlike cover/
+       back's asymmetric left-strong/right-weak below). Third layer
+       repeats the shared rule's rest-state outer shadow: this rule and
+       the shared 6-face rule above both match via a single class
+       selector here (equal (0,1,0) specificity), so this rule's
+       box-shadow wins only because it comes later in the file --
+       and since a more-specific-or-tied box-shadow fully replaces
+       (does not layer with) the shared rule's, the outer shadow must
+       be repeated here or it would vanish at rest. */
+    box-shadow:
+        inset 0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        inset -0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
 .shelf-book-spine-title {
+    position: relative;
+    z-index: 2;
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.05em;
-    color: color-mix(in srgb, var(--color-text-on-dark) 85%, transparent);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    max-height: 90%;
+    color: #f0e0b8;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.4);
+    max-height: calc(100% - 1.1rem);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+/* Kapitalband: the small woven two-tone band at the top and bottom of a
+   hardcover spine, where the page block meets the binding. Fixed red/
+   gold regardless of theme -- this is the book's own physical
+   decoration, not app UI chrome, so it doesn't participate in the
+   palette/theme system the way the leather color does. */
+.shelf-book-headband {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0.26rem;
+    background:
+        repeating-linear-gradient(60deg, transparent 0, transparent 0.06rem, rgba(0, 0, 0, 0.35) 0.06rem, rgba(0, 0, 0, 0.35) 0.09rem, transparent 0.09rem, transparent 0.18rem),
+        repeating-linear-gradient(-60deg, transparent 0, transparent 0.06rem, rgba(255, 255, 255, 0.18) 0.06rem, rgba(255, 255, 255, 0.18) 0.09rem, transparent 0.09rem, transparent 0.18rem),
+        linear-gradient(90deg, #7a1f1f, #8f2a28 50%, #7a1f1f);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+    z-index: 2;
+}
+.shelf-book-headband-top { top: 0; border-radius: 0.22rem 0.22rem 0 0; }
+.shelf-book-headband-bottom { bottom: 0; border-radius: 0 0 0.22rem 0.22rem; }
+
+/* Gold double-rule frame, inset from the board edge -- classic
+   fine-binding decoration. Two concentric borders with a hairline gap,
+   drawn via one element's border + outline so it needs no extra DOM
+   nodes beyond itself. */
+.shelf-book-gilt-frame {
+    position: absolute;
+    inset: 0.32rem;
+    border: 1px solid color-mix(in srgb, var(--color-gold-accent) 55%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--color-gold-accent) 30%, transparent);
+    outline-offset: 2px;
+    pointer-events: none;
+    /* z-index 2, not 1: .shelf-book-cover img is also z-index 1 and comes
+       later in the DOM, so an equal z-index let the img win ties and paint
+       over this frame on any book with a real cover. */
+    z-index: 2;
+}
+
+/* True box geometry: each face's translateZ is half of the dimension it
+   does NOT span -- the standard CSS-cube formula. T (thickness) =
+   3.25rem = .shelf-book's own width (unchanged, the spine's on-screen
+   size at rest); W (cover width) = 6.3rem (unchanged, the app's
+   established 2:3-ish cover shape); H = 9.5rem (unchanged). Verified
+   live in a browser (color-coded debug faces swept -180deg..180deg,
+   then the real textured faces) before being written here -- a prior
+   attempt at a 3rd face (PR #447) hit apparent z-fighting because the
+   old geometry hinged the cover off the spine's edge instead of
+   sharing a true box center, so faces slightly interpenetrated at the
+   seam; this formula shares edges exactly, with zero overlap. */
 .shelf-book-cover {
-    transform: rotateY(90deg) translateZ(1.6rem);
+    transform: translateZ(1.625rem);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     padding: 0.5rem;
     gap: 0.15rem;
     color: var(--color-text-on-dark);
-    /* Only clickable once actually revealed -- at rest this face is
-       edge-on (a thin sliver visually) but still occupies its full
-       bounding box in the DOM, so without this the favorite button
-       inside it could be spuriously clickable while barely visible. */
+    /* Same reasoning as the pre-existing pointer-events guard this
+       replaces: modern browsers generally hit-test a 3D-transformed
+       element at its rendered (projected) position, but this project
+       found live that an edge-on preserve-3d face can still register
+       clicks against its untransformed layout box -- keep the same
+       guard rather than re-litigating that quirk. */
     pointer-events: none;
-    /* At rest this face shares .shelf-book's own narrow spine-thickness
-       footprint (inset: 0 from the shared .shelf-book-spine,
-       .shelf-book-cover rule above) -- correct there, since it's an
-       edge-on sliver mimicking the book's physical thickness. But real
-       cover art is roughly as wide as it is tall (this app's own
-       established book-cover ratio is 2:3, see .book-card-cover
-       elsewhere in this file), so displaying it inside that same narrow
-       box made object-fit: cover crop away most of the image. On
-       reveal (below), left/width widen this face to a real 2:3-ish
-       cover shape; transitioning left/width here (separately from the
-       transform property .shelf-book-rotator/.shelf-book already
-       transition) lets this resize animate too, even though it isn't
-       part of shelf-physics.js's spring-driven transform.
-       --motion-spring-sync (not --motion-reveal) for the same reason as
-       the lift-shadow transition above: see that token's own comment in
-       tokens.css for why this needs to stay in step with the spring
-       instead of using the shorter, fixed reveal duration used
-       elsewhere. */
-    transition: width var(--motion-spring-sync) var(--ease-standard), left var(--motion-spring-sync) var(--ease-standard);
-}
-
-/* A visible slice of the page-block, as if peeking out from inside the
-   cover near the spine -- makes the revealed cover read as an actual
-   bound book rather than a flat card. Deliberately a flat 2D decoration
-   painted directly on .shelf-book-cover's own (already correctly
-   positioned/sized) face, NOT a separate 3D-rotated element: an earlier
-   attempt at a true third "fore-edge" face (rotated to sit between the
-   spine and cover faces) hit CSS's well-known lack of true per-pixel
-   z-buffering for overlapping transform-style: preserve-3d elements --
-   it intermittently painted on top of (ghosted over) the spine face at
-   some rotation angles, a browser depth-sorting limitation rather than
-   a wrong number to tune. This approach has no such risk: it's flat
-   content on one already-correct face, not competing 3D geometry.
-   left: 0 is the cover's own left edge, the side nearer the spine
-   (confirmed live: as the book rotates from spine to cover, the cover
-   swings into view from that side). The repeating-linear-gradient
-   stripes are individual page edges, not a texture image. Paints above
-   the cover's own ::before leather-texture overlay and its real cover
-   image (default stacking: an ::after pseudo-element paints after the
-   element's other children) -- deliberately overlaps a thin sliver of
-   the actual cover art at that edge, matching how this looks on a real
-   book viewed at a slight angle. */
-.shelf-book-cover::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 0.4rem;
-    background: repeating-linear-gradient(
-        to bottom,
-        #efe6d3 0,
-        #efe6d3 2px,
-        #ddd0b3 2px,
-        #ddd0b3 3px
-    );
-    box-shadow: inset 2px 0 3px rgba(0, 0, 0, 0.35);
-    pointer-events: none;
+    /* Hinge-groove shading: left edge borders the spine (the book's real
+       hinge) so it gets the stronger inset shadow; right edge borders
+       the fore-edge/pages face so it gets a weaker one. Third layer
+       repeats the shared rule's rest-state outer shadow: this rule and
+       the shared 6-face rule above both match via a single class
+       selector here (equal (0,1,0) specificity), so this rule's
+       box-shadow wins only because it comes later in the file --
+       and since a more-specific-or-tied box-shadow fully replaces
+       (does not layer with) the shared rule's, the outer shadow must
+       be repeated here or it would vanish at rest. */
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
 .shelf-book:hover .shelf-book-cover,
@@ -1534,27 +1606,90 @@ select:focus-visible,
 .shelf-book:has(:focus-visible) .shelf-book-cover,
 .shelf-book.is-revealed .shelf-book-cover {
     pointer-events: auto;
-    /* 6.3rem / 9.5rem (this face's unchanged height) ~= 2/3, matching
-       this app's established book-cover aspect ratio elsewhere
-       (.book-card-cover). left/right together with width position this
-       symmetrically around .shelf-book-rotator's own 3.25rem-wide box
-       (-1.525rem = (3.25rem - 6.3rem) / 2) rather than growing from one
-       edge, so the widened cover reads as centered on the spine it
-       pulled out from. This only resizes .shelf-book-cover itself
-       (position: absolute, so it doesn't affect .shelf-book's own
-       layout box or push neighboring books in the flex row) -- the
-       existing z-index: 5 lift on a revealed book's .shelf-book-slot
-       (below) already lets it paint over neighboring slots it now
-       visually overlaps more than before, matching the reference
-       mockups' own "pulled book covers part of its neighbors" look. */
-    left: -1.525rem;
-    right: auto;
-    width: 6.3rem;
+}
+
+.shelf-book-back {
+    transform: rotateY(180deg) translateZ(1.625rem);
+    /* Same spine-hinge-on-left, fore-edge-on-right relationship as
+       .shelf-book-cover above -- identical hinge-groove shading. */
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+/* Hover-state overrides for the three leather faces' hinge-groove
+   box-shadow above. The per-element rest-state rules above (a single
+   class selector, (0,1,0) specificity) are NOT what wins on hover --
+   Step 1's shared hover/focus/revealed rule (`.shelf-book:hover
+   .shelf-book-cover, ...`, three chained class-level selectors =
+   (0,3,0)) beats them outright on specificity alone, no tie, no source
+   order involved. So without this block, hovering would fall straight
+   through to that shared hover rule's box-shadow -- which is just the
+   plain outer glow, no inset layers -- deleting the hinge-groove seam
+   shadow entirely on hover rather than merely freezing it at its
+   rest-state size. This block's selectors have the exact same form as
+   Step 1's shared hover rule, so they're ALSO (0,3,0) -- a genuine
+   specificity tie with that rule. That tie is what source order
+   resolves: this block keeps the inset seam layers and swaps only the
+   third (outer-shadow) layer to the hover value, and must stay AFTER
+   Step 1's shared hover rule in the file to win that tie. */
+.shelf-book:hover .shelf-book-cover,
+.shelf-book:focus-visible .shelf-book-cover,
+.shelf-book:has(:focus-visible) .shelf-book-cover,
+.shelf-book.is-revealed .shelf-book-cover,
+.shelf-book:hover .shelf-book-back,
+.shelf-book:focus-visible .shelf-book-back,
+.shelf-book:has(:focus-visible) .shelf-book-back,
+.shelf-book.is-revealed .shelf-book-back {
+    box-shadow:
+        inset 0.28rem 0 0.35rem -0.15rem rgba(0, 0, 0, 0.5),
+        inset -0.12rem 0 0.2rem -0.08rem rgba(0, 0, 0, 0.3),
+        2px 14px 28px -4px rgba(0, 0, 0, 0.5);
+}
+
+.shelf-book:hover .shelf-book-spine,
+.shelf-book:focus-visible .shelf-book-spine,
+.shelf-book:has(:focus-visible) .shelf-book-spine,
+.shelf-book.is-revealed .shelf-book-spine {
+    box-shadow:
+        inset 0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        inset -0.2rem 0 0.3rem -0.12rem rgba(0, 0, 0, 0.5),
+        2px 14px 28px -4px rgba(0, 0, 0, 0.5);
+}
+
+.shelf-book-pages,
+.shelf-book-top,
+.shelf-book-bottom {
+    background:
+        radial-gradient(ellipse 70% 55% at 50% 50%, rgba(255, 255, 255, 0.3), transparent 70%),
+        repeating-linear-gradient(to bottom, #f2e9d6 0, #f2e9d6 1.5px, #e3d5b3 1.5px, #e3d5b3 2.3px, #f0e6d0 2.3px, #f0e6d0 3.6px, #ddcda3 3.6px, #ddcda3 4px),
+        linear-gradient(160deg, #eadfc4, #d8c69a);
+    box-shadow:
+        inset 0 0.6rem 0.6rem -0.4rem rgba(0, 0, 0, 0.35),
+        inset 0 -0.6rem 0.6rem -0.4rem rgba(0, 0, 0, 0.35),
+        0 2px 5px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.shelf-book-pages {
+    transform: rotateY(90deg) translateZ(3.15rem);
+}
+
+.shelf-book-top {
+    transform-origin: top center;
+    transform: translateZ(-1.625rem) rotateX(90deg);
+}
+
+.shelf-book-bottom {
+    transform-origin: bottom center;
+    transform: translateZ(-1.625rem) rotateX(-90deg);
 }
 
 .shelf-book-cover img {
     position: absolute;
     inset: 0;
+    z-index: 1;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -1568,15 +1703,17 @@ select:focus-visible,
 .shelf-book-cover-title,
 .shelf-book-cover-author {
     position: relative;
+    z-index: 2;
     font-size: 0.65rem;
     line-height: 1.2;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
-.shelf-book-cover-title { font-weight: 600; }
+.shelf-book-cover-title { font-weight: 600; color: var(--color-accent-text); }
 .shelf-book-cover-author { font-size: 0.6rem; opacity: 0.85; }
 
 .shelf-book-favorite {
     position: relative;
+    z-index: 2;
     align-self: flex-end;
     background: none;
     border: none;
@@ -1590,6 +1727,7 @@ select:focus-visible,
 
 .shelf-book-borrowed-badge {
     position: relative;
+    z-index: 2;
     font-size: 0.55rem;
     background: rgba(0, 0, 0, 0.5);
     padding: 0.1rem 0.3rem;
@@ -1599,6 +1737,7 @@ select:focus-visible,
 
 .shelf-book-progress {
     position: relative;
+    z-index: 2;
     height: 0.2rem;
     background: rgba(255, 255, 255, 0.25);
     border-radius: 0.1rem;
@@ -1618,20 +1757,25 @@ select:focus-visible,
    defaults to the exact remainder (percentages summing to less than 100%
    makes the browser apply an unwanted alpha multiplier to the result). */
 .shelf-book-palette-0 .shelf-book-spine,
-.shelf-book-palette-0 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 85%, white), color-mix(in srgb, var(--color-secondary) 70%, black)); }
+.shelf-book-palette-0 .shelf-book-cover,
+.shelf-book-palette-0 .shelf-book-back { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 85%, white), color-mix(in srgb, var(--color-secondary) 70%, black)); }
 .shelf-book-palette-1 .shelf-book-spine,
-.shelf-book-palette-1 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-border) 60%, var(--color-secondary)), color-mix(in srgb, var(--color-border) 50%, black)); }
+.shelf-book-palette-1 .shelf-book-cover,
+.shelf-book-palette-1 .shelf-book-back { background: linear-gradient(160deg, color-mix(in srgb, var(--color-border) 60%, var(--color-secondary)), color-mix(in srgb, var(--color-border) 50%, black)); }
 .shelf-book-palette-2 .shelf-book-spine,
-.shelf-book-palette-2 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white), color-mix(in srgb, var(--color-primary) 70%, black)); }
+.shelf-book-palette-2 .shelf-book-cover,
+.shelf-book-palette-2 .shelf-book-back { background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 85%, white), color-mix(in srgb, var(--color-primary) 70%, black)); }
 .shelf-book-palette-3 .shelf-book-spine,
-.shelf-book-palette-3 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 40%, var(--color-primary)), color-mix(in srgb, var(--color-bg-dark) 70%, black)); }
+.shelf-book-palette-3 .shelf-book-cover,
+.shelf-book-palette-3 .shelf-book-back { background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 40%, var(--color-primary)), color-mix(in srgb, var(--color-bg-dark) 70%, black)); }
 .shelf-book-palette-4 .shelf-book-spine,
-.shelf-book-palette-4 .shelf-book-cover { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 78%, var(--color-primary)), color-mix(in srgb, var(--color-secondary) 65%, black)); }
+.shelf-book-palette-4 .shelf-book-cover,
+.shelf-book-palette-4 .shelf-book-back { background: linear-gradient(160deg, color-mix(in srgb, var(--color-secondary) 78%, var(--color-primary)), color-mix(in srgb, var(--color-secondary) 65%, black)); }
 
 /* Cover-derived spine tint (Library Rework Phase 3): when ShelfBook.razor.cs
    successfully extracted a color from the book's actual cover image, it
    sets --shelf-book-tint and adds this class directly on each face span
-   (.shelf-book-spine/.shelf-book-cover), NOT on the .shelf-book anchor --
+   (.shelf-book-spine/.shelf-book-cover/.shelf-book-back), NOT on the .shelf-book anchor --
    shelf-physics.js (Phase 2) writes the anchor's style.transform every rAF
    frame during the spring animation and its classList (is-revealed) on the
    touch-reveal path; putting this tint's class/style on the anchor too
@@ -1648,7 +1792,8 @@ select:focus-visible,
    color rather than trying to retrofit --shelf-book-tint into each
    palette's own distinct two-token mix recipe. */
 .shelf-book .shelf-book-spine.has-cover-tint,
-.shelf-book .shelf-book-cover.has-cover-tint {
+.shelf-book .shelf-book-cover.has-cover-tint,
+.shelf-book .shelf-book-back.has-cover-tint {
     background: linear-gradient(160deg,
         color-mix(in srgb, var(--shelf-book-tint) 85%, white),
         color-mix(in srgb, var(--shelf-book-tint) 70%, black));
@@ -1657,13 +1802,13 @@ select:focus-visible,
 .shelf-book:hover,
 .shelf-book:focus-visible,
 .shelf-book:has(:focus-visible) {
-    transform: translateY(-1.4rem) translateZ(3.6rem) scale(1.08);
+    transform: translateY(-1.4rem) translateZ(3.6rem) scale(1.05);
 }
 
 .shelf-book:hover .shelf-book-rotator,
 .shelf-book:focus-visible .shelf-book-rotator,
 .shelf-book:has(:focus-visible) .shelf-book-rotator {
-    transform: rotateY(-88deg);
+    transform: rotateY(4deg);
 }
 
 /* Added by shelf-physics.js (Phase 2) once it takes over the reveal
@@ -1682,18 +1827,20 @@ select:focus-visible,
 @media (prefers-reduced-motion: reduce) {
     .shelf-book,
     .shelf-book-rotator,
-    /* .shelf-book-cover's own width/left transition (added for the
-       cover-image aspect-ratio fix, see its rule above) isn't driven by
-       shelf-physics.js at all, so it isn't covered by that module's own
-       reduced-motion no-op -- it needs its own carve-out here, same as
-       .shelf-book/.shelf-book-rotator, so a reduced-motion reveal snaps
-       to its final wider size instantly instead of still visibly easing
-       while the rotation/scale next to it correctly snaps. */
+    /* The lift-shadow (box-shadow) transition on all 6 box faces
+       (.shelf-book-spine/-cover/-back/-pages/-top/-bottom, see their
+       shared rule above) isn't driven by shelf-physics.js at all, so
+       it isn't covered by that module's own reduced-motion no-op -- it
+       needs its own carve-out here, same as .shelf-book/.shelf-book-
+       rotator, so a reduced-motion reveal snaps its shadow instantly
+       instead of still visibly easing while the rotation/scale next to
+       it correctly snaps. */
+    .shelf-book-spine,
     .shelf-book-cover,
-    /* Same reasoning as .shelf-book-cover above -- the new lift-shadow
-       transition on .shelf-book-spine/.shelf-book-cover isn't driven by
-       shelf-physics.js either, so it needs the same explicit carve-out. */
-    .shelf-book-spine {
+    .shelf-book-back,
+    .shelf-book-pages,
+    .shelf-book-top,
+    .shelf-book-bottom {
         transition: none;
     }
 }

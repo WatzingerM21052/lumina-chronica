@@ -12,8 +12,11 @@
     <span class="shelf-book-rotator">
         <span class="shelf-book-spine @(_spineTint is not null ? "has-cover-tint" : "")" style="@TintStyle">
             <span class="shelf-book-spine-title" aria-hidden="true">@Book.Title</span>
+            <span class="shelf-book-headband shelf-book-headband-top" aria-hidden="true"></span>
+            <span class="shelf-book-headband shelf-book-headband-bottom" aria-hidden="true"></span>
         </span>
         <span class="shelf-book-cover @(_spineTint is not null ? "has-cover-tint" : "")" style="@TintStyle">
+            <span class="shelf-book-gilt-frame" aria-hidden="true"></span>
             @if (_coverObjectUrl is not null)
             {
                 <img src="@_coverObjectUrl" alt="" aria-hidden="true" />
@@ -46,5 +49,9 @@
                 </span>
             }
         </span>
+        <span class="shelf-book-back @(_spineTint is not null ? "has-cover-tint" : "")" style="@TintStyle" aria-hidden="true"></span>
+        <span class="shelf-book-pages" aria-hidden="true"></span>
+        <span class="shelf-book-top" aria-hidden="true"></span>
+        <span class="shelf-book-bottom" aria-hidden="true"></span>
     </span>
 </a>

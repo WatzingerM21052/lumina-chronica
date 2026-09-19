@@ -39,3 +39,4 @@ frontend/LuminaChronica.Client/wwwroot/images/Layerimage/*.png
 frontend/LuminaChronica.Client/wwwroot/images/Designimages/*.png
 frontend/LuminaChronica.Client/wwwroot/images/*.png
 frontend/LuminaChronica.Client/wwwroot/images/*.svg
+.worktrees/
