@@ -33,15 +33,21 @@ else if (_books.Count == 0)
 else
 {
     <p class="text-muted">Insgesamt @FormatSize(_totalSizeBytes) belegt.</p>
-    <ul class="offline-book-list">
+    <div class="offline-book-grid">
         @foreach (var book in _books)
         {
-            <li class="offline-book-item">
-                <div>
+            <div class="offline-book-card">
+                <div class="offline-book-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                        <path d="M4 5.5c2.2-1 5-1 8 0v13c-3-1-5.8-1-8 0z" />
+                        <path d="M20 5.5c-2.2-1-5-1-8 0v13c3-1 5.8-1 8 0z" />
+                    </svg>
+                </div>
+                <div class="offline-book-info">
                     <strong>@book.Title</strong>
                     @if (!string.IsNullOrWhiteSpace(book.Author))
                     {
-                        <span class="text-muted"> — @book.Author</span>
+                        <div class="text-muted">@book.Author</div>
                     }
                     <div class="text-muted">@book.Format · @FormatSize(book.SizeBytes)</div>
                 </div>
@@ -49,9 +55,9 @@ else
                     <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">Lesen</a>
                     <button type="button" class="btn" @onclick="() => RemoveAsync(book.Id)">Entfernen</button>
                 </div>
-            </li>
+            </div>
         }
-    </ul>
+    </div>
 }
 
 @code {

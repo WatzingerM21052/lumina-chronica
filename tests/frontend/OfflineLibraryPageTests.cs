@@ -45,6 +45,23 @@ public class OfflineLibraryPageTests : BunitContext
     }
 
     [Fact]
+    public void OfflineLibrary_RendersBooksAsCards_WithPlaceholderIcon_NotAPlainList()
+    {
+        JSInterop.SetupModule("./js/offlineStorage.js")
+            .Setup<List<OfflineBookSummary>>("listBooks", _ => true)
+            .SetResult(
+            [
+                new OfflineBookSummary { Id = 1, Title = "Dune", Author = "Frank Herbert", Format = "EPUB", SizeBytes = 1024 * 1024, SavedAt = "2026-08-01T00:00:00Z" },
+            ]);
+
+        var cut = Render<OfflineLibrary>();
+
+        Assert.Single(cut.FindAll(".offline-book-card"));
+        Assert.Single(cut.FindAll(".offline-book-icon svg"));
+        Assert.Empty(cut.FindAll(".offline-book-list")); // old markup is gone
+    }
+
+    [Fact]
     public void OfflineLibrary_RemoveButton_CallsDeleteBook()
     {
         var module = JSInterop.SetupModule("./js/offlineStorage.js");
