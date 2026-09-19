@@ -447,6 +447,21 @@ public class LibraryPageTests : BunitContext
         Assert.Equal("40", cut.Find("select.library-raster-page-size").GetAttribute("value"));
     }
 
+    [Fact]
+    public void Library_OnLoad_IgnoresAnOutOfRangePersistedRasterPageSize_AndFallsBackToDefault()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":100}}""");
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<int?>("getRasterPageSize", _ => true)
+            .SetResult(99); // not one of RasterPageSizeOptions -- stale/tampered value
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        Assert.Equal("20", cut.Find("select.library-raster-page-size").GetAttribute("value"));
+    }
+
     private sealed class FirstRequestThenHangingHttpMessageHandler(string facetsJson, string firstBooksJson) : HttpMessageHandler
     {
         private int _booksRequestCount;
