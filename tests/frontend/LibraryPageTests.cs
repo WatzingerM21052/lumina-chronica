@@ -309,4 +309,68 @@ public class LibraryPageTests : BunitContext
         Assert.Equal(25, cut.FindAll("a.shelf-book").Count);
         Assert.Empty(cut.FindAll(".library-pager")); // pager is Raster-only now
     }
+
+    [Fact]
+    public void Library_ReloadInFlight_KeepsShowingPreviousResults_InsteadOfBlankingToLoadingState()
+    {
+        // Regression test for the "don't blank _allItems during a reload"
+        // fix: every other test's mocked HTTP response resolves
+        // synchronously, so none of them can distinguish "keeps old results
+        // visible while the new request is in flight" from "blanks to the
+        // loading spinner and then repopulates" -- both would look
+        // identical once the (synchronous) response arrives. This handler
+        // lets the *first* /api/books request complete normally, then makes
+        // every subsequent /api/books request hang forever (adapted from
+        // DiscoverPageTests.NeverRespondingHttpMessageHandler), so we can
+        // assert on what's on screen *while* a reload is still pending.
+        var handler = new FirstRequestThenHangingHttpMessageHandler(
+            """{"success":true,"data":{"tags":[],"genres":[]}}""",
+            """{"success":true,"data":{"items":[{"id":1,"title":"Dune","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}],"total":1,"page":1,"pageSize":100}}""");
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        var cut = Render<Library>();
+        Assert.Contains("Dune", cut.Markup);
+
+        // Any reload path works here; the favorites checkbox is the
+        // simplest synchronous one already used elsewhere in this file
+        // (Library_ClearFiltersButton_ResetsFavoritesOnlyAndReloadsWithoutIt)
+        // -- its @bind:after calls ApplyFiltersAsync -> LoadAllBooksAsync
+        // directly, no debounce timer to contend with. That second
+        // /api/books request now hangs forever courtesy of the handler.
+        cut.Find("input[type=checkbox]").Change(true);
+
+        // If LoadAllBooksAsync ever blanks _allItems to null again before
+        // this second request resolves, "Dune" disappears and the
+        // <LoadingIndicator> markup ("Bibliothek wird geladen...") takes
+        // its place -- this assertion catches that regression even though
+        // the hanging request never completes for the rest of the test.
+        Assert.Contains("Dune", cut.Markup);
+        Assert.DoesNotContain("Bibliothek wird geladen", cut.Markup);
+    }
+
+    private sealed class FirstRequestThenHangingHttpMessageHandler(string facetsJson, string firstBooksJson) : HttpMessageHandler
+    {
+        private int _booksRequestCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/facets"))
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(facetsJson));
+            }
+
+            if (Interlocked.Increment(ref _booksRequestCount) == 1)
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(firstBooksJson));
+            }
+
+            // Every subsequent /api/books request hangs forever -- lets a
+            // test observe what's on screen while a reload is still pending.
+            return new TaskCompletionSource<HttpResponseMessage>().Task;
+        }
+    }
 }
