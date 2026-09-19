@@ -399,6 +399,54 @@ public class LibraryPageTests : BunitContext
         Assert.Equal(countAfterFull, cut.FindAll("a.shelf-book").Count);
     }
 
+    [Fact]
+    public void Library_RasterPageSizeDropdown_ChangingItReslicesWithoutANewRequest_AndPersists()
+    {
+        var books = string.Join(",", Enumerable.Range(1, 50).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}"""));
+        var capturedRequests = new List<HttpRequestMessage>();
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books", r =>
+            {
+                capturedRequests.Add(r);
+                return RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":50,"page":1,"pageSize":100}}""");
+            });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+        var setSizeHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setRasterPageSize", _ => true);
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        Assert.Equal(20, cut.FindAll("a.book-card").Count);
+
+        var requestCountBeforeChange = capturedRequests.Count;
+        cut.Find("select.library-raster-page-size").Change("60");
+
+        Assert.Equal(50, cut.FindAll("a.book-card").Count); // 60 requested but only 50 exist -- all of them show on page 1
+        Assert.Equal(requestCountBeforeChange, capturedRequests.Count); // still no new HTTP request
+        var invocation = Assert.Single(setSizeHandler.Invocations);
+        Assert.Equal(60, invocation.Arguments[0]); // persisted the new choice
+    }
+
+    [Fact]
+    public void Library_OnLoad_UsesPersistedRasterPageSize()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":100}}""");
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<int?>("getRasterPageSize", _ => true)
+            .SetResult(40);
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        Assert.Equal("40", cut.Find("select.library-raster-page-size").GetAttribute("value"));
+    }
+
     private sealed class FirstRequestThenHangingHttpMessageHandler(string facetsJson, string firstBooksJson) : HttpMessageHandler
     {
         private int _booksRequestCount;

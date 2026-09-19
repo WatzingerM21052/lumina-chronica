@@ -66,6 +66,15 @@
         <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Regal</button>
         <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Raster</button>
     </div>
+    @if (_viewMode == LibraryViewMode.List)
+    {
+        <select class="library-raster-page-size" @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
+            @foreach (var size in RasterPageSizeOptions)
+            {
+                <option value="@size">@size pro Seite</option>
+            }
+        </select>
+    }
 </div>
 
 @if (_errorMessage is not null)
@@ -145,7 +154,9 @@ else
     private string _sort = "createdAt";
     private string _order = "desc";
     private int _rasterPage = 1;
-    private int _rasterPageSize = DefaultRasterPageSize;
+    private int _rasterPageSize;
+
+    private static readonly int[] RasterPageSizeOptions = [20, 40, 60, 100];
 
     private const int InitialVisibleBookCount = 40;
     private const int VisibleBookBatchSize = 40;
@@ -153,6 +164,8 @@ else
     private int _visibleBookCount = InitialVisibleBookCount;
     private ElementReference _loadMoreSentinelRef;
     private DotNetObjectReference<Library>? _dotNetHelper;
+
+    private IJSObjectReference? _libraryPreferencesModule;
 
     private System.Threading.Timer? _searchDebounceTimer;
 
@@ -177,6 +190,8 @@ else
             }
         }
 
+        _rasterPageSize = await LoadPreferredRasterPageSizeAsync();
+
         var facetsResponse = await ApiClient.GetAsync<BookFacets>("/api/books/facets");
         if (facetsResponse is { Success: true, Data: not null })
         {
@@ -184,6 +199,38 @@ else
         }
 
         await LoadAllBooksAsync();
+    }
+
+    private async Task<int> LoadPreferredRasterPageSizeAsync()
+    {
+        try
+        {
+            _libraryPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+            var stored = await _libraryPreferencesModule.InvokeAsync<int?>("getRasterPageSize");
+            return stored.HasValue && RasterPageSizeOptions.Contains(stored.Value) ? stored.Value : DefaultRasterPageSize;
+        }
+        catch (Exception)
+        {
+            return DefaultRasterPageSize;
+        }
+    }
+
+    private async Task SavePreferredRasterPageSizeAsync(int size)
+    {
+        try
+        {
+            _libraryPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+            await _libraryPreferencesModule.InvokeVoidAsync("setRasterPageSize", size);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private async Task OnRasterPageSizeChangedAsync()
+    {
+        _rasterPage = 1;
+        await SavePreferredRasterPageSizeAsync(_rasterPageSize);
     }
 
     // Walks the already-grouped shelf in order, including whole groups until
@@ -404,5 +451,16 @@ else
         }
 
         _dotNetHelper?.Dispose();
+
+        if (_libraryPreferencesModule is not null)
+        {
+            try
+            {
+                await _libraryPreferencesModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }
