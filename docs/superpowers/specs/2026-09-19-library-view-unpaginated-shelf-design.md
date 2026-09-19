@@ -37,12 +37,14 @@ Beide Ansichten (Regal, Raster) lesen ab jetzt aus `_allItems`. Serverseitige Pa
 
 Damit nicht potenziell hunderte 3D-CSS-Buch-Elemente auf einmal ins DOM gerendert werden (heute irrelevant bei < 100 Büchern, aber die Mechanik soll für später stehen):
 
-- Neuer State: `_visibleGroupCount` (int), initial auf einen Startwert gesetzt, der die erste Bildschirmfüllung plus Puffer abdeckt (Default: 6 Gruppen).
-- Gerendert wird `groups.Take(_visibleGroupCount)`.
-- Nach der letzten gerenderten Gruppe steht ein unsichtbarer Sentinel-Marker (`<div class="shelf-load-more-sentinel" @ref="_loadMoreSentinelRef">`).
+**Korrektur gegenüber der ersten Idee (Batching nach Gruppen-Anzahl)**: die Standard-Sortierung ("Hinzugefügt") gruppiert nach `GroupByRecency` in nur **vier** festen Buckets ("Diese Woche"/"Diesen Monat"/"Dieses Jahr"/"Älter") — bei einer großen Bibliothek könnten hunderte Bücher in einem einzigen Bucket ("Älter") landen. Ein Batching nach Gruppen-Anzahl (z. B. "6 Gruppen sichtbar") würde dann gar nichts begrenzen, weil schon die erste sichtbare Gruppe hunderte Bücher enthalten könnte. Batching erfolgt deshalb nach **Buch-Anzahl über alle Gruppen hinweg**, nicht nach Gruppen-Anzahl:
+
+- Neuer State: `_visibleBookCount` (int), initial auf einen Startwert gesetzt, der die erste Bildschirmfüllung plus Puffer abdeckt (Default: 40 Bücher).
+- Gerendert wird: die Gruppen in Reihenfolge durchlaufen, pro Gruppe so viele ihrer Bücher rendern, wie das verbleibende Budget (`_visibleBookCount` minus bereits gerenderter Bücher) noch erlaubt — eine Gruppe kann dabei auch nur teilweise gerendert werden (der Rest kommt beim nächsten Nachlade-Schritt einfach als Fortsetzung derselben Gruppe hinzu, kein Neustart). Sobald das Budget erschöpft ist, werden keine weiteren Gruppen mehr begonnen.
+- Nach dem letzten gerenderten Buch steht ein unsichtbarer Sentinel-Marker (`<div class="shelf-load-more-sentinel" @ref="_loadMoreSentinelRef">`), nur vorhanden, solange noch nicht alle Bücher sichtbar sind.
 - Neue JS-Funktion in `shelf-physics.js` (dieselbe Datei, die bereits für den Shelf-DOM importiert wird): `observeLoadMore(sentinelEl, dotNetHelper, methodName)` — ein `IntersectionObserver` mit großzügigem `rootMargin` (z. B. `"600px 0px"`, analog zu `lazyCover.js`s Vorlauf-Muster), der beim Näherkommen den C#-Callback `[JSInvokable] RevealMoreGroups()` auslöst.
-- `RevealMoreGroups()` erhöht `_visibleGroupCount` um eine feste Batch-Größe (Default: +6) und begrenzt auf `groups.Count`. Sobald `_visibleGroupCount >= groups.Count`, wird der Observer disconnected (keine weiteren Trigger nötig).
-- Der Observer wird neu aufgesetzt, wann immer sich die zugrunde liegende Datenmenge ändert (neuer Filter/Suche/Sortierung → `_visibleGroupCount` wird auf den Startwert zurückgesetzt, alter Observer disconnected, neuer beobachtet den (neuen) Sentinel).
+- `RevealMoreGroups()` erhöht `_visibleBookCount` um eine feste Batch-Größe (Default: +40) und begrenzt auf die Gesamtzahl der gefilterten Bücher.
+- Der Observer wird bei jedem Render neu aufgesetzt, solange der Sentinel existiert (das JS-Modul disconnected dabei intern immer erst den alten Observer, analog zu `lazyCover.js` — siehe dortigen Kommentar). Ein neuer Filter/Suche/Sortierung setzt `_visibleBookCount` auf den Startwert zurück.
 
 ## Raster-Ansicht: clientseitige Pagination mit wählbarer Seitengröße
 
@@ -69,7 +71,7 @@ Neues Dropdown neben den bestehenden Sortier-Controls: feste Stufen **20 / 40 / 
 - **Mehrseiten-Fetch-Loop**: bUnit-Test mit gemocktem `ApiClient`, der > 200 Test-Bücher über 3 Backend-Seiten (100/100/rest) verteilt zurückgibt — prüft, dass `_allItems` am Ende alle Bücher enthält und die Gruppierung über den vollständigen Satz läuft, nicht nur über Seite 1. (Ein Test mit nur 2 Büchern würde den Loop gar nicht auslösen — bewusst groß genug seeden.)
 - **Fehlerfall im Loop**: eine der Folgeseiten schlägt fehl → `_errorMessage` wird gesetzt, kein Teil-Rendering.
 - **Raster-Seitengröße**: Wechsel der Dropdown-Auswahl reslict `_allItems` ohne zusätzlichen `ApiClient`-Call (Call-Count-Assertion) und setzt `_rasterPage` zurück auf 1.
-- **Lazy-Render-Zähler**: `RevealMoreGroups()` erhöht `_visibleGroupCount` korrekt und kappt bei `groups.Count` (reiner C#-Logik-Test, kein echtes Scroll-Verhalten).
+- **Lazy-Render-Zähler**: `RevealMoreGroups()` erhöht `_visibleBookCount` korrekt und kappt bei der Gesamtzahl der gefilterten Bücher; ein Aufruf reicht in bUnit aus, um "vollständig geladen" direkt zu prüfen, ohne einen echten `IntersectionObserver` zu brauchen (reiner C#-Logik-Test, kein echtes Scroll-Verhalten — das braucht Live-Verifikation, siehe unten).
 - **Nicht bUnit-testbar, braucht Live-Verifikation**: das tatsächliche Scroll-getriggerte Nachladen im echten Browser (`IntersectionObserver` + echtes Scrollen) — bei der Verifikation echtes Scroll-Wheel-Input verwenden (`computer`-Tool), nicht `window.scrollTo()`/`javascript_tool`, siehe bekannter Automatisierungs-Quirk in diesem Projekt.
 
 ## Bestehende Zustände bleiben erhalten
