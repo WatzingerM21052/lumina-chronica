@@ -288,7 +288,6 @@ else
     private async Task LoadAllBooksAsync()
     {
         _errorMessage = null;
-        _allItems = null;
         _rasterPage = 1;
 
         var query = new List<string> { $"sort={_sort}", $"order={_order}", $"pageSize={FetchPageSize}" };
