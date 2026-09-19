@@ -352,6 +352,53 @@ public class LibraryPageTests : BunitContext
         Assert.DoesNotContain("Bibliothek wird geladen", cut.Markup);
     }
 
+    [Fact]
+    public void Library_GridView_InitiallyRendersFewerBooksThanTotal_WhenLibraryIsLarge()
+    {
+        // All 60 books share one createdAt far in the past -- default sort
+        // (createdAt/desc) buckets them all into the single "Älter" recency
+        // group. This is deliberate: it's the exact case the design spec's
+        // self-correction called out -- batching by GROUP count would not
+        // limit anything here, since there's only one group. Batching by BOOK
+        // count must still cap the initial render below the total.
+        var books = string.Join(",", Enumerable.Range(1, 60).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        UseApiResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":60,"page":1,"pageSize":100}}""");
+
+        var cut = Render<Library>();
+
+        var initialCount = cut.FindAll("a.shelf-book").Count;
+        Assert.True(initialCount < 60, $"expected fewer than 60 books rendered initially, got {initialCount}");
+        Assert.True(initialCount > 0);
+    }
+
+    [Fact]
+    public async Task Library_RevealMoreBooks_EventuallyRendersEveryBook_AndStopsGrowingOnceAllShown()
+    {
+        var books = string.Join(",", Enumerable.Range(1, 60).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        UseApiResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":60,"page":1,"pageSize":100}}""");
+
+        var cut = Render<Library>();
+
+        for (var i = 0; i < 10; i++) // generous upper bound; the loop below stops early once everything is shown
+        {
+            if (cut.FindAll("a.shelf-book").Count >= 60) break;
+            // RevealMoreBooks calls StateHasChanged, which requires running on
+            // bUnit's render dispatcher -- cut.InvokeAsync marshals onto it,
+            // matching this codebase's existing convention for calling a
+            // rendering-triggering instance method directly from a test (see
+            // DiscoverPageTests.LoadCoverAsync / ReaderPageTests.OnChapterAnchorNotFound).
+            await cut.InvokeAsync(() => cut.Instance.RevealMoreBooks());
+        }
+
+        Assert.Equal(60, cut.FindAll("a.shelf-book").Count);
+
+        var countAfterFull = cut.FindAll("a.shelf-book").Count;
+        await cut.InvokeAsync(() => cut.Instance.RevealMoreBooks()); // calling again once everything is already shown must be a harmless no-op
+        Assert.Equal(countAfterFull, cut.FindAll("a.shelf-book").Count);
+    }
+
     private sealed class FirstRequestThenHangingHttpMessageHandler(string facetsJson, string firstBooksJson) : HttpMessageHandler
     {
         private int _booksRequestCount;

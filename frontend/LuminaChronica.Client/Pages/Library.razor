@@ -90,14 +90,21 @@ else
 {
     @if (_viewMode == LibraryViewMode.Grid)
     {
+        var allGroups = LibraryShelfGrouping.Group(_allItems ?? [], _sort, _genreFilters, _tagFilters);
+        var totalBookCount = _allItems?.Count ?? 0;
+
         <div class="library-shelf" @ref="_shelfRef">
             <div class="shelf-cabinet">
-                @foreach (var group in LibraryShelfGrouping.Group(_allItems ?? [], _sort, _genreFilters, _tagFilters))
+                @foreach (var group in TakeUpToBookCount(allGroups, _visibleBookCount))
                 {
                     <ShelfRow @key="group.Label" Label="@group.Label" Books="group.Books" />
                 }
             </div>
         </div>
+        @if (_visibleBookCount < totalBookCount)
+        {
+            <div class="shelf-load-more-sentinel" @ref="_loadMoreSentinelRef"></div>
+        }
     }
     else
     {
@@ -140,6 +147,13 @@ else
     private int _rasterPage = 1;
     private int _rasterPageSize = DefaultRasterPageSize;
 
+    private const int InitialVisibleBookCount = 40;
+    private const int VisibleBookBatchSize = 40;
+
+    private int _visibleBookCount = InitialVisibleBookCount;
+    private ElementReference _loadMoreSentinelRef;
+    private DotNetObjectReference<Library>? _dotNetHelper;
+
     private System.Threading.Timer? _searchDebounceTimer;
 
     private ElementReference _shelfRef;
@@ -172,6 +186,39 @@ else
         await LoadAllBooksAsync();
     }
 
+    // Walks the already-grouped shelf in order, including whole groups until
+    // the remaining book budget runs out, then truncates the group that
+    // crosses the budget boundary instead of skipping it entirely -- so a
+    // partially-revealed shelf compartment grows in place on the next reveal
+    // rather than appearing all-or-nothing.
+    private static IEnumerable<BookGroup> TakeUpToBookCount(IEnumerable<BookGroup> groups, int bookCount)
+    {
+        var remaining = bookCount;
+        foreach (var group in groups)
+        {
+            if (remaining <= 0) yield break;
+
+            if (group.Books.Count <= remaining)
+            {
+                yield return group;
+                remaining -= group.Books.Count;
+            }
+            else
+            {
+                yield return new BookGroup(group.Label, group.Books.Take(remaining).ToList());
+                remaining = 0;
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void RevealMoreBooks()
+    {
+        var total = _allItems?.Count ?? 0;
+        _visibleBookCount = Math.Min(_visibleBookCount + VisibleBookBatchSize, total);
+        StateHasChanged();
+    }
+
     private bool ShelfIsRendered =>
         _errorMessage is null
         && _allItems is not null
@@ -190,22 +237,37 @@ else
             return;
         }
 
-        if (_shelfPhysicsInitialized) return;
-
-        try
+        if (!_shelfPhysicsInitialized)
         {
-            _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
-            await _shelfPhysicsModule.InvokeVoidAsync("initShelfPhysics", _shelfRef);
-            await _shelfPhysicsModule.InvokeVoidAsync("initShelfTouch", _shelfRef);
-            // Re-check rather than unconditionally setting true: a later
-            // OnAfterRenderAsync invocation (e.g. a view-mode toggle mid-import)
-            // may have already reset this while these awaits were suspended --
-            // only claim "initialized" if the shelf is still actually rendered
-            // now that we've resumed.
-            _shelfPhysicsInitialized = ShelfIsRendered;
+            try
+            {
+                _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
+                await _shelfPhysicsModule.InvokeVoidAsync("initShelfPhysics", _shelfRef);
+                await _shelfPhysicsModule.InvokeVoidAsync("initShelfTouch", _shelfRef);
+                // Re-check rather than unconditionally setting true: a later
+                // OnAfterRenderAsync invocation (e.g. a view-mode toggle mid-import)
+                // may have already reset this while these awaits were suspended --
+                // only claim "initialized" if the shelf is still actually rendered
+                // now that we've resumed.
+                _shelfPhysicsInitialized = ShelfIsRendered;
+            }
+            catch (Exception)
+            {
+            }
         }
-        catch (Exception)
+
+        var totalBookCount = _allItems?.Count ?? 0;
+        if (_visibleBookCount < totalBookCount)
         {
+            try
+            {
+                _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
+                _dotNetHelper ??= DotNetObjectReference.Create(this);
+                await _shelfPhysicsModule.InvokeVoidAsync("observeLoadMore", _loadMoreSentinelRef, _dotNetHelper, nameof(RevealMoreBooks));
+            }
+            catch (Exception)
+            {
+            }
         }
     }
 
@@ -289,6 +351,7 @@ else
     {
         _errorMessage = null;
         _rasterPage = 1;
+        _visibleBookCount = InitialVisibleBookCount;
 
         var query = new List<string> { $"sort={_sort}", $"order={_order}", $"pageSize={FetchPageSize}" };
         if (!string.IsNullOrWhiteSpace(_searchTerm)) query.Add($"search={Uri.EscapeDataString(_searchTerm)}");
@@ -332,11 +395,14 @@ else
         {
             try
             {
+                await _shelfPhysicsModule.InvokeVoidAsync("disconnectLoadMore");
                 await _shelfPhysicsModule.DisposeAsync();
             }
             catch (JSDisconnectedException)
             {
             }
         }
+
+        _dotNetHelper?.Dispose();
     }
 }
