@@ -23,7 +23,8 @@ public class OfflineLibraryPageTests : BunitContext
 
         var cut = Render<OfflineLibrary>();
 
-        Assert.Contains("Noch keine Bücher offline gespeichert.", cut.Markup);
+        Assert.Contains("Noch keine Bücher für unterwegs gepackt.", cut.Markup);
+        Assert.Single(cut.FindAll(".offline-empty-icon svg"));
     }
 
     [Fact]

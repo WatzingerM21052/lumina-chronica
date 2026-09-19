@@ -78,3 +78,38 @@
     margin-top: auto;
     padding-top: var(--space-1);
 }
+
+.offline-empty-state {
+    text-align: center;
+    padding: var(--space-5) var(--space-3);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-card);
+}
+
+.offline-empty-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--color-text-disabled);
+    margin-bottom: var(--space-1);
+}
+
+.offline-empty-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.offline-empty-ornament {
+    display: block;
+    color: var(--color-gold-accent);
+    font-size: 1.3rem;
+    margin-bottom: var(--space-1);
+}
+
+.offline-empty-state p {
+    font-family: var(--font-family-reader);
+    font-style: italic;
+    color: var(--color-text-secondary);
+    max-width: 26rem;
+    margin: 0 auto;
+}

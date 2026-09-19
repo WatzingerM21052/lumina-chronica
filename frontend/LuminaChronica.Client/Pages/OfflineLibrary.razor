@@ -28,7 +28,18 @@
 }
 else if (_books.Count == 0)
 {
-    <EmptyState Message="Noch keine Bücher offline gespeichert." />
+    <div class="offline-empty-state">
+        <div class="offline-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M9 8V6a3 3 0 0 1 3-3 3 3 0 0 1 3 3v2" />
+                <rect x="3" y="8" width="18" height="12" rx="2" />
+                <path d="M8 11.5v5M12 11.5v5M16 11.5v5" stroke-width="1.1" />
+                <rect x="10.3" y="7.6" width="3.4" height="1.6" rx="0.4" />
+            </svg>
+        </div>
+        <span class="offline-empty-ornament" aria-hidden="true">❦</span>
+        <p>Noch keine Bücher für unterwegs gepackt.</p>
+    </div>
 }
 else
 {
