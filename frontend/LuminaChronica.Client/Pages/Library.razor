@@ -72,17 +72,17 @@
 {
     <p class="form-error">@_errorMessage</p>
 }
-else if (_result is null)
+else if (_allItems is null)
 {
     <LoadingIndicator Mode="LoadingIndicatorMode.Page" Text="Bibliothek wird geladen..." />
 }
-else if (_result.Total == 0 && !HasActiveFilters)
+else if (_allItems.Count == 0 && !HasActiveFilters)
 {
     <EmptyState Message="Deine Bibliothek ist noch leer. Füge dein erstes Buch hinzu und beginne deine Sammlung."
                 ActionText="Buch hinzufügen"
                 OnAction="GoToUpload" />
 }
-else if (_result.Items.Count == 0)
+else if (_allItems.Count == 0)
 {
     <p class="text-muted">Keine Bücher gefunden.</p>
 }
@@ -92,7 +92,7 @@ else
     {
         <div class="library-shelf" @ref="_shelfRef">
             <div class="shelf-cabinet">
-                @foreach (var group in LibraryShelfGrouping.Group(_result.Items, _sort, _genreFilters, _tagFilters))
+                @foreach (var group in LibraryShelfGrouping.Group(_allItems ?? [], _sort, _genreFilters, _tagFilters))
                 {
                     <ShelfRow @key="group.Label" Label="@group.Label" Books="group.Books" />
                 }
@@ -102,29 +102,30 @@ else
     else
     {
         <div class="library-raster">
-            @foreach (var book in _result.Items)
+            @foreach (var book in (_allItems ?? []).Skip((_rasterPage - 1) * _rasterPageSize).Take(_rasterPageSize))
             {
                 <BookCard Book="book" />
             }
         </div>
-    }
 
-    @if (_result.Total > _result.PageSize)
-    {
-        <div class="library-pager">
-            <button type="button" class="btn" disabled="@(_result.Page <= 1)" @onclick="() => GoToPageAsync(_result.Page - 1)">← Zurück</button>
-            <span>Seite @_result.Page von @PageCount</span>
-            <button type="button" class="btn" disabled="@(_result.Page >= PageCount)" @onclick="() => GoToPageAsync(_result.Page + 1)">Weiter →</button>
-        </div>
+        @if ((_allItems?.Count ?? 0) > _rasterPageSize)
+        {
+            <div class="library-pager">
+                <button type="button" class="btn" disabled="@(_rasterPage <= 1)" @onclick="() => GoToRasterPage(_rasterPage - 1)">← Zurück</button>
+                <span>Seite @_rasterPage von @RasterPageCount</span>
+                <button type="button" class="btn" disabled="@(_rasterPage >= RasterPageCount)" @onclick="() => GoToRasterPage(_rasterPage + 1)">Weiter →</button>
+            </div>
+        }
     }
 }
 
 @code {
     private enum LibraryViewMode { Grid, List }
 
-    private const int PageSize = 20;
+    private const int FetchPageSize = 100; // backend's MAX_PAGE_SIZE
+    private const int DefaultRasterPageSize = 20;
 
-    private BookListResponse? _result;
+    private List<Book>? _allItems;
     private BookFacets? _facets;
     private List<Book>? _suggestions;
     private string? _errorMessage;
@@ -136,7 +137,8 @@ else
     private bool _favoritesOnly;
     private string _sort = "createdAt";
     private string _order = "desc";
-    private int _page = 1;
+    private int _rasterPage = 1;
+    private int _rasterPageSize = DefaultRasterPageSize;
 
     private System.Threading.Timer? _searchDebounceTimer;
 
@@ -146,7 +148,7 @@ else
 
     private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || _genreFilters.Count > 0 || _tagFilters.Count > 0 || _favoritesOnly;
 
-    private int PageCount => _result is null ? 1 : Math.Max(1, (int)Math.Ceiling((double)_result.Total / _result.PageSize));
+    private int RasterPageCount => _allItems is null ? 1 : Math.Max(1, (int)Math.Ceiling((double)_allItems.Count / _rasterPageSize));
 
     protected override async Task OnInitializedAsync()
     {
@@ -167,14 +169,14 @@ else
             _facets = facetsResponse.Data;
         }
 
-        await LoadBooksAsync();
+        await LoadAllBooksAsync();
     }
 
     private bool ShelfIsRendered =>
         _errorMessage is null
-        && _result is not null
-        && !(_result.Total == 0 && !HasActiveFilters)
-        && _result.Items.Count != 0
+        && _allItems is not null
+        && !(_allItems.Count == 0 && !HasActiveFilters)
+        && _allItems.Count != 0
         && _viewMode == LibraryViewMode.Grid;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -276,37 +278,51 @@ else
         await ApplyFiltersAsync();
     }
 
-    private Task ApplyFiltersAsync()
+    private Task ApplyFiltersAsync() => LoadAllBooksAsync();
+
+    private void GoToRasterPage(int page)
     {
-        _page = 1;
-        return LoadBooksAsync();
+        _rasterPage = page;
     }
 
-    private Task GoToPageAsync(int page)
-    {
-        _page = page;
-        return LoadBooksAsync();
-    }
-
-    private async Task LoadBooksAsync()
+    private async Task LoadAllBooksAsync()
     {
         _errorMessage = null;
+        _allItems = null;
+        _rasterPage = 1;
 
-        var query = new List<string> { $"sort={_sort}", $"order={_order}", $"page={_page}", $"pageSize={PageSize}" };
+        var query = new List<string> { $"sort={_sort}", $"order={_order}", $"pageSize={FetchPageSize}" };
         if (!string.IsNullOrWhiteSpace(_searchTerm)) query.Add($"search={Uri.EscapeDataString(_searchTerm)}");
         if (_genreFilters.Count > 0) query.Add($"genre={Uri.EscapeDataString(string.Join(",", _genreFilters))}");
         if (_tagFilters.Count > 0) query.Add($"tag={Uri.EscapeDataString(string.Join(",", _tagFilters))}");
         if (_favoritesOnly) query.Add("favorite=true");
 
-        var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}");
-        if (response is { Success: true, Data: not null })
+        var items = new List<Book>();
+        var page = 1;
+        while (true)
         {
-            _result = response.Data;
+            var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}&page={page}");
+            if (response is not { Success: true, Data: not null })
+            {
+                _errorMessage = response?.Error?.Message ?? "Bibliothek konnte nicht geladen werden.";
+                return;
+            }
+
+            items.AddRange(response.Data.Items);
+
+            // Stop once we've collected everything the server says exists, or
+            // if a page ever comes back empty despite Total not being reached
+            // yet -- the latter guards against an infinite loop if the server
+            // and its own reported Total ever disagree.
+            if (items.Count >= response.Data.Total || response.Data.Items.Count == 0)
+            {
+                break;
+            }
+
+            page++;
         }
-        else
-        {
-            _errorMessage = response?.Error?.Message ?? "Bibliothek konnte nicht geladen werden.";
-        }
+
+        _allItems = items;
     }
 
     public async ValueTask DisposeAsync()

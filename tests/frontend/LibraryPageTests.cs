@@ -207,15 +207,17 @@ public class LibraryPageTests : BunitContext
     }
 
     [Fact]
-    public void Library_Pager_AppearsWhenMoreBooksThanOnePage_AndWeiterRequestsPage2()
+    public void Library_RasterPager_ClickingWeiter_ShowsNextClientSidePage_WithoutANewRequest()
     {
+        var books = string.Join(",", Enumerable.Range(1, 25).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}"""));
         var capturedRequests = new List<HttpRequestMessage>();
         var handler = new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
             .When(r => r.RequestUri!.AbsolutePath == "/api/books", r =>
             {
                 capturedRequests.Add(r);
-                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[{"id":1,"title":"Dune","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}],"total":25,"page":1,"pageSize":20}}""");
+                return RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":25,"page":1,"pageSize":100}}""");
             });
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -224,8 +226,87 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        Assert.Equal(20, cut.FindAll("a.book-card").Count); // default page size, Task 3 makes this configurable
+        Assert.Contains("Book 1", cut.Markup);
+        Assert.DoesNotContain("Book 21", cut.Markup);
+
+        var requestCountBeforeClick = capturedRequests.Count;
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter →").Click();
 
-        Assert.Contains("page=2", capturedRequests[^1].RequestUri?.Query);
+        Assert.Equal(5, cut.FindAll("a.book-card").Count); // remaining 5 books on page 2
+        Assert.Contains("Book 21", cut.Markup);
+        Assert.DoesNotContain("Book 1<", cut.Markup); // page 1's first book is gone from page 2
+        Assert.Equal(requestCountBeforeClick, capturedRequests.Count); // no new HTTP request for the page turn
+    }
+
+    [Fact]
+    public void Library_LoadAllBooksAsync_FetchesEverySubsequentBackendPage_WhenTotalExceedsOneBackendPage()
+    {
+        var page1Books = string.Join(",", Enumerable.Range(1, 100).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var page2Books = string.Join(",", Enumerable.Range(101, 25).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books" && r.RequestUri.Query.Contains("page=2"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{page2Books}}}],"total":125,"page":2,"pageSize":100}}"""))
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books",
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{page1Books}}}],"total":125,"page":1,"pageSize":100}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        // All 125 must be reachable via client-side raster paging -- proves
+        // LoadAllBooksAsync actually followed the second backend page instead
+        // of silently stopping at the first 100.
+        Assert.Contains("Book 1", cut.Markup);
+        Assert.DoesNotContain("Book 125", cut.Markup); // not on page 1 of the raster view yet
+        // DefaultRasterPageSize = 20 -> ceil(125/20) = 7 pages total; starting on
+        // page 1, reaching page 7 (where book 125 lives) takes 6 "Weiter"-clicks.
+        for (var i = 0; i < 6; i++)
+        {
+            cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter →").Click();
+        }
+        Assert.Contains("Book 125", cut.Markup);
+    }
+
+    [Fact]
+    public void Library_GridView_KeepsACategoryWithMoreThan20BooksAsOneContinuousGroup()
+    {
+        // Regression test for the bug this task fixes: the shelf (Regal)
+        // view used to group books by category within only the currently
+        // loaded 20-item server page, so a category with more than 20 books
+        // got split across pages instead of rendering as one group. All 25
+        // books share the same old createdAt date -- with the default sort
+        // ("createdAt"/"desc", no genre/tag filter), LibraryShelfGrouping
+        // routes to GroupByRecency, and a date this old buckets everything
+        // into the single "Älter" group (see
+        // Library_GridViewMode_WrapsShelfRowsInACabinet for the same
+        // bucketing rule).
+        var books = string.Join(",", Enumerable.Range(1, 25).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books",
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":25,"page":1,"pageSize":100}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        // Default view mode is Grid (Regal) -- no click needed.
+        var cut = Render<Library>();
+
+        Assert.Single(cut.FindAll(".shelf-row-group"));
+        Assert.Equal(25, cut.FindAll("a.shelf-book").Count);
+        Assert.Empty(cut.FindAll(".library-pager")); // pager is Raster-only now
     }
 }
