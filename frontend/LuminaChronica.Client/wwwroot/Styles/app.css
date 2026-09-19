@@ -237,7 +237,10 @@ h3 {
 
 /* Shared literary empty-state (PublicProfile's Bibliothek/Projekte/
    Aktivität chapters, Discover's book grid) -- an ornament + flavor text
-   instead of a bare "no items" line. */
+   instead of a bare "no items" line. Also used directly (not through the
+   shared EmptyState component) by OfflineLibrary.razor's empty state,
+   which needs an extra page-specific icon slot the component doesn't
+   support. */
 .empty-state-literary {
     text-align: center;
     padding: var(--space-5) var(--space-3);

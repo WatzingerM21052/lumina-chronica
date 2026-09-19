@@ -63,6 +63,23 @@ public class OfflineLibraryPageTests : BunitContext
     }
 
     [Fact]
+    public void OfflineLibrary_RendersCard_WithoutAuthorLine_WhenAuthorIsNull()
+    {
+        JSInterop.SetupModule("./js/offlineStorage.js")
+            .Setup<List<OfflineBookSummary>>("listBooks", _ => true)
+            .SetResult(
+            [
+                new OfflineBookSummary { Id = 1, Title = "Dune", Author = null, Format = "EPUB", SizeBytes = 1024 * 1024, SavedAt = "2026-08-01T00:00:00Z" },
+            ]);
+
+        var cut = Render<OfflineLibrary>();
+
+        Assert.Single(cut.FindAll(".offline-book-card"));
+        Assert.Contains("Dune", cut.Markup);
+        Assert.Single(cut.FindAll(".offline-book-card .text-muted"));
+    }
+
+    [Fact]
     public void OfflineLibrary_RemoveButton_CallsDeleteBook()
     {
         var module = JSInterop.SetupModule("./js/offlineStorage.js");
