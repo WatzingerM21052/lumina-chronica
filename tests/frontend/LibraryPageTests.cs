@@ -207,15 +207,17 @@ public class LibraryPageTests : BunitContext
     }
 
     [Fact]
-    public void Library_Pager_AppearsWhenMoreBooksThanOnePage_AndWeiterRequestsPage2()
+    public void Library_RasterPager_ClickingWeiter_ShowsNextClientSidePage_WithoutANewRequest()
     {
+        var books = string.Join(",", Enumerable.Range(1, 25).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}"""));
         var capturedRequests = new List<HttpRequestMessage>();
         var handler = new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
             .When(r => r.RequestUri!.AbsolutePath == "/api/books", r =>
             {
                 capturedRequests.Add(r);
-                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[{"id":1,"title":"Dune","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}],"total":25,"page":1,"pageSize":20}}""");
+                return RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":25,"page":1,"pageSize":100}}""");
             });
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
@@ -224,8 +226,372 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        Assert.Equal(20, cut.FindAll("a.book-card").Count); // default page size, Task 3 makes this configurable
+        Assert.Contains("Book 1", cut.Markup);
+        Assert.DoesNotContain("Book 21", cut.Markup);
+
+        var requestCountBeforeClick = capturedRequests.Count;
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter →").Click();
 
-        Assert.Contains("page=2", capturedRequests[^1].RequestUri?.Query);
+        Assert.Equal(5, cut.FindAll("a.book-card").Count); // remaining 5 books on page 2
+        Assert.Contains("Book 21", cut.Markup);
+        Assert.DoesNotContain("Book 1<", cut.Markup); // page 1's first book is gone from page 2
+        Assert.Equal(requestCountBeforeClick, capturedRequests.Count); // no new HTTP request for the page turn
+    }
+
+    [Fact]
+    public void Library_LoadAllBooksAsync_FetchesEverySubsequentBackendPage_WhenTotalExceedsOneBackendPage()
+    {
+        var page1Books = string.Join(",", Enumerable.Range(1, 100).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var page2Books = string.Join(",", Enumerable.Range(101, 25).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books" && r.RequestUri.Query.Contains("page=2"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{page2Books}}}],"total":125,"page":2,"pageSize":100}}"""))
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books",
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{page1Books}}}],"total":125,"page":1,"pageSize":100}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        // All 125 must be reachable via client-side raster paging -- proves
+        // LoadAllBooksAsync actually followed the second backend page instead
+        // of silently stopping at the first 100.
+        Assert.Contains("Book 1", cut.Markup);
+        Assert.DoesNotContain("Book 125", cut.Markup); // not on page 1 of the raster view yet
+        // DefaultRasterPageSize = 20 -> ceil(125/20) = 7 pages total; starting on
+        // page 1, reaching page 7 (where book 125 lives) takes 6 "Weiter"-clicks.
+        for (var i = 0; i < 6; i++)
+        {
+            cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter →").Click();
+        }
+        Assert.Contains("Book 125", cut.Markup);
+    }
+
+    [Fact]
+    public void Library_LoadAllBooksAsync_MidLoopFetchFailure_SetsErrorMessage_WithoutPartialRendering()
+    {
+        // Design spec's "Fehlerfall im Loop" test, never implemented until
+        // now: page 1 of the fetch-all loop succeeds (100 books, but
+        // total=125 forces a page 2 request), and page 2 then fails. Per
+        // LoadAllBooksAsync's early return (before _allItems is ever
+        // assigned), the 100 successfully-fetched page-1 books must NOT
+        // leak into the rendered page -- only _errorMessage should show.
+        var page1Books = string.Join(",", Enumerable.Range(1, 100).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books" && r.RequestUri.Query.Contains("page=2"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":false,"error":{"code":"SERVER_ERROR","message":"Bibliothek konnte nicht geladen werden (Seite 2)."}}"""))
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books",
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{page1Books}}}],"total":125,"page":1,"pageSize":100}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        var cut = Render<Library>();
+
+        Assert.Contains("Bibliothek konnte nicht geladen werden (Seite 2).", cut.Markup);
+        Assert.DoesNotContain("Book 1<", cut.Markup);
+        Assert.Empty(cut.FindAll("a.shelf-book"));
+    }
+
+    [Fact]
+    public void Library_Reload_DoesNotResetRasterPage_UntilTheNewFetchActuallyCompletes()
+    {
+        // Regression test for the "reset-before-fetch instead of
+        // reset-after-fetch" bug: LoadAllBooksAsync used to set
+        // _rasterPage = 1 / _visibleBookCount = InitialVisibleBookCount at
+        // the *top* of the method, before the fetch even started. That's
+        // only observable while a reload's fetch is still pending (a fully
+        // synchronous mock response settles to the same end state either
+        // way) -- so this uses a handler whose second /api/books request
+        // hangs until the test explicitly completes it, mirroring
+        // Library_ReloadInFlight_KeepsShowingPreviousResults_... below.
+        var oldBooks = string.Join(",", Enumerable.Range(1, 45).Select(i =>
+            $$"""{"id":{{i}},"title":"Old Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var handler = new PendingSecondBooksRequestHttpMessageHandler(
+            """{"success":true,"data":{"tags":[],"genres":[]}}""",
+            $$$"""{"success":true,"data":{"items":[{{{oldBooks}}}],"total":45,"page":1,"pageSize":100}}""");
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        // DefaultRasterPageSize = 20 -> ceil(45/20) = 3 pages. Move away
+        // from page 1 before triggering the reload.
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter →").Click();
+        Assert.Contains("Old Book 21", cut.Markup); // now on page 2
+
+        // Trigger a reload; the second /api/books request now hangs.
+        cut.Find("input[type=checkbox]").Change(true);
+
+        // While the new fetch is still pending, the raster page must NOT
+        // have snapped back to 1 yet -- with the old buggy reset-before-
+        // fetch code, this would already have happened at this point (the
+        // still-displayed OLD data jumping to its own page 1 before the new
+        // data even arrived).
+        Assert.Contains("Old Book 21", cut.Markup);
+        Assert.DoesNotContain("Old Book 1<", cut.Markup);
+
+        var newBooks = string.Join(",", Enumerable.Range(1, 45).Select(i =>
+            $$"""{"id":{{i}},"title":"New Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        handler.SecondBooksResponse.SetResult(RoutedFakeHttpMessageHandler.JsonResponse(
+            $$$"""{"success":true,"data":{"items":[{{{newBooks}}}],"total":45,"page":1,"pageSize":100}}"""));
+
+        // Once the new fetch actually completes, the raster page must be
+        // back on page 1 -- for the NEW data.
+        cut.WaitForAssertion(() => Assert.Contains("New Book 1<", cut.Markup), TimeSpan.FromSeconds(2));
+        Assert.DoesNotContain("New Book 21", cut.Markup); // page 1 only
+    }
+
+    [Fact]
+    public void Library_GridView_KeepsACategoryWithMoreThan20BooksAsOneContinuousGroup()
+    {
+        // Regression test for the bug this task fixes: the shelf (Regal)
+        // view used to group books by category within only the currently
+        // loaded 20-item server page, so a category with more than 20 books
+        // got split across pages instead of rendering as one group. All 25
+        // books share the same old createdAt date -- with the default sort
+        // ("createdAt"/"desc", no genre/tag filter), LibraryShelfGrouping
+        // routes to GroupByRecency, and a date this old buckets everything
+        // into the single "Älter" group (see
+        // Library_GridViewMode_WrapsShelfRowsInACabinet for the same
+        // bucketing rule).
+        var books = string.Join(",", Enumerable.Range(1, 25).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books",
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":25,"page":1,"pageSize":100}}"""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        // Default view mode is Grid (Regal) -- no click needed.
+        var cut = Render<Library>();
+
+        Assert.Single(cut.FindAll(".shelf-row-group"));
+        Assert.Equal(25, cut.FindAll("a.shelf-book").Count);
+        Assert.Empty(cut.FindAll(".library-pager")); // pager is Raster-only now
+    }
+
+    [Fact]
+    public void Library_ReloadInFlight_KeepsShowingPreviousResults_InsteadOfBlankingToLoadingState()
+    {
+        // Regression test for the "don't blank _allItems during a reload"
+        // fix: every other test's mocked HTTP response resolves
+        // synchronously, so none of them can distinguish "keeps old results
+        // visible while the new request is in flight" from "blanks to the
+        // loading spinner and then repopulates" -- both would look
+        // identical once the (synchronous) response arrives. This handler
+        // lets the *first* /api/books request complete normally, then makes
+        // every subsequent /api/books request hang forever (adapted from
+        // DiscoverPageTests.NeverRespondingHttpMessageHandler), so we can
+        // assert on what's on screen *while* a reload is still pending.
+        var handler = new FirstRequestThenHangingHttpMessageHandler(
+            """{"success":true,"data":{"tags":[],"genres":[]}}""",
+            """{"success":true,"data":{"items":[{"id":1,"title":"Dune","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}],"total":1,"page":1,"pageSize":100}}""");
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+
+        var cut = Render<Library>();
+        Assert.Contains("Dune", cut.Markup);
+
+        // Any reload path works here; the favorites checkbox is the
+        // simplest synchronous one already used elsewhere in this file
+        // (Library_ClearFiltersButton_ResetsFavoritesOnlyAndReloadsWithoutIt)
+        // -- its @bind:after calls ApplyFiltersAsync -> LoadAllBooksAsync
+        // directly, no debounce timer to contend with. That second
+        // /api/books request now hangs forever courtesy of the handler.
+        cut.Find("input[type=checkbox]").Change(true);
+
+        // If LoadAllBooksAsync ever blanks _allItems to null again before
+        // this second request resolves, "Dune" disappears and the
+        // <LoadingIndicator> markup ("Bibliothek wird geladen...") takes
+        // its place -- this assertion catches that regression even though
+        // the hanging request never completes for the rest of the test.
+        Assert.Contains("Dune", cut.Markup);
+        Assert.DoesNotContain("Bibliothek wird geladen", cut.Markup);
+    }
+
+    [Fact]
+    public void Library_GridView_InitiallyRendersFewerBooksThanTotal_WhenLibraryIsLarge()
+    {
+        // All 60 books share one createdAt far in the past -- default sort
+        // (createdAt/desc) buckets them all into the single "Älter" recency
+        // group. This is deliberate: it's the exact case the design spec's
+        // self-correction called out -- batching by GROUP count would not
+        // limit anything here, since there's only one group. Batching by BOOK
+        // count must still cap the initial render below the total.
+        var books = string.Join(",", Enumerable.Range(1, 60).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        UseApiResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":60,"page":1,"pageSize":100}}""");
+
+        var cut = Render<Library>();
+
+        var initialCount = cut.FindAll("a.shelf-book").Count;
+        Assert.True(initialCount < 60, $"expected fewer than 60 books rendered initially, got {initialCount}");
+        Assert.True(initialCount > 0);
+    }
+
+    [Fact]
+    public async Task Library_RevealMoreBooks_EventuallyRendersEveryBook_AndStopsGrowingOnceAllShown()
+    {
+        var books = string.Join(",", Enumerable.Range(1, 60).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2000-01-01","isFavorite":false}"""));
+        UseApiResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":60,"page":1,"pageSize":100}}""");
+
+        var cut = Render<Library>();
+
+        for (var i = 0; i < 10; i++) // generous upper bound; the loop below stops early once everything is shown
+        {
+            if (cut.FindAll("a.shelf-book").Count >= 60) break;
+            // RevealMoreBooks calls StateHasChanged, which requires running on
+            // bUnit's render dispatcher -- cut.InvokeAsync marshals onto it,
+            // matching this codebase's existing convention for calling a
+            // rendering-triggering instance method directly from a test (see
+            // DiscoverPageTests.LoadCoverAsync / ReaderPageTests.OnChapterAnchorNotFound).
+            await cut.InvokeAsync(() => cut.Instance.RevealMoreBooks());
+        }
+
+        Assert.Equal(60, cut.FindAll("a.shelf-book").Count);
+
+        var countAfterFull = cut.FindAll("a.shelf-book").Count;
+        await cut.InvokeAsync(() => cut.Instance.RevealMoreBooks()); // calling again once everything is already shown must be a harmless no-op
+        Assert.Equal(countAfterFull, cut.FindAll("a.shelf-book").Count);
+    }
+
+    [Fact]
+    public void Library_RasterPageSizeDropdown_ChangingItReslicesWithoutANewRequest_AndPersists()
+    {
+        var books = string.Join(",", Enumerable.Range(1, 50).Select(i =>
+            $$"""{"id":{{i}},"title":"Book {{i}}","author":null,"coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isFavorite":false}"""));
+        var capturedRequests = new List<HttpRequestMessage>();
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books", r =>
+            {
+                capturedRequests.Add(r);
+                return RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":50,"page":1,"pageSize":100}}""");
+            });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+        var setSizeHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setRasterPageSize", _ => true);
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        Assert.Equal(20, cut.FindAll("a.book-card").Count);
+
+        var requestCountBeforeChange = capturedRequests.Count;
+        cut.Find("select.library-raster-page-size").Change("60");
+
+        Assert.Equal(50, cut.FindAll("a.book-card").Count); // 60 requested but only 50 exist -- all of them show on page 1
+        Assert.Equal(requestCountBeforeChange, capturedRequests.Count); // still no new HTTP request
+        var invocation = Assert.Single(setSizeHandler.Invocations);
+        Assert.Equal(60, invocation.Arguments[0]); // persisted the new choice
+    }
+
+    [Fact]
+    public void Library_OnLoad_UsesPersistedRasterPageSize()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":100}}""");
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<int?>("getRasterPageSize", _ => true)
+            .SetResult(40);
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        Assert.Equal("40", cut.Find("select.library-raster-page-size").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Library_OnLoad_IgnoresAnOutOfRangePersistedRasterPageSize_AndFallsBackToDefault()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":100}}""");
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<int?>("getRasterPageSize", _ => true)
+            .SetResult(99); // not one of RasterPageSizeOptions -- stale/tampered value
+
+        var cut = Render<Library>();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        Assert.Equal("20", cut.Find("select.library-raster-page-size").GetAttribute("value"));
+    }
+
+    private sealed class FirstRequestThenHangingHttpMessageHandler(string facetsJson, string firstBooksJson) : HttpMessageHandler
+    {
+        private int _booksRequestCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/facets"))
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(facetsJson));
+            }
+
+            if (Interlocked.Increment(ref _booksRequestCount) == 1)
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(firstBooksJson));
+            }
+
+            // Every subsequent /api/books request hangs forever -- lets a
+            // test observe what's on screen while a reload is still pending.
+            return new TaskCompletionSource<HttpResponseMessage>().Task;
+        }
+    }
+
+    // Unlike FirstRequestThenHangingHttpMessageHandler (which hangs forever),
+    // this exposes the second /api/books request's response as a
+    // TaskCompletionSource the test can complete on demand -- needed to
+    // observe state both *while* a reload is pending and *after* it
+    // resolves, within the same test.
+    private sealed class PendingSecondBooksRequestHttpMessageHandler(string facetsJson, string firstBooksJson) : HttpMessageHandler
+    {
+        private int _booksRequestCount;
+
+        public TaskCompletionSource<HttpResponseMessage> SecondBooksResponse { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/facets"))
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(facetsJson));
+            }
+
+            if (Interlocked.Increment(ref _booksRequestCount) == 1)
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(firstBooksJson));
+            }
+
+            return SecondBooksResponse.Task;
+        }
     }
 }

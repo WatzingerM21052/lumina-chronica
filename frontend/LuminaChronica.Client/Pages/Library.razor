@@ -66,23 +66,32 @@
         <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Regal</button>
         <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Raster</button>
     </div>
+    @if (_viewMode == LibraryViewMode.List)
+    {
+        <select class="library-raster-page-size" @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
+            @foreach (var size in RasterPageSizeOptions)
+            {
+                <option value="@size">@size pro Seite</option>
+            }
+        </select>
+    }
 </div>
 
 @if (_errorMessage is not null)
 {
     <p class="form-error">@_errorMessage</p>
 }
-else if (_result is null)
+else if (_allItems is null)
 {
     <LoadingIndicator Mode="LoadingIndicatorMode.Page" Text="Bibliothek wird geladen..." />
 }
-else if (_result.Total == 0 && !HasActiveFilters)
+else if (_allItems.Count == 0 && !HasActiveFilters)
 {
     <EmptyState Message="Deine Bibliothek ist noch leer. Füge dein erstes Buch hinzu und beginne deine Sammlung."
                 ActionText="Buch hinzufügen"
                 OnAction="GoToUpload" />
 }
-else if (_result.Items.Count == 0)
+else if (_allItems.Count == 0)
 {
     <p class="text-muted">Keine Bücher gefunden.</p>
 }
@@ -90,41 +99,49 @@ else
 {
     @if (_viewMode == LibraryViewMode.Grid)
     {
+        var allGroups = LibraryShelfGrouping.Group(_allItems ?? [], _sort, _genreFilters, _tagFilters);
+        var totalBookCount = _allItems?.Count ?? 0;
+
         <div class="library-shelf" @ref="_shelfRef">
             <div class="shelf-cabinet">
-                @foreach (var group in LibraryShelfGrouping.Group(_result.Items, _sort, _genreFilters, _tagFilters))
+                @foreach (var group in TakeUpToBookCount(allGroups, _visibleBookCount))
                 {
                     <ShelfRow @key="group.Label" Label="@group.Label" Books="group.Books" />
                 }
             </div>
         </div>
+        @if (_visibleBookCount < totalBookCount)
+        {
+            <div class="shelf-load-more-sentinel" @ref="_loadMoreSentinelRef"></div>
+        }
     }
     else
     {
         <div class="library-raster">
-            @foreach (var book in _result.Items)
+            @foreach (var book in (_allItems ?? []).Skip((_rasterPage - 1) * _rasterPageSize).Take(_rasterPageSize))
             {
                 <BookCard Book="book" />
             }
         </div>
-    }
 
-    @if (_result.Total > _result.PageSize)
-    {
-        <div class="library-pager">
-            <button type="button" class="btn" disabled="@(_result.Page <= 1)" @onclick="() => GoToPageAsync(_result.Page - 1)">← Zurück</button>
-            <span>Seite @_result.Page von @PageCount</span>
-            <button type="button" class="btn" disabled="@(_result.Page >= PageCount)" @onclick="() => GoToPageAsync(_result.Page + 1)">Weiter →</button>
-        </div>
+        @if ((_allItems?.Count ?? 0) > _rasterPageSize)
+        {
+            <div class="library-pager">
+                <button type="button" class="btn" disabled="@(_rasterPage <= 1)" @onclick="() => GoToRasterPage(_rasterPage - 1)">← Zurück</button>
+                <span>Seite @_rasterPage von @RasterPageCount</span>
+                <button type="button" class="btn" disabled="@(_rasterPage >= RasterPageCount)" @onclick="() => GoToRasterPage(_rasterPage + 1)">Weiter →</button>
+            </div>
+        }
     }
 }
 
 @code {
     private enum LibraryViewMode { Grid, List }
 
-    private const int PageSize = 20;
+    private const int FetchPageSize = 100; // backend's MAX_PAGE_SIZE
+    private const int DefaultRasterPageSize = 20;
 
-    private BookListResponse? _result;
+    private List<Book>? _allItems;
     private BookFacets? _facets;
     private List<Book>? _suggestions;
     private string? _errorMessage;
@@ -136,7 +153,19 @@ else
     private bool _favoritesOnly;
     private string _sort = "createdAt";
     private string _order = "desc";
-    private int _page = 1;
+    private int _rasterPage = 1;
+    private int _rasterPageSize;
+
+    private static readonly int[] RasterPageSizeOptions = [20, 40, 60, 100];
+
+    private const int InitialVisibleBookCount = 40;
+    private const int VisibleBookBatchSize = 40;
+
+    private int _visibleBookCount = InitialVisibleBookCount;
+    private ElementReference _loadMoreSentinelRef;
+    private DotNetObjectReference<Library>? _dotNetHelper;
+
+    private IJSObjectReference? _libraryPreferencesModule;
 
     private System.Threading.Timer? _searchDebounceTimer;
 
@@ -146,7 +175,7 @@ else
 
     private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || _genreFilters.Count > 0 || _tagFilters.Count > 0 || _favoritesOnly;
 
-    private int PageCount => _result is null ? 1 : Math.Max(1, (int)Math.Ceiling((double)_result.Total / _result.PageSize));
+    private int RasterPageCount => _allItems is null ? 1 : Math.Max(1, (int)Math.Ceiling((double)_allItems.Count / _rasterPageSize));
 
     protected override async Task OnInitializedAsync()
     {
@@ -161,20 +190,87 @@ else
             }
         }
 
+        _rasterPageSize = await LoadPreferredRasterPageSizeAsync();
+
         var facetsResponse = await ApiClient.GetAsync<BookFacets>("/api/books/facets");
         if (facetsResponse is { Success: true, Data: not null })
         {
             _facets = facetsResponse.Data;
         }
 
-        await LoadBooksAsync();
+        await LoadAllBooksAsync();
+    }
+
+    private async Task<int> LoadPreferredRasterPageSizeAsync()
+    {
+        try
+        {
+            _libraryPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+            var stored = await _libraryPreferencesModule.InvokeAsync<int?>("getRasterPageSize");
+            return stored.HasValue && RasterPageSizeOptions.Contains(stored.Value) ? stored.Value : DefaultRasterPageSize;
+        }
+        catch (Exception)
+        {
+            return DefaultRasterPageSize;
+        }
+    }
+
+    private async Task SavePreferredRasterPageSizeAsync(int size)
+    {
+        try
+        {
+            _libraryPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+            await _libraryPreferencesModule.InvokeVoidAsync("setRasterPageSize", size);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private async Task OnRasterPageSizeChangedAsync()
+    {
+        _rasterPage = 1;
+        await SavePreferredRasterPageSizeAsync(_rasterPageSize);
+    }
+
+    // Walks the already-grouped shelf in order, including whole groups until
+    // the remaining book budget runs out, then truncates the group that
+    // crosses the budget boundary instead of skipping it entirely -- so a
+    // partially-revealed shelf compartment grows in place on the next reveal
+    // rather than appearing all-or-nothing.
+    private static IEnumerable<BookGroup> TakeUpToBookCount(IEnumerable<BookGroup> groups, int bookCount)
+    {
+        var remaining = bookCount;
+        foreach (var group in groups)
+        {
+            if (remaining <= 0) yield break;
+
+            if (group.Books.Count <= remaining)
+            {
+                yield return group;
+                remaining -= group.Books.Count;
+            }
+            else
+            {
+                yield return new BookGroup(group.Label, group.Books.Take(remaining).ToList());
+                remaining = 0;
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void RevealMoreBooks()
+    {
+        var total = _allItems?.Count ?? 0;
+        _visibleBookCount = Math.Min(_visibleBookCount + VisibleBookBatchSize, total);
+        StateHasChanged();
     }
 
     private bool ShelfIsRendered =>
         _errorMessage is null
-        && _result is not null
-        && !(_result.Total == 0 && !HasActiveFilters)
-        && _result.Items.Count != 0
+        && _allItems is not null
+        && !(_allItems.Count == 0 && !HasActiveFilters)
+        && _allItems.Count != 0
         && _viewMode == LibraryViewMode.Grid;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -188,22 +284,37 @@ else
             return;
         }
 
-        if (_shelfPhysicsInitialized) return;
-
-        try
+        if (!_shelfPhysicsInitialized)
         {
-            _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
-            await _shelfPhysicsModule.InvokeVoidAsync("initShelfPhysics", _shelfRef);
-            await _shelfPhysicsModule.InvokeVoidAsync("initShelfTouch", _shelfRef);
-            // Re-check rather than unconditionally setting true: a later
-            // OnAfterRenderAsync invocation (e.g. a view-mode toggle mid-import)
-            // may have already reset this while these awaits were suspended --
-            // only claim "initialized" if the shelf is still actually rendered
-            // now that we've resumed.
-            _shelfPhysicsInitialized = ShelfIsRendered;
+            try
+            {
+                _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
+                await _shelfPhysicsModule.InvokeVoidAsync("initShelfPhysics", _shelfRef);
+                await _shelfPhysicsModule.InvokeVoidAsync("initShelfTouch", _shelfRef);
+                // Re-check rather than unconditionally setting true: a later
+                // OnAfterRenderAsync invocation (e.g. a view-mode toggle mid-import)
+                // may have already reset this while these awaits were suspended --
+                // only claim "initialized" if the shelf is still actually rendered
+                // now that we've resumed.
+                _shelfPhysicsInitialized = ShelfIsRendered;
+            }
+            catch (Exception)
+            {
+            }
         }
-        catch (Exception)
+
+        var totalBookCount = _allItems?.Count ?? 0;
+        if (_visibleBookCount < totalBookCount)
         {
+            try
+            {
+                _shelfPhysicsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelf-physics.js");
+                _dotNetHelper ??= DotNetObjectReference.Create(this);
+                await _shelfPhysicsModule.InvokeVoidAsync("observeLoadMore", _loadMoreSentinelRef, _dotNetHelper, nameof(RevealMoreBooks));
+            }
+            catch (Exception)
+            {
+            }
         }
     }
 
@@ -276,37 +387,64 @@ else
         await ApplyFiltersAsync();
     }
 
-    private Task ApplyFiltersAsync()
+    private Task ApplyFiltersAsync() => LoadAllBooksAsync();
+
+    private void GoToRasterPage(int page)
     {
-        _page = 1;
-        return LoadBooksAsync();
+        _rasterPage = page;
     }
 
-    private Task GoToPageAsync(int page)
-    {
-        _page = page;
-        return LoadBooksAsync();
-    }
-
-    private async Task LoadBooksAsync()
+    private async Task LoadAllBooksAsync()
     {
         _errorMessage = null;
 
-        var query = new List<string> { $"sort={_sort}", $"order={_order}", $"page={_page}", $"pageSize={PageSize}" };
+        var query = new List<string> { $"sort={_sort}", $"order={_order}", $"pageSize={FetchPageSize}" };
         if (!string.IsNullOrWhiteSpace(_searchTerm)) query.Add($"search={Uri.EscapeDataString(_searchTerm)}");
         if (_genreFilters.Count > 0) query.Add($"genre={Uri.EscapeDataString(string.Join(",", _genreFilters))}");
         if (_tagFilters.Count > 0) query.Add($"tag={Uri.EscapeDataString(string.Join(",", _tagFilters))}");
         if (_favoritesOnly) query.Add("favorite=true");
 
-        var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}");
-        if (response is { Success: true, Data: not null })
+        var items = new List<Book>();
+        var page = 1;
+        while (true)
         {
-            _result = response.Data;
+            var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}&page={page}");
+            if (response is not { Success: true, Data: not null })
+            {
+                _errorMessage = response?.Error?.Message ?? "Bibliothek konnte nicht geladen werden.";
+                return;
+            }
+
+            items.AddRange(response.Data.Items);
+
+            // Stop once we've collected everything the server says exists, or
+            // if a page ever comes back empty despite Total not being reached
+            // yet -- the latter guards against an infinite loop if the server
+            // and its own reported Total ever disagree.
+            if (items.Count >= response.Data.Total || response.Data.Items.Count == 0)
+            {
+                break;
+            }
+
+            page++;
         }
-        else
-        {
-            _errorMessage = response?.Error?.Message ?? "Bibliothek konnte nicht geladen werden.";
-        }
+
+        // Dedupe by Id before assigning: a backend page query with no
+        // secondary sort-key tiebreaker could in principle return the same
+        // row across two page fetches if the primary sort column ties,
+        // which would otherwise violate ShelfRow's @key="book.Id"
+        // uniqueness within a shelf group.
+        _allItems = items.DistinctBy(b => b.Id).ToList();
+
+        // Reset only on success, together with _allItems, and only here --
+        // not at the top of this method -- so a reload keeps showing the
+        // previous results (and the previous reveal/page position) for as
+        // long as the new fetch is in flight, and only snaps back to the
+        // initial batch/page once the new result set is actually what's
+        // about to be shown. On failure (the early return above), none of
+        // this runs, leaving whatever was already on screen untouched.
+        _rasterPage = 1;
+        _visibleBookCount = InitialVisibleBookCount;
     }
 
     public async ValueTask DisposeAsync()
@@ -317,7 +455,21 @@ else
         {
             try
             {
+                await _shelfPhysicsModule.InvokeVoidAsync("disconnectLoadMore");
                 await _shelfPhysicsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        _dotNetHelper?.Dispose();
+
+        if (_libraryPreferencesModule is not null)
+        {
+            try
+            {
+                await _libraryPreferencesModule.DisposeAsync();
             }
             catch (JSDisconnectedException)
             {

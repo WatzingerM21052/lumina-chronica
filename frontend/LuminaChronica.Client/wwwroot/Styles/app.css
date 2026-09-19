@@ -1889,6 +1889,15 @@ select:focus-visible,
     pointer-events: none;
 }
 
+/* Invisible trigger for the Regal view's scroll-driven lazy rendering
+   (Library Rework -- unpaginated shelf). Needs a non-zero size to be a
+   reliable IntersectionObserver target across browsers; kept visually
+   inert otherwise. Lives as a sibling AFTER .library-shelf, never inside
+   .shelf-cabinet -- see that class's own :last-child rule below. */
+.shelf-load-more-sentinel {
+  height: 1px;
+}
+
 /* Wraps all of a Grid-view page's ShelfRows in one continuous cabinet
    silhouette (Library Shelf Cabinet phase) -- individual .shelf-compartment
    rows (below) lose their own external rounding/shadow and become flat

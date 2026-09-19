@@ -543,3 +543,30 @@ export function initShelfPhysics(root) {
         closeIfCurrentlyRevealed(book);
     });
 }
+
+// Infinite-scroll trigger for the Regal view's lazy book rendering
+// (Library Rework -- unpaginated shelf). One observer instance at a time,
+// same disconnect-before-reobserve pattern as lazyCover.js: this module is
+// re-invoked on every render where more books remain to reveal, and each
+// call must fully replace whatever observer the previous render created
+// rather than stacking a new one on top of it.
+let loadMoreObserver = null;
+
+export function observeLoadMore(sentinel, dotNetHelper, methodName) {
+    loadMoreObserver?.disconnect();
+    if (!sentinel) return;
+
+    loadMoreObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            dotNetHelper.invokeMethodAsync(methodName);
+        }
+    }, { rootMargin: "600px 0px" }); // start revealing well before the sentinel is actually on-screen
+
+    loadMoreObserver.observe(sentinel);
+}
+
+export function disconnectLoadMore() {
+    loadMoreObserver?.disconnect();
+    loadMoreObserver = null;
+}
