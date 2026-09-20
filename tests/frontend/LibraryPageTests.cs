@@ -545,6 +545,74 @@ public class LibraryPageTests : BunitContext
         Assert.Equal("20", cut.Find("select.library-raster-page-size").GetAttribute("value"));
     }
 
+    [Fact]
+    public void Library_ShelfBookZoomDropdown_OnlyVisibleInGridView()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":100}}""");
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Library>(); // Grid is the default view mode
+        Assert.Single(cut.FindAll("select.library-shelf-book-zoom"));
+        Assert.Empty(cut.FindAll("select.library-raster-page-size"));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        Assert.Empty(cut.FindAll("select.library-shelf-book-zoom"));
+    }
+
+    private const string OneBookResponse = """
+        {"success":true,"data":{"items":[
+            {"id":1,"title":"Dune","author":"Frank Herbert","coverUrl":null,"genre":"scifi","language":"en","visibility":"PRIVATE","createdAt":"2026-01-01"}
+        ],"total":1,"page":1,"pageSize":100}}
+        """;
+
+    [Fact]
+    public void Library_ShelfBookZoomDropdown_ChangingItSetsCssVariable_AndPersists()
+    {
+        UseApiResponse(OneBookResponse);
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        var setZoomHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setShelfBookZoom", _ => true);
+
+        var cut = Render<Library>();
+        Assert.Contains("--shelf-book-zoom: 1", cut.Find("div.shelf-cabinet").GetAttribute("style"));
+
+        cut.Find("select.library-shelf-book-zoom").Change("1.5");
+
+        var cabinetStyle = cut.Find("div.shelf-cabinet").GetAttribute("style")!;
+        Assert.Contains("--shelf-book-zoom: 1.5", cabinetStyle);
+        var invocation = Assert.Single(setZoomHandler.Invocations);
+        Assert.Equal("1.5", invocation.Arguments[0]);
+    }
+
+    [Fact]
+    public void Library_OnLoad_UsesPersistedShelfBookZoom()
+    {
+        UseApiResponse(OneBookResponse);
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<string?>("getShelfBookZoom", _ => true)
+            .SetResult("1.25");
+
+        var cut = Render<Library>();
+
+        Assert.Equal("1.25", cut.Find("select.library-shelf-book-zoom").GetAttribute("value"));
+        Assert.Contains("--shelf-book-zoom: 1.25", cut.Find("div.shelf-cabinet").GetAttribute("style"));
+    }
+
+    [Fact]
+    public void Library_OnLoad_IgnoresAnOutOfRangePersistedShelfBookZoom_AndFallsBackToDefault()
+    {
+        UseApiResponse(OneBookResponse);
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<string?>("getShelfBookZoom", _ => true)
+            .SetResult("2"); // not one of ShelfBookZoomOptions -- stale/tampered value
+
+        var cut = Render<Library>();
+
+        Assert.Equal("1", cut.Find("select.library-shelf-book-zoom").GetAttribute("value"));
+        Assert.Contains("--shelf-book-zoom: 1", cut.Find("div.shelf-cabinet").GetAttribute("style"));
+    }
+
     private sealed class FirstRequestThenHangingHttpMessageHandler(string facetsJson, string firstBooksJson) : HttpMessageHandler
     {
         private int _booksRequestCount;

@@ -66,6 +66,15 @@
         <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Regal</button>
         <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Raster</button>
     </div>
+    @if (_viewMode == LibraryViewMode.Grid)
+    {
+        <select class="library-shelf-book-zoom" @bind="_shelfBookZoom" @bind:after="OnShelfBookZoomChangedAsync">
+            @foreach (var zoom in ShelfBookZoomOptions)
+            {
+                <option value="@zoom">@ShelfBookZoomLabel(zoom)</option>
+            }
+        </select>
+    }
     @if (_viewMode == LibraryViewMode.List)
     {
         <select class="library-raster-page-size" @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
@@ -103,7 +112,7 @@ else
         var totalBookCount = _allItems?.Count ?? 0;
 
         <div class="library-shelf" @ref="_shelfRef">
-            <div class="shelf-cabinet">
+            <div class="shelf-cabinet" style="--shelf-book-zoom: @_shelfBookZoom">
                 @foreach (var group in TakeUpToBookCount(allGroups, _visibleBookCount))
                 {
                     <ShelfRow @key="group.Label" Label="@group.Label" Books="group.Books" />
@@ -155,8 +164,17 @@ else
     private string _order = "desc";
     private int _rasterPage = 1;
     private int _rasterPageSize;
+    private string _shelfBookZoom = DefaultShelfBookZoom;
 
     private static readonly int[] RasterPageSizeOptions = [20, 40, 60, 100];
+    // Plain invariant strings, not double -- these round-trip through a
+    // <select>'s bound value, a CSS custom property, and localStorage; a
+    // double field bound via @bind formats/parses using the CURRENT
+    // culture (e.g. "1,25" under de-DE), which silently desyncs from the
+    // invariant-formatted option values and breaks both display and
+    // change-handling. Keeping it a string end-to-end sidesteps that.
+    private static readonly string[] ShelfBookZoomOptions = ["1", "1.25", "1.5"];
+    private const string DefaultShelfBookZoom = "1";
 
     private const int InitialVisibleBookCount = 40;
     private const int VisibleBookBatchSize = 40;
@@ -191,6 +209,7 @@ else
         }
 
         _rasterPageSize = await LoadPreferredRasterPageSizeAsync();
+        _shelfBookZoom = await LoadPreferredShelfBookZoomAsync();
 
         var facetsResponse = await ApiClient.GetAsync<BookFacets>("/api/books/facets");
         if (facetsResponse is { Success: true, Data: not null })
@@ -232,6 +251,41 @@ else
         _rasterPage = 1;
         await SavePreferredRasterPageSizeAsync(_rasterPageSize);
     }
+
+    private async Task<string> LoadPreferredShelfBookZoomAsync()
+    {
+        try
+        {
+            _libraryPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+            var stored = await _libraryPreferencesModule.InvokeAsync<string?>("getShelfBookZoom");
+            return stored is not null && ShelfBookZoomOptions.Contains(stored) ? stored : DefaultShelfBookZoom;
+        }
+        catch (Exception)
+        {
+            return DefaultShelfBookZoom;
+        }
+    }
+
+    private async Task SavePreferredShelfBookZoomAsync(string zoom)
+    {
+        try
+        {
+            _libraryPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+            await _libraryPreferencesModule.InvokeVoidAsync("setShelfBookZoom", zoom);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private async Task OnShelfBookZoomChangedAsync() => await SavePreferredShelfBookZoomAsync(_shelfBookZoom);
+
+    private static string ShelfBookZoomLabel(string zoom) => zoom switch
+    {
+        "1.5" => "Sehr groß",
+        "1.25" => "Groß",
+        _ => "Normal",
+    };
 
     // Walks the already-grouped shelf in order, including whole groups until
     // the remaining book budget runs out, then truncates the group that
