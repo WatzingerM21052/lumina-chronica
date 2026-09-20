@@ -2025,9 +2025,21 @@ select:focus-visible,
    its own perspective makes each book's own center its vanishing point,
    so translateZ always means "toward the viewer" with zero position-
    dependent skew, regardless of where the book sits in the row. */
+/* zoom (not transform: scale()) so the user-chosen book size also affects
+   layout -- .shelf-books is a flex row and .shelf-compartment is content-
+   height, so a bigger zoom naturally means fewer books per row and a
+   taller compartment, with no extra CSS needed for either. transform:
+   scale() would only repaint bigger without changing the box's
+   contribution to that layout. Verified live (2026-09-20) that zoom
+   scales every rem-based measurement in this box's translateZ/perspective
+   chain by the exact same factor as width/height, so the closed 6-face
+   geometry (see .shelf-book-cover etc. below) stays intact at every
+   level -- set on the slot specifically (not .shelf-cabinet), so only the
+   books scale, not the cabinet trim/posts/lip/plaques around them. */
 .shelf-book-slot {
     transform-style: preserve-3d;
     perspective: 60rem;
+    zoom: var(--shelf-book-zoom, 1);
 }
 
 /* .shelf-book-slot establishes its own stacking context via
