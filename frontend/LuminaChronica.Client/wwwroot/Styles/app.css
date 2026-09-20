@@ -343,8 +343,8 @@ button:not(:disabled):active,
    every input/select/textarea in the app rendered on unstyled browser
    defaults -- there was no project-wide rule for them (confirmed via
    grep), only the shared :focus-visible outline above. Scoped to
-   exclude checkbox/radio, which already render fine as native controls
-   and were never part of this complaint. */
+   exclude checkbox/radio, which get their own themed rule below instead
+   of this text-field treatment. */
 input:where(:not([type="checkbox"]):not([type="radio"])),
 select,
 textarea {
@@ -356,6 +356,67 @@ textarea {
     color: var(--color-text-primary);
     padding: var(--space-1) var(--space-2);
 }
+
+/* App-wide themed checkbox, replacing the native white-box/blue-check
+   control (which never matched any theme's palette -- raised directly by
+   the user as looking "altmodisch und unprofessionell" next to the
+   app's otherwise-styled UI). appearance: none strips native rendering
+   so the box itself can be drawn in the current theme's own palette;
+   the checkmark is a small rotated two-sided border (an unclipped ::after
+   box, not an SVG/font glyph), so no extra asset is needed and it scales
+   cleanly with font-size like a text-based check would, without a
+   glyph's font-rendering/baseline quirks. --color-primary is reused
+   deliberately, not a new token -- it's already this theme's own accent
+   (brown-gold/blue/gold per theme, exactly what btn-primary uses), so a
+   checked box always matches whatever "selected/active" already looks
+   like elsewhere on the same page. */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+    margin: 0;
+    border-radius: 0.3rem;
+    border: 1.5px solid var(--color-border);
+    background-color: var(--color-bg-card);
+    cursor: pointer;
+    position: relative;
+    transition: background-color var(--motion-micro) var(--ease-standard), border-color var(--motion-micro) var(--ease-standard);
+}
+
+input[type="checkbox"]:hover {
+    border-color: var(--color-primary);
+}
+
+input[type="checkbox"]:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+/* The check itself: a square rotated 45deg with only its bottom-right
+   border visible, forming a checkmark shape -- centered by nudging up
+   slightly since a checkmark's visual weight sits below its bounding
+   box's true center. */
+input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 0.36rem;
+    top: 0.16rem;
+    width: 0.3rem;
+    height: 0.55rem;
+    border: solid var(--color-text-on-dark);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* No checkbox-specific :focus-visible rule here deliberately -- the
+   shared input:focus-visible rule further down this file already covers
+   it, using --color-accent-text rather than --color-primary specifically
+   because --color-primary equals --color-gold-accent in Dark Library,
+   which measures under WCAG's 3:1 focus-indicator floor (issue #341 a11y
+   audit). Reusing --color-primary here for the outline would have quietly
+   reintroduced that exact failure for every checkbox in that theme. */
 
 #blazor-error-ui {
     background: var(--color-error);
