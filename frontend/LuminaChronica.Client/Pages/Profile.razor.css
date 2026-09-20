@@ -15,15 +15,3 @@
 .profile-seal-header h1 {
     margin: 0;
 }
-
-.profile-card {
-    padding: var(--space-3);
-    margin-bottom: var(--space-2);
-    border-radius: var(--radius-lg);
-    background-color: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-}
-
-.profile-card h2 {
-    margin-top: 0;
-}
