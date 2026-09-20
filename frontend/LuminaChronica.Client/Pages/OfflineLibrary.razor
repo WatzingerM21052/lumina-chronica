@@ -9,8 +9,15 @@
 
 <PageTitle>Offline Bücher — Lumina Chronica</PageTitle>
 
-<h1>Offline Bücher</h1>
-<p class="text-muted">
+<div class="offline-hero">
+    <img src="images/offline-hero.webp" alt="" class="offline-hero-image" loading="eager" decoding="async" />
+    <div class="offline-hero-scrim"></div>
+    <div class="offline-hero-content">
+        <h1>Offline Bücher</h1>
+    </div>
+</div>
+
+<p class="text-muted offline-intro">
     Bücher, die du auf diesem Gerät für das Lesen ohne Internetverbindung gespeichert hast. Speichere ein
     Buch über "Offline speichern" auf seiner Detailseite.
 </p>
@@ -21,20 +28,37 @@
 }
 else if (_books.Count == 0)
 {
-    <EmptyState Message="Noch keine Bücher offline gespeichert." />
+    <div class="empty-state-literary">
+        <div class="offline-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M9 8V6a3 3 0 0 1 3-3 3 3 0 0 1 3 3v2" />
+                <rect x="3" y="8" width="18" height="12" rx="2" />
+                <path d="M8 11.5v5M12 11.5v5M16 11.5v5" stroke-width="1.1" />
+                <rect x="10.3" y="7.6" width="3.4" height="1.6" rx="0.4" />
+            </svg>
+        </div>
+        <span class="empty-state-ornament" aria-hidden="true">❦</span>
+        <p>Noch keine Bücher für unterwegs gepackt.</p>
+    </div>
 }
 else
 {
     <p class="text-muted">Insgesamt @FormatSize(_totalSizeBytes) belegt.</p>
-    <ul class="offline-book-list">
+    <div class="offline-book-grid">
         @foreach (var book in _books)
         {
-            <li class="offline-book-item">
-                <div>
+            <div class="offline-book-card">
+                <div class="offline-book-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                        <path d="M4 5.5c2.2-1 5-1 8 0v13c-3-1-5.8-1-8 0z" />
+                        <path d="M20 5.5c-2.2-1-5-1-8 0v13c3-1 5.8-1 8 0z" />
+                    </svg>
+                </div>
+                <div class="offline-book-info">
                     <strong>@book.Title</strong>
                     @if (!string.IsNullOrWhiteSpace(book.Author))
                     {
-                        <span class="text-muted"> — @book.Author</span>
+                        <div class="text-muted">@book.Author</div>
                     }
                     <div class="text-muted">@book.Format · @FormatSize(book.SizeBytes)</div>
                 </div>
@@ -42,9 +66,9 @@ else
                     <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">Lesen</a>
                     <button type="button" class="btn" @onclick="() => RemoveAsync(book.Id)">Entfernen</button>
                 </div>
-            </li>
+            </div>
         }
-    </ul>
+    </div>
 }
 
 @code {

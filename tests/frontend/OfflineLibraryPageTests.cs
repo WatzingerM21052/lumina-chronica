@@ -23,7 +23,8 @@ public class OfflineLibraryPageTests : BunitContext
 
         var cut = Render<OfflineLibrary>();
 
-        Assert.Contains("Noch keine Bücher offline gespeichert.", cut.Markup);
+        Assert.Contains("Noch keine Bücher für unterwegs gepackt.", cut.Markup);
+        Assert.Single(cut.FindAll(".offline-empty-icon svg"));
     }
 
     [Fact]
@@ -42,6 +43,40 @@ public class OfflineLibraryPageTests : BunitContext
         Assert.Contains("Dune", cut.Markup);
         Assert.Contains("Foundation", cut.Markup);
         Assert.Contains("3.0 MB", cut.Markup);
+    }
+
+    [Fact]
+    public void OfflineLibrary_RendersBooksAsCards_WithPlaceholderIcon_NotAPlainList()
+    {
+        JSInterop.SetupModule("./js/offlineStorage.js")
+            .Setup<List<OfflineBookSummary>>("listBooks", _ => true)
+            .SetResult(
+            [
+                new OfflineBookSummary { Id = 1, Title = "Dune", Author = "Frank Herbert", Format = "EPUB", SizeBytes = 1024 * 1024, SavedAt = "2026-08-01T00:00:00Z" },
+            ]);
+
+        var cut = Render<OfflineLibrary>();
+
+        Assert.Single(cut.FindAll(".offline-book-card"));
+        Assert.Single(cut.FindAll(".offline-book-icon svg"));
+        Assert.Empty(cut.FindAll(".offline-book-list")); // old markup is gone
+    }
+
+    [Fact]
+    public void OfflineLibrary_RendersCard_WithoutAuthorLine_WhenAuthorIsNull()
+    {
+        JSInterop.SetupModule("./js/offlineStorage.js")
+            .Setup<List<OfflineBookSummary>>("listBooks", _ => true)
+            .SetResult(
+            [
+                new OfflineBookSummary { Id = 1, Title = "Dune", Author = null, Format = "EPUB", SizeBytes = 1024 * 1024, SavedAt = "2026-08-01T00:00:00Z" },
+            ]);
+
+        var cut = Render<OfflineLibrary>();
+
+        Assert.Single(cut.FindAll(".offline-book-card"));
+        Assert.Contains("Dune", cut.Markup);
+        Assert.Single(cut.FindAll(".offline-book-card .text-muted"));
     }
 
     [Fact]

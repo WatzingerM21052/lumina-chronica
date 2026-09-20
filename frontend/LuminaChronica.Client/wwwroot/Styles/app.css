@@ -237,7 +237,10 @@ h3 {
 
 /* Shared literary empty-state (PublicProfile's Bibliothek/Projekte/
    Aktivität chapters, Discover's book grid) -- an ornament + flavor text
-   instead of a bare "no items" line. */
+   instead of a bare "no items" line. Also used directly (not through the
+   shared EmptyState component) by OfflineLibrary.razor's empty state,
+   which needs an extra page-specific icon slot the component doesn't
+   support. */
 .empty-state-literary {
     text-align: center;
     padding: var(--space-5) var(--space-3);
@@ -2155,25 +2158,6 @@ select:focus-visible,
     grid-template-columns: auto 1fr;
     gap: var(--space-1) var(--space-2);
     margin: var(--space-2) 0;
-}
-
-.offline-book-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    list-style: none;
-    padding: 0;
-    margin: var(--space-2) 0;
-}
-
-.offline-book-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    padding: var(--space-3);
-    border-radius: var(--radius-lg, var(--radius));
-    background-color: var(--color-bg-card);
 }
 
 .book-detail-meta dt {
