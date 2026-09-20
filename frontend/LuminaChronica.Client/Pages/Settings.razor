@@ -7,45 +7,57 @@
 
 <PageTitle>Einstellungen — Lumina Chronica</PageTitle>
 
-<h1>Einstellungen</h1>
-
-<h2>Theme</h2>
-<div class="theme-picker">
-    @foreach (var (value, label) in Themes)
-    {
-        <button class="btn @(_currentTheme == value ? "btn-primary" : "")" @onclick="() => SetThemeAsync(value)">@label</button>
-    }
+<div class="settings-hero">
+    <img src="images/settings-hero.webp" alt="" class="settings-hero-image" loading="eager" decoding="async" />
+    <div class="settings-hero-scrim"></div>
+    <div class="settings-hero-content">
+        <h1>Einstellungen</h1>
+    </div>
 </div>
 
-<h2>Bibliothek</h2>
-<label class="library-preference-row">
-    <input type="checkbox" checked="@_showShelfCoverText" @onchange="e => SetShowShelfCoverTextAsync((bool)e.Value!)" />
-    <span>
-        <strong>Titel/Autor auf Regal-Cover anzeigen</strong>
-        <span class="text-muted"> — die meisten echten Cover-Bilder tragen Titel/Autor bereits selbst</span>
-    </span>
-</label>
-
-<h2>Benachrichtigungen</h2>
-@if (_preferences is null)
-{
-    <p class="text-muted">Lade …</p>
-}
-else
-{
-    <div class="notification-preferences">
-        @foreach (var (type, label, description) in NotificationTypes)
+<div class="settings-card">
+    <h2>Theme</h2>
+    <div class="theme-picker">
+        @foreach (var (value, label) in Themes)
         {
-            <label class="notification-preference-row">
-                <input type="checkbox" checked="@GetPreference(type)" @onchange="e => SetPreferenceAsync(type, (bool)e.Value!)" />
-                <span>
-                    <strong>@label</strong>
-                    <span class="text-muted"> — @description</span>
-                </span>
-            </label>
+            <button class="btn @(_currentTheme == value ? "btn-primary" : "")" @onclick="() => SetThemeAsync(value)">@label</button>
         }
     </div>
-}
+</div>
+
+<div class="settings-card">
+    <h2>Bibliothek</h2>
+    <label class="library-preference-row">
+        <input type="checkbox" checked="@_showShelfCoverText" @onchange="e => SetShowShelfCoverTextAsync((bool)e.Value!)" />
+        <span>
+            <strong>Titel/Autor auf Regal-Cover anzeigen</strong>
+            <span class="text-muted"> — die meisten echten Cover-Bilder tragen Titel/Autor bereits selbst</span>
+        </span>
+    </label>
+</div>
+
+<div class="settings-card">
+    <h2>Benachrichtigungen</h2>
+    @if (_preferences is null)
+    {
+        <p class="text-muted">Lade …</p>
+    }
+    else
+    {
+        <div class="notification-preferences">
+            @foreach (var (type, label, description) in NotificationTypes)
+            {
+                <label class="notification-preference-row">
+                    <input type="checkbox" checked="@GetPreference(type)" @onchange="e => SetPreferenceAsync(type, (bool)e.Value!)" />
+                    <span>
+                        <strong>@label</strong>
+                        <span class="text-muted"> — @description</span>
+                    </span>
+                </label>
+            }
+        </div>
+    }
+</div>
 
 @code {
     private static readonly (string Value, string Label)[] Themes =
