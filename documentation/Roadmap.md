@@ -1429,3 +1429,15 @@ Same-day follow-up, raised by the user directly while reviewing the Settings rew
 - Live-verified in all 4 themes: Classic Library and Dark Library render solid brown-gold/gold checked boxes, Modern Light and System render solid blue — all three colors are each theme's own actual `--color-primary`, clearly distinct from the empty/bordered unchecked state at every checkbox in the app.
 
 Frontend: 396/396 tests passing, unchanged (pure CSS, no markup changes — nothing for the existing `checked`-attribute assertions to regress against). Backend: unchanged, no backend files touched.
+
+## Profile page rework (complete)
+
+Second slice of #358's remaining scope (Library rework and the two new themes still open). Unlike Dashboard/Statistics/Offline/Settings, no photo hero here — the design spec's own framing for this page was "persönlich/hochwertig wie ein Ex-Libris/Archivdossier," and a ready-made asset for exactly that already existed unused: `Designimages/03_profile_ex_libris_seal_transparent.png`, generated 2026-09-07 (engraved-style bookplate crest — laurel wreath, open book, oil lamp, quill — transparent background) but never wired up anywhere.
+
+- The seal (optimized to `profile-ex-libris-seal.webp`, 480×480 with alpha preserved) sits centered above the `<h1>Profil</h1>` heading as a small crest, not a wide banner — asked the user directly (photo-hero-in-the-Settings-style vs. seal-centered) before building either, since this was a real design fork, not an obvious default.
+- "Konto" and "Passwort ändern" wrapped in `.profile-card` (new page-scoped `Profile.razor.css`, same border/background/radius values as Settings' `.settings-card` and Offline's `.offline-book-card` — this codebase's established convention is each page defining its own page-scoped copy of the shared "card" look via Blazor CSS isolation, not a single global class, so a new page-scoped rule was the correct move, not a shortcut).
+- Zero functional changes — the existing account-update/password-change/logout logic and the single pre-existing regression test (`Profile_PublicProfileLink_HasNoLeadingSlash`, guarding the public-profile link's relative href for GitHub Pages subpath correctness) were left untouched and pass unmodified.
+- Distinct from `PublicProfile.razor` (the "title page of an author's public collection," issue #315/#339, already fully designed with its own portrait-hero treatment) — this rework only touched the private account-settings page, which had received zero visual treatment until now.
+- Live-verified in Classic/Dark Library and Modern Light — the seal's sepia/brass linework reads clearly against all three card backgrounds, no contrast issues. Confirmed the public-profile link still navigates correctly.
+
+Frontend: 396/396 tests passing, unchanged (pure markup/CSS restructure, no new test surface — the one pre-existing test already covers the only behavior touched). Backend: unchanged, no backend files touched.
