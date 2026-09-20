@@ -22,64 +22,60 @@ else
 {
     <p><a href="@($"u/{_profile.Username}")">Öffentliches Profil ansehen</a></p>
 
-    <div class="profile-card">
-        <h2>Konto</h2>
-        <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form">
-            @if (_profileErrorMessage is not null)
-            {
-                <p class="form-error">@_profileErrorMessage</p>
-            }
+    <h2>Konto</h2>
+    <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form">
+        @if (_profileErrorMessage is not null)
+        {
+            <p class="form-error">@_profileErrorMessage</p>
+        }
 
-            <div class="form-group">
-                <label for="username">Benutzername</label>
-                <InputText id="username" @bind-Value="_profileForm.Username" />
-            </div>
+        <div class="form-group">
+            <label for="username">Benutzername</label>
+            <InputText id="username" @bind-Value="_profileForm.Username" />
+        </div>
 
-            <div class="form-group">
-                <label for="email">E-Mail</label>
-                <InputText id="email" type="email" @bind-Value="_profileForm.Email" />
-            </div>
+        <div class="form-group">
+            <label for="email">E-Mail</label>
+            <InputText id="email" type="email" @bind-Value="_profileForm.Email" />
+        </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary" disabled="@(_saveProfileState != ButtonBusyState.Idle)" style="min-width: @(AsyncButtonContent.MinWidthCh("Speichern", null, "Gespeichert"))ch">
-                    <AsyncButtonContent State="_saveProfileState" IdleText="Speichern" SuccessText="Gespeichert" />
-                </button>
-            </div>
-        </EditForm>
-    </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" disabled="@(_saveProfileState != ButtonBusyState.Idle)" style="min-width: @(AsyncButtonContent.MinWidthCh("Speichern", null, "Gespeichert"))ch">
+                <AsyncButtonContent State="_saveProfileState" IdleText="Speichern" SuccessText="Gespeichert" />
+            </button>
+        </div>
+    </EditForm>
 
-    <div class="profile-card">
-        <h2>Passwort ändern</h2>
-        <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form">
-            @if (_passwordErrorMessage is not null)
-            {
-                <p class="form-error">@_passwordErrorMessage</p>
-            }
-            @if (_passwordSuccessMessage is not null)
-            {
-                <p class="form-success">@_passwordSuccessMessage</p>
-            }
+    <h2>Passwort ändern</h2>
+    <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form">
+        @if (_passwordErrorMessage is not null)
+        {
+            <p class="form-error">@_passwordErrorMessage</p>
+        }
+        @if (_passwordSuccessMessage is not null)
+        {
+            <p class="form-success">@_passwordSuccessMessage</p>
+        }
 
-            <div class="form-group">
-                <label for="currentPassword">Aktuelles Passwort</label>
-                <InputText id="currentPassword" type="password" @bind-Value="_passwordForm.CurrentPassword" />
-            </div>
+        <div class="form-group">
+            <label for="currentPassword">Aktuelles Passwort</label>
+            <InputText id="currentPassword" type="password" @bind-Value="_passwordForm.CurrentPassword" />
+        </div>
 
-            <div class="form-group">
-                <label for="newPassword">Neues Passwort</label>
-                <InputText id="newPassword" type="password" @bind-Value="_passwordForm.NewPassword" />
-            </div>
+        <div class="form-group">
+            <label for="newPassword">Neues Passwort</label>
+            <InputText id="newPassword" type="password" @bind-Value="_passwordForm.NewPassword" />
+        </div>
 
-            <div class="form-group">
-                <label for="confirmNewPassword">Neues Passwort bestätigen</label>
-                <InputText id="confirmNewPassword" type="password" @bind-Value="_passwordForm.ConfirmNewPassword" />
-            </div>
+        <div class="form-group">
+            <label for="confirmNewPassword">Neues Passwort bestätigen</label>
+            <InputText id="confirmNewPassword" type="password" @bind-Value="_passwordForm.ConfirmNewPassword" />
+        </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary" disabled="@_isSavingPassword">Passwort ändern</button>
-            </div>
-        </EditForm>
-    </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" disabled="@_isSavingPassword">Passwort ändern</button>
+        </div>
+    </EditForm>
 
     <div class="form-actions">
         <button type="button" class="btn" @onclick="LogoutAsync">Abmelden</button>
