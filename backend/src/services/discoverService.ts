@@ -4,6 +4,8 @@
 // #10's own body (newest/highest-rated sort, user search), same as
 // followers/ratings before it.
 
+import { resolveAvatarUrl } from "./userService";
+
 export type DiscoverSort = "newest" | "rating";
 
 export type DiscoverBookSummary = {
@@ -101,20 +103,20 @@ export type SearchUsersResult = {
     pageSize: number;
 };
 
-export async function searchUsers(db: D1Database, search: string, page: number, pageSize: number): Promise<SearchUsersResult> {
+export async function searchUsers(db: D1Database, search: string, page: number, pageSize: number, origin: string): Promise<SearchUsersResult> {
     const like = `%${search}%`;
     const offset = (page - 1) * pageSize;
 
     const [rows, countRow] = await Promise.all([
         db
-            .prepare(`SELECT username, avatar_url FROM users WHERE deleted_at IS NULL AND username LIKE ? ORDER BY username ASC LIMIT ? OFFSET ?`)
+            .prepare(`SELECT username, avatar_url, avatar_key FROM users WHERE deleted_at IS NULL AND username LIKE ? ORDER BY username ASC LIMIT ? OFFSET ?`)
             .bind(like, pageSize, offset)
-            .all<{ username: string; avatar_url: string | null }>(),
+            .all<{ username: string; avatar_url: string | null; avatar_key: string | null }>(),
         db.prepare(`SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL AND username LIKE ?`).bind(like).first<{ total: number }>(),
     ]);
 
     return {
-        items: rows.results.map((row) => ({ username: row.username, avatarUrl: row.avatar_url })),
+        items: rows.results.map((row) => ({ username: row.username, avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin) })),
         total: countRow?.total ?? 0,
         page,
         pageSize,

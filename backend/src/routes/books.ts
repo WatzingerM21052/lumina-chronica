@@ -270,7 +270,7 @@ booksRoute.delete("/:id/rating", requireAuth, async (c) => {
 booksRoute.get("/:id/shares", requireAuth, async (c) => {
     const bookId = Number(c.req.param("id"));
     try {
-        const shares = await listBookShares(c.env.DB, c.get("userId"), bookId);
+        const shares = await listBookShares(c.env.DB, c.get("userId"), bookId, new URL(c.req.url).origin);
         return c.json(success(shares));
     } catch (err) {
         if (err instanceof ShareNotFoundError) return c.json(failure("NOT_FOUND", "Book not found."), 404);

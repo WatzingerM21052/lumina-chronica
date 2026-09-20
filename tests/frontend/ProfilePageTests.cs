@@ -1,6 +1,7 @@
 using Bunit;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -23,10 +24,95 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
 
         var cut = Render<Profile>();
 
         var link = cut.Find("a");
         Assert.Equal("u/alice", link.GetAttribute("href"));
+    }
+
+    [Fact]
+    public void Profile_NoAvatarSet_ShowsPlaceholderIcon()
+    {
+        var handler = new FakeHttpMessageHandler(ProfileJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+
+        Assert.Single(cut.FindAll(".profile-avatar-placeholder"));
+        Assert.Empty(cut.FindAll("img.profile-avatar-preview"));
+    }
+
+    [Fact]
+    public void Profile_AvatarUrlSet_ShowsItAsImage()
+    {
+        const string json = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":"https://example.com/api/users/alice/avatar","roleName":"USER","createdAt":"2026-01-01"}}""";
+        var handler = new FakeHttpMessageHandler(json);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+
+        var img = cut.Find("img.profile-avatar-preview");
+        Assert.Equal("https://example.com/api/users/alice/avatar", img.GetAttribute("src"));
+    }
+
+    [Fact]
+    public void Profile_SelectingAnAvatarFile_UploadsItImmediately_NoFormSubmitNeeded()
+    {
+        HttpRequestMessage? avatarRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Put && r.RequestUri!.AbsolutePath.EndsWith("/avatar"), r =>
+            {
+                avatarRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson);
+            })
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.SetupModule("./js/blobUrl.js").Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-avatar-url");
+
+        var cut = Render<Profile>();
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("avatar bytes", "avatar.jpg"));
+
+        Assert.Equal(HttpMethod.Put, avatarRequest?.Method);
+        Assert.Equal("/api/users/me/avatar", avatarRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void Profile_SelectingADisallowedFileType_ShowsErrorAndDoesNotUpload()
+    {
+        HttpRequestMessage? avatarRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Put && r.RequestUri!.AbsolutePath.EndsWith("/avatar"), r =>
+            {
+                avatarRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson);
+            })
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("not an image", "avatar.gif"));
+
+        Assert.Null(avatarRequest);
+        Assert.Contains("form-error", cut.Markup);
     }
 }

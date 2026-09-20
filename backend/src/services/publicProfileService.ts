@@ -25,8 +25,8 @@ export type PublicProfile = {
     activities: ProfileActivity[];
 };
 
-export async function getPublicProfile(db: D1Database, username: string, viewerId: number | null): Promise<PublicProfile | null> {
-    const user = await getUserByUsername(db, username);
+export async function getPublicProfile(db: D1Database, username: string, viewerId: number | null, origin: string): Promise<PublicProfile | null> {
+    const user = await getUserByUsername(db, username, origin);
     if (!user) return null;
 
     const [books, projects, followState, activities] = await Promise.all([

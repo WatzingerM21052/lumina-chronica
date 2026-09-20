@@ -36,6 +36,6 @@ discoverRoute.get("/users", async (c) => {
 
     if (!search) return c.json(success({ items: [], total: 0, page, pageSize }));
 
-    const result = await searchUsers(c.env.DB, search, page, pageSize);
+    const result = await searchUsers(c.env.DB, search, page, pageSize, new URL(c.req.url).origin);
     return c.json(success(result));
 });

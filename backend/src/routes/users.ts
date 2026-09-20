@@ -1,12 +1,16 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
+import { conditionalCoverResponse } from "../utils/fileResponse";
 import { optionalAuth, requireAuth } from "../middleware/auth";
 import {
     EmailTakenError,
     InvalidPasswordError,
     UsernameTakenError,
+    ValidationError,
+    getUserAvatarObject,
     getUserProfile,
+    updateUserAvatar,
     updateUserProfile,
 } from "../services/userService";
 import { getPublicProfile } from "../services/publicProfileService";
@@ -23,9 +27,19 @@ const MIN_PASSWORD_LENGTH = 8;
 // /:username/public (not a bare /:username) so it can never shadow the
 // static /me routes below regardless of router matching order.
 usersRoute.get("/:username/public", optionalAuth, async (c) => {
-    const profile = await getPublicProfile(c.env.DB, c.req.param("username") ?? "", c.get("userId") ?? null);
+    const profile = await getPublicProfile(c.env.DB, c.req.param("username") ?? "", c.get("userId") ?? null, new URL(c.req.url).origin);
     if (!profile) return c.json(failure("NOT_FOUND", "User not found."), 404);
     return c.json(success(profile));
+});
+
+// Deliberately no auth at all (not even optionalAuth) -- an avatar has no
+// privacy concept, unlike a book/shelf cover; anyone with the URL (which is
+// itself only ever handed out already-resolved in a profile response) can
+// load it, same as an external OAuth avatar URL always could.
+usersRoute.get("/:username/avatar", async (c) => {
+    const object = await getUserAvatarObject(c.env.DB, c.env.STORAGE, c.req.param("username") ?? "");
+    if (!object) return c.json(failure("NOT_FOUND", "Avatar not found."), 404);
+    return conditionalCoverResponse(c, object, true);
 });
 
 // Community Phase 2 (issue #304). Idempotent by design (INSERT OR IGNORE /
@@ -53,9 +67,23 @@ usersRoute.delete("/:username/follow", requireAuth, async (c) => {
 });
 
 usersRoute.get("/me", requireAuth, async (c) => {
-    const profile = await getUserProfile(c.env.DB, c.get("userId"));
+    const profile = await getUserProfile(c.env.DB, c.get("userId"), new URL(c.req.url).origin);
     if (!profile) return c.json(failure("NOT_FOUND", "User not found."), 404);
     return c.json(success(profile));
+});
+
+usersRoute.put("/me/avatar", requireAuth, async (c) => {
+    const body = await c.req.parseBody().catch(() => null);
+    const avatar = body?.avatar instanceof File ? body.avatar : null;
+    if (!avatar) return c.json(failure("VALIDATION_ERROR", "avatar is required."), 400);
+
+    try {
+        const profile = await updateUserAvatar(c.env.DB, c.env.STORAGE, c.get("userId"), avatar, new URL(c.req.url).origin);
+        return c.json(success(profile));
+    } catch (err) {
+        if (err instanceof ValidationError) return c.json(failure("VALIDATION_ERROR", err.message), 400);
+        throw err;
+    }
 });
 
 usersRoute.put("/me", requireAuth, async (c) => {
@@ -68,7 +96,7 @@ usersRoute.put("/me", requireAuth, async (c) => {
     }
 
     try {
-        const profile = await updateUserProfile(c.env.DB, c.get("userId"), body);
+        const profile = await updateUserProfile(c.env.DB, c.get("userId"), body, new URL(c.req.url).origin);
         return c.json(success(profile));
     } catch (err) {
         if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);

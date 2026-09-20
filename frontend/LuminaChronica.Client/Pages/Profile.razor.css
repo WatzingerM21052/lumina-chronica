@@ -15,3 +15,40 @@
 .profile-seal-header h1 {
     margin: 0;
 }
+
+.profile-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-2) 0;
+}
+
+.profile-avatar-preview {
+    flex-shrink: 0;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--color-bg-card);
+    outline: 1px solid var(--color-gold-accent);
+    outline-offset: 2px;
+}
+
+.profile-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-card);
+    color: var(--color-text-disabled);
+}
+
+.profile-avatar-placeholder-icon {
+    width: 40%;
+    height: 40%;
+}
+
+.dropzone--compact {
+    flex: 1;
+    min-height: 2.5rem;
+    padding: var(--space-2);
+}
