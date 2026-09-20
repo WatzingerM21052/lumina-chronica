@@ -1,8 +1,10 @@
 import { hashPassword, verifyPassword } from "../utils/crypto";
+import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 
 export class InvalidPasswordError extends Error {}
 export class EmailTakenError extends Error {}
 export class UsernameTakenError extends Error {}
+export { ValidationError };
 
 export type UserProfile = {
     id: number;
@@ -18,16 +20,34 @@ type UserProfileRow = {
     username: string;
     email: string;
     avatar_url: string | null;
+    avatar_key: string | null;
     created_at: string;
     role_name: string;
 };
 
-function toProfile(row: UserProfileRow): UserProfile {
+function r2AvatarKey(userId: number, ext: string): string {
+    return `avatars/${userId}/avatar.${ext}`;
+}
+
+// A self-hosted upload (avatar_key) always wins over an external OAuth URL
+// (avatar_url) when both are set -- the user explicitly chose to replace
+// what their provider gave them. Resolved to an absolute URL (not a bare R2
+// key) so the frontend can drop it straight into <img src> exactly like an
+// external OAuth URL, with no special-casing needed on that side; origin
+// comes from the request itself (new URL(c.req.url).origin in the route
+// layer), mirroring routes/auth.ts's existing absolute-URL-building pattern
+// for the OAuth callback URL.
+export function resolveAvatarUrl(avatarUrl: string | null, avatarKey: string | null, username: string, origin: string): string | null {
+    if (avatarKey) return `${origin}/api/users/${encodeURIComponent(username)}/avatar`;
+    return avatarUrl;
+}
+
+function toProfile(row: UserProfileRow, origin: string): UserProfile {
     return {
         id: row.id,
         username: row.username,
         email: row.email,
-        avatarUrl: row.avatar_url,
+        avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin),
         roleName: row.role_name,
         createdAt: row.created_at,
     };
@@ -47,26 +67,26 @@ export type PublicUserProfile = {
 // than UserProfile: no email/role/createdAt, nothing an anonymous visitor
 // shouldn't see. Looked up by username (the public-facing identifier, e.g.
 // /u/{username}) rather than id.
-export async function getUserByUsername(db: D1Database, username: string): Promise<PublicUserProfile | null> {
+export async function getUserByUsername(db: D1Database, username: string, origin: string): Promise<PublicUserProfile | null> {
     const row = await db
-        .prepare("SELECT id, username, avatar_url FROM users WHERE username = ? AND deleted_at IS NULL")
+        .prepare("SELECT id, username, avatar_url, avatar_key FROM users WHERE username = ? AND deleted_at IS NULL")
         .bind(username)
-        .first<{ id: number; username: string; avatar_url: string | null }>();
+        .first<{ id: number; username: string; avatar_url: string | null; avatar_key: string | null }>();
 
-    return row ? { id: row.id, username: row.username, avatarUrl: row.avatar_url } : null;
+    return row ? { id: row.id, username: row.username, avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin) } : null;
 }
 
-export async function getUserProfile(db: D1Database, userId: number): Promise<UserProfile | null> {
+export async function getUserProfile(db: D1Database, userId: number, origin: string): Promise<UserProfile | null> {
     const row = await db
         .prepare(
-            `SELECT users.id, users.username, users.email, users.avatar_url, users.created_at, roles.name AS role_name
+            `SELECT users.id, users.username, users.email, users.avatar_url, users.avatar_key, users.created_at, roles.name AS role_name
              FROM users JOIN roles ON roles.id = users.role_id
              WHERE users.id = ? AND users.deleted_at IS NULL`
         )
         .bind(userId)
         .first<UserProfileRow>();
 
-    return row ? toProfile(row) : null;
+    return row ? toProfile(row, origin) : null;
 }
 
 export type UpdateProfileInput = {
@@ -76,7 +96,7 @@ export type UpdateProfileInput = {
     newPassword?: string;
 };
 
-export async function updateUserProfile(db: D1Database, userId: number, input: UpdateProfileInput): Promise<UserProfile> {
+export async function updateUserProfile(db: D1Database, userId: number, input: UpdateProfileInput, origin: string): Promise<UserProfile> {
     if (input.username) {
         const taken = await db.prepare("SELECT id FROM users WHERE username = ? AND id != ?").bind(input.username, userId).first();
         if (taken) throw new UsernameTakenError();
@@ -124,7 +144,48 @@ export async function updateUserProfile(db: D1Database, userId: number, input: U
         await db.prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`).bind(...values).run();
     }
 
-    const profile = await getUserProfile(db, userId);
+    const profile = await getUserProfile(db, userId, origin);
     if (!profile) throw new Error("User disappeared during profile update.");
     return profile;
+}
+
+// Separate from updateUserProfile (JSON metadata only) since an avatar
+// replace is a multipart upload -- mirrors bookService.ts's
+// updateBookCover, plus best-effort cleanup of the old R2 object. Only
+// ever touches avatar_key, never avatar_url -- an OAuth-provided avatar_url
+// is left untouched underneath a self-hosted upload, so removing the
+// upload later (not yet built) could fall back to it again.
+export async function updateUserAvatar(db: D1Database, storage: R2Bucket, userId: number, avatar: File, origin: string): Promise<UserProfile> {
+    const row = await db.prepare("SELECT avatar_key FROM users WHERE id = ? AND deleted_at IS NULL").bind(userId).first<{ avatar_key: string | null }>();
+    if (!row) throw new Error("User disappeared during avatar update.");
+
+    const ext = validateFile(avatar, ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, "Avatar image");
+    const avatarKey = r2AvatarKey(userId, ext);
+    const previousKey = row.avatar_key;
+
+    await storage.put(avatarKey, await avatar.arrayBuffer(), { httpMetadata: { contentType: avatar.type || undefined } });
+    await db.prepare("UPDATE users SET avatar_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(avatarKey, userId).run();
+
+    if (previousKey && previousKey !== avatarKey) {
+        await storage.delete(previousKey).catch((err) => {
+            console.error(`Failed to delete old R2 avatar ${previousKey} after replacing user ${userId}'s avatar:`, err);
+        });
+    }
+
+    const profile = await getUserProfile(db, userId, origin);
+    if (!profile) throw new Error("User disappeared during avatar update.");
+    return profile;
+}
+
+// For the public, unauthenticated GET /api/users/:username/avatar route --
+// deliberately no privacy/visibility gating (unlike book/shelf covers):
+// an avatar has no concept of private/shared, it's either set or it isn't.
+export async function getUserAvatarObject(db: D1Database, storage: R2Bucket, username: string): Promise<R2ObjectBody | null> {
+    const row = await db
+        .prepare("SELECT avatar_key FROM users WHERE username = ? AND deleted_at IS NULL")
+        .bind(username)
+        .first<{ avatar_key: string | null }>();
+    if (!row || !row.avatar_key) return null;
+
+    return storage.get(row.avatar_key);
 }

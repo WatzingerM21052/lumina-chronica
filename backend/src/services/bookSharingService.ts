@@ -6,6 +6,7 @@
 
 import { NotFoundError } from "./errors";
 import { buildNotificationInsert } from "./notificationService";
+import { resolveAvatarUrl } from "./userService";
 
 export { NotFoundError };
 export class SelfShareError extends Error {}
@@ -44,17 +45,17 @@ export type BookShareUser = {
     avatarUrl: string | null;
 };
 
-export async function listBookShares(db: D1Database, ownerId: number, bookId: number): Promise<BookShareUser[]> {
+export async function listBookShares(db: D1Database, ownerId: number, bookId: number, origin: string): Promise<BookShareUser[]> {
     await requireOwnedBook(db, ownerId, bookId);
     const rows = await db
         .prepare(
-            `SELECT users.username, users.avatar_url FROM book_shares
+            `SELECT users.username, users.avatar_url, users.avatar_key FROM book_shares
              JOIN users ON users.id = book_shares.user_id
              WHERE book_shares.book_id = ?
              ORDER BY users.username ASC`
         )
         .bind(bookId)
-        .all<{ username: string; avatar_url: string | null }>();
+        .all<{ username: string; avatar_url: string | null; avatar_key: string | null }>();
 
-    return rows.results.map((row) => ({ username: row.username, avatarUrl: row.avatar_url }));
+    return rows.results.map((row) => ({ username: row.username, avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin) }));
 }
