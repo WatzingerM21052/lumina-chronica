@@ -3,6 +3,7 @@
 @using LuminaChronica.Client.Services
 @inject IThemeService ThemeService
 @inject ApiClient ApiClient
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Einstellungen — Lumina Chronica</PageTitle>
 
@@ -15,6 +16,15 @@
         <button class="btn @(_currentTheme == value ? "btn-primary" : "")" @onclick="() => SetThemeAsync(value)">@label</button>
     }
 </div>
+
+<h2>Bibliothek</h2>
+<label class="library-preference-row">
+    <input type="checkbox" checked="@_showShelfCoverText" @onchange="e => SetShowShelfCoverTextAsync((bool)e.Value!)" />
+    <span>
+        <strong>Titel/Autor auf Regal-Cover anzeigen</strong>
+        <span class="text-muted"> — die meisten echten Cover-Bilder tragen Titel/Autor bereits selbst</span>
+    </span>
+</label>
 
 <h2>Benachrichtigungen</h2>
 @if (_preferences is null)
@@ -67,12 +77,24 @@ else
 
     private string? _currentTheme;
     private NotificationPreferences? _preferences;
+    private bool _showShelfCoverText;
+    private IJSObjectReference? _shelfCoverTextModule;
 
     protected override async Task OnInitializedAsync()
     {
         _currentTheme = await ThemeService.GetThemeAsync();
         var response = await ApiClient.GetAsync<NotificationPreferences>("/api/notifications/preferences");
         _preferences = response is { Success: true, Data: not null } ? response.Data : new NotificationPreferences();
+
+        _shelfCoverTextModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelfCoverText.js");
+        _showShelfCoverText = await _shelfCoverTextModule.InvokeAsync<bool>("getShowCoverText");
+    }
+
+    private async Task SetShowShelfCoverTextAsync(bool show)
+    {
+        _showShelfCoverText = show;
+        _shelfCoverTextModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelfCoverText.js");
+        await _shelfCoverTextModule.InvokeVoidAsync("setShowCoverText", show);
     }
 
     private async Task SetThemeAsync(string theme)

@@ -25,6 +25,11 @@ public class SettingsPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<IThemeService>(new FakeThemeService());
+        // Loose so tests unrelated to the shelf-cover-text preference don't
+        // need their own shelfCoverText.js setup -- an unconfigured
+        // getShowCoverText() call then returns bool's default (false),
+        // which also happens to match this preference's own default.
+        JSInterop.Mode = JSRuntimeMode.Loose;
         return handler;
     }
 
@@ -89,5 +94,50 @@ public class SettingsPageTests : BunitContext
         Assert.EndsWith("/preferences", putRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("\"FOLLOW\"", putBody);
         Assert.Contains("\"enabled\":false", putBody);
+    }
+
+    [Fact]
+    public void Settings_ShelfCoverTextCheckbox_OnLoad_ReflectsStoredValue()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+        JSInterop.SetupModule("./js/shelfCoverText.js")
+            .Setup<bool>("getShowCoverText", _ => true)
+            .SetResult(true);
+
+        var cut = Render<Settings>();
+
+        var checkbox = cut.Find("label.library-preference-row input[type=checkbox]");
+        Assert.True(checkbox.HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void Settings_ShelfCoverTextCheckbox_OnLoad_DefaultsToUnchecked()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+        JSInterop.SetupModule("./js/shelfCoverText.js")
+            .Setup<bool>("getShowCoverText", _ => true)
+            .SetResult(false);
+
+        var cut = Render<Settings>();
+
+        var checkbox = cut.Find("label.library-preference-row input[type=checkbox]");
+        Assert.False(checkbox.HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void Settings_TogglingShelfCoverTextCheckbox_Persists()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+        JSInterop.SetupModule("./js/shelfCoverText.js")
+            .Setup<bool>("getShowCoverText", _ => true)
+            .SetResult(false);
+        var setHandler = JSInterop.SetupModule("./js/shelfCoverText.js").SetupVoid("setShowCoverText", _ => true);
+
+        var cut = Render<Settings>();
+        cut.Find("label.library-preference-row input[type=checkbox]").Change(true);
+
+        var invocation = Assert.Single(setHandler.Invocations);
+        Assert.Equal(true, invocation.Arguments[0]);
+        Assert.True(cut.Find("label.library-preference-row input[type=checkbox]").HasAttribute("checked"));
     }
 }

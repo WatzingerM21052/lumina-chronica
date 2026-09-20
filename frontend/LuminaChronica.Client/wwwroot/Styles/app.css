@@ -1703,13 +1703,24 @@ select:focus-visible,
     inset: 0;
 }
 
+/* Hidden by default (Einstellungen > "Titel/Autor auf Regal-Cover
+   anzeigen", off by default) -- most real cover images already carry their
+   own printed title/author, so this overlay is opt-in clutter rather than
+   a default. Gated purely via a data-attribute on <html> (set by
+   shelfCoverText.js at app boot, same technique as theme.js) so no Razor
+   parameter or JS interop is needed per rendered book. */
 .shelf-book-cover-title,
 .shelf-book-cover-author {
+    display: none;
     position: relative;
     z-index: 2;
     font-size: 0.65rem;
     line-height: 1.2;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+html[data-shelf-cover-text="show"] .shelf-book-cover-title,
+html[data-shelf-cover-text="show"] .shelf-book-cover-author {
+    display: inline;
 }
 .shelf-book-cover-title { font-weight: 600; color: var(--color-accent-text); }
 .shelf-book-cover-author { font-size: 0.6rem; opacity: 0.85; }
@@ -2993,7 +3004,8 @@ select:focus-visible,
     margin: var(--space-2) 0;
 }
 
-.notification-preference-row {
+.notification-preference-row,
+.library-preference-row {
     display: flex;
     align-items: baseline;
     gap: var(--space-1);
