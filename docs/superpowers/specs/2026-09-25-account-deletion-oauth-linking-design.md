@@ -29,22 +29,29 @@ On delete (`DELETE /api/users/me`, `requireAuth`):
 
 The live `username`/`email` columns are immediately free — no UNIQUE conflict, no table rebuild.
 
-### Restore, folded into `registerUser`
+### Restore is explicit, not silent — `DELETED_ACCOUNT_FOUND`
 
-Before the existing `emailTaken`/`usernameTaken` checks in `authService.registerUser`, look for a soft-deleted row matching the submitted email:
+Registering with an email that matches a soft-deleted account's `deleted_email` must **not** silently restore (a user who deliberately wants a fresh, unrelated account with that same email needs that path to keep working — see below), and must **not** silently fail with the normal `EmailTakenError` either (the live `email` column is free — no DB conflict actually exists). Instead:
+
+In `authService.registerUser`, before the existing `emailTaken` check, look for a match:
 
 ```sql
 SELECT id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL
 ```
 
-- **Match found:** treat as a restore, not a fresh insert. Validate the submitted `username` isn't taken by a different *active* user (existing check already does this correctly, since the live column no longer holds the old value). `UPDATE` that same row: `username`, `email` back to the submitted values, new `password_hash`, `deleted_at = NULL`, `deleted_username = NULL`, `deleted_email = NULL`. Same user `id` throughout, so every FK'd row (books, projects, comments, ratings, follows, `oauth_identities`, `user_settings`) reattaches automatically — nothing else needs to change. Return the normal `AuthResult` (fresh JWT) for that `id`.
-- **No match:** existing fresh-registration path, unchanged.
+- **Match found, and the request has no `confirmNewAccount: true` flag:** abort with a new `DeletedAccountFoundError` → route layer returns `409 { code: "DELETED_ACCOUNT_FOUND", message: "..." }`. Nothing is created or changed. The frontend catches this specific code and shows a two-button choice instead of the generic error banner.
+- **Match found, and `confirmNewAccount: true` is set:** the user explicitly chose "neuen Account erstellen" despite the match — proceed with the existing fresh-insert path unchanged, using the submitted email live. The old deleted row's `deleted_email` snapshot is left completely untouched, so it stays independently restorable later (restoring it later will itself fail with the ordinary `EmailTakenError` if *this* new account still currently holds that email live at that time — an unavoidable, ordinary uniqueness conflict, not a special case).
+- **No match:** existing path, unchanged.
 
-**Known trade-off (flagged, not solved here):** this app has no email-ownership verification at registration today — anyone can register with any unclaimed email. Restore-by-email carries the identical trust level (whoever submits that exact email at registration time gets the account, restored or fresh) — not a new class of risk. No expiry/grace-period on restorability in v1 (no cron infra exists yet; add later if ever needed — YAGNI for now).
+New endpoint `POST /api/auth/restore` (`{ email, username, password }`, no auth required — same trust level as `/register`, see trade-off below): re-runs the `deleted_email` lookup; 404 if no match (already restored / never existed / raced). On match, validate the submitted `username` isn't taken by a different *active* user (existing `usernameTaken` check works as-is, since the live column no longer holds the deleted account's old value) and that the live `email` isn't currently held by a different active account (ordinary `EmailTakenError` if so). `UPDATE` the matched row: `username`, `email` set to the submitted values, new `password_hash`, `deleted_at = NULL`, `deleted_username = NULL`, `deleted_email = NULL`. Same user `id` throughout, so every FK'd row (books, projects, comments, ratings, follows, `oauth_identities`, `user_settings`) reattaches automatically. Returns the normal `AuthResult` (fresh JWT).
 
-### Frontend (`Profile.razor`)
+**Known trade-off (flagged, not solved here):** this app has no email-ownership verification at registration today — anyone can register with any unclaimed email. Restoring via `/api/auth/restore` carries the identical trust level. No expiry/grace-period on restorability in v1 (no cron infra exists yet; add later if ever needed — YAGNI for now). Row count stays exactly one per original account forever, regardless of how many delete/restore cycles happen — everything above is an `UPDATE` on the same row, never an insert of a new tracking row.
 
-New "Konto löschen" section at the bottom, styled as a danger zone. For accounts with a real password: a password field + "Konto endgültig löschen" button, disabled until the field is filled. For OAuth-only accounts: just the button. A second confirmation step (simple inline "Bist du sicher? Ja, endgültig löschen" toggle, not a new Modal component — this codebase doesn't have one yet and it's out of scope to add one here) before the call fires. On success: clear auth state, redirect to `/`.
+### Frontend
+
+**`Register.razor`:** on a `409 DELETED_ACCOUNT_FOUND` response, replace the normal error banner with a two-button choice: "Alten Account wiederherstellen" (calls `POST /api/auth/restore` with the same form values) or "Neuen Account erstellen" (resubmits `POST /api/auth/register` with `confirmNewAccount: true` added).
+
+**`Profile.razor`:** new "Konto löschen" section at the bottom, styled as a danger zone. For accounts with a real password: a password field + "Konto endgültig löschen" button, disabled until the field is filled. For OAuth-only accounts: just the button. A second confirmation step (simple inline "Bist du sicher? Ja, endgültig löschen" toggle, not a new Modal component — this codebase doesn't have one yet and it's out of scope to add one here) before the call fires. On success: clear auth state, redirect to `/`.
 
 ---
 
