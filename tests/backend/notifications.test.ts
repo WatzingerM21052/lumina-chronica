@@ -2,8 +2,18 @@
 // with per-user, per-type preferences (FOLLOW/COMMENT/RATING/SHARE), plus a
 // 5th preference type (ACTIVITY_RATING) added mid-scoping via
 // AskUserQuestion that gates profile_activities' RATING_GIVEN entries
-// instead of a notification. Preferences are checked at insert time, not
-// read time -- muting must never retroactively hide history.
+// instead of a notification.
+//
+// FOLLOW/COMMENT/RATING/SHARE preferences are checked at insert time, not
+// read time -- a notification is a one-time alert, and muting must never
+// retroactively hide history from the recipient's inbox.
+//
+// ACTIVITY_RATING/ACTIVITY_RATING_STARS are different: they gate what's
+// currently rendered on the profile owner's own public activity log, a
+// live view, not a one-time alert -- so (bug found live, 2026-09-25) they
+// must be re-checked at READ time against each request's CURRENT
+// preference value, not frozen at the moment the rating was given. See
+// activityService.ts's recordRatingActivity/listProfileActivities.
 
 import { beforeEach, describe, expect, it } from "vitest";
 import app from "../../backend/src/index";
@@ -284,5 +294,66 @@ describe("ACTIVITY_RATING/ACTIVITY_RATING_STARS gate profile_activities, not not
         const profileRes = await app.request("/api/users/bob/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
         const profile = await readJson(profileRes);
         expect(profile.data.activities[0]).toMatchObject({ type: "RATING_GIVEN", targetId: bookId, rating: 4 });
+    });
+
+    it("hides the star value retroactively when ACTIVITY_RATING_STARS is disabled after the rating was given", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setBookVisibility(tokenA, bookId, "PUBLIC");
+        await setPreference(tokenB, "ACTIVITY_RATING", true);
+        await setPreference(tokenB, "ACTIVITY_RATING_STARS", true);
+
+        await rate(tokenB, bookId, 4);
+
+        // Turned off AFTER the rating was already given and logged.
+        await setPreference(tokenB, "ACTIVITY_RATING_STARS", false);
+
+        const profileRes = await app.request("/api/users/bob/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const profile = await readJson(profileRes);
+        expect(profile.data.activities[0]).toMatchObject({ type: "RATING_GIVEN", targetId: bookId, rating: null });
+    });
+
+    it("reveals the star value retroactively when ACTIVITY_RATING_STARS is enabled after the rating was given", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setBookVisibility(tokenA, bookId, "PUBLIC");
+        await setPreference(tokenB, "ACTIVITY_RATING", true);
+        // ACTIVITY_RATING_STARS left at its default (off) for the rating itself.
+
+        await rate(tokenB, bookId, 4);
+
+        // Turned on AFTER the rating was already given -- the raw value must
+        // still be recoverable, not permanently lost from having been off
+        // at write time.
+        await setPreference(tokenB, "ACTIVITY_RATING_STARS", true);
+
+        const profileRes = await app.request("/api/users/bob/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const profile = await readJson(profileRes);
+        expect(profile.data.activities[0]).toMatchObject({ type: "RATING_GIVEN", targetId: bookId, rating: 4 });
+    });
+
+    it("hides the whole activity retroactively when ACTIVITY_RATING is disabled after the rating was given", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setBookVisibility(tokenA, bookId, "PUBLIC");
+        await setPreference(tokenB, "ACTIVITY_RATING", true);
+
+        await rate(tokenB, bookId, 4);
+        await setPreference(tokenB, "ACTIVITY_RATING", false);
+
+        const profileRes = await app.request("/api/users/bob/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const profile = await readJson(profileRes);
+        expect(profile.data.activities).toEqual([]);
+    });
+
+    it("reveals the whole activity retroactively when ACTIVITY_RATING is enabled after the rating was given", async () => {
+        const bookId = await uploadBook(tokenA);
+        await setBookVisibility(tokenA, bookId, "PUBLIC");
+        // ACTIVITY_RATING left at its default (off) for the rating itself.
+
+        await rate(tokenB, bookId, 4);
+        await setPreference(tokenB, "ACTIVITY_RATING", true);
+
+        const profileRes = await app.request("/api/users/bob/public", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const profile = await readJson(profileRes);
+        expect(profile.data.activities).toHaveLength(1);
+        expect(profile.data.activities[0]).toMatchObject({ type: "RATING_GIVEN", targetId: bookId });
     });
 });

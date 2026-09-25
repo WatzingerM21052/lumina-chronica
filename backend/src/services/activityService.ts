@@ -52,20 +52,31 @@ export async function recordProjectPublicActivity(db: D1Database, userId: number
 // someone else's work, not just "an activity happened"), so it's checked
 // and gated separately rather than being implied by the first.
 //
-// Both are checked at insert time, not read time (same as every other
-// preference here) -- a row's rating value is fixed at the moment it's
-// written; toggling ACTIVITY_RATING_STARS later never retroactively
-// reveals or hides an already-recorded value.
+// Both are re-checked at READ time (listProfileActivities below), not here
+// at insert time -- unlike a one-shot notification, the activity log is a
+// live view of the profile owner's current state, so toggling either
+// preference must immediately affect every already-logged entry, not just
+// future ones (bug found live, 2026-09-25: a user disabled
+// ACTIVITY_RATING_STARS after rating a book and the exact star value kept
+// showing, because the old code baked the gate in at write time). The raw
+// rating is therefore always stored here, unconditionally, so it's never
+// lost and can always be revealed or hidden later based on whatever the
+// preference is at the moment someone actually views the log.
 export async function recordRatingActivity(db: D1Database, userId: number, bookId: number, rating: number): Promise<void> {
-    if (!(await isPreferenceEnabled(db, userId, "ACTIVITY_RATING"))) return;
-    const showStars = await isPreferenceEnabled(db, userId, "ACTIVITY_RATING_STARS");
     await db
         .prepare(`INSERT INTO profile_activities (user_id, type, target_type, target_id, rating) VALUES (?, 'RATING_GIVEN', 'BOOK', ?, ?)`)
-        .bind(userId, bookId, showStars ? rating : null)
+        .bind(userId, bookId, rating)
         .run();
 }
 
 export async function listProfileActivities(db: D1Database, userId: number): Promise<ProfileActivity[]> {
+    // Current preference values, not whatever was true when each row was
+    // written -- see the comment on recordRatingActivity above.
+    const [showRatings, showStars] = await Promise.all([
+        isPreferenceEnabled(db, userId, "ACTIVITY_RATING"),
+        isPreferenceEnabled(db, userId, "ACTIVITY_RATING_STARS"),
+    ]);
+
     const { results } = await db
         .prepare(
             `SELECT pa.id, pa.type, pa.target_type, pa.target_id, pa.rating, pa.created_at,
@@ -73,11 +84,11 @@ export async function listProfileActivities(db: D1Database, userId: number): Pro
              FROM profile_activities pa
              LEFT JOIN books ON pa.target_type = 'BOOK' AND books.id = pa.target_id
              LEFT JOIN projects ON pa.target_type = 'PROJECT' AND projects.id = pa.target_id
-             WHERE pa.user_id = ?
+             WHERE pa.user_id = ? AND (pa.type != 'RATING_GIVEN' OR ?)
              ORDER BY pa.created_at DESC, pa.id DESC
              LIMIT ?`
         )
-        .bind(userId, MAX_ACTIVITIES)
+        .bind(userId, showRatings ? 1 : 0, MAX_ACTIVITIES)
         .all<{
             id: number;
             type: ActivityType;
@@ -94,7 +105,7 @@ export async function listProfileActivities(db: D1Database, userId: number): Pro
         targetType: row.target_type,
         targetId: row.target_id,
         targetTitle: row.target_title,
-        rating: row.rating,
+        rating: row.type === "RATING_GIVEN" && showStars ? row.rating : null,
         createdAt: row.created_at,
     }));
 }
