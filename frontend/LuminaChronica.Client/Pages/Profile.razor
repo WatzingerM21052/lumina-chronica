@@ -257,7 +257,11 @@ else
         if (response is { Success: true, Data: not null })
         {
             NavigationManager.NavigateTo(response.Data.RedirectUrl, forceLoad: true);
+            return;
         }
+
+        _linkBanner = response?.Error?.Message ?? "Verknüpfen fehlgeschlagen. Bitte versuche es erneut.";
+        _linkBannerIsError = true;
     }
 
     private async Task UnlinkProviderAsync(string provider)

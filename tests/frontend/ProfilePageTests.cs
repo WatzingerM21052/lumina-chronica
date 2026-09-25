@@ -301,4 +301,35 @@ public class ProfilePageTests : BunitContext
         Assert.DoesNotContain("Entfernen", cut.Markup);
         Assert.Contains("Verknüpfen", cut.Markup);
     }
+
+    [Fact]
+    public void Profile_LinkProvider_StartFailure_ShowsErrorMessage()
+    {
+        // Neither provider is linked, so the Google row shows "Verknüpfen";
+        // clicking it calls GET /api/auth/oauth/google/link/start, which
+        // this test makes fail with a real ApiError envelope. Route order
+        // matters: "/link/start" must be matched before the generic "/linked"
+        // -- both /api/auth/oauth/google/link/start and /api/auth/oauth/linked
+        // end in overlapping suffixes, so match on the longer, more specific
+        // path first.
+        const string linkStartErrorJson = """{"success":false,"error":{"code":"INVALID_PROVIDER","message":"Unknown OAuth provider \"google\"."}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/link/start"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse(linkStartErrorJson))
+            .When(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/linked"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":[]}"""))
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+        var linkButton = cut.FindAll(".linked-account-row button").First(b => b.TextContent == "Verknüpfen");
+        linkButton.Click();
+
+        Assert.Contains("Unknown OAuth provider \"google\".", cut.Markup);
+        Assert.Contains("form-error", cut.Markup);
+    }
 }
