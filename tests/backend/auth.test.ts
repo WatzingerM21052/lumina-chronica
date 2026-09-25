@@ -288,3 +288,95 @@ describe("POST /api/auth/register against a deleted account's email", () => {
         expect((await readJson(registerCRes)).error.code).toBe("EMAIL_TAKEN");
     });
 });
+
+describe("POST /api/auth/restore", () => {
+    async function registerAndDelete(username: string, email: string): Promise<number> {
+        const registerRes = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username, email, password: "correct horse" }),
+            env
+        );
+        const { token, userId } = (await readJson(registerRes)).data;
+        await app.request(
+            "/api/users/me",
+            {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ currentPassword: "correct horse" }),
+            },
+            env
+        );
+        return userId;
+    }
+
+    it("returns 404 when there is no deleted account for this email", async () => {
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "whoever", email: "never-existed@example.com", password: "a new password" }),
+            env
+        );
+        expect(res.status).toBe(404);
+    });
+
+    it("restores the same account id, reattaching its prior content, with a fresh password", async () => {
+        const originalId = await registerAndDelete("original", "restore-me@example.com");
+
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "reclaimed", email: "restore-me@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(res.status).toBe(200);
+        const json = await readJson(res);
+        expect(json.data.userId).toBe(originalId);
+
+        const meRes = await app.request("/api/users/me", { headers: { Authorization: `Bearer ${json.data.token}` } }, env);
+        const me = await readJson(meRes);
+        expect(me.data.id).toBe(originalId);
+        expect(me.data.username).toBe("reclaimed");
+        expect(me.data.email).toBe("restore-me@example.com");
+
+        const loginRes = await app.request(
+            "/api/auth/login",
+            jsonRequest({ identifier: "restore-me@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(loginRes.status).toBe(200);
+    });
+
+    it("rejects a restore username already taken by a different active user", async () => {
+        await registerAndDelete("original2", "restore-me2@example.com");
+        await app.request("/api/auth/register", jsonRequest({ username: "taken", email: "someone@example.com", password: "correct horse" }), env);
+
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "taken", email: "restore-me2@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(res.status).toBe(409);
+        expect((await readJson(res)).error.code).toBe("USERNAME_TAKEN");
+    });
+
+    it("stays possible after a different, brand new account claimed the same email (confirmNewAccount path)", async () => {
+        const originalId = await registerAndDelete("original3", "restore-me3@example.com");
+        await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "interim", email: "restore-me3@example.com", password: "correct horse", confirmNewAccount: true }),
+            env
+        );
+
+        // The email is now live on the interim account -- restoring the
+        // original must fail with the ordinary EmailTakenError, not a crash
+        // or a silent overwrite.
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "reclaimed3", email: "restore-me3@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(res.status).toBe(409);
+        expect((await readJson(res)).error.code).toBe("EMAIL_TAKEN");
+
+        const original = await env.DB.prepare("SELECT deleted_at FROM users WHERE id = ?").bind(originalId).first<{ deleted_at: string | null }>();
+        expect(original!.deleted_at).not.toBeNull();
+    });
+});

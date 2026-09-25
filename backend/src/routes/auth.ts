@@ -7,9 +7,11 @@ import {
     DeletedAccountFoundError,
     EmailTakenError,
     InvalidCredentialsError,
+    NoDeletedAccountError,
     UsernameTakenError,
     loginUser,
     registerUser,
+    restoreUser,
 } from "../services/authService";
 import { OAuthExchangeError } from "../services/oauthProviders";
 import {
@@ -70,6 +72,41 @@ authRoute.post("/register", async (c) => {
         if (err instanceof DeletedAccountFoundError) {
             return c.json(failure("DELETED_ACCOUNT_FOUND", "A deleted account exists with this email. Restore it, or confirm you want a new one."), 409);
         }
+        throw err;
+    }
+});
+
+authRoute.post("/restore", async (c) => {
+    let rateLimit;
+    try {
+        rateLimit = await assertNotRateLimited(c, "register", "");
+    } catch (err) {
+        if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
+        throw err;
+    }
+
+    const body = await c.req.json<{ username?: string; email?: string; password?: string }>().catch(() => null);
+    const { username, email, password } = body ?? {};
+
+    await recordFailedAttempt(c.env.DB, "register", rateLimit.ip, "");
+
+    if (!username || !email || !password) {
+        return c.json(failure("VALIDATION_ERROR", "username, email, and password are required."), 400);
+    }
+    if (!EMAIL_PATTERN.test(email)) {
+        return c.json(failure("VALIDATION_ERROR", "email is not a valid address."), 400);
+    }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+        return c.json(failure("VALIDATION_ERROR", `password must be at least ${MIN_PASSWORD_LENGTH} characters.`), 400);
+    }
+
+    try {
+        const result = await restoreUser(c.env.DB, c.env.JWT_SECRET, { username, email, password });
+        return c.json(success(result), 200);
+    } catch (err) {
+        if (err instanceof NoDeletedAccountError) return c.json(failure("NOT_FOUND", "No deleted account found for this email."), 404);
+        if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);
+        if (err instanceof UsernameTakenError) return c.json(failure("USERNAME_TAKEN", "This username is already taken."), 409);
         throw err;
     }
 });

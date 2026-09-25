@@ -9,6 +9,7 @@ export class EmailTakenError extends Error {}
 export class UsernameTakenError extends Error {}
 export class InvalidCredentialsError extends Error {}
 export class DeletedAccountFoundError extends Error {}
+export class NoDeletedAccountError extends Error {}
 
 type UserRow = {
     id: number;
@@ -89,4 +90,45 @@ export async function loginUser(
     const role = await roleName(db, user.role_id);
     const token = await signJwt({ sub: user.id, role }, jwtSecret, TOKEN_EXPIRY_SECONDS);
     return { token, userId: user.id };
+}
+
+export async function restoreUser(
+    db: D1Database,
+    jwtSecret: string,
+    input: { username: string; email: string; password: string }
+): Promise<AuthResult> {
+    const deletedMatch = await db
+        .prepare("SELECT id, role_id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL")
+        .bind(input.email)
+        .first<{ id: number; role_id: number }>();
+    if (!deletedMatch) throw new NoDeletedAccountError();
+
+    const usernameTaken = await db
+        .prepare("SELECT id FROM users WHERE username = ? AND id != ?")
+        .bind(input.username, deletedMatch.id)
+        .first();
+    if (usernameTaken) throw new UsernameTakenError();
+
+    // The live email column is free unless some OTHER account has since
+    // claimed it live (e.g. via registerUser's confirmNewAccount path) --
+    // an ordinary uniqueness conflict, not special-cased.
+    const emailTaken = await db
+        .prepare("SELECT id FROM users WHERE email = ? AND id != ?")
+        .bind(input.email, deletedMatch.id)
+        .first();
+    if (emailTaken) throw new EmailTakenError();
+
+    const passwordHash = await hashPassword(input.password);
+    await db
+        .prepare(
+            `UPDATE users SET username = ?, email = ?, password_hash = ?,
+             deleted_username = NULL, deleted_email = NULL, deleted_at = NULL, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`
+        )
+        .bind(input.username, input.email, passwordHash, deletedMatch.id)
+        .run();
+
+    const role = await roleName(db, deletedMatch.role_id);
+    const token = await signJwt({ sub: deletedMatch.id, role }, jwtSecret, TOKEN_EXPIRY_SECONDS);
+    return { token, userId: deletedMatch.id };
 }
