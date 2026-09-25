@@ -179,3 +179,70 @@ describe("GET /api/users/:username/avatar", () => {
         expect(res.status).toBe(404);
     });
 });
+
+describe("DELETE /api/users/me", () => {
+    it("requires authentication", async () => {
+        const res = await app.request("/api/users/me", { method: "DELETE" }, env);
+        expect(res.status).toBe(401);
+    });
+
+    it("rejects a missing/wrong current password for a password-based account", async () => {
+        const res = await app.request(
+            "/api/users/me",
+            jsonRequest("DELETE", { currentPassword: "wrong password" }, token),
+            env
+        );
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("INVALID_PASSWORD");
+
+        const meRes = await app.request("/api/users/me", { headers: { Authorization: `Bearer ${token}` } }, env);
+        expect(meRes.status).toBe(200);
+    });
+
+    it("soft-deletes the account, frees the username/email, and blocks further login", async () => {
+        const res = await app.request(
+            "/api/users/me",
+            jsonRequest("DELETE", { currentPassword: "correct horse" }, token),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect((await readJson(res)).success).toBe(true);
+
+        const meRes = await app.request("/api/users/me", { headers: { Authorization: `Bearer ${token}` } }, env);
+        expect(meRes.status).toBe(404);
+
+        const loginRes = await app.request(
+            "/api/auth/login",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ identifier: "alice@example.com", password: "correct horse" }),
+            },
+            env
+        );
+        expect(loginRes.status).toBe(401);
+
+        // Username/email are freed for a brand new registration.
+        const reRegisterRes = await app.request(
+            "/api/auth/register",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: "alice", email: "someone-else@example.com", password: "another password" }),
+            },
+            env
+        );
+        expect(reRegisterRes.status).toBe(201);
+    });
+
+    it("deletes the R2 avatar object on account deletion", async () => {
+        const form = new FormData();
+        form.set("avatar", new File(["avatar bytes"], "avatar.jpg", { type: "image/jpeg" }));
+        await app.request("/api/users/me/avatar", { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: form }, env);
+
+        await app.request("/api/users/me", jsonRequest("DELETE", { currentPassword: "correct horse" }, token), env);
+
+        const getRes = await app.request("/api/users/alice/avatar", {}, env);
+        expect(getRes.status).toBe(404);
+    });
+});

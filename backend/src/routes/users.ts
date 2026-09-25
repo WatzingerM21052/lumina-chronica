@@ -8,6 +8,7 @@ import {
     InvalidPasswordError,
     UsernameTakenError,
     ValidationError,
+    deleteUser,
     getUserAvatarObject,
     getUserProfile,
     updateUserAvatar,
@@ -101,6 +102,20 @@ usersRoute.put("/me", requireAuth, async (c) => {
     } catch (err) {
         if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);
         if (err instanceof UsernameTakenError) return c.json(failure("USERNAME_TAKEN", "This username is already taken."), 409);
+        if (err instanceof InvalidPasswordError) return c.json(failure("INVALID_PASSWORD", "Current password is incorrect."), 400);
+        throw err;
+    }
+});
+
+// 200 { data: null } rather than a bare 204 -- see the plan's Global
+// Constraints for why (failure needs to carry INVALID_PASSWORD through the
+// same envelope).
+usersRoute.delete("/me", requireAuth, async (c) => {
+    const body = await c.req.json<{ currentPassword?: string }>().catch(() => ({}) as { currentPassword?: string });
+    try {
+        await deleteUser(c.env.DB, c.env.STORAGE, c.get("userId"), body.currentPassword);
+        return c.json(success(null));
+    } catch (err) {
         if (err instanceof InvalidPasswordError) return c.json(failure("INVALID_PASSWORD", "Current password is incorrect."), 400);
         throw err;
     }

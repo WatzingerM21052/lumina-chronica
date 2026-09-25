@@ -107,8 +107,73 @@ else
         </div>
     </EditForm>
 
+    <h2>Verknüpfte Konten</h2>
+    @if (_linkBanner is not null)
+    {
+        <p class="@(_linkBannerIsError ? "form-error" : "form-success")">@_linkBanner</p>
+    }
+    @if (_linkedProviders is null)
+    {
+        <p class="text-muted">Lade …</p>
+    }
+    else
+    {
+        <div class="linked-accounts-list">
+            @foreach (var (providerKey, label) in OAuthProviders)
+            {
+                var linked = _linkedProviders.FirstOrDefault(p => p.Provider == providerKey);
+                <div class="linked-account-row">
+                    <span>@label@(linked is not null ? $" — {linked.Email}" : "")</span>
+                    @if (linked is not null)
+                    {
+                        <button type="button" class="btn" @onclick="() => UnlinkProviderAsync(providerKey)">Entfernen</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn" @onclick="() => LinkProviderAsync(providerKey)">Verknüpfen</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+
     <div class="form-actions">
         <button type="button" class="btn" @onclick="LogoutAsync">Abmelden</button>
+    </div>
+
+    <div class="profile-danger-zone">
+        <h2>Konto löschen</h2>
+        <p class="text-muted">Diese Aktion kann nicht rückgängig gemacht werden. Dein Konto wird sofort deaktiviert.</p>
+
+        @if (_deleteAccountErrorMessage is not null)
+        {
+            <p class="form-error">@_deleteAccountErrorMessage</p>
+        }
+
+        @if (_hasRealPassword)
+        {
+            <div class="form-group">
+                <label for="deleteAccountPassword">Aktuelles Passwort</label>
+                <input id="deleteAccountPassword" type="password" @bind="_deleteAccountPassword" @bind:event="oninput" />
+            </div>
+        }
+
+        @if (!_isConfirmingDelete)
+        {
+            <div class="form-actions">
+                <button type="button" id="confirmDeleteAccount" class="btn btn-danger" @onclick="() => _isConfirmingDelete = true">Konto löschen</button>
+            </div>
+        }
+        else
+        {
+            <p class="form-error">Bist du sicher? Das kann nicht rückgängig gemacht werden.</p>
+            <div class="form-actions">
+                <button type="button" class="btn" @onclick="() => _isConfirmingDelete = false">Abbrechen</button>
+                <button type="button" id="deleteAccountButton" class="btn btn-danger" disabled="@(_hasRealPassword && string.IsNullOrEmpty(_deleteAccountPassword))" @onclick="DeleteAccountAsync">
+                    Ja, endgültig löschen
+                </button>
+            </div>
+        }
     </div>
 }
 
@@ -128,8 +193,27 @@ else
     private string? _avatarPreviewUrl;
     private string? _avatarErrorMessage;
 
+    // TODO: hardcoded true until UserProfile exposes whether the account has a
+    // real password (vs. OAuth-only) -- password_hash is intentionally never
+    // serialized today. Wiring this up for real is a follow-up once that gap
+    // is closed; out of scope for this task per the design doc.
+    private bool _hasRealPassword = true;
+    private bool _isConfirmingDelete;
+    private string _deleteAccountPassword = string.Empty;
+    private string? _deleteAccountErrorMessage;
+
     private const long MaxAvatarBytes = 5 * 1024 * 1024;
     private static readonly string[] AllowedAvatarExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+
+    private static readonly (string Key, string Label)[] OAuthProviders =
+    [
+        ("google", "Google"),
+        ("github", "GitHub"),
+    ];
+
+    private List<LinkedOAuthProvider>? _linkedProviders;
+    private string? _linkBanner;
+    private bool _linkBannerIsError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -138,6 +222,71 @@ else
         {
             _profile = response.Data;
             _profileForm = new ProfileFormModel { Username = _profile.Username, Email = _profile.Email };
+        }
+
+        var linkedResponse = await ApiClient.GetAsync<List<LinkedOAuthProvider>>("/api/auth/oauth/linked");
+        _linkedProviders = linkedResponse is { Success: true, Data: not null } ? linkedResponse.Data : [];
+
+        var query = new Uri(NavigationManager.Uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length != 2) continue;
+            if (parts[0] == "linked")
+            {
+                var providerKey = Uri.UnescapeDataString(parts[1]);
+                var label = OAuthProviders.FirstOrDefault(p => p.Key == providerKey).Label ?? providerKey;
+                _linkBanner = $"{label} wurde verknüpft.";
+                _linkBannerIsError = false;
+            }
+            else if (parts[0] == "linkError")
+            {
+                _linkBanner = DescribeLinkError(Uri.UnescapeDataString(parts[1]));
+                _linkBannerIsError = true;
+            }
+        }
+        if (_linkBanner is not null)
+        {
+            NavigationManager.NavigateTo("profile", replace: true);
+        }
+    }
+
+    // Mirrors OAuthCallback.razor's DescribeError switch pattern -- branches
+    // on the actual reason code from the query string instead of a single
+    // hardcoded message, since routes/auth.ts's callback can redirect here
+    // with more than one linkError reason (already_linked, exchange_failed).
+    private static string DescribeLinkError(string reason) => reason switch
+    {
+        "already_linked" => "Verknüpfung fehlgeschlagen. Dieses Konto ist bereits mit einem anderen Benutzer verknüpft.",
+        "exchange_failed" => "Verknüpfung fehlgeschlagen. Die Anmeldung beim Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
+        _ => "Verknüpfung fehlgeschlagen. Bitte versuche es erneut.",
+    };
+
+    private async Task LinkProviderAsync(string provider)
+    {
+        var response = await ApiClient.GetAsync<OAuthLinkStartResult>($"/api/auth/oauth/{provider}/link/start");
+        if (response is { Success: true, Data: not null })
+        {
+            NavigationManager.NavigateTo(response.Data.RedirectUrl, forceLoad: true);
+            return;
+        }
+
+        _linkBanner = response?.Error?.Message ?? "Verknüpfen fehlgeschlagen. Bitte versuche es erneut.";
+        _linkBannerIsError = true;
+    }
+
+    private async Task UnlinkProviderAsync(string provider)
+    {
+        var response = await ApiClient.DeleteAsync<object, object>($"/api/auth/oauth/{provider}", new { });
+        if (response is { Success: true })
+        {
+            _linkedProviders = _linkedProviders?.Where(p => p.Provider != provider).ToList();
+            _linkBanner = null;
+        }
+        else
+        {
+            _linkBanner = response?.Error?.Message ?? "Entfernen fehlgeschlagen. Bitte versuche es erneut.";
+            _linkBannerIsError = true;
         }
     }
 
@@ -203,6 +352,24 @@ else
         await ApiClient.PostAsync("/api/auth/logout");
         await AuthStateProvider.MarkUserAsLoggedOutAsync();
         NavigationManager.NavigateTo("");
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        _deleteAccountErrorMessage = null;
+
+        var request = new DeleteAccountRequest { CurrentPassword = _hasRealPassword ? _deleteAccountPassword : null };
+        var response = await ApiClient.DeleteAsync<DeleteAccountRequest, object>("/api/users/me", request);
+
+        if (response is { Success: true })
+        {
+            await AuthStateProvider.MarkUserAsLoggedOutAsync();
+            NavigationManager.NavigateTo("");
+            return;
+        }
+
+        _deleteAccountErrorMessage = response?.Error?.Message ?? "Konto konnte nicht gelöscht werden. Bitte versuche es erneut.";
+        _isConfirmingDelete = false;
     }
 
     // Uploads immediately on selection, unlike the Konto/Passwort forms

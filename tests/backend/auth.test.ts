@@ -207,3 +207,214 @@ describe("POST /api/auth/logout", () => {
         expect(res.status).toBe(204);
     });
 });
+
+describe("POST /api/auth/register against a deleted account's email", () => {
+    async function registerAndDelete(email: string): Promise<void> {
+        const registerRes = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "original", email, password: "correct horse" }),
+            env
+        );
+        const token = (await readJson(registerRes)).data.token;
+        await app.request(
+            "/api/users/me",
+            {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ currentPassword: "correct horse" }),
+            },
+            env
+        );
+    }
+
+    it("returns 409 DELETED_ACCOUNT_FOUND instead of creating or restoring", async () => {
+        await registerAndDelete("deleted@example.com");
+
+        const res = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "newname", email: "deleted@example.com", password: "a new password" }),
+            env
+        );
+        expect(res.status).toBe(409);
+        expect((await readJson(res)).error.code).toBe("DELETED_ACCOUNT_FOUND");
+
+        const stillFree = await env.DB.prepare("SELECT id FROM users WHERE email = 'deleted@example.com' AND deleted_at IS NULL").first();
+        expect(stillFree).toBeNull();
+    });
+
+    it("creates a brand new, independent account when confirmNewAccount is true", async () => {
+        await registerAndDelete("deleted2@example.com");
+
+        const res = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "brandnew", email: "deleted2@example.com", password: "a new password", confirmNewAccount: true }),
+            env
+        );
+        expect(res.status).toBe(201);
+
+        const users = await env.DB.prepare("SELECT id FROM users WHERE email = 'deleted2@example.com'").all();
+        expect(users.results).toHaveLength(1);
+    });
+
+    it("registers normally when there is no matching deleted account", async () => {
+        const res = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "freshuser", email: "never-deleted@example.com", password: "a new password" }),
+            env
+        );
+        expect(res.status).toBe(201);
+    });
+
+    it("returns 409 EMAIL_TAKEN when deleted email has been reclaimed by active account", async () => {
+        // Step 1: Register and delete account A
+        await registerAndDelete("reclaimed@example.com");
+
+        // Step 2: Register account B with the same email (with confirmNewAccount override)
+        const registerBRes = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "accountb", email: "reclaimed@example.com", password: "a new password", confirmNewAccount: true }),
+            env
+        );
+        expect(registerBRes.status).toBe(201);
+
+        // Step 3: Try to register account C with the same email (without confirmNewAccount)
+        // Expected: 409 EMAIL_TAKEN (not DELETED_ACCOUNT_FOUND), since email is actively held by B
+        const registerCRes = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "accountc", email: "reclaimed@example.com", password: "a new password" }),
+            env
+        );
+        expect(registerCRes.status).toBe(409);
+        expect((await readJson(registerCRes)).error.code).toBe("EMAIL_TAKEN");
+    });
+});
+
+describe("POST /api/auth/restore", () => {
+    async function registerAndDelete(username: string, email: string): Promise<number> {
+        const registerRes = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username, email, password: "correct horse" }),
+            env
+        );
+        const { token, userId } = (await readJson(registerRes)).data;
+        await app.request(
+            "/api/users/me",
+            {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ currentPassword: "correct horse" }),
+            },
+            env
+        );
+        return userId;
+    }
+
+    it("returns 404 when there is no deleted account for this email", async () => {
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "whoever", email: "never-existed@example.com", password: "a new password" }),
+            env
+        );
+        expect(res.status).toBe(404);
+    });
+
+    it("restores the same account id, reattaching its prior content, with a fresh password", async () => {
+        const originalId = await registerAndDelete("original", "restore-me@example.com");
+
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "reclaimed", email: "restore-me@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(res.status).toBe(200);
+        const json = await readJson(res);
+        expect(json.data.userId).toBe(originalId);
+
+        const meRes = await app.request("/api/users/me", { headers: { Authorization: `Bearer ${json.data.token}` } }, env);
+        const me = await readJson(meRes);
+        expect(me.data.id).toBe(originalId);
+        expect(me.data.username).toBe("reclaimed");
+        expect(me.data.email).toBe("restore-me@example.com");
+
+        const loginRes = await app.request(
+            "/api/auth/login",
+            jsonRequest({ identifier: "restore-me@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(loginRes.status).toBe(200);
+    });
+
+    it("rejects a restore username already taken by a different active user", async () => {
+        await registerAndDelete("original2", "restore-me2@example.com");
+        await app.request("/api/auth/register", jsonRequest({ username: "taken", email: "someone@example.com", password: "correct horse" }), env);
+
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "taken", email: "restore-me2@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(res.status).toBe(409);
+        expect((await readJson(res)).error.code).toBe("USERNAME_TAKEN");
+    });
+
+    it("stays possible after a different, brand new account claimed the same email (confirmNewAccount path)", async () => {
+        const originalId = await registerAndDelete("original3", "restore-me3@example.com");
+        await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "interim", email: "restore-me3@example.com", password: "correct horse", confirmNewAccount: true }),
+            env
+        );
+
+        // The email is now live on the interim account -- restoring the
+        // original must fail with the ordinary EmailTakenError, not a crash
+        // or a silent overwrite.
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "reclaimed3", email: "restore-me3@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(res.status).toBe(409);
+        expect((await readJson(res)).error.code).toBe("EMAIL_TAKEN");
+
+        const original = await env.DB.prepare("SELECT deleted_at FROM users WHERE id = ?").bind(originalId).first<{ deleted_at: string | null }>();
+        expect(original!.deleted_at).not.toBeNull();
+    });
+
+    it("restores the most recently deleted account when the same email has been deleted more than once", async () => {
+        // Deleted, reclaimed by a new account (confirmNewAccount), deleted
+        // again -- two rows now share the same deleted_email. Without the
+        // ORDER BY deleted_at DESC tie-break, whichever row SQLite happened
+        // to return first would win; this asserts the most-recently-deleted
+        // one does, deterministically.
+        const firstId = await registerAndDelete("firstclaim", "twice-deleted@example.com");
+
+        await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "secondclaim", email: "twice-deleted@example.com", password: "correct horse", confirmNewAccount: true }),
+            env
+        );
+        // registerAndDelete's own register call would collide with the
+        // email already being live on "secondclaim" -- delete that account
+        // directly (login, then DELETE /api/users/me) instead of reusing
+        // the helper.
+        const secondUser = await env.DB.prepare("SELECT id FROM users WHERE username = ? AND deleted_at IS NULL").bind("secondclaim").first<{ id: number }>();
+        expect(secondUser).not.toBeNull();
+        const loginRes = await app.request("/api/auth/login", jsonRequest({ identifier: "twice-deleted@example.com", password: "correct horse" }), env);
+        const { token } = (await readJson(loginRes)).data;
+        await app.request(
+            "/api/users/me",
+            { method: "DELETE", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ currentPassword: "correct horse" }) },
+            env
+        );
+
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "reclaimed-final", email: "twice-deleted@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(res.status).toBe(200);
+        const json = await readJson(res);
+        expect(json.data.userId).toBe(secondUser!.id);
+        expect(json.data.userId).not.toBe(firstId);
+    });
+});
