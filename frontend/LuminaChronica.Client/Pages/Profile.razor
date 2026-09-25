@@ -1,6 +1,7 @@
 @page "/profile"
 @attribute [Authorize]
 @implements IDisposable
+@using System.Linq
 @using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
@@ -107,6 +108,36 @@ else
         </div>
     </EditForm>
 
+    <h2>Verknüpfte Konten</h2>
+    @if (_linkBanner is not null)
+    {
+        <p class="@(_linkBannerIsError ? "form-error" : "form-success")">@_linkBanner</p>
+    }
+    @if (_linkedProviders is null)
+    {
+        <p class="text-muted">Lade …</p>
+    }
+    else
+    {
+        <div class="linked-accounts-list">
+            @foreach (var (providerKey, label) in OAuthProviders)
+            {
+                var linked = _linkedProviders.FirstOrDefault(p => p.Provider == providerKey);
+                <div class="linked-account-row">
+                    <span>@label@(linked is not null ? $" — {linked.Email}" : "")</span>
+                    @if (linked is not null)
+                    {
+                        <button type="button" class="btn" @onclick="() => UnlinkProviderAsync(providerKey)">Entfernen</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn" @onclick="() => LinkProviderAsync(providerKey)">Verknüpfen</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+
     <div class="form-actions">
         <button type="button" class="btn" @onclick="LogoutAsync">Abmelden</button>
     </div>
@@ -175,6 +206,16 @@ else
     private const long MaxAvatarBytes = 5 * 1024 * 1024;
     private static readonly string[] AllowedAvatarExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
+    private static readonly (string Key, string Label)[] OAuthProviders =
+    [
+        ("google", "Google"),
+        ("github", "GitHub"),
+    ];
+
+    private List<LinkedOAuthProvider>? _linkedProviders;
+    private string? _linkBanner;
+    private bool _linkBannerIsError;
+
     protected override async Task OnInitializedAsync()
     {
         var response = await ApiClient.GetAsync<UserProfile>("/api/users/me");
@@ -182,6 +223,56 @@ else
         {
             _profile = response.Data;
             _profileForm = new ProfileFormModel { Username = _profile.Username, Email = _profile.Email };
+        }
+
+        var linkedResponse = await ApiClient.GetAsync<List<LinkedOAuthProvider>>("/api/auth/oauth/linked");
+        _linkedProviders = linkedResponse is { Success: true, Data: not null } ? linkedResponse.Data : [];
+
+        var query = new Uri(NavigationManager.Uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length != 2) continue;
+            if (parts[0] == "linked")
+            {
+                var providerKey = Uri.UnescapeDataString(parts[1]);
+                var label = OAuthProviders.FirstOrDefault(p => p.Key == providerKey).Label ?? providerKey;
+                _linkBanner = $"{label} wurde verknüpft.";
+                _linkBannerIsError = false;
+            }
+            else if (parts[0] == "linkError")
+            {
+                _linkBanner = "Verknüpfung fehlgeschlagen. Dieses Konto ist bereits mit einem anderen Benutzer verknüpft.";
+                _linkBannerIsError = true;
+            }
+        }
+        if (_linkBanner is not null)
+        {
+            NavigationManager.NavigateTo("profile", replace: true);
+        }
+    }
+
+    private async Task LinkProviderAsync(string provider)
+    {
+        var response = await ApiClient.GetAsync<OAuthLinkStartResult>($"/api/auth/oauth/{provider}/link/start");
+        if (response is { Success: true, Data: not null })
+        {
+            NavigationManager.NavigateTo(response.Data.RedirectUrl, forceLoad: true);
+        }
+    }
+
+    private async Task UnlinkProviderAsync(string provider)
+    {
+        var response = await ApiClient.DeleteAsync<object, object>($"/api/auth/oauth/{provider}", new { });
+        if (response is { Success: true })
+        {
+            _linkedProviders = _linkedProviders?.Where(p => p.Provider != provider).ToList();
+            _linkBanner = null;
+        }
+        else
+        {
+            _linkBanner = response?.Error?.Message ?? "Entfernen fehlgeschlagen. Bitte versuche es erneut.";
+            _linkBannerIsError = true;
         }
     }
 

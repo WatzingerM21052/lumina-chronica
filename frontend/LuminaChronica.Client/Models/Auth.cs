@@ -103,3 +103,23 @@ public class RestoreAccountRequest
     [JsonPropertyName("password")]
     public string Password { get; set; } = string.Empty;
 }
+
+// Mirrors backend/src/services/oauthService.ts's LinkedProvider.
+public class LinkedOAuthProvider
+{
+    [JsonPropertyName("provider")]
+    public string Provider { get; set; } = string.Empty;
+
+    [JsonPropertyName("email")]
+    public string? Email { get; set; }
+
+    [JsonPropertyName("linkedAt")]
+    public string LinkedAt { get; set; } = string.Empty;
+}
+
+// Returned by GET /api/auth/oauth/:provider/link/start.
+public class OAuthLinkStartResult
+{
+    [JsonPropertyName("redirectUrl")]
+    public string RedirectUrl { get; set; } = string.Empty;
+}

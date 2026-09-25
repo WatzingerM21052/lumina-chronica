@@ -69,3 +69,18 @@
     background: var(--color-error);
     color: var(--color-bg-card);
 }
+
+.linked-accounts-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-bottom: var(--space-3);
+}
+
+.linked-account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+}
