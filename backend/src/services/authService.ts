@@ -28,6 +28,13 @@ export async function registerUser(
     jwtSecret: string,
     input: { username: string; email: string; password: string; confirmNewAccount?: boolean }
 ): Promise<AuthResult> {
+    const [emailTaken, usernameTaken] = await Promise.all([
+        db.prepare("SELECT id FROM users WHERE email = ?").bind(input.email).first(),
+        db.prepare("SELECT id FROM users WHERE username = ?").bind(input.username).first(),
+    ]);
+    if (emailTaken) throw new EmailTakenError();
+    if (usernameTaken) throw new UsernameTakenError();
+
     if (!input.confirmNewAccount) {
         const deletedMatch = await db
             .prepare("SELECT id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL")
@@ -35,13 +42,6 @@ export async function registerUser(
             .first();
         if (deletedMatch) throw new DeletedAccountFoundError();
     }
-
-    const [emailTaken, usernameTaken] = await Promise.all([
-        db.prepare("SELECT id FROM users WHERE email = ?").bind(input.email).first(),
-        db.prepare("SELECT id FROM users WHERE username = ?").bind(input.username).first(),
-    ]);
-    if (emailTaken) throw new EmailTakenError();
-    if (usernameTaken) throw new UsernameTakenError();
 
     const userRole = await db.prepare("SELECT id FROM roles WHERE name = 'USER'").first<{ id: number }>();
     if (!userRole) throw new Error("USER role is not seeded (see database/migrations/0001_initial.sql).");

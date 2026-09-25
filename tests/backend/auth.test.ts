@@ -264,4 +264,27 @@ describe("POST /api/auth/register against a deleted account's email", () => {
         );
         expect(res.status).toBe(201);
     });
+
+    it("returns 409 EMAIL_TAKEN when deleted email has been reclaimed by active account", async () => {
+        // Step 1: Register and delete account A
+        await registerAndDelete("reclaimed@example.com");
+
+        // Step 2: Register account B with the same email (with confirmNewAccount override)
+        const registerBRes = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "accountb", email: "reclaimed@example.com", password: "a new password", confirmNewAccount: true }),
+            env
+        );
+        expect(registerBRes.status).toBe(201);
+
+        // Step 3: Try to register account C with the same email (without confirmNewAccount)
+        // Expected: 409 EMAIL_TAKEN (not DELETED_ACCOUNT_FOUND), since email is actively held by B
+        const registerCRes = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "accountc", email: "reclaimed@example.com", password: "a new password" }),
+            env
+        );
+        expect(registerCRes.status).toBe(409);
+        expect((await readJson(registerCRes)).error.code).toBe("EMAIL_TAKEN");
+    });
 });
