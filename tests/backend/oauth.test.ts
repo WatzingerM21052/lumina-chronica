@@ -623,6 +623,24 @@ describe("OAuth login restores a previously soft-deleted account (Task 10)", () 
         // account is never silently swapped out for a deleted one.
         expect(signedInUserId).toBe(userId2);
     });
+
+    it("restores the most recently deleted account when two soft-deleted rows share the same deleted_email (ORDER BY deleted_at DESC, id DESC tie-break)", async () => {
+        const first = await registerPasswordUser("tiefirst", "tie@example.com");
+        await deleteAccount(first.token);
+        // Same email, reclaimed and deleted again -- both deletions land in
+        // the same fakeD1 CURRENT_TIMESTAMP second, so deleted_at ties and
+        // this exercises the id DESC fallback specifically, not just
+        // deleted_at ordering.
+        const second = await registerPasswordUser("tiesecond", "tie@example.com", true);
+        await deleteAccount(second.token);
+
+        const { userId: restoredUserId } = await signInViaGoogle("tie@example.com", "google-tie-1");
+
+        // Most-recently-deleted wins -- same tie-break reasoning as
+        // authService.ts's registerUser/restoreUser.
+        expect(restoredUserId).toBe(second.userId);
+        expect(restoredUserId).not.toBe(first.userId);
+    });
 });
 
 describe("password login against an OAuth-only account", () => {
