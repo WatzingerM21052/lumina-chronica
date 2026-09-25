@@ -163,6 +163,10 @@ else
     private string? _avatarPreviewUrl;
     private string? _avatarErrorMessage;
 
+    // TODO: hardcoded true until UserProfile exposes whether the account has a
+    // real password (vs. OAuth-only) -- password_hash is intentionally never
+    // serialized today. Wiring this up for real is a follow-up once that gap
+    // is closed; out of scope for this task per the design doc.
     private bool _hasRealPassword = true;
     private bool _isConfirmingDelete;
     private string _deleteAccountPassword = string.Empty;
