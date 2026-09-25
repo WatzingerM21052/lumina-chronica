@@ -1,4 +1,4 @@
-import { hashPassword, verifyPassword } from "../utils/crypto";
+import { OAUTH_NO_PASSWORD_SENTINEL, hashPassword, verifyPassword } from "../utils/crypto";
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 
 export class InvalidPasswordError extends Error {}
@@ -188,4 +188,43 @@ export async function getUserAvatarObject(db: D1Database, storage: R2Bucket, use
     if (!row || !row.avatar_key) return null;
 
     return storage.get(row.avatar_key);
+}
+
+// Soft-delete: frees username/email immediately (see 0023_account_deletion.sql
+// for why this is an anonymize-in-place rather than a real row delete or a
+// UNIQUE constraint change) rather than a hard delete -- every read path in
+// this codebase already filters `deleted_at IS NULL`, so this alone makes
+// the account fully invisible/unusable everywhere without touching a single
+// other table. currentPassword is required and verified for accounts with a
+// real password; OAuth-only accounts (OAUTH_NO_PASSWORD_SENTINEL) have
+// nothing to verify it against, so authentication alone is the proof there,
+// same asymmetry updateUserProfile already has for password changes.
+export async function deleteUser(db: D1Database, storage: R2Bucket, userId: number, currentPassword?: string): Promise<void> {
+    const row = await db
+        .prepare("SELECT username, email, password_hash, avatar_key FROM users WHERE id = ? AND deleted_at IS NULL")
+        .bind(userId)
+        .first<{ username: string; email: string; password_hash: string; avatar_key: string | null }>();
+    if (!row) throw new Error("User disappeared during account deletion.");
+
+    if (row.password_hash !== OAUTH_NO_PASSWORD_SENTINEL) {
+        if (!currentPassword || !(await verifyPassword(currentPassword, row.password_hash))) {
+            throw new InvalidPasswordError();
+        }
+    }
+
+    await db
+        .prepare(
+            `UPDATE users SET deleted_username = username, deleted_email = email,
+             username = 'deleted-user-' || id, email = 'deleted-' || id || '@deleted.invalid',
+             avatar_key = NULL, deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`
+        )
+        .bind(userId)
+        .run();
+
+    if (row.avatar_key) {
+        await storage.delete(row.avatar_key).catch((err) => {
+            console.error(`Failed to delete R2 avatar ${row.avatar_key} for deleted user ${userId}:`, err);
+        });
+    }
 }
