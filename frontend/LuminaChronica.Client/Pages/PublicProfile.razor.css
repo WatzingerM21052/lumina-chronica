@@ -78,10 +78,24 @@
     margin: 0;
 }
 
-.profile-hero-meta span:not(:last-child)::after {
+.profile-hero-meta-link:not(:last-child)::after {
     content: "·";
     margin-left: 0.9rem;
     color: var(--color-border);
+}
+
+.profile-hero-meta-link {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.profile-hero-meta-link:hover {
+    color: var(--color-text-primary);
+    text-decoration: underline;
 }
 
 .profile-hero-actions {

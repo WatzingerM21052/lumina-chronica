@@ -448,4 +448,80 @@ public class PublicProfilePageTests : BunitContext
 
         Assert.False(hasAuthorizeAttribute);
     }
+
+    [Fact]
+    public void PublicProfile_ClickingFollowerCount_OpensDialogAndListsFollowers()
+    {
+        const string followersJson =
+            """{"success":true,"data":{"items":[{"username":"carol","avatarUrl":null,"isFollowing":null}],"total":1,"page":1,"pageSize":20}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/public", NotFollowingProfileJson)
+            .WhenPathEndsWith("/followers", followersJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        SetAuthenticated(false);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
+        Assert.Empty(cut.FindAll(".follow-list-dialog"));
+
+        cut.Find("#showFollowersButton").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindAll(".follow-list-dialog"));
+            Assert.Contains("carol", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public void PublicProfile_FollowingDialog_TogglingFollowFromRow_SendsRequestAndFlipsLabel()
+    {
+        const string followingJson =
+            """{"success":true,"data":{"items":[{"username":"carol","avatarUrl":null,"isFollowing":false}],"total":1,"page":1,"pageSize":20}}""";
+        HttpRequestMessage? followRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/public", NotFollowingProfileJson)
+            .WhenPathEndsWith("/following", followingJson)
+            .When(r => r.Method == HttpMethod.Post, r =>
+            {
+                followRequest = r;
+                return new HttpResponseMessage(System.Net.HttpStatusCode.NoContent);
+            });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        SetAuthenticated(true, "alice");
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
+        cut.Find("#showFollowingButton").Click();
+        cut.WaitForAssertion(() => Assert.Contains("carol", cut.Markup));
+
+        cut.Find(".follow-list-dialog .btn-follow").Click();
+
+        Assert.Equal(HttpMethod.Post, followRequest?.Method);
+        Assert.Equal("/api/users/carol/follow", followRequest?.RequestUri?.AbsolutePath);
+        Assert.Equal("✓ Gefolgt", cut.Find(".follow-list-dialog .btn-follow").TextContent.Trim());
+    }
+
+    [Fact]
+    public void PublicProfile_FollowersDialog_ShowsEmptyStateMessage()
+    {
+        const string emptyFollowersJson = """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/public", NotFollowingProfileJson)
+            .WhenPathEndsWith("/followers", emptyFollowersJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<BlobUrlService>();
+        SetAuthenticated(false);
+
+        var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
+        cut.Find("#showFollowersButton").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Noch keine Follower.", cut.Markup));
+    }
 }
