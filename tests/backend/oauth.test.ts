@@ -269,6 +269,110 @@ describe("POST /api/auth/oauth/exchange", () => {
     });
 });
 
+describe("GET /api/auth/oauth/:provider/link/start", () => {
+    async function registerUser(): Promise<string> {
+        const res = await app.request("/api/auth/register", jsonRequest({ username: "alice", email: "alice@example.com", password: "correct horse" }), env);
+        return (await readJson(res)).data.token;
+    }
+
+    it("requires authentication", async () => {
+        const res = await app.request("/api/auth/oauth/google/link/start", {}, env);
+        expect(res.status).toBe(401);
+    });
+
+    it("returns a redirect URL as JSON (not a 302) and stores linking_user_id on the state row", async () => {
+        const token = await registerUser();
+        const res = await app.request("/api/auth/oauth/google/link/start", { headers: { Authorization: `Bearer ${token}` } }, env);
+        expect(res.status).toBe(200);
+
+        const json = await readJson(res);
+        expect(json.data.redirectUrl).toContain("https://accounts.google.com/o/oauth2/v2/auth");
+
+        const state = new URL(json.data.redirectUrl).searchParams.get("state");
+        const stored = await env.DB.prepare("SELECT linking_user_id FROM oauth_states WHERE state = ?").bind(state).first<{ linking_user_id: number }>();
+        expect(stored!.linking_user_id).not.toBeNull();
+    });
+});
+
+describe("GET /api/auth/oauth/:provider/callback -- linking an identity onto an existing session", () => {
+    async function registerUser(email = "alice@example.com"): Promise<{ token: string; userId: number }> {
+        // username derived from the email's local part (not hardcoded "alice")
+        // so this helper can register more than one distinct user per test --
+        // several tests in this describe block need two separate accounts.
+        const res = await app.request("/api/auth/register", jsonRequest({ username: email.split("@")[0], email, password: "correct horse" }), env);
+        return (await readJson(res)).data;
+    }
+
+    async function startLink(token: string): Promise<string> {
+        const res = await app.request("/api/auth/oauth/google/link/start", { headers: { Authorization: `Bearer ${token}` } }, env);
+        const json = await readJson(res);
+        return new URL(json.data.redirectUrl).searchParams.get("state")!;
+    }
+
+    it("links the identity to the caller and redirects to /profile?linked=google without issuing an exchange code", async () => {
+        const { token, userId } = await registerUser();
+        const state = await startLink(token);
+        stubFetchQueue([
+            { match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub: "google-link-1", email: "alice@gmail.com", email_verified: true }) } },
+        ]);
+
+        const res = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
+        expect(res.status).toBe(302);
+        const location = res.headers.get("location")!;
+        expect(location).toContain("https://example.test/some-app/profile");
+        expect(extractQueryParam(location, "linked")).toBe("google");
+        expect(extractQueryParam(location, "code")).toBeNull();
+
+        const identity = await env.DB.prepare("SELECT user_id FROM oauth_identities WHERE provider_user_id = ?").bind("google-link-1").first<{ user_id: number }>();
+        expect(identity!.user_id).toBe(userId);
+    });
+
+    it("redirects to /profile?linkError=already_linked when the identity belongs to a different user", async () => {
+        // First user links google-link-2 to themselves.
+        const owner = await registerUser("owner@example.com");
+        const ownerState = await startLink(owner.token);
+        stubFetchQueue([
+            { match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub: "google-link-2", email: "owner@gmail.com", email_verified: true }) } },
+        ]);
+        await app.request(`/api/auth/oauth/google/callback?code=abc&state=${ownerState}`, { redirect: "manual" } as RequestInit, env);
+
+        // A second, different user tries to link the SAME provider identity.
+        const other = await registerUser("other@example.com");
+        const otherState = await startLink(other.token);
+        stubFetchQueue([
+            { match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub: "google-link-2", email: "owner@gmail.com", email_verified: true }) } },
+        ]);
+        const res = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${otherState}`, { redirect: "manual" } as RequestInit, env);
+
+        const location = res.headers.get("location")!;
+        expect(location).toContain("https://example.test/some-app/profile");
+        expect(extractQueryParam(location, "linkError")).toBe("already_linked");
+
+        const identity = await env.DB.prepare("SELECT user_id FROM oauth_identities WHERE provider_user_id = ?").bind("google-link-2").first<{ user_id: number }>();
+        expect(identity!.user_id).toBe(owner.userId);
+    });
+
+    it("is idempotent when re-linking the same identity the caller already has", async () => {
+        const { token, userId } = await registerUser();
+        const firstState = await startLink(token);
+        stubFetchQueue([
+            { match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub: "google-link-3", email: "alice@gmail.com", email_verified: true }) } },
+        ]);
+        await app.request(`/api/auth/oauth/google/callback?code=abc&state=${firstState}`, { redirect: "manual" } as RequestInit, env);
+
+        const secondState = await startLink(token);
+        stubFetchQueue([
+            { match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub: "google-link-3", email: "alice@gmail.com", email_verified: true }) } },
+        ]);
+        const res = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${secondState}`, { redirect: "manual" } as RequestInit, env);
+        expect(extractQueryParam(res.headers.get("location")!, "linked")).toBe("google");
+
+        const identities = await env.DB.prepare("SELECT * FROM oauth_identities WHERE provider_user_id = ?").bind("google-link-3").all();
+        expect(identities.results).toHaveLength(1);
+        expect((identities.results[0] as { user_id: number }).user_id).toBe(userId);
+    });
+});
+
 describe("password login against an OAuth-only account", () => {
     it("fails cleanly with 401 since password_hash is the OAUTH_NO_PASSWORD_SENTINEL, not a real hash", async () => {
         const startRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);

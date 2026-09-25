@@ -11,16 +11,26 @@ const EXCHANGE_CODE_TTL_SECONDS = 60 * 2; // just the redirect -> immediate POST
 
 export class InvalidProviderError extends Error {}
 export class InvalidStateError extends Error {}
+export class OAuthAlreadyLinkedError extends Error {}
 
 export type StartResult = { redirectUrl: string };
 
-export async function startOAuth(db: D1Database, provider: string, clientId: string, redirectUri: string): Promise<StartResult> {
+export async function startOAuth(
+    db: D1Database,
+    provider: string,
+    clientId: string,
+    redirectUri: string,
+    linkingUserId: number | null = null
+): Promise<StartResult> {
     const adapter = providerFor(provider);
     if (!adapter) throw new InvalidProviderError(provider);
 
     const state = randomToken();
     const expiresAt = new Date(Date.now() + STATE_TTL_SECONDS * 1000).toISOString();
-    await db.prepare("INSERT INTO oauth_states (state, provider, expires_at) VALUES (?, ?, ?)").bind(state, provider, expiresAt).run();
+    await db
+        .prepare("INSERT INTO oauth_states (state, provider, expires_at, linking_user_id) VALUES (?, ?, ?, ?)")
+        .bind(state, provider, expiresAt, linkingUserId)
+        .run();
 
     return { redirectUrl: adapter.authorizeUrl(clientId, redirectUri, state) };
 }
@@ -37,21 +47,48 @@ export async function completeOAuthCallback(
     state: string,
     credentials: { clientId: string; clientSecret: string },
     redirectUri: string
-): Promise<{ userId: number }> {
+): Promise<{ userId: number; linked: boolean }> {
     const adapter = providerFor(provider);
     if (!adapter) throw new InvalidProviderError(provider);
 
     // Single-use: delete on read, not just check-then-ignore, so a replayed
     // callback URL (e.g. from browser history) can't be replayed too.
     const stateRow = await db
-        .prepare("DELETE FROM oauth_states WHERE state = ? AND provider = ? AND expires_at > CURRENT_TIMESTAMP RETURNING state")
+        .prepare("DELETE FROM oauth_states WHERE state = ? AND provider = ? AND expires_at > CURRENT_TIMESTAMP RETURNING state, linking_user_id")
         .bind(state, provider)
-        .first();
+        .first<{ state: string; linking_user_id: number | null }>();
     if (!stateRow) throw new InvalidStateError();
 
     const profile = await adapter.exchangeCode(code, redirectUri, credentials);
+
+    if (stateRow.linking_user_id !== null) {
+        await linkOAuthIdentity(db, stateRow.linking_user_id, provider as OAuthProviderName, profile);
+        return { userId: stateRow.linking_user_id, linked: true };
+    }
+
     const userId = await findOrCreateUserForOAuth(db, provider as OAuthProviderName, profile);
-    return { userId };
+    return { userId, linked: false };
+}
+
+// Links an already-authenticated user's account onto a provider identity.
+// Idempotent when re-linking an identity the caller already has (a repeat
+// link attempt after e.g. a double-click shouldn't error); rejects when the
+// identity belongs to someone else.
+async function linkOAuthIdentity(db: D1Database, userId: number, provider: OAuthProviderName, profile: OAuthProfile): Promise<void> {
+    const existing = await db
+        .prepare("SELECT user_id FROM oauth_identities WHERE provider = ? AND provider_user_id = ?")
+        .bind(provider, profile.providerUserId)
+        .first<{ user_id: number }>();
+
+    if (existing) {
+        if (existing.user_id !== userId) throw new OAuthAlreadyLinkedError();
+        return;
+    }
+
+    await db
+        .prepare("INSERT INTO oauth_identities (user_id, provider, provider_user_id, email) VALUES (?, ?, ?, ?)")
+        .bind(userId, provider, profile.providerUserId, profile.email)
+        .run();
 }
 
 async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderName, profile: OAuthProfile): Promise<number> {
