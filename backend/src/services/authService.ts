@@ -37,8 +37,17 @@ export async function registerUser(
     if (usernameTaken) throw new UsernameTakenError();
 
     if (!input.confirmNewAccount) {
+        // ORDER BY deleted_at DESC, id DESC: an email can end up on more
+        // than one soft-deleted row (deleted, re-registered, deleted
+        // again) -- most-recently-deleted wins the tie-break, since that's
+        // the account a user re-registering right now is almost certainly
+        // asking about. `id DESC` is a second-resolution-timestamp
+        // tiebreak (CURRENT_TIMESTAMP; same recurring class as
+        // dashboardService.ts's `<timestamp> DESC, id DESC` ordering) --
+        // two deletions in the same second would otherwise tie and fall
+        // back to SQLite's unspecified order.
         const deletedMatch = await db
-            .prepare("SELECT id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL")
+            .prepare("SELECT id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
             .bind(input.email)
             .first();
         if (deletedMatch) throw new DeletedAccountFoundError();
@@ -97,8 +106,11 @@ export async function restoreUser(
     jwtSecret: string,
     input: { username: string; email: string; password: string }
 ): Promise<AuthResult> {
+    // Same ORDER BY deleted_at DESC, id DESC tie-break as registerUser's
+    // deleted-account gate above -- most-recently-deleted wins when the
+    // same email has been deleted-and-reclaimed-and-deleted-again.
     const deletedMatch = await db
-        .prepare("SELECT id, role_id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL")
+        .prepare("SELECT id, role_id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
         .bind(input.email)
         .first<{ id: number; role_id: number }>();
     if (!deletedMatch) throw new NoDeletedAccountError();

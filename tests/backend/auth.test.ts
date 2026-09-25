@@ -379,4 +379,42 @@ describe("POST /api/auth/restore", () => {
         const original = await env.DB.prepare("SELECT deleted_at FROM users WHERE id = ?").bind(originalId).first<{ deleted_at: string | null }>();
         expect(original!.deleted_at).not.toBeNull();
     });
+
+    it("restores the most recently deleted account when the same email has been deleted more than once", async () => {
+        // Deleted, reclaimed by a new account (confirmNewAccount), deleted
+        // again -- two rows now share the same deleted_email. Without the
+        // ORDER BY deleted_at DESC tie-break, whichever row SQLite happened
+        // to return first would win; this asserts the most-recently-deleted
+        // one does, deterministically.
+        const firstId = await registerAndDelete("firstclaim", "twice-deleted@example.com");
+
+        await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "secondclaim", email: "twice-deleted@example.com", password: "correct horse", confirmNewAccount: true }),
+            env
+        );
+        // registerAndDelete's own register call would collide with the
+        // email already being live on "secondclaim" -- delete that account
+        // directly (login, then DELETE /api/users/me) instead of reusing
+        // the helper.
+        const secondUser = await env.DB.prepare("SELECT id FROM users WHERE username = ? AND deleted_at IS NULL").bind("secondclaim").first<{ id: number }>();
+        expect(secondUser).not.toBeNull();
+        const loginRes = await app.request("/api/auth/login", jsonRequest({ identifier: "twice-deleted@example.com", password: "correct horse" }), env);
+        const { token } = (await readJson(loginRes)).data;
+        await app.request(
+            "/api/users/me",
+            { method: "DELETE", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ currentPassword: "correct horse" }) },
+            env
+        );
+
+        const res = await app.request(
+            "/api/auth/restore",
+            jsonRequest({ username: "reclaimed-final", email: "twice-deleted@example.com", password: "a fresh password" }),
+            env
+        );
+        expect(res.status).toBe(200);
+        const json = await readJson(res);
+        expect(json.data.userId).toBe(secondUser!.id);
+        expect(json.data.userId).not.toBe(firstId);
+    });
 });

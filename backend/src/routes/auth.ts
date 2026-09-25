@@ -17,6 +17,7 @@ import { OAuthExchangeError } from "../services/oauthProviders";
 import {
     InvalidProviderError,
     InvalidStateError,
+    LinkExchangeFailedError,
     OAuthAlreadyLinkedError,
     OAuthUnlinkBlockedError,
     completeOAuthCallback,
@@ -244,6 +245,14 @@ authRoute.get("/oauth/:provider/callback", async (c) => {
     } catch (err) {
         if (err instanceof OAuthAlreadyLinkedError) {
             profileRedirect.searchParams.set("linkError", "already_linked");
+            return c.redirect(profileRedirect.toString(), 302);
+        }
+        if (err instanceof LinkExchangeFailedError) {
+            // Same underlying failure as OAuthExchangeError below (the
+            // provider token exchange failed), but this was a link attempt
+            // (see oauthService.ts's LinkExchangeFailedError comment) --
+            // send it to the profile page, not the login-oriented one.
+            profileRedirect.searchParams.set("linkError", "exchange_failed");
             return c.redirect(profileRedirect.toString(), 302);
         }
         const reason =

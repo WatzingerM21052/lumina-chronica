@@ -150,7 +150,7 @@ else
             <p class="form-error">@_deleteAccountErrorMessage</p>
         }
 
-        @if (_profile.Email.EndsWith("@deleted.invalid") == false && _hasRealPassword)
+        @if (_hasRealPassword)
         {
             <div class="form-group">
                 <label for="deleteAccountPassword">Aktuelles Passwort</label>
@@ -241,7 +241,7 @@ else
             }
             else if (parts[0] == "linkError")
             {
-                _linkBanner = "Verknüpfung fehlgeschlagen. Dieses Konto ist bereits mit einem anderen Benutzer verknüpft.";
+                _linkBanner = DescribeLinkError(Uri.UnescapeDataString(parts[1]));
                 _linkBannerIsError = true;
             }
         }
@@ -250,6 +250,17 @@ else
             NavigationManager.NavigateTo("profile", replace: true);
         }
     }
+
+    // Mirrors OAuthCallback.razor's DescribeError switch pattern -- branches
+    // on the actual reason code from the query string instead of a single
+    // hardcoded message, since routes/auth.ts's callback can redirect here
+    // with more than one linkError reason (already_linked, exchange_failed).
+    private static string DescribeLinkError(string reason) => reason switch
+    {
+        "already_linked" => "Verknüpfung fehlgeschlagen. Dieses Konto ist bereits mit einem anderen Benutzer verknüpft.",
+        "exchange_failed" => "Verknüpfung fehlgeschlagen. Die Anmeldung beim Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
+        _ => "Verknüpfung fehlgeschlagen. Bitte versuche es erneut.",
+    };
 
     private async Task LinkProviderAsync(string provider)
     {

@@ -245,6 +245,28 @@ public class ProfilePageTests : BunitContext
     }
 
     [Fact]
+    public void Profile_LinkErrorExchangeFailedQueryParam_ShowsDistinctErrorBanner()
+    {
+        // linkError must branch on the actual reason code -- the callback
+        // can redirect here with more than one reason (already_linked,
+        // exchange_failed) -- instead of always showing the
+        // "already_linked" message regardless of cause.
+        var handler = NoLinkedProvidersHandler();
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.GetRequiredService<NavigationManager>().NavigateTo("profile?linkError=exchange_failed");
+
+        var cut = Render<Profile>();
+
+        Assert.Contains("Die Anmeldung beim Anbieter ist fehlgeschlagen", cut.Markup);
+        Assert.DoesNotContain("bereits mit einem anderen Benutzer verknüpft", cut.Markup);
+        Assert.Contains("form-error", cut.Markup);
+    }
+
+    [Fact]
     public void Profile_UnlinkProvider_Failure_ShowsErrorMessage()
     {
         // Initial GET /linked returns a linked Google account so the

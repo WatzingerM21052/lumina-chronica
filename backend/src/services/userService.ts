@@ -222,6 +222,34 @@ export async function deleteUser(db: D1Database, storage: R2Bucket, userId: numb
         .bind(userId)
         .run();
 
+    // A soft-deleted account must not remain sign-in-able via a linked
+    // OAuth identity -- findOrCreateUserForOAuth
+    // (oauthService.ts) looks identities up with no deleted_at check on the
+    // owning user, so for a purely-OAuth account (no password) this was the
+    // only sign-in method that account ever had, making deletion nearly a
+    // no-op. Deleting the identity rows here closes that directly: a later
+    // sign-in via the same provider finds no identity and falls through to
+    // findOrCreateUserForOAuth's normal create-new-or-auto-link-by-email
+    // path, which itself already filters deleted_at IS NULL on the email
+    // lookup, so it can't resurrect this account by accident.
+    //
+    // Known, accepted tradeoff: OAuth identities do NOT come back on
+    // POST /api/auth/restore (unlike every other owned row, which reattaches
+    // because restoreUser reactivates the same user row) -- a restored
+    // account must re-link providers from Profile's "Verknüpfte Konten"
+    // section. Acceptable because restoreUser always sets a fresh password,
+    // so the restored account has a working sign-in method immediately.
+    await db.prepare("DELETE FROM oauth_identities WHERE user_id = ?").bind(userId).run();
+
+    // Defense-in-depth, not closing a separate hole (both tables are
+    // already short-TTL: exchange codes 2 min, states 10 min) -- a code/state
+    // minted seconds before deletion shouldn't still be redeemable after.
+    // oauth_states has no user_id column for a normal login-flow row, only
+    // linking_user_id for a link-flow row, so that's the only deletable
+    // shape here.
+    await db.prepare("DELETE FROM oauth_exchange_codes WHERE user_id = ?").bind(userId).run();
+    await db.prepare("DELETE FROM oauth_states WHERE linking_user_id = ?").bind(userId).run();
+
     if (row.avatar_key) {
         await storage.delete(row.avatar_key).catch((err) => {
             console.error(`Failed to delete R2 avatar ${row.avatar_key} for deleted user ${userId}:`, err);

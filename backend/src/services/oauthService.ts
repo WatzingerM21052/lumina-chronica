@@ -1,6 +1,6 @@
 import { roleName } from "./authService";
 import { OAUTH_NO_PASSWORD_SENTINEL, randomToken, sha256Hex, signJwt } from "../utils/crypto";
-import { type OAuthProfile, type OAuthProviderName, providerFor } from "./oauthProviders";
+import { OAuthExchangeError, type OAuthProfile, type OAuthProviderName, providerFor } from "./oauthProviders";
 
 // 7 days -- mirrors authService.ts's TOKEN_EXPIRY_SECONDS exactly, so an
 // OAuth-issued token is indistinguishable from a password-login one to the
@@ -12,6 +12,19 @@ const EXCHANGE_CODE_TTL_SECONDS = 60 * 2; // just the redirect -> immediate POST
 export class InvalidProviderError extends Error {}
 export class InvalidStateError extends Error {}
 export class OAuthAlreadyLinkedError extends Error {}
+
+// A distinguishable error for "the provider token exchange failed, but this
+// was a link attempt (an already-authenticated user linking an additional
+// provider), not an ordinary login." Without this, routes/auth.ts's callback
+// handler had no way to tell the two apart once
+// the exchange itself throws OAuthExchangeError, since by then the state
+// row (which carried linking_user_id) has already been consumed, and always
+// sent the caller to the login-oriented redirect even when they were mid-
+// link on the Profile page. InvalidStateError deliberately does NOT get the
+// same treatment: the state row was never found at all in that case, so
+// there's no way to know it was a link attempt -- that one still goes to
+// loginRedirect.
+export class LinkExchangeFailedError extends Error {}
 
 export type StartResult = { redirectUrl: string };
 
@@ -59,7 +72,13 @@ export async function completeOAuthCallback(
         .first<{ state: string; linking_user_id: number | null }>();
     if (!stateRow) throw new InvalidStateError();
 
-    const profile = await adapter.exchangeCode(code, redirectUri, credentials);
+    let profile: OAuthProfile;
+    try {
+        profile = await adapter.exchangeCode(code, redirectUri, credentials);
+    } catch (err) {
+        if (stateRow.linking_user_id !== null && err instanceof OAuthExchangeError) throw new LinkExchangeFailedError();
+        throw err;
+    }
 
     if (stateRow.linking_user_id !== null) {
         await linkOAuthIdentity(db, stateRow.linking_user_id, provider as OAuthProviderName, profile);

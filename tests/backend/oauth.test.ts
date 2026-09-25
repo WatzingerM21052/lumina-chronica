@@ -352,6 +352,19 @@ describe("GET /api/auth/oauth/:provider/callback -- linking an identity onto an 
         expect(identity!.user_id).toBe(owner.userId);
     });
 
+    it("redirects a failed link attempt's provider exchange to /profile?linkError=exchange_failed, not /oauth-callback", async () => {
+        const { token } = await registerUser();
+        const state = await startLink(token);
+        stubFetchQueue([{ match: "oauth2.googleapis.com/token", status: 400, json: { error: "invalid_grant" } }]);
+
+        const res = await app.request(`/api/auth/oauth/google/callback?code=bad&state=${state}`, { redirect: "manual" } as RequestInit, env);
+        expect(res.status).toBe(302);
+        const location = res.headers.get("location")!;
+        expect(location).toContain("https://example.test/some-app/profile");
+        expect(extractQueryParam(location, "linkError")).toBe("exchange_failed");
+        expect(extractQueryParam(location, "code")).toBeNull();
+    });
+
     it("is idempotent when re-linking the same identity the caller already has", async () => {
         const { token, userId } = await registerUser();
         const firstState = await startLink(token);
@@ -370,6 +383,105 @@ describe("GET /api/auth/oauth/:provider/callback -- linking an identity onto an 
         const identities = await env.DB.prepare("SELECT * FROM oauth_identities WHERE provider_user_id = ?").bind("google-link-3").all();
         expect(identities.results).toHaveLength(1);
         expect((identities.results[0] as { user_id: number }).user_id).toBe(userId);
+    });
+});
+
+describe("account deletion closes the OAuth sign-in hole", () => {
+    it("an OAuth-only account that gets soft-deleted can no longer sign in via that same identity", async () => {
+        // 1. Create an OAuth-only account via Google sign-in.
+        const startRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
+        const state = extractQueryParam(startRes.headers.get("location")!, "state")!;
+        stubFetchQueue([
+            {
+                match: "oauth2.googleapis.com/token",
+                json: { id_token: fakeGoogleIdToken({ sub: "google-deleteme", email: "deleteme@example.com", email_verified: true }) },
+            },
+        ]);
+        const callbackRes = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
+        const code = extractQueryParam(callbackRes.headers.get("location")!, "code")!;
+        const exchangeRes = await app.request("/api/auth/oauth/exchange", jsonRequest({ code }), env);
+        const { token, userId } = (await readJson(exchangeRes)).data;
+
+        // Sanity: the identity row exists before deletion.
+        const identityBefore = await env.DB.prepare("SELECT user_id FROM oauth_identities WHERE provider_user_id = ?").bind("google-deleteme").first<{ user_id: number }>();
+        expect(identityBefore!.user_id).toBe(userId);
+
+        // 2. Soft-delete the account. OAuth-only -- no currentPassword needed
+        // (mirrors userService.ts's deleteUser asymmetry, same as
+        // updateUserProfile's password-change check).
+        const deleteRes = await app.request("/api/users/me", { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: "{}" }, env);
+        expect(deleteRes.status).toBe(200);
+
+        // 3. The oauth_identities row must be gone.
+        const identityAfter = await env.DB.prepare("SELECT * FROM oauth_identities WHERE provider_user_id = ?").bind("google-deleteme").first();
+        expect(identityAfter).toBeNull();
+
+        // The user row itself is soft-deleted (anonymized), not resurrected.
+        const deletedUserRow = await env.DB.prepare("SELECT deleted_at, email FROM users WHERE id = ?").bind(userId).first<{ deleted_at: string | null; email: string }>();
+        expect(deletedUserRow!.deleted_at).not.toBeNull();
+        expect(deletedUserRow!.email).not.toBe("deleteme@example.com");
+
+        // 4. Signing in again via the SAME Google identity must NOT log back
+        // into the deleted account -- findOrCreateUserForOAuth should find no
+        // identity row (deleted above) and no live user with that email
+        // (anonymized above), so it creates a brand-new account instead.
+        const secondStartRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
+        const secondState = extractQueryParam(secondStartRes.headers.get("location")!, "state")!;
+        stubFetchQueue([
+            {
+                match: "oauth2.googleapis.com/token",
+                json: { id_token: fakeGoogleIdToken({ sub: "google-deleteme", email: "deleteme@example.com", email_verified: true }) },
+            },
+        ]);
+        const secondCallbackRes = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${secondState}`, { redirect: "manual" } as RequestInit, env);
+        const secondCode = extractQueryParam(secondCallbackRes.headers.get("location")!, "code")!;
+        expect(secondCode).toBeTruthy();
+        const secondExchangeRes = await app.request("/api/auth/oauth/exchange", jsonRequest({ code: secondCode }), env);
+        const secondResult = (await readJson(secondExchangeRes)).data;
+
+        expect(secondResult.userId).not.toBe(userId);
+
+        const newIdentity = await env.DB.prepare("SELECT user_id FROM oauth_identities WHERE provider_user_id = ?").bind("google-deleteme").first<{ user_id: number }>();
+        expect(newIdentity!.user_id).toBe(secondResult.userId);
+
+        // The original deleted user still has no oauth_identities row -- the
+        // new identity belongs to the new account only.
+        const oldUserIdentities = await env.DB.prepare("SELECT * FROM oauth_identities WHERE user_id = ?").bind(userId).all();
+        expect(oldUserIdentities.results).toHaveLength(0);
+    });
+
+    it("also cleans up any live oauth_exchange_codes / linking oauth_states rows for the deleted user", async () => {
+        const startRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
+        const state = extractQueryParam(startRes.headers.get("location")!, "state")!;
+        stubFetchQueue([
+            {
+                match: "oauth2.googleapis.com/token",
+                json: { id_token: fakeGoogleIdToken({ sub: "google-cleanup", email: "cleanup@example.com", email_verified: true }) },
+            },
+        ]);
+        const callbackRes = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
+        const code = extractQueryParam(callbackRes.headers.get("location")!, "code")!;
+        const exchangeRes = await app.request("/api/auth/oauth/exchange", jsonRequest({ code }), env);
+        const { token, userId } = (await readJson(exchangeRes)).data;
+
+        // Mint another exchange code for this same user directly (simulating
+        // a code issued seconds before deletion, not yet redeemed) and a
+        // pending link-flow oauth_states row.
+        await env.DB.prepare("INSERT INTO oauth_exchange_codes (code_hash, user_id, expires_at) VALUES (?, ?, ?)")
+            .bind("fake-hash-for-test", userId, new Date(Date.now() + 60_000).toISOString())
+            .run();
+        await env.DB.prepare("INSERT INTO oauth_states (state, provider, expires_at, linking_user_id) VALUES (?, ?, ?, ?)")
+            .bind("fake-link-state-for-test", "google", new Date(Date.now() + 60_000).toISOString(), userId)
+            .run();
+
+        const deleteRes = await app.request("/api/users/me", { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: "{}" }, env);
+        expect(deleteRes.status).toBe(200);
+
+        const remainingCodes = await env.DB.prepare("SELECT * FROM oauth_exchange_codes WHERE user_id = ?").bind(userId).all();
+        expect(remainingCodes.results).toHaveLength(0);
+
+        const remainingStates = await env.DB.prepare("SELECT * FROM oauth_states WHERE linking_user_id = ?").bind(userId).all();
+        expect(remainingStates.results).toHaveLength(0);
     });
 });
 
