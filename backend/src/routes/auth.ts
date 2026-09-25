@@ -18,10 +18,13 @@ import {
     InvalidProviderError,
     InvalidStateError,
     OAuthAlreadyLinkedError,
+    OAuthUnlinkBlockedError,
     completeOAuthCallback,
+    getLinkedProviders,
     redeemExchangeCode,
     startOAuth,
     storeExchangeCode,
+    unlinkProvider,
 } from "../services/oauthService";
 import { RateLimitedError, assertNotRateLimited, clearRateLimit, recordFailedAttempt } from "../services/rateLimitService";
 
@@ -261,4 +264,24 @@ authRoute.post("/oauth/exchange", async (c) => {
     if (!result) return c.json(failure("INVALID_CODE", "This sign-in link has expired or was already used."), 401);
 
     return c.json(success(result), 200);
+});
+
+authRoute.get("/oauth/linked", requireAuth, async (c) => {
+    const providers = await getLinkedProviders(c.env.DB, c.get("userId"));
+    return c.json(success(providers));
+});
+
+// 200 { data: null } rather than a bare 204 -- see the plan's Global
+// Constraints for why (UNLINK_BLOCKED needs to carry a message through the
+// same envelope).
+authRoute.delete("/oauth/:provider", requireAuth, async (c) => {
+    try {
+        await unlinkProvider(c.env.DB, c.get("userId"), c.req.param("provider"));
+        return c.json(success(null));
+    } catch (err) {
+        if (err instanceof OAuthUnlinkBlockedError) {
+            return c.json(failure("UNLINK_BLOCKED", "You can't remove your last sign-in method while no password is set."), 409);
+        }
+        throw err;
+    }
 });

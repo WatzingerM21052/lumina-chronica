@@ -200,3 +200,33 @@ export async function redeemExchangeCode(db: D1Database, jwtSecret: string, rawC
     const token = await signJwt({ sub: row.user_id, role }, jwtSecret, TOKEN_EXPIRY_SECONDS);
     return { token, userId: row.user_id };
 }
+
+export class OAuthUnlinkBlockedError extends Error {}
+
+export type LinkedProvider = { provider: string; email: string | null; linkedAt: string };
+
+export async function getLinkedProviders(db: D1Database, userId: number): Promise<LinkedProvider[]> {
+    const rows = await db
+        .prepare("SELECT provider, email, created_at FROM oauth_identities WHERE user_id = ? ORDER BY created_at ASC")
+        .bind(userId)
+        .all<{ provider: string; email: string | null; created_at: string }>();
+    return rows.results.map((row) => ({ provider: row.provider, email: row.email, linkedAt: row.created_at }));
+}
+
+// Refuses to remove the last way a purely-OAuth account (no real password)
+// could ever sign in again. Deleting a provider the caller never actually
+// had linked is treated as a no-op success, same idempotent-by-design
+// philosophy as routes/users.ts's follow/unfollow.
+export async function unlinkProvider(db: D1Database, userId: number, provider: string): Promise<void> {
+    const user = await db.prepare("SELECT password_hash FROM users WHERE id = ?").bind(userId).first<{ password_hash: string }>();
+    if (!user) throw new Error("User disappeared during unlink.");
+
+    const identityCount = await db.prepare("SELECT COUNT(*) AS count FROM oauth_identities WHERE user_id = ?").bind(userId).first<{ count: number }>();
+    const hasRealPassword = user.password_hash !== OAUTH_NO_PASSWORD_SENTINEL;
+
+    if (!hasRealPassword && (identityCount?.count ?? 0) <= 1) {
+        throw new OAuthUnlinkBlockedError();
+    }
+
+    await db.prepare("DELETE FROM oauth_identities WHERE user_id = ? AND provider = ?").bind(userId, provider).run();
+}

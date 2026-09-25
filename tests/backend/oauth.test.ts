@@ -393,3 +393,61 @@ describe("password login against an OAuth-only account", () => {
         expect(res.status).toBe(401);
     });
 });
+
+describe("GET /api/auth/oauth/linked and DELETE /api/auth/oauth/:provider", () => {
+    async function registerAndLinkGoogle(): Promise<{ token: string; userId: number }> {
+        const registerRes = await app.request("/api/auth/register", jsonRequest({ username: "alice", email: "alice@example.com", password: "correct horse" }), env);
+        const { token, userId } = (await readJson(registerRes)).data;
+
+        const startRes = await app.request("/api/auth/oauth/google/link/start", { headers: { Authorization: `Bearer ${token}` } }, env);
+        const state = new URL((await readJson(startRes)).data.redirectUrl).searchParams.get("state")!;
+        stubFetchQueue([
+            { match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub: "google-manage-1", email: "alice@gmail.com", email_verified: true }) } },
+        ]);
+        await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
+
+        return { token, userId };
+    }
+
+    it("requires authentication for both endpoints", async () => {
+        expect((await app.request("/api/auth/oauth/linked", {}, env)).status).toBe(401);
+        expect((await app.request("/api/auth/oauth/google", { method: "DELETE" }, env)).status).toBe(401);
+    });
+
+    it("lists a linked provider", async () => {
+        const { token } = await registerAndLinkGoogle();
+        const res = await app.request("/api/auth/oauth/linked", { headers: { Authorization: `Bearer ${token}` } }, env);
+        const json = await readJson(res);
+        expect(json.data).toHaveLength(1);
+        expect(json.data[0].provider).toBe("google");
+        expect(json.data[0].email).toBe("alice@gmail.com");
+    });
+
+    it("unlinks a provider when the account still has a real password", async () => {
+        const { token } = await registerAndLinkGoogle();
+        const res = await app.request("/api/auth/oauth/google", { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }, env);
+        expect(res.status).toBe(200);
+
+        const listRes = await app.request("/api/auth/oauth/linked", { headers: { Authorization: `Bearer ${token}` } }, env);
+        expect((await readJson(listRes)).data).toHaveLength(0);
+    });
+
+    it("blocks unlinking the only sign-in method for an OAuth-only account", async () => {
+        const startRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
+        const state = extractQueryParam(startRes.headers.get("location")!, "state")!;
+        stubFetchQueue([
+            { match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub: "google-onlyauth", email: "onlyauth@example.com", email_verified: true }) } },
+        ]);
+        const callbackRes = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
+        const code = extractQueryParam(callbackRes.headers.get("location")!, "code")!;
+        const exchangeRes = await app.request("/api/auth/oauth/exchange", jsonRequest({ code }), env);
+        const token = (await readJson(exchangeRes)).data.token;
+
+        const res = await app.request("/api/auth/oauth/google", { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }, env);
+        expect(res.status).toBe(409);
+        expect((await readJson(res)).error.code).toBe("UNLINK_BLOCKED");
+
+        const listRes = await app.request("/api/auth/oauth/linked", { headers: { Authorization: `Bearer ${token}` } }, env);
+        expect((await readJson(listRes)).data).toHaveLength(1);
+    });
+});
