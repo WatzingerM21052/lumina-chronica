@@ -66,4 +66,23 @@ public class RegisterPageTests : BunitContext
 
         Assert.Contains("This email is already registered.", cut.Markup);
     }
+
+    [Fact]
+    public void Register_DeletedAccountFound_ShowsRestoreOrNewChoice()
+    {
+        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"DELETED_ACCOUNT_FOUND","message":"A deleted account exists with this email. Restore it, or confirm you want a new one."}}""");
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        RegisterAuthServices(this);
+
+        var cut = Render<Register>();
+        cut.Find("#username").Change("alice");
+        cut.Find("#email").Change("alice@example.com");
+        cut.Find("#password").Change("correct horse");
+        cut.Find("#confirmPassword").Change("correct horse");
+        cut.Find("form").Submit();
+
+        Assert.NotNull(cut.Find("#restoreDeletedAccount"));
+        Assert.NotNull(cut.Find("#createNewAccountAnyway"));
+    }
 }
