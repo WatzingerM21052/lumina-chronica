@@ -8,6 +8,7 @@ export type AuthResult = { token: string; userId: number };
 export class EmailTakenError extends Error {}
 export class UsernameTakenError extends Error {}
 export class InvalidCredentialsError extends Error {}
+export class DeletedAccountFoundError extends Error {}
 
 type UserRow = {
     id: number;
@@ -25,8 +26,16 @@ export async function roleName(db: D1Database, roleId: number): Promise<string> 
 export async function registerUser(
     db: D1Database,
     jwtSecret: string,
-    input: { username: string; email: string; password: string }
+    input: { username: string; email: string; password: string; confirmNewAccount?: boolean }
 ): Promise<AuthResult> {
+    if (!input.confirmNewAccount) {
+        const deletedMatch = await db
+            .prepare("SELECT id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL")
+            .bind(input.email)
+            .first();
+        if (deletedMatch) throw new DeletedAccountFoundError();
+    }
+
     const [emailTaken, usernameTaken] = await Promise.all([
         db.prepare("SELECT id FROM users WHERE email = ?").bind(input.email).first(),
         db.prepare("SELECT id FROM users WHERE username = ?").bind(input.username).first(),

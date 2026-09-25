@@ -4,6 +4,7 @@ import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
 import { requireAuth } from "../middleware/auth";
 import {
+    DeletedAccountFoundError,
     EmailTakenError,
     InvalidCredentialsError,
     UsernameTakenError,
@@ -42,8 +43,8 @@ authRoute.post("/register", async (c) => {
         throw err;
     }
 
-    const body = await c.req.json<{ username?: string; email?: string; password?: string }>().catch(() => null);
-    const { username, email, password } = body ?? {};
+    const body = await c.req.json<{ username?: string; email?: string; password?: string; confirmNewAccount?: boolean }>().catch(() => null);
+    const { username, email, password, confirmNewAccount } = body ?? {};
 
     // Every POST counts toward the IP's window regardless of outcome --
     // including validation failures, since a flood of malformed requests is
@@ -61,11 +62,14 @@ authRoute.post("/register", async (c) => {
     }
 
     try {
-        const result = await registerUser(c.env.DB, c.env.JWT_SECRET, { username, email, password });
+        const result = await registerUser(c.env.DB, c.env.JWT_SECRET, { username, email, password, confirmNewAccount });
         return c.json(success(result), 201);
     } catch (err) {
         if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);
         if (err instanceof UsernameTakenError) return c.json(failure("USERNAME_TAKEN", "This username is already taken."), 409);
+        if (err instanceof DeletedAccountFoundError) {
+            return c.json(failure("DELETED_ACCOUNT_FOUND", "A deleted account exists with this email. Restore it, or confirm you want a new one."), 409);
+        }
         throw err;
     }
 });

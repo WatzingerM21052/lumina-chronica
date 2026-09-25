@@ -207,3 +207,61 @@ describe("POST /api/auth/logout", () => {
         expect(res.status).toBe(204);
     });
 });
+
+describe("POST /api/auth/register against a deleted account's email", () => {
+    async function registerAndDelete(email: string): Promise<void> {
+        const registerRes = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "original", email, password: "correct horse" }),
+            env
+        );
+        const token = (await readJson(registerRes)).data.token;
+        await app.request(
+            "/api/users/me",
+            {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ currentPassword: "correct horse" }),
+            },
+            env
+        );
+    }
+
+    it("returns 409 DELETED_ACCOUNT_FOUND instead of creating or restoring", async () => {
+        await registerAndDelete("deleted@example.com");
+
+        const res = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "newname", email: "deleted@example.com", password: "a new password" }),
+            env
+        );
+        expect(res.status).toBe(409);
+        expect((await readJson(res)).error.code).toBe("DELETED_ACCOUNT_FOUND");
+
+        const stillFree = await env.DB.prepare("SELECT id FROM users WHERE email = 'deleted@example.com' AND deleted_at IS NULL").first();
+        expect(stillFree).toBeNull();
+    });
+
+    it("creates a brand new, independent account when confirmNewAccount is true", async () => {
+        await registerAndDelete("deleted2@example.com");
+
+        const res = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "brandnew", email: "deleted2@example.com", password: "a new password", confirmNewAccount: true }),
+            env
+        );
+        expect(res.status).toBe(201);
+
+        const users = await env.DB.prepare("SELECT id FROM users WHERE email = 'deleted2@example.com'").all();
+        expect(users.results).toHaveLength(1);
+    });
+
+    it("registers normally when there is no matching deleted account", async () => {
+        const res = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "freshuser", email: "never-deleted@example.com", password: "a new password" }),
+            env
+        );
+        expect(res.status).toBe(201);
+    });
+});
