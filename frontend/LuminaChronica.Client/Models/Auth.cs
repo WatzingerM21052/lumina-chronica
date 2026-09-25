@@ -12,6 +12,9 @@ public class RegisterRequest
 
     [JsonPropertyName("password")]
     public string Password { get; set; } = string.Empty;
+
+    [JsonPropertyName("confirmNewAccount")]
+    public bool? ConfirmNewAccount { get; set; }
 }
 
 public class LoginRequest
@@ -76,4 +79,27 @@ public class UpdateProfileRequest
 
     [JsonPropertyName("newPassword")]
     public string? NewPassword { get; set; }
+}
+
+// Posted to DELETE /api/users/me. CurrentPassword is required by the
+// backend for accounts with a real password, and ignored for OAuth-only
+// accounts -- see backend/src/services/userService.ts's deleteUser.
+public class DeleteAccountRequest
+{
+    [JsonPropertyName("currentPassword")]
+    public string? CurrentPassword { get; set; }
+}
+
+// Posted to POST /api/auth/restore, shown after a 409 DELETED_ACCOUNT_FOUND
+// from /api/auth/register.
+public class RestoreAccountRequest
+{
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = string.Empty;
+
+    [JsonPropertyName("email")]
+    public string Email { get; set; } = string.Empty;
+
+    [JsonPropertyName("password")]
+    public string Password { get; set; } = string.Empty;
 }
