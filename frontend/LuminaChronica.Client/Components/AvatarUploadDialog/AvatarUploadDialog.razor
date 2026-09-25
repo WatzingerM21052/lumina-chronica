@@ -1,0 +1,42 @@
+@namespace LuminaChronica.Client.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using LuminaChronica.Client.Models
+
+@if (IsOpen)
+{
+    <div class="avatar-upload-dialog-overlay" @onclick="CancelAsync">
+        <div class="avatar-upload-dialog" role="dialog" aria-modal="true" tabindex="-1"
+             @ref="_dialogElement" @onclick:stopPropagation="true" @onkeydown="HandleKeyDownAsync">
+            <h2>Profilbild ändern</h2>
+
+            @if (_errorMessage is not null)
+            {
+                <p class="form-error">@_errorMessage</p>
+            }
+
+            <div class="dropzone @(_previewUrl is not null ? "dropzone--filled" : "") @(_isDragging ? "dropzone--active" : "")"
+                 @ondragenter="() => _isDragging = true" @ondragleave="() => _isDragging = false"
+                 @ondragover:preventDefault @ondrop="() => _isDragging = false">
+                <InputFile id="avatarDialogInput" OnChange="OnFileSelectedAsync" />
+                @if (_previewUrl is { } previewUrl)
+                {
+                    <img src="@previewUrl" alt="" class="avatar-upload-dialog-preview" />
+                }
+                else
+                {
+                    <span class="dropzone-label">Profilbild hierher ziehen oder klicken zum Auswählen</span>
+                }
+            </div>
+
+            <div class="avatar-upload-dialog-actions">
+                <button type="button" id="avatarDialogUpload" class="btn btn-primary"
+                        disabled="@(_selectedBytes is null || _uploadState != ButtonBusyState.Idle)"
+                        style="min-width: @(AsyncButtonContent.MinWidthCh("Hochladen", null, "Hochgeladen"))ch"
+                        @onclick="UploadAsync">
+                    <AsyncButtonContent State="_uploadState" IdleText="Hochladen" SuccessText="Hochgeladen" />
+                </button>
+                <button type="button" class="btn" @onclick="CancelAsync">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+}

@@ -81,7 +81,25 @@ public class ProfilePageTests : BunitContext
     }
 
     [Fact]
-    public void Profile_SelectingAnAvatarFile_UploadsItImmediately_NoFormSubmitNeeded()
+    public void Profile_ChangeAvatarButton_OpensUploadDialog()
+    {
+        var handler = NoLinkedProvidersHandler();
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+        Assert.Empty(cut.FindAll(".avatar-upload-dialog"));
+
+        cut.Find("#changeAvatarButton").Click();
+
+        Assert.Single(cut.FindAll(".avatar-upload-dialog"));
+    }
+
+    [Fact]
+    public void Profile_SelectingAnAvatarFile_ShowsPreviewAndDoesNotUploadUntilConfirmed()
     {
         HttpRequestMessage? avatarRequest = null;
         var handler = new RoutedFakeHttpMessageHandler()
@@ -99,13 +117,25 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
-        JSInterop.SetupModule("./js/blobUrl.js").Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-avatar-url");
+        var blobModule = JSInterop.SetupModule("./js/blobUrl.js");
+        blobModule.Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-avatar-url");
+        blobModule.SetupVoid("revokeObjectUrl", _ => true).SetVoidResult();
 
         var cut = Render<Profile>();
+        cut.Find("#changeAvatarButton").Click();
         cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("avatar bytes", "avatar.jpg"));
+
+        // Selecting a file only previews it -- no upload request yet, and the
+        // upload button is now enabled.
+        Assert.Null(avatarRequest);
+        Assert.NotNull(cut.Find("img.avatar-upload-dialog-preview"));
+        Assert.False(cut.Find("#avatarDialogUpload").HasAttribute("disabled"));
+
+        cut.Find("#avatarDialogUpload").Click();
 
         Assert.Equal(HttpMethod.Put, avatarRequest?.Method);
         Assert.Equal("/api/users/me/avatar", avatarRequest?.RequestUri?.AbsolutePath);
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".avatar-upload-dialog")));
     }
 
     [Fact]
@@ -129,10 +159,31 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<BlobUrlService>();
 
         var cut = Render<Profile>();
+        cut.Find("#changeAvatarButton").Click();
         cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("not an image", "avatar.gif"));
 
         Assert.Null(avatarRequest);
         Assert.Contains("form-error", cut.Markup);
+        Assert.True(cut.Find("#avatarDialogUpload").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Profile_CancellingAvatarDialog_ClosesItWithoutUploading()
+    {
+        var handler = NoLinkedProvidersHandler();
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+        cut.Find("#changeAvatarButton").Click();
+        Assert.Single(cut.FindAll(".avatar-upload-dialog"));
+
+        cut.Find(".avatar-upload-dialog-actions .btn:not(.btn-primary)").Click();
+
+        Assert.Empty(cut.FindAll(".avatar-upload-dialog"));
     }
 
     [Fact]

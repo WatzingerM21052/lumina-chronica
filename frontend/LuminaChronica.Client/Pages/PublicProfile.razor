@@ -50,8 +50,12 @@ else
             <p class="profile-hero-eyebrow">Öffentliches Archiv</p>
             <h1 class="profile-hero-name">@_profile.Username</h1>
             <p class="profile-hero-meta">
-                <span><strong>@_profile.FollowerCount</strong> Follower</span>
-                <span><strong>@_profile.FollowingCount</strong> Folgt</span>
+                <button type="button" id="showFollowersButton" class="profile-hero-meta-link" @onclick="() => _isFollowersOpen = true">
+                    <strong>@_profile.FollowerCount</strong> Follower
+                </button>
+                <button type="button" id="showFollowingButton" class="profile-hero-meta-link" @onclick="() => _isFollowingOpen = true">
+                    <strong>@_profile.FollowingCount</strong> Folgt
+                </button>
             </p>
         </div>
         @if (!_profile.IsOwnProfile)
@@ -67,6 +71,9 @@ else
             </div>
         }
     </div>
+
+    <FollowListDialog IsOpen="_isFollowersOpen" Username="@Username" Kind="followers" Title="Follower" EmptyText="Noch keine Follower." OnClose="() => _isFollowersOpen = false" />
+    <FollowListDialog IsOpen="_isFollowingOpen" Username="@Username" Kind="following" Title="Folgt" EmptyText="Folgt noch niemandem." OnClose="() => _isFollowingOpen = false" />
 
     <section class="profile-chapter" data-reveal>
         <div class="profile-chapter-numeral-row"><span>I</span></div>
@@ -177,6 +184,8 @@ else
     private PublicProfileResponse? _profile;
     private bool _notFound;
     private bool _isTogglingFollow;
+    private bool _isFollowersOpen;
+    private bool _isFollowingOpen;
     private readonly Dictionary<string, string> _coverObjectUrls = [];
     private IJSObjectReference? _motionModule;
 

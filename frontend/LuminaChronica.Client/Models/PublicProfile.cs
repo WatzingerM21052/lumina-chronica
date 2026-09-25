@@ -106,6 +106,37 @@ public class ProfileActivity
     public string CreatedAt { get; set; } = string.Empty;
 }
 
+// Mirrors backend/src/services/followService.ts's FollowListItem/FollowListResult
+// -- used by both GET /api/users/{username}/followers and /following.
+public class FollowListItem
+{
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = string.Empty;
+
+    [JsonPropertyName("avatarUrl")]
+    public string? AvatarUrl { get; set; }
+
+    // Null for a logged-out viewer (no identity to check "do you follow
+    // this person" against) -- not the same as false.
+    [JsonPropertyName("isFollowing")]
+    public bool? IsFollowing { get; set; }
+}
+
+public class FollowListResult
+{
+    [JsonPropertyName("items")]
+    public List<FollowListItem> Items { get; set; } = [];
+
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("page")]
+    public int Page { get; set; }
+
+    [JsonPropertyName("pageSize")]
+    public int PageSize { get; set; }
+}
+
 public class PublicProfileResponse
 {
     [JsonPropertyName("username")]

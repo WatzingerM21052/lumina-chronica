@@ -112,3 +112,88 @@ describe("POST/DELETE /api/users/:username/follow", () => {
         expect(res.status).toBe(404);
     });
 });
+
+describe("GET /api/users/:username/followers and /following", () => {
+    it("returns 404 for an unknown username, on both endpoints", async () => {
+        const followersRes = await app.request("/api/users/nobody/followers", {}, env);
+        expect(followersRes.status).toBe(404);
+
+        const followingRes = await app.request("/api/users/nobody/following", {}, env);
+        expect(followingRes.status).toBe(404);
+    });
+
+    it("requires no authentication -- same as the public profile's own counts", async () => {
+        await app.request("/api/users/bob/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+
+        const res = await app.request("/api/users/bob/followers", {}, env);
+        expect(res.status).toBe(200);
+        const json = await readJson(res);
+        expect(json.data.items).toEqual([{ username: "alice", avatarUrl: null, isFollowing: null }]);
+        expect(json.data.total).toBe(1);
+    });
+
+    it("reports isFollowing from the authenticated viewer's own perspective, per row", async () => {
+        const tokenC = await registerAndLogin("carol", "carol@example.com");
+        await app.request("/api/users/bob/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        await app.request("/api/users/bob/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenC}` } }, env);
+        // alice (the viewer below) already follows carol, but not herself.
+        await app.request("/api/users/carol/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+
+        const res = await app.request("/api/users/bob/followers", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+        const byUsername = Object.fromEntries(json.data.items.map((u: { username: string; isFollowing: boolean }) => [u.username, u.isFollowing]));
+        expect(byUsername).toEqual({ carol: true, alice: false });
+    });
+
+    it("lists who follows the target user, most recent first", async () => {
+        const tokenC = await registerAndLogin("carol", "carol@example.com");
+        await app.request("/api/users/bob/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        await app.request("/api/users/bob/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenC}` } }, env);
+
+        const res = await app.request("/api/users/bob/followers", {}, env);
+        const json = await readJson(res);
+        expect(json.data.items.map((u: { username: string }) => u.username)).toEqual(["carol", "alice"]);
+        expect(json.data.total).toBe(2);
+    });
+
+    it("lists who the target user follows, most recent first", async () => {
+        const tokenC = await registerAndLogin("carol", "carol@example.com");
+        await app.request("/api/users/bob/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        await app.request("/api/users/carol/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+
+        const res = await app.request("/api/users/alice/following", {}, env);
+        const json = await readJson(res);
+        expect(json.data.items.map((u: { username: string }) => u.username)).toEqual(["carol", "bob"]);
+        expect(json.data.total).toBe(2);
+        void tokenC;
+    });
+
+    it("paginates via page/pageSize, matching the discover-users convention", async () => {
+        for (const name of ["carol", "dave", "erin"]) {
+            const t = await registerAndLogin(name, `${name}@example.com`);
+            await app.request("/api/users/bob/follow", { method: "POST", headers: { Authorization: `Bearer ${t}` } }, env);
+        }
+        await app.request("/api/users/bob/follow", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+
+        const firstPage = await app.request("/api/users/bob/followers?page=1&pageSize=2", {}, env);
+        const firstJson = await readJson(firstPage);
+        expect(firstJson.data.items).toHaveLength(2);
+        expect(firstJson.data.total).toBe(4);
+        expect(firstJson.data.page).toBe(1);
+        expect(firstJson.data.pageSize).toBe(2);
+
+        const secondPage = await app.request("/api/users/bob/followers?page=2&pageSize=2", {}, env);
+        const secondJson = await readJson(secondPage);
+        expect(secondJson.data.items).toHaveLength(2);
+
+        const allUsernames = [...firstJson.data.items, ...secondJson.data.items].map((u: { username: string }) => u.username);
+        expect(new Set(allUsernames)).toEqual(new Set(["alice", "carol", "dave", "erin"]));
+    });
+
+    it("returns an empty list for a user nobody follows / who follows nobody", async () => {
+        const res = await app.request("/api/users/bob/followers", {}, env);
+        const json = await readJson(res);
+        expect(json.data.items).toEqual([]);
+        expect(json.data.total).toBe(0);
+    });
+});
