@@ -11,7 +11,25 @@
 <h1>Registrieren</h1>
 
 <EditForm Model="_form" OnValidSubmit="SubmitAsync" class="auth-form">
-    @if (_errorMessage is not null)
+    @if (_deletedAccountFound)
+    {
+        <p class="form-error">Zu dieser E-Mail existiert ein gelöschter Account.</p>
+        <div class="form-actions">
+            <button type="button" id="restoreDeletedAccount" class="btn btn-primary"
+                    disabled="@(_restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)"
+                    style="min-width: @(AsyncButtonContent.MinWidthCh("Alten Account wiederherstellen", null, "Wiederhergestellt"))ch"
+                    @onclick="RestoreAccountAsync">
+                <AsyncButtonContent State="_restoreState" IdleText="Alten Account wiederherstellen" SuccessText="Wiederhergestellt" />
+            </button>
+            <button type="button" id="createNewAccountAnyway" class="btn"
+                    disabled="@(_restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)"
+                    style="min-width: @(AsyncButtonContent.MinWidthCh("Neuen Account erstellen", null, "Erstellt"))ch"
+                    @onclick="CreateNewAccountAnywayAsync">
+                <AsyncButtonContent State="_createNewState" IdleText="Neuen Account erstellen" SuccessText="Erstellt" />
+            </button>
+        </div>
+    }
+    else if (_errorMessage is not null)
     {
         <p class="form-error">@_errorMessage</p>
     }
@@ -43,7 +61,7 @@
     else
     {
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Konto erstellen</button>
+            <button type="submit" class="btn btn-primary" disabled="@(_isSubmitting || _restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)">Konto erstellen</button>
         </div>
     }
 </EditForm>
@@ -56,10 +74,14 @@
     private readonly RegisterFormModel _form = new();
     private bool _isSubmitting;
     private string? _errorMessage;
+    private bool _deletedAccountFound;
+    private ButtonBusyState _restoreState;
+    private ButtonBusyState _createNewState;
 
     private async Task SubmitAsync()
     {
         _errorMessage = null;
+        _deletedAccountFound = false;
 
         if (_form.Password != _form.ConfirmPassword)
         {
@@ -79,8 +101,65 @@
             return;
         }
 
+        if (response?.Error?.Code == "DELETED_ACCOUNT_FOUND")
+        {
+            _deletedAccountFound = true;
+            _isSubmitting = false;
+            return;
+        }
+
         _errorMessage = response?.Error?.Message ?? "Registrierung fehlgeschlagen. Bitte versuche es erneut.";
         _isSubmitting = false;
+    }
+
+    private Task RestoreAccountAsync() =>
+        AsyncButtonRunner.RunAsync(RestoreAccountCoreAsync, state =>
+        {
+            _restoreState = state;
+            StateHasChanged();
+        });
+
+    private async Task<bool> RestoreAccountCoreAsync()
+    {
+        _errorMessage = null;
+        var request = new RestoreAccountRequest { Username = _form.Username, Email = _form.Email, Password = _form.Password };
+        var response = await ApiClient.PostAsync<RestoreAccountRequest, AuthResult>("/api/auth/restore", request);
+
+        if (response is { Success: true, Data: not null })
+        {
+            await AuthStateProvider.MarkUserAsAuthenticatedAsync(response.Data.Token);
+            NavigationManager.NavigateTo("");
+            return true;
+        }
+
+        _deletedAccountFound = false;
+        _errorMessage = response?.Error?.Message ?? "Wiederherstellung fehlgeschlagen. Bitte versuche es erneut.";
+        return false;
+    }
+
+    private Task CreateNewAccountAnywayAsync() =>
+        AsyncButtonRunner.RunAsync(CreateNewAccountAnywayCoreAsync, state =>
+        {
+            _createNewState = state;
+            StateHasChanged();
+        });
+
+    private async Task<bool> CreateNewAccountAnywayCoreAsync()
+    {
+        _errorMessage = null;
+        var request = new RegisterRequest { Username = _form.Username, Email = _form.Email, Password = _form.Password, ConfirmNewAccount = true };
+        var response = await ApiClient.PostAsync<RegisterRequest, AuthResult>("/api/auth/register", request);
+
+        if (response is { Success: true, Data: not null })
+        {
+            await AuthStateProvider.MarkUserAsAuthenticatedAsync(response.Data.Token);
+            NavigationManager.NavigateTo("");
+            return true;
+        }
+
+        _deletedAccountFound = false;
+        _errorMessage = response?.Error?.Message ?? "Registrierung fehlgeschlagen. Bitte versuche es erneut.";
+        return false;
     }
 
     // Not RegisterRequest itself -- ConfirmPassword is a client-only field

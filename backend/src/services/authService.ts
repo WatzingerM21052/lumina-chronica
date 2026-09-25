@@ -8,6 +8,8 @@ export type AuthResult = { token: string; userId: number };
 export class EmailTakenError extends Error {}
 export class UsernameTakenError extends Error {}
 export class InvalidCredentialsError extends Error {}
+export class DeletedAccountFoundError extends Error {}
+export class NoDeletedAccountError extends Error {}
 
 type UserRow = {
     id: number;
@@ -25,7 +27,7 @@ export async function roleName(db: D1Database, roleId: number): Promise<string> 
 export async function registerUser(
     db: D1Database,
     jwtSecret: string,
-    input: { username: string; email: string; password: string }
+    input: { username: string; email: string; password: string; confirmNewAccount?: boolean }
 ): Promise<AuthResult> {
     const [emailTaken, usernameTaken] = await Promise.all([
         db.prepare("SELECT id FROM users WHERE email = ?").bind(input.email).first(),
@@ -33,6 +35,23 @@ export async function registerUser(
     ]);
     if (emailTaken) throw new EmailTakenError();
     if (usernameTaken) throw new UsernameTakenError();
+
+    if (!input.confirmNewAccount) {
+        // ORDER BY deleted_at DESC, id DESC: an email can end up on more
+        // than one soft-deleted row (deleted, re-registered, deleted
+        // again) -- most-recently-deleted wins the tie-break, since that's
+        // the account a user re-registering right now is almost certainly
+        // asking about. `id DESC` is a second-resolution-timestamp
+        // tiebreak (CURRENT_TIMESTAMP; same recurring class as
+        // dashboardService.ts's `<timestamp> DESC, id DESC` ordering) --
+        // two deletions in the same second would otherwise tie and fall
+        // back to SQLite's unspecified order.
+        const deletedMatch = await db
+            .prepare("SELECT id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+            .bind(input.email)
+            .first();
+        if (deletedMatch) throw new DeletedAccountFoundError();
+    }
 
     const userRole = await db.prepare("SELECT id FROM roles WHERE name = 'USER'").first<{ id: number }>();
     if (!userRole) throw new Error("USER role is not seeded (see database/migrations/0001_initial.sql).");
@@ -80,4 +99,48 @@ export async function loginUser(
     const role = await roleName(db, user.role_id);
     const token = await signJwt({ sub: user.id, role }, jwtSecret, TOKEN_EXPIRY_SECONDS);
     return { token, userId: user.id };
+}
+
+export async function restoreUser(
+    db: D1Database,
+    jwtSecret: string,
+    input: { username: string; email: string; password: string }
+): Promise<AuthResult> {
+    // Same ORDER BY deleted_at DESC, id DESC tie-break as registerUser's
+    // deleted-account gate above -- most-recently-deleted wins when the
+    // same email has been deleted-and-reclaimed-and-deleted-again.
+    const deletedMatch = await db
+        .prepare("SELECT id, role_id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+        .bind(input.email)
+        .first<{ id: number; role_id: number }>();
+    if (!deletedMatch) throw new NoDeletedAccountError();
+
+    const usernameTaken = await db
+        .prepare("SELECT id FROM users WHERE username = ? AND id != ?")
+        .bind(input.username, deletedMatch.id)
+        .first();
+    if (usernameTaken) throw new UsernameTakenError();
+
+    // The live email column is free unless some OTHER account has since
+    // claimed it live (e.g. via registerUser's confirmNewAccount path) --
+    // an ordinary uniqueness conflict, not special-cased.
+    const emailTaken = await db
+        .prepare("SELECT id FROM users WHERE email = ? AND id != ?")
+        .bind(input.email, deletedMatch.id)
+        .first();
+    if (emailTaken) throw new EmailTakenError();
+
+    const passwordHash = await hashPassword(input.password);
+    await db
+        .prepare(
+            `UPDATE users SET username = ?, email = ?, password_hash = ?,
+             deleted_username = NULL, deleted_email = NULL, deleted_at = NULL, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`
+        )
+        .bind(input.username, input.email, passwordHash, deletedMatch.id)
+        .run();
+
+    const role = await roleName(db, deletedMatch.role_id);
+    const token = await signJwt({ sub: deletedMatch.id, role }, jwtSecret, TOKEN_EXPIRY_SECONDS);
+    return { token, userId: deletedMatch.id };
 }

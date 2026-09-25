@@ -78,6 +78,29 @@ public class ApiClient(HttpClient httpClient)
         }
     }
 
+    // For a DELETE with a JSON body where both outcomes carry a real
+    // ApiResponse envelope (e.g. account deletion's wrong-password case) --
+    // mirrors PutAsync<TRequest,TResponse> exactly, just with HttpMethod.Delete
+    // via SendAsync since HttpClient has no DeleteAsJsonAsync helper.
+    public async Task<ApiResponse<TResponse>?> DeleteAsync<TRequest, TResponse>(
+        string relativeUrl, TRequest body, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Delete, relativeUrl) { Content = JsonContent.Create(body) };
+            var response = await httpClient.SendAsync(request, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return new ApiResponse<TResponse>
+            {
+                Success = false,
+                Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
+            };
+        }
+    }
+
     // For endpoints with no request body and no response envelope to parse
     // (e.g. logout's 204 No Content).
     public async Task<bool> PostAsync(string relativeUrl, CancellationToken cancellationToken = default)
