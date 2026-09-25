@@ -15,8 +15,18 @@
     {
         <p class="form-error">Zu dieser E-Mail existiert ein gelöschter Account.</p>
         <div class="form-actions">
-            <button type="button" id="restoreDeletedAccount" class="btn btn-primary" @onclick="RestoreAccountAsync">Alten Account wiederherstellen</button>
-            <button type="button" id="createNewAccountAnyway" class="btn" @onclick="CreateNewAccountAnywayAsync">Neuen Account erstellen</button>
+            <button type="button" id="restoreDeletedAccount" class="btn btn-primary"
+                    disabled="@(_restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)"
+                    style="min-width: @(AsyncButtonContent.MinWidthCh("Alten Account wiederherstellen", null, "Wiederhergestellt"))ch"
+                    @onclick="RestoreAccountAsync">
+                <AsyncButtonContent State="_restoreState" IdleText="Alten Account wiederherstellen" SuccessText="Wiederhergestellt" />
+            </button>
+            <button type="button" id="createNewAccountAnyway" class="btn"
+                    disabled="@(_restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)"
+                    style="min-width: @(AsyncButtonContent.MinWidthCh("Neuen Account erstellen", null, "Erstellt"))ch"
+                    @onclick="CreateNewAccountAnywayAsync">
+                <AsyncButtonContent State="_createNewState" IdleText="Neuen Account erstellen" SuccessText="Erstellt" />
+            </button>
         </div>
     }
     else if (_errorMessage is not null)
@@ -51,7 +61,7 @@
     else
     {
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Konto erstellen</button>
+            <button type="submit" class="btn btn-primary" disabled="@(_isSubmitting || _restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)">Konto erstellen</button>
         </div>
     }
 </EditForm>
@@ -65,6 +75,8 @@
     private bool _isSubmitting;
     private string? _errorMessage;
     private bool _deletedAccountFound;
+    private ButtonBusyState _restoreState;
+    private ButtonBusyState _createNewState;
 
     private async Task SubmitAsync()
     {
@@ -100,7 +112,14 @@
         _isSubmitting = false;
     }
 
-    private async Task RestoreAccountAsync()
+    private Task RestoreAccountAsync() =>
+        AsyncButtonRunner.RunAsync(RestoreAccountCoreAsync, state =>
+        {
+            _restoreState = state;
+            StateHasChanged();
+        });
+
+    private async Task<bool> RestoreAccountCoreAsync()
     {
         _errorMessage = null;
         var request = new RestoreAccountRequest { Username = _form.Username, Email = _form.Email, Password = _form.Password };
@@ -110,14 +129,22 @@
         {
             await AuthStateProvider.MarkUserAsAuthenticatedAsync(response.Data.Token);
             NavigationManager.NavigateTo("");
-            return;
+            return true;
         }
 
         _deletedAccountFound = false;
         _errorMessage = response?.Error?.Message ?? "Wiederherstellung fehlgeschlagen. Bitte versuche es erneut.";
+        return false;
     }
 
-    private async Task CreateNewAccountAnywayAsync()
+    private Task CreateNewAccountAnywayAsync() =>
+        AsyncButtonRunner.RunAsync(CreateNewAccountAnywayCoreAsync, state =>
+        {
+            _createNewState = state;
+            StateHasChanged();
+        });
+
+    private async Task<bool> CreateNewAccountAnywayCoreAsync()
     {
         _errorMessage = null;
         var request = new RegisterRequest { Username = _form.Username, Email = _form.Email, Password = _form.Password, ConfirmNewAccount = true };
@@ -127,11 +154,12 @@
         {
             await AuthStateProvider.MarkUserAsAuthenticatedAsync(response.Data.Token);
             NavigationManager.NavigateTo("");
-            return;
+            return true;
         }
 
         _deletedAccountFound = false;
         _errorMessage = response?.Error?.Message ?? "Registrierung fehlgeschlagen. Bitte versuche es erneut.";
+        return false;
     }
 
     // Not RegisterRequest itself -- ConfirmPassword is a client-only field
