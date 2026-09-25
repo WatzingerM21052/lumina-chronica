@@ -47,12 +47,6 @@
     height: 40%;
 }
 
-.dropzone--compact {
-    flex: 1;
-    min-height: 2.5rem;
-    padding: var(--space-2);
-}
-
 .profile-danger-zone {
     margin-top: var(--space-4);
     padding-top: var(--space-3);

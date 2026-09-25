@@ -1,12 +1,9 @@
 @page "/profile"
 @attribute [Authorize]
-@implements IDisposable
-@using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
-@inject BlobUrlService BlobUrlService
 @inject LuminaAuthStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
@@ -26,11 +23,7 @@ else
     <p><a href="@($"u/{_profile.Username}")">Öffentliches Profil ansehen</a></p>
 
     <div class="profile-avatar-row">
-        @if (_avatarPreviewUrl is { } previewUrl)
-        {
-            <img src="@previewUrl" alt="" class="profile-avatar-preview" />
-        }
-        else if (_profile.AvatarUrl is { } avatarUrl)
+        @if (_profile.AvatarUrl is { } avatarUrl)
         {
             <img src="@avatarUrl" alt="" class="profile-avatar-preview" />
         }
@@ -40,17 +33,10 @@ else
                 <Icon Name="person" Class="profile-avatar-placeholder-icon" />
             </div>
         }
-        <div class="dropzone dropzone--compact @(_isDraggingAvatar ? "dropzone--active" : "")"
-             @ondragenter="() => _isDraggingAvatar = true" @ondragleave="() => _isDraggingAvatar = false"
-             @ondragover:preventDefault @ondrop="() => _isDraggingAvatar = false">
-            <InputFile id="avatar" OnChange="OnAvatarSelectedAsync" />
-            <span class="dropzone-label">Profilbild hierher ziehen oder klicken zum Auswählen</span>
-        </div>
+        <button type="button" id="changeAvatarButton" class="btn" @onclick="() => _isAvatarDialogOpen = true">Profilbild ändern</button>
     </div>
-    @if (_avatarErrorMessage is not null)
-    {
-        <p class="form-error">@_avatarErrorMessage</p>
-    }
+
+    <AvatarUploadDialog IsOpen="_isAvatarDialogOpen" OnUploaded="OnAvatarUploaded" OnClose="() => _isAvatarDialogOpen = false" />
 
     <h2>Konto</h2>
     <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form">
@@ -189,9 +175,7 @@ else
     private string? _passwordErrorMessage;
     private string? _passwordSuccessMessage;
 
-    private bool _isDraggingAvatar;
-    private string? _avatarPreviewUrl;
-    private string? _avatarErrorMessage;
+    private bool _isAvatarDialogOpen;
 
     // TODO: hardcoded true until UserProfile exposes whether the account has a
     // real password (vs. OAuth-only) -- password_hash is intentionally never
@@ -201,9 +185,6 @@ else
     private bool _isConfirmingDelete;
     private string _deleteAccountPassword = string.Empty;
     private string? _deleteAccountErrorMessage;
-
-    private const long MaxAvatarBytes = 5 * 1024 * 1024;
-    private static readonly string[] AllowedAvatarExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
     private static readonly (string Key, string Label)[] OAuthProviders =
     [
@@ -372,61 +353,10 @@ else
         _isConfirmingDelete = false;
     }
 
-    // Uploads immediately on selection, unlike the Konto/Passwort forms
-    // below -- the avatar has its own backend endpoint (PUT /me/avatar,
-    // separate from PUT /me) and no other field it needs to be saved
-    // together with, so a "Speichern" button here would only add a step.
-    private async Task OnAvatarSelectedAsync(InputFileChangeEventArgs e)
+    private void OnAvatarUploaded(UserProfile profile)
     {
-        _avatarErrorMessage = null;
-
-        var extension = Path.GetExtension(e.File.Name).ToLowerInvariant();
-        if (!AllowedAvatarExtensions.Contains(extension))
-        {
-            _avatarErrorMessage = $"Dateityp muss eines von {string.Join(", ", AllowedAvatarExtensions)} sein.";
-            return;
-        }
-        if (e.File.Size > MaxAvatarBytes)
-        {
-            _avatarErrorMessage = $"Datei überschreitet das {MaxAvatarBytes / (1024 * 1024)}MB-Limit.";
-            return;
-        }
-
-        using var stream = e.File.OpenReadStream(MaxAvatarBytes);
-        using var memoryStream = new MemoryStream();
-        await stream.CopyToAsync(memoryStream);
-        var bytes = memoryStream.ToArray();
-        var contentType = string.IsNullOrWhiteSpace(e.File.ContentType) ? "application/octet-stream" : e.File.ContentType;
-
-        if (_avatarPreviewUrl is not null)
-        {
-            await BlobUrlService.RevokeObjectUrlAsync(_avatarPreviewUrl);
-        }
-        _avatarPreviewUrl = await BlobUrlService.CreateObjectUrlAsync(bytes, contentType);
-        StateHasChanged();
-
-        using var content = new MultipartFormDataContent();
-        var byteContent = new ByteArrayContent(bytes);
-        byteContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-        content.Add(byteContent, "\"avatar\"", $"\"{e.File.Name}\"");
-
-        var response = await ApiClient.PutMultipartAsync<UserProfile>("/api/users/me/avatar", content);
-        if (response is { Success: true, Data: not null })
-        {
-            _profile = response.Data;
-        }
-        else
-        {
-            _avatarErrorMessage = response?.Error?.Message ?? "Profilbild konnte nicht hochgeladen werden.";
-        }
-    }
-
-    public void Dispose()
-    {
-        if (_avatarPreviewUrl is not null)
-        {
-            _ = BlobUrlService.RevokeObjectUrlAsync(_avatarPreviewUrl);
-        }
+        _profile = profile;
+        _isAvatarDialogOpen = false;
     }
 
     private class ProfileFormModel
