@@ -4,6 +4,7 @@
 
 import { NotFoundError } from "./errors";
 import { buildNotificationInsert } from "./notificationService";
+import { resolveAvatarUrl } from "./userService";
 
 export { NotFoundError };
 export class SelfFollowError extends Error {}
@@ -55,5 +56,131 @@ export async function getFollowState(db: D1Database, targetUserId: number, viewe
         followingCount: followingRow?.count ?? 0,
         isFollowing: viewerFollowsRow !== null,
         isOwnProfile: viewerId !== null && viewerId === targetUserId,
+    };
+}
+
+export type FollowListItem = {
+    username: string;
+    avatarUrl: string | null;
+    // Whether the CALLER (viewerId) follows this listed user -- null for a
+    // logged-out visitor, since "do you follow X" has no answer without an
+    // identity. Distinct from whatever relationship the listed row itself
+    // represents (e.g. every row in a followers list already follows the
+    // profile being viewed -- that's not what this field means).
+    isFollowing: boolean | null;
+};
+
+export type FollowListResult = {
+    items: FollowListItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+};
+
+async function resolveViewerFollowing(db: D1Database, viewerId: number | null, userIds: number[]): Promise<Set<number>> {
+    if (viewerId === null || userIds.length === 0) return new Set();
+    const placeholders = userIds.map(() => "?").join(", ");
+    const rows = await db
+        .prepare(`SELECT following_id FROM followers WHERE follower_id = ? AND following_id IN (${placeholders})`)
+        .bind(viewerId, ...userIds)
+        .all<{ following_id: number }>();
+    return new Set(rows.results.map((r) => r.following_id));
+}
+
+// Who follows targetUsername -- newest follow first. Returns null (not an
+// empty result) for an unknown username, same as resolveUserIdByUsername's
+// own NotFoundError-throwing sibling, so the route layer can 404 cleanly.
+export async function listFollowers(
+    db: D1Database,
+    targetUsername: string,
+    viewerId: number | null,
+    page: number,
+    pageSize: number,
+    origin: string
+): Promise<FollowListResult | null> {
+    let targetId: number;
+    try {
+        targetId = await resolveUserIdByUsername(db, targetUsername);
+    } catch (err) {
+        if (err instanceof NotFoundError) return null;
+        throw err;
+    }
+
+    const offset = (page - 1) * pageSize;
+    const [rows, countRow] = await Promise.all([
+        db
+            .prepare(
+                `SELECT users.username, users.avatar_url, users.avatar_key, users.id
+                 FROM followers JOIN users ON users.id = followers.follower_id
+                 WHERE followers.following_id = ? AND users.deleted_at IS NULL
+                 ORDER BY followers.created_at DESC, users.id DESC
+                 LIMIT ? OFFSET ?`
+            )
+            .bind(targetId, pageSize, offset)
+            .all<{ username: string; avatar_url: string | null; avatar_key: string | null; id: number }>(),
+        db
+            .prepare(`SELECT COUNT(*) AS total FROM followers JOIN users ON users.id = followers.follower_id WHERE followers.following_id = ? AND users.deleted_at IS NULL`)
+            .bind(targetId)
+            .first<{ total: number }>(),
+    ]);
+
+    const viewerFollowing = await resolveViewerFollowing(db, viewerId, rows.results.map((r) => r.id));
+    return {
+        items: rows.results.map((row) => ({
+            username: row.username,
+            avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin),
+            isFollowing: viewerId === null ? null : viewerFollowing.has(row.id),
+        })),
+        total: countRow?.total ?? 0,
+        page,
+        pageSize,
+    };
+}
+
+// Who targetUsername follows -- newest follow first.
+export async function listFollowing(
+    db: D1Database,
+    targetUsername: string,
+    viewerId: number | null,
+    page: number,
+    pageSize: number,
+    origin: string
+): Promise<FollowListResult | null> {
+    let targetId: number;
+    try {
+        targetId = await resolveUserIdByUsername(db, targetUsername);
+    } catch (err) {
+        if (err instanceof NotFoundError) return null;
+        throw err;
+    }
+
+    const offset = (page - 1) * pageSize;
+    const [rows, countRow] = await Promise.all([
+        db
+            .prepare(
+                `SELECT users.username, users.avatar_url, users.avatar_key, users.id
+                 FROM followers JOIN users ON users.id = followers.following_id
+                 WHERE followers.follower_id = ? AND users.deleted_at IS NULL
+                 ORDER BY followers.created_at DESC, users.id DESC
+                 LIMIT ? OFFSET ?`
+            )
+            .bind(targetId, pageSize, offset)
+            .all<{ username: string; avatar_url: string | null; avatar_key: string | null; id: number }>(),
+        db
+            .prepare(`SELECT COUNT(*) AS total FROM followers JOIN users ON users.id = followers.following_id WHERE followers.follower_id = ? AND users.deleted_at IS NULL`)
+            .bind(targetId)
+            .first<{ total: number }>(),
+    ]);
+
+    const viewerFollowing = await resolveViewerFollowing(db, viewerId, rows.results.map((r) => r.id));
+    return {
+        items: rows.results.map((row) => ({
+            username: row.username,
+            avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin),
+            isFollowing: viewerId === null ? null : viewerFollowing.has(row.id),
+        })),
+        total: countRow?.total ?? 0,
+        page,
+        pageSize,
     };
 }

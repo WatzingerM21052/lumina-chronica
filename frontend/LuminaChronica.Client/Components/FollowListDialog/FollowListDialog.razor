@@ -1,0 +1,63 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+
+@if (IsOpen)
+{
+    <div class="follow-list-dialog-overlay" @onclick="() => OnClose.InvokeAsync()">
+        <div class="follow-list-dialog" role="dialog" aria-modal="true" tabindex="-1"
+             @ref="_dialogElement" @onclick:stopPropagation="true" @onkeydown="HandleKeyDownAsync">
+            <h2>@Title</h2>
+
+            @if (_isLoading && _items is null)
+            {
+                <p class="text-muted">Lade …</p>
+            }
+            else if (_items is { Count: 0 })
+            {
+                <p class="text-muted">@EmptyText</p>
+            }
+            else if (_items is not null)
+            {
+                <ul class="follow-list-dialog-items">
+                    @foreach (var item in _items)
+                    {
+                        <li class="follow-list-dialog-row">
+                            <a href="@($"u/{item.Username}")" class="follow-list-dialog-user" @onclick="() => OnClose.InvokeAsync()">
+                                @if (item.AvatarUrl is { } avatarUrl)
+                                {
+                                    <img src="@avatarUrl" alt="" class="follow-list-dialog-avatar" />
+                                }
+                                else
+                                {
+                                    <div class="follow-list-dialog-avatar follow-list-dialog-avatar-placeholder" aria-hidden="true">
+                                        <Icon Name="person" Class="follow-list-dialog-avatar-placeholder-icon" />
+                                    </div>
+                                }
+                                <span>@item.Username</span>
+                            </a>
+                            @if (item.IsFollowing is { } isFollowing)
+                            {
+                                <button type="button" class="btn-follow @(isFollowing ? "is-following" : "")"
+                                        disabled="@(_togglingUsername == item.Username)"
+                                        @onclick="() => ToggleFollowAsync(item)">
+                                    @(isFollowing ? "✓ Gefolgt" : "+ Folgen")
+                                </button>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @if (_items.Count < _total)
+                {
+                    <div class="follow-list-dialog-actions">
+                        <button type="button" class="btn" disabled="@_isLoading" @onclick="LoadMoreAsync">Mehr laden</button>
+                    </div>
+                }
+            }
+
+            <div class="follow-list-dialog-actions">
+                <button type="button" class="btn" @onclick="() => OnClose.InvokeAsync()">Schließen</button>
+            </div>
+        </div>
+    </div>
+}

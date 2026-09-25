@@ -1,0 +1,91 @@
+.follow-list-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3);
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.follow-list-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 24rem;
+    max-height: 80vh;
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, var(--radius));
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card-hover, var(--shadow-card));
+    overflow: hidden;
+}
+
+.follow-list-dialog:focus {
+    outline: none;
+}
+
+.follow-list-dialog h2 {
+    margin: 0;
+}
+
+.follow-list-dialog-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-y: auto;
+}
+
+.follow-list-dialog-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+}
+
+.follow-list-dialog-user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    color: var(--color-text-primary);
+    text-decoration: none;
+}
+
+.follow-list-dialog-user:hover {
+    text-decoration: underline;
+}
+
+.follow-list-dialog-avatar {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.follow-list-dialog-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-paper);
+    color: var(--color-text-disabled);
+}
+
+.follow-list-dialog-avatar-placeholder-icon {
+    width: 60%;
+    height: 60%;
+}
+
+.follow-list-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}

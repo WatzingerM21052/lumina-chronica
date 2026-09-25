@@ -15,11 +15,23 @@ import {
     updateUserProfile,
 } from "../services/userService";
 import { getPublicProfile } from "../services/publicProfileService";
-import { NotFoundError, SelfFollowError, followUser, unfollowUser } from "../services/followService";
+import { NotFoundError, SelfFollowError, followUser, listFollowers, listFollowing, unfollowUser } from "../services/followService";
 
 export const usersRoute = new Hono<AppEnv>();
 
 const MIN_PASSWORD_LENGTH = 8;
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+// Mirrors routes/discover.ts's own parsePagination -- same convention,
+// duplicated rather than shared since it's three lines and pulling in a
+// cross-route-file dependency for that isn't worth it.
+function parsePagination(q: Record<string, string>): { page: number; pageSize: number } {
+    return {
+        page: Math.max(1, Number(q.page) || 1),
+        pageSize: Math.min(MAX_PAGE_SIZE, Math.max(1, Number(q.pageSize) || DEFAULT_PAGE_SIZE)),
+    };
+}
 
 // Community Phase 1 (issue #300) -- optionalAuth, not requireAuth: still
 // reachable by a fully logged-out visitor (viewerId falls back to null),
@@ -41,6 +53,22 @@ usersRoute.get("/:username/avatar", async (c) => {
     const object = await getUserAvatarObject(c.env.DB, c.env.STORAGE, c.req.param("username") ?? "");
     if (!object) return c.json(failure("NOT_FOUND", "Avatar not found."), 404);
     return conditionalCoverResponse(c, object, true);
+});
+
+// Public, like /:username/public's own counts -- optionalAuth only so a
+// logged-in viewer's isFollowing can be computed per row when they are one.
+usersRoute.get("/:username/followers", optionalAuth, async (c) => {
+    const { page, pageSize } = parsePagination(c.req.query());
+    const result = await listFollowers(c.env.DB, c.req.param("username") ?? "", c.get("userId") ?? null, page, pageSize, new URL(c.req.url).origin);
+    if (!result) return c.json(failure("NOT_FOUND", "User not found."), 404);
+    return c.json(success(result));
+});
+
+usersRoute.get("/:username/following", optionalAuth, async (c) => {
+    const { page, pageSize } = parsePagination(c.req.query());
+    const result = await listFollowing(c.env.DB, c.req.param("username") ?? "", c.get("userId") ?? null, page, pageSize, new URL(c.req.url).origin);
+    if (!result) return c.json(failure("NOT_FOUND", "User not found."), 404);
+    return c.json(success(result));
 });
 
 // Community Phase 2 (issue #304). Idempotent by design (INSERT OR IGNORE /
