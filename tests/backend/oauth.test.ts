@@ -387,7 +387,7 @@ describe("GET /api/auth/oauth/:provider/callback -- linking an identity onto an 
 });
 
 describe("account deletion closes the OAuth sign-in hole", () => {
-    it("an OAuth-only account that gets soft-deleted can no longer sign in via that same identity", async () => {
+    it("an OAuth-only account that gets soft-deleted can no longer sign in via its old (deleted) identity row, but IS restored by matching email (Task 10)", async () => {
         // 1. Create an OAuth-only account via Google sign-in.
         const startRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
         const state = extractQueryParam(startRes.headers.get("location")!, "state")!;
@@ -421,10 +421,15 @@ describe("account deletion closes the OAuth sign-in hole", () => {
         expect(deletedUserRow!.deleted_at).not.toBeNull();
         expect(deletedUserRow!.email).not.toBe("deleteme@example.com");
 
-        // 4. Signing in again via the SAME Google identity must NOT log back
-        // into the deleted account -- findOrCreateUserForOAuth should find no
-        // identity row (deleted above) and no live user with that email
-        // (anonymized above), so it creates a brand-new account instead.
+        // 4. Signing in again via the SAME Google identity finds no identity
+        // row (deleted above) -- so on its own, the old identity can't be
+        // used to sign back in by luck. But findOrCreateUserForOAuth also now
+        // checks deleted_email (Task 10), and this profile's email DOES
+        // match this account's deleted_email, so it correctly RESTORES the
+        // same account (same id) rather than creating a brand-new one --
+        // the intentional counterpart to the "no resurrection" behavior this
+        // describe block is named for: matching email is a deliberate,
+        // automatic restore, not an accidental one.
         const secondStartRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
         const secondState = extractQueryParam(secondStartRes.headers.get("location")!, "state")!;
         stubFetchQueue([
@@ -439,15 +444,14 @@ describe("account deletion closes the OAuth sign-in hole", () => {
         const secondExchangeRes = await app.request("/api/auth/oauth/exchange", jsonRequest({ code: secondCode }), env);
         const secondResult = (await readJson(secondExchangeRes)).data;
 
-        expect(secondResult.userId).not.toBe(userId);
+        expect(secondResult.userId).toBe(userId);
 
         const newIdentity = await env.DB.prepare("SELECT user_id FROM oauth_identities WHERE provider_user_id = ?").bind("google-deleteme").first<{ user_id: number }>();
-        expect(newIdentity!.user_id).toBe(secondResult.userId);
+        expect(newIdentity!.user_id).toBe(userId);
 
-        // The original deleted user still has no oauth_identities row -- the
-        // new identity belongs to the new account only.
-        const oldUserIdentities = await env.DB.prepare("SELECT * FROM oauth_identities WHERE user_id = ?").bind(userId).all();
-        expect(oldUserIdentities.results).toHaveLength(0);
+        const restoredRow = await env.DB.prepare("SELECT deleted_at, email FROM users WHERE id = ?").bind(userId).first<{ deleted_at: string | null; email: string }>();
+        expect(restoredRow!.deleted_at).toBeNull();
+        expect(restoredRow!.email).toBe("deleteme@example.com");
     });
 
     it("also cleans up any live oauth_exchange_codes / linking oauth_states rows for the deleted user", async () => {
@@ -482,6 +486,142 @@ describe("account deletion closes the OAuth sign-in hole", () => {
 
         const remainingStates = await env.DB.prepare("SELECT * FROM oauth_states WHERE linking_user_id = ?").bind(userId).all();
         expect(remainingStates.results).toHaveLength(0);
+    });
+});
+
+// Task 10: unlike the password-based restore flow (authService.ts's
+// registerUser/restoreUser), which requires an explicit confirm step because
+// registering blind with someone else's email is a real risk, OAuth restore
+// is automatic and silent -- the provider has already verified the email,
+// and this codebase already auto-links onto a *live* account under that same
+// trust model (see "auto-links to an existing password account" above), so
+// restoring a *deleted* account by the same verified email is consistent,
+// not a new risk.
+describe("OAuth login restores a previously soft-deleted account (Task 10)", () => {
+    async function registerPasswordUser(username: string, email: string, confirmNewAccount = false): Promise<{ token: string; userId: number }> {
+        const res = await app.request("/api/auth/register", jsonRequest({ username, email, password: "correct horse", confirmNewAccount }), env);
+        return (await readJson(res)).data;
+    }
+
+    async function deleteAccount(token: string): Promise<void> {
+        const res = await app.request(
+            "/api/users/me",
+            { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ currentPassword: "correct horse" }) },
+            env
+        );
+        expect(res.status).toBe(200);
+    }
+
+    async function signInViaGoogle(email: string, sub: string): Promise<{ userId: number }> {
+        const startRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
+        const state = extractQueryParam(startRes.headers.get("location")!, "state")!;
+        stubFetchQueue([{ match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub, email, email_verified: true }) } }]);
+        const callbackRes = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
+        const code = extractQueryParam(callbackRes.headers.get("location")!, "code")!;
+        const exchangeRes = await app.request("/api/auth/oauth/exchange", jsonRequest({ code }), env);
+        return (await readJson(exchangeRes)).data;
+    }
+
+    it("restores the deleted account (same id, same reattached user_settings row) on the next Google sign-in with the matching email", async () => {
+        const { token, userId } = await registerPasswordUser("restoreme", "restoreme@example.com");
+        const settingsBefore = await env.DB.prepare("SELECT user_id FROM user_settings WHERE user_id = ?").bind(userId).first();
+        expect(settingsBefore).not.toBeNull();
+
+        await deleteAccount(token);
+        const deletedRow = await env.DB.prepare("SELECT deleted_at, deleted_email, deleted_username FROM users WHERE id = ?").bind(userId).first<{
+            deleted_at: string | null;
+            deleted_email: string | null;
+            deleted_username: string | null;
+        }>();
+        expect(deletedRow!.deleted_at).not.toBeNull();
+        expect(deletedRow!.deleted_email).toBe("restoreme@example.com");
+
+        const { userId: restoredUserId } = await signInViaGoogle("restoreme@example.com", "google-restore-1");
+
+        // Same id -- this is what makes owned content (e.g. shelves, entries)
+        // reattach automatically instead of starting over on a fresh account.
+        expect(restoredUserId).toBe(userId);
+
+        const restoredRow = await env.DB.prepare("SELECT username, email, deleted_at, deleted_email, deleted_username, avatar_key, password_hash FROM users WHERE id = ?")
+            .bind(userId)
+            .first<{
+                username: string;
+                email: string;
+                deleted_at: string | null;
+                deleted_email: string | null;
+                deleted_username: string | null;
+                avatar_key: string | null;
+                password_hash: string;
+            }>();
+        expect(restoredRow!.deleted_at).toBeNull();
+        expect(restoredRow!.deleted_email).toBeNull();
+        expect(restoredRow!.deleted_username).toBeNull();
+        expect(restoredRow!.username).toBe("restoreme");
+        expect(restoredRow!.email).toBe("restoreme@example.com");
+        expect(restoredRow!.avatar_key).toBeNull();
+        // password_hash from before deletion is untouched -- deleteUser never
+        // clears it, so a returning user could still log in with their old
+        // password too (not exercised by this OAuth-focused test).
+        expect(restoredRow!.password_hash).not.toBe("");
+
+        // user_settings was never deleted by deleteUser -- restoring must not
+        // insert a second row for this user.
+        const settingsAfter = await env.DB.prepare("SELECT * FROM user_settings WHERE user_id = ?").bind(userId).all();
+        expect(settingsAfter.results).toHaveLength(1);
+
+        const identity = await env.DB.prepare("SELECT user_id FROM oauth_identities WHERE provider_user_id = ?").bind("google-restore-1").first<{ user_id: number }>();
+        expect(identity!.user_id).toBe(userId);
+    });
+
+    it("falls back to a generated username when the deleted account's original username has since been taken by a different active user", async () => {
+        const { token, userId } = await registerPasswordUser("collideme", "collide1@example.com");
+        await deleteAccount(token);
+
+        // "collideme" is free again post-deletion (the live username column
+        // was overwritten with the deleted-user-<id> placeholder) -- a
+        // different person registers it for themselves.
+        const other = await registerPasswordUser("collideme", "collide2@example.com");
+        expect(other.userId).not.toBe(userId);
+
+        const { userId: restoredUserId } = await signInViaGoogle("collide1@example.com", "google-collide-1");
+        expect(restoredUserId).toBe(userId);
+
+        const restoredRow = await env.DB.prepare("SELECT username FROM users WHERE id = ?").bind(userId).first<{ username: string }>();
+        expect(restoredRow!.username).not.toBe("collideme");
+        expect(restoredRow!.username).not.toBe("");
+
+        // The other, unrelated active account keeps its own username untouched.
+        const otherRow = await env.DB.prepare("SELECT username FROM users WHERE id = ?").bind(other.userId).first<{ username: string }>();
+        expect(otherRow!.username).toBe("collideme");
+    });
+
+    it("restores the correct (old) account by email even when a different, unrelated account was registered in the meantime", async () => {
+        const { token, userId } = await registerPasswordUser("multiold", "multi1@example.com");
+        await deleteAccount(token);
+
+        // An entirely unrelated new account, unrelated email, created after
+        // the deletion -- must not be confused with the deleted one.
+        const unrelated = await registerPasswordUser("multinew", "multi2@example.com");
+
+        const { userId: restoredUserId } = await signInViaGoogle("multi1@example.com", "google-multi-1");
+        expect(restoredUserId).toBe(userId);
+        expect(restoredUserId).not.toBe(unrelated.userId);
+    });
+
+    it("still prioritizes a LIVE account over a deleted one sharing the same email (deleted-then-reclaimed email)", async () => {
+        const { token: token1, userId: userId1 } = await registerPasswordUser("reclaimold", "reclaim@example.com");
+        await deleteAccount(token1);
+
+        // The email is reclaimed by a brand-new live registration.
+        const { userId: userId2 } = await registerPasswordUser("reclaimnew", "reclaim@example.com", true);
+        expect(userId2).not.toBe(userId1);
+
+        const { userId: signedInUserId } = await signInViaGoogle("reclaim@example.com", "google-reclaim-1");
+
+        // The live account must win, exactly like the existing "auto-links
+        // to an existing password account" behavior -- a currently-active
+        // account is never silently swapped out for a deleted one.
+        expect(signedInUserId).toBe(userId2);
     });
 });
 

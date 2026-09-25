@@ -133,24 +133,75 @@ async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderN
     if (existingUser) {
         userId = existingUser.id;
     } else {
-        const userRole = await db.prepare("SELECT id FROM roles WHERE name = 'USER'").first<{ id: number }>();
-        if (!userRole) throw new Error("USER role is not seeded (see database/migrations/0001_initial.sql).");
+        // No LIVE account has this email either -- but a previously
+        // soft-deleted one might (userService.ts's deleteUser moves the live
+        // email into deleted_email and anonymizes the live column). Unlike
+        // the password-based restore flow (authService.ts's registerUser /
+        // POST /api/auth/restore), which requires an explicit confirm step
+        // because registering blind with someone else's email is a real
+        // risk, this restore is automatic and silent: the email just came
+        // from the OAuth provider, which already verified it, and this
+        // function already auto-links onto a *live* account under that same
+        // trust model two lines up -- restoring a *deleted* account by the
+        // same verified email carries no additional risk. OAuth's
+        // redirect-based flow also makes an interactive confirm step here
+        // significantly more expensive to build (a new short-lived
+        // pending-profile cache) for little benefit.
+        //
+        // ORDER BY deleted_at DESC, id DESC: same tie-break as
+        // authService.ts's registerUser/restoreUser for the identical
+        // ambiguous-collision scenario (multiple soft-deleted rows sharing
+        // the same deleted_email) -- most-recently-deleted wins.
+        const deletedMatch = await db
+            .prepare("SELECT id, deleted_username FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+            .bind(profile.email)
+            .first<{ id: number; deleted_username: string }>();
 
-        const username = await generateUniqueUsername(db, profile);
-        const insertUser = await db
-            .prepare("INSERT INTO users (username, email, password_hash, avatar_url, role_id) VALUES (?, ?, ?, ?, ?)")
-            .bind(username, profile.email, OAUTH_NO_PASSWORD_SENTINEL, profile.avatarUrl ?? null, userRole.id)
-            .run();
-        userId = insertUser.meta.last_row_id;
+        if (deletedMatch) {
+            // The original username might since have been taken by a
+            // different active account -- fall back to a fresh generated one
+            // in that case, same as a brand-new account would get.
+            let restoredUsername = deletedMatch.deleted_username;
+            const usernameTaken = await db.prepare("SELECT id FROM users WHERE username = ? AND id != ?").bind(restoredUsername, deletedMatch.id).first();
+            if (usernameTaken) {
+                restoredUsername = await generateUniqueUsername(db, profile);
+            }
 
-        try {
-            // Same compensating-delete pattern as authService.ts's
-            // registerUser -- D1's batch() can't express this as one atomic
-            // call since the second insert needs the first insert's id.
-            await db.prepare("INSERT INTO user_settings (user_id) VALUES (?)").bind(userId).run();
-        } catch (err) {
-            await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
-            throw err;
+            // password_hash and avatar_key are deliberately left untouched:
+            // deleteUser never touches password_hash, and it already cleared
+            // avatar_key (and deleted the R2 object) on deletion, so there's
+            // nothing to restore there. user_settings was likewise never
+            // deleted, so no fresh INSERT is needed for it here (only the
+            // create-new-user branch below needs one).
+            await db
+                .prepare(
+                    `UPDATE users SET username = ?, email = ?,
+                     deleted_username = NULL, deleted_email = NULL, deleted_at = NULL, updated_at = CURRENT_TIMESTAMP
+                     WHERE id = ?`
+                )
+                .bind(restoredUsername, profile.email, deletedMatch.id)
+                .run();
+            userId = deletedMatch.id;
+        } else {
+            const userRole = await db.prepare("SELECT id FROM roles WHERE name = 'USER'").first<{ id: number }>();
+            if (!userRole) throw new Error("USER role is not seeded (see database/migrations/0001_initial.sql).");
+
+            const username = await generateUniqueUsername(db, profile);
+            const insertUser = await db
+                .prepare("INSERT INTO users (username, email, password_hash, avatar_url, role_id) VALUES (?, ?, ?, ?, ?)")
+                .bind(username, profile.email, OAUTH_NO_PASSWORD_SENTINEL, profile.avatarUrl ?? null, userRole.id)
+                .run();
+            userId = insertUser.meta.last_row_id;
+
+            try {
+                // Same compensating-delete pattern as authService.ts's
+                // registerUser -- D1's batch() can't express this as one atomic
+                // call since the second insert needs the first insert's id.
+                await db.prepare("INSERT INTO user_settings (user_id) VALUES (?)").bind(userId).run();
+            } catch (err) {
+                await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+                throw err;
+            }
         }
     }
 
