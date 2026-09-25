@@ -110,6 +110,41 @@ else
     <div class="form-actions">
         <button type="button" class="btn" @onclick="LogoutAsync">Abmelden</button>
     </div>
+
+    <div class="profile-danger-zone">
+        <h2>Konto löschen</h2>
+        <p class="text-muted">Diese Aktion kann nicht rückgängig gemacht werden. Dein Konto wird sofort deaktiviert.</p>
+
+        @if (_deleteAccountErrorMessage is not null)
+        {
+            <p class="form-error">@_deleteAccountErrorMessage</p>
+        }
+
+        @if (_profile.Email.EndsWith("@deleted.invalid") == false && _hasRealPassword)
+        {
+            <div class="form-group">
+                <label for="deleteAccountPassword">Aktuelles Passwort</label>
+                <input id="deleteAccountPassword" type="password" @bind="_deleteAccountPassword" @bind:event="oninput" />
+            </div>
+        }
+
+        @if (!_isConfirmingDelete)
+        {
+            <div class="form-actions">
+                <button type="button" id="confirmDeleteAccount" class="btn btn-danger" @onclick="() => _isConfirmingDelete = true">Konto löschen</button>
+            </div>
+        }
+        else
+        {
+            <p class="form-error">Bist du sicher? Das kann nicht rückgängig gemacht werden.</p>
+            <div class="form-actions">
+                <button type="button" class="btn" @onclick="() => _isConfirmingDelete = false">Abbrechen</button>
+                <button type="button" id="deleteAccountButton" class="btn btn-danger" disabled="@(_hasRealPassword && string.IsNullOrEmpty(_deleteAccountPassword))" @onclick="DeleteAccountAsync">
+                    Ja, endgültig löschen
+                </button>
+            </div>
+        }
+    </div>
 }
 
 @code {
@@ -127,6 +162,11 @@ else
     private bool _isDraggingAvatar;
     private string? _avatarPreviewUrl;
     private string? _avatarErrorMessage;
+
+    private bool _hasRealPassword = true;
+    private bool _isConfirmingDelete;
+    private string _deleteAccountPassword = string.Empty;
+    private string? _deleteAccountErrorMessage;
 
     private const long MaxAvatarBytes = 5 * 1024 * 1024;
     private static readonly string[] AllowedAvatarExtensions = [".jpg", ".jpeg", ".png", ".webp"];
@@ -203,6 +243,24 @@ else
         await ApiClient.PostAsync("/api/auth/logout");
         await AuthStateProvider.MarkUserAsLoggedOutAsync();
         NavigationManager.NavigateTo("");
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        _deleteAccountErrorMessage = null;
+
+        var request = new DeleteAccountRequest { CurrentPassword = _hasRealPassword ? _deleteAccountPassword : null };
+        var response = await ApiClient.DeleteAsync<DeleteAccountRequest, object>("/api/users/me", request);
+
+        if (response is { Success: true })
+        {
+            await AuthStateProvider.MarkUserAsLoggedOutAsync();
+            NavigationManager.NavigateTo("");
+            return;
+        }
+
+        _deleteAccountErrorMessage = response?.Error?.Message ?? "Konto konnte nicht gelöscht werden. Bitte versuche es erneut.";
+        _isConfirmingDelete = false;
     }
 
     // Uploads immediately on selection, unlike the Konto/Passwort forms

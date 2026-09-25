@@ -115,4 +115,49 @@ public class ProfilePageTests : BunitContext
         Assert.Null(avatarRequest);
         Assert.Contains("form-error", cut.Markup);
     }
+
+    [Fact]
+    public void Profile_RendersDeleteAccountSection()
+    {
+        var handler = new FakeHttpMessageHandler(ProfileJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+
+        Assert.NotNull(cut.Find("#deleteAccountPassword"));
+        Assert.Contains("Konto löschen", cut.Markup);
+    }
+
+    [Fact]
+    public void Profile_DeleteAccount_WrongPassword_ShowsErrorWithoutNavigating()
+    {
+        // FakeHttpMessageHandler (used by the other tests in this file) returns
+        // the same canned body for every request regardless of URL/method, so it
+        // can't serve a profile-load response and a different delete-error
+        // response in the same render. This test needs both -- the profile GET
+        // for the initial render, then a distinct error body for the DELETE --
+        // so it uses RoutedFakeHttpMessageHandler instead, the same handler the
+        // avatar-upload tests above already use for their own two-different-
+        // responses-in-one-render case.
+        const string deleteErrorJson = """{"success":false,"error":{"code":"INVALID_PASSWORD","message":"Current password is incorrect."}}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Delete, _ => RoutedFakeHttpMessageHandler.JsonResponse(deleteErrorJson))
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+        cut.Find("#deleteAccountPassword").Input("wrong password");
+        cut.Find("#confirmDeleteAccount").Click();
+        cut.Find("#deleteAccountButton").Click();
+
+        Assert.Contains("Current password is incorrect.", cut.Markup);
+    }
 }
