@@ -272,4 +272,33 @@ public class ProfilePageTests : BunitContext
         Assert.Contains("Du kannst dein letztes Anmeldeverfahren nicht entfernen.", cut.Markup);
         Assert.Contains("form-error", cut.Markup);
     }
+
+    [Fact]
+    public void Profile_UnlinkProvider_Success_RemovesRowAndShowsVerknuepfen()
+    {
+        // Mirrors the failure test above, but the DELETE succeeds with the
+        // real backend envelope shape (backend/src/routes/auth.ts: 200
+        // { success:true, data:null }) -- the Google row should flip from
+        // "Entfernen"/email to "Verknüpfen".
+        const string linkedJson = """{"success":true,"data":[{"provider":"google","email":"alice@gmail.com","linkedAt":"2026-01-01T00:00:00Z"}]}""";
+        const string unlinkSuccessJson = """{"success":true,"data":null}""";
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Delete, _ => RoutedFakeHttpMessageHandler.JsonResponse(unlinkSuccessJson))
+            .When(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/linked"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse(linkedJson))
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<Profile>();
+        var unlinkButton = cut.FindAll(".linked-account-row button").First(b => b.TextContent == "Entfernen");
+        unlinkButton.Click();
+
+        Assert.DoesNotContain("alice@gmail.com", cut.Markup);
+        Assert.DoesNotContain("Entfernen", cut.Markup);
+        Assert.Contains("Verknüpfen", cut.Markup);
+    }
 }
