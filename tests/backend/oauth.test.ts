@@ -450,4 +450,28 @@ describe("GET /api/auth/oauth/linked and DELETE /api/auth/oauth/:provider", () =
         const listRes = await app.request("/api/auth/oauth/linked", { headers: { Authorization: `Bearer ${token}` } }, env);
         expect((await readJson(listRes)).data).toHaveLength(1);
     });
+
+    it("treats unlinking a never-linked provider as a successful no-op for OAuth-only accounts", async () => {
+        // Create an OAuth-only account with only google linked
+        const startRes = await app.request("/api/auth/oauth/google/start", { redirect: "manual" } as RequestInit, env);
+        const state = extractQueryParam(startRes.headers.get("location")!, "state")!;
+        stubFetchQueue([
+            { match: "oauth2.googleapis.com/token", json: { id_token: fakeGoogleIdToken({ sub: "google-noop-test", email: "noop@example.com", email_verified: true }) } },
+        ]);
+        const callbackRes = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
+        const code = extractQueryParam(callbackRes.headers.get("location")!, "code")!;
+        const exchangeRes = await app.request("/api/auth/oauth/exchange", jsonRequest({ code }), env);
+        const token = (await readJson(exchangeRes)).data.token;
+
+        // Attempt to unlink github (never linked) on an OAuth-only account with only google
+        // This should be a silent no-op success (200), not a 409 block
+        const res = await app.request("/api/auth/oauth/github", { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }, env);
+        expect(res.status).toBe(200);
+
+        // Verify google is still linked (the no-op didn't touch anything)
+        const listRes = await app.request("/api/auth/oauth/linked", { headers: { Authorization: `Bearer ${token}` } }, env);
+        const listJson = await readJson(listRes);
+        expect(listJson.data).toHaveLength(1);
+        expect(listJson.data[0].provider).toBe("google");
+    });
 });

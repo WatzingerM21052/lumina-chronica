@@ -221,6 +221,9 @@ export async function unlinkProvider(db: D1Database, userId: number, provider: s
     const user = await db.prepare("SELECT password_hash FROM users WHERE id = ?").bind(userId).first<{ password_hash: string }>();
     if (!user) throw new Error("User disappeared during unlink.");
 
+    const targetExists = await db.prepare("SELECT 1 FROM oauth_identities WHERE user_id = ? AND provider = ?").bind(userId, provider).first();
+    if (!targetExists) return; // nothing to unlink -- idempotent no-op, matches follow/unfollow's philosophy
+
     const identityCount = await db.prepare("SELECT COUNT(*) AS count FROM oauth_identities WHERE user_id = ?").bind(userId).first<{ count: number }>();
     const hasRealPassword = user.password_hash !== OAUTH_NO_PASSWORD_SENTINEL;
 
