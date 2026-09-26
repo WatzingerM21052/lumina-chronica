@@ -1,4 +1,5 @@
-// Throttles POST /api/auth/login and /api/auth/register. D1-backed (see
+// Throttles POST /api/auth/login, /api/auth/register, and
+// /api/auth/forgot-password. D1-backed (see
 // database/migrations/0014_auth_rate_limit.sql for why this is a fixed
 // window rather than a precise algorithm, and why login keys on (ip,
 // identifier) instead of identifier alone).
@@ -6,6 +7,7 @@
 const WINDOW_MS = 15 * 60 * 1000;
 export const LOGIN_MAX_ATTEMPTS = 8;
 export const REGISTER_MAX_ATTEMPTS = 8;
+export const FORGOT_PASSWORD_MAX_ATTEMPTS = 5;
 
 export class RateLimitedError extends Error {
     constructor(public readonly retryAfterSeconds: number) {
@@ -73,11 +75,17 @@ async function clearAttempts(db: D1Database, route: string, ip: string, identifi
     await db.prepare("DELETE FROM auth_rate_limits WHERE route = ? AND ip = ? AND identifier = ?").bind(route, ip, identifier).run();
 }
 
+function maxAttemptsFor(route: string): number {
+    if (route === "login") return LOGIN_MAX_ATTEMPTS;
+    if (route === "forgot-password") return FORGOT_PASSWORD_MAX_ATTEMPTS;
+    return REGISTER_MAX_ATTEMPTS;
+}
+
 // Throws RateLimitedError if the (ip, identifier) pair is already at the
 // cap for this window -- call before doing the real (expensive) work.
 export async function assertNotRateLimited(c: { env: { DB: D1Database }; req: { header(name: string): string | undefined } }, route: string, identifier: string): Promise<{ ip: string; identifier: string }> {
     const ip = getClientIp(c);
-    await checkLimit(c.env.DB, route, ip, identifier, route === "login" ? LOGIN_MAX_ATTEMPTS : REGISTER_MAX_ATTEMPTS);
+    await checkLimit(c.env.DB, route, ip, identifier, maxAttemptsFor(route));
     return { ip, identifier };
 }
 

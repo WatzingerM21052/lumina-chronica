@@ -10,6 +10,7 @@ export type Bindings = {
     STORAGE: R2Bucket;
     JWT_SECRET: string;
     BIBLE_API_KEY: string;
+    RESEND_API_KEY: string;
     FRONTEND_URL: string;
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;

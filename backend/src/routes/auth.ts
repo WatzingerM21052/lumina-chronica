@@ -27,6 +27,7 @@ import {
     storeExchangeCode,
     unlinkProvider,
 } from "../services/oauthService";
+import { InvalidResetTokenError, requestPasswordReset, resetPassword } from "../services/passwordResetService";
 import { RateLimitedError, assertNotRateLimited, clearRateLimit, recordFailedAttempt } from "../services/rateLimitService";
 
 export const authRoute = new Hono<AppEnv>();
@@ -112,6 +113,60 @@ authRoute.post("/restore", async (c) => {
         if (err instanceof NoDeletedAccountError) return c.json(failure("NOT_FOUND", "No deleted account found for this email."), 404);
         if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);
         if (err instanceof UsernameTakenError) return c.json(failure("USERNAME_TAKEN", "This username is already taken."), 409);
+        throw err;
+    }
+});
+
+authRoute.post("/forgot-password", async (c) => {
+    const body = await c.req.json<{ identifier?: string }>().catch(() => null);
+    if (!body?.identifier) {
+        return c.json(failure("VALIDATION_ERROR", "identifier is required."), 400);
+    }
+
+    // Keyed by (ip, identifier), same rationale as /login: an attacker must
+    // not be able to email-bomb one victim's inbox from many IPs, while the
+    // victim can still request their own reset from their own IP. Every
+    // attempt counts regardless of outcome (like /register), since this
+    // route has no distinguishable success/failure to condition on -- that
+    // asymmetry is the whole point of the generic response below.
+    let rateLimit;
+    try {
+        rateLimit = await assertNotRateLimited(c, "forgot-password", body.identifier);
+    } catch (err) {
+        if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
+        throw err;
+    }
+    await recordFailedAttempt(c.env.DB, "forgot-password", rateLimit.ip, rateLimit.identifier);
+
+    try {
+        await requestPasswordReset(c.env.DB, c.env.RESEND_API_KEY, c.env.FRONTEND_URL, body.identifier);
+    } catch (err) {
+        // A failure anywhere in requestPasswordReset (DB lookup, token
+        // insert, or the email send itself) shouldn't leak through as a
+        // distinguishable response, or 500 the request -- whatever token
+        // row was created (if any) already exists by this point regardless.
+        console.error("forgot-password: requestPasswordReset failed", err);
+    }
+
+    return c.json(success({ message: "If an account exists, a reset email has been sent." }));
+});
+
+authRoute.post("/reset-password", async (c) => {
+    const body = await c.req.json<{ token?: string; newPassword?: string }>().catch(() => null);
+    if (!body?.token || !body?.newPassword) {
+        return c.json(failure("VALIDATION_ERROR", "token and newPassword are required."), 400);
+    }
+    if (body.newPassword.length < MIN_PASSWORD_LENGTH) {
+        return c.json(failure("VALIDATION_ERROR", `newPassword must be at least ${MIN_PASSWORD_LENGTH} characters.`), 400);
+    }
+
+    try {
+        const result = await resetPassword(c.env.DB, c.env.JWT_SECRET, body.token, body.newPassword);
+        return c.json(success(result));
+    } catch (err) {
+        if (err instanceof InvalidResetTokenError) {
+            return c.json(failure("INVALID_RESET_TOKEN", "This reset link is invalid or has expired."), 400);
+        }
         throw err;
     }
 });

@@ -50,9 +50,10 @@ Source spec's Definition of Done (§117): "Ein Benutzer kann sich vollständig a
 - [x] Session — JWT in `localStorage`, `AuthenticationStateProvider`/`<AuthorizeView>` wired up
 - [x] Rollen — `USER`/`ADMIN` carried in the token, no role-gated endpoints yet (nothing needs one)
 - [x] Benutzerprofil — `/profile` page, `GET`/`PUT /api/users/me`, password change
+- [x] Passwort zurücksetzen — built later, once an email-sending provider was picked (Resend): `POST /api/auth/forgot-password` / `POST /api/auth/reset-password`, single-use 1-hour-TTL token, reachable from both the Login page and Settings. See `Database.md`'s `0025_password_reset.sql` entry and `Architecture.md`'s Auth rows for the details.
 
 **Explicitly deferred** (spec §117 lists these too, but each pulls in a dependency this project has deliberately not taken on yet):
-- **Passwort zurücksetzen / E-Mail-Bestätigung** — need an email-sending provider, not yet evaluated (same cost-avoidance concern already raised about R2).
+- **E-Mail-Bestätigung** — needs an email-sending provider; one was since picked (Resend) for the password-reset feature above, but email confirmation itself hasn't been built yet.
 - **Avatar** — needs file upload, which needs the file-storage backend decision below (deferred to Phase 3).
 
 Verified end-to-end against the real production backend and D1 (2026-07-29): register → JWT issued → login → profile update persists → password change + re-login → real remote `users.password_hash` confirmed hashed, not plaintext. Frontend: 7/7 bUnit tests passing. Backend: 20/20 Vitest tests passing (`auth.test.ts`, `users.test.ts`). See `Architecture.md`'s "Password hashing"/"Auth token"/"Token storage"/"Auth middleware" rows for the decisions made.
