@@ -16,10 +16,11 @@
 @inject TextPaginatorService TextPaginator
 @inject ReaderSettingsService ReaderSettings
 @inject OfflineStorageService OfflineStorage
+@inject II18nService I18n
 
-<PageTitle>@(_book?.Title ?? "Lesen") — Lumina Chronica</PageTitle>
+<PageTitle>@(_book?.Title ?? I18n.T("reader.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="@($"library/books/{Id}")">← Zurück zum Buch</a>
+<a href="@($"library/books/{Id}")">@I18n.T("reader.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -27,11 +28,11 @@
 }
 else if (_book is null)
 {
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Reading" Text="Buch wird geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Reading" Text="@I18n.T("reader.loading")" />
 }
 else if (_book.File is null)
 {
-    <p class="form-error">Für dieses Buch ist keine Datei hinterlegt.</p>
+    <p class="form-error">@I18n.T("reader.noFileMessage")</p>
 }
 else
 {
@@ -39,17 +40,17 @@ else
     {
         <div class="reader-controls">
             <div class="reader-settings-menu">
-                <button type="button" class="btn" @onclick="ToggleSettingsMenu"><Icon Name="settings" /> Einstellungen</button>
+                <button type="button" class="btn" @onclick="ToggleSettingsMenu"><Icon Name="settings" /> @I18n.T("reader.settingsButton")</button>
                 @if (_settingsMenuOpen)
                 {
                     <div class="reader-settings-popover">
                         @if (_book.File.Format is "TXT" or "MD" or "EPUB" or "PDF")
                         {
                             <div class="reader-setting-row">
-                                <span class="reader-setting-label">Ansicht</span>
+                                <span class="reader-setting-label">@I18n.T("reader.viewLabel")</span>
                                 <span class="reader-setting-group">
-                                    <button type="button" class="btn @(_readerMode == "book" ? "is-active" : "")" @onclick='() => SetReaderMode("book")'>Buch</button>
-                                    <button type="button" class="btn @(_readerMode == "scroll" ? "is-active" : "")" @onclick='() => SetReaderMode("scroll")'>Scroll</button>
+                                    <button type="button" class="btn @(_readerMode == "book" ? "is-active" : "")" @onclick='() => SetReaderMode("book")'>@I18n.T("reader.viewBook")</button>
+                                    <button type="button" class="btn @(_readerMode == "scroll" ? "is-active" : "")" @onclick='() => SetReaderMode("scroll")'>@I18n.T("reader.viewScroll")</button>
                                     @* EPUB's Realistic View (issue #189) stays gated off here -- the section-capture
                                        implementation still has an unresolved bug where it silently falls back to
                                        looking identical to Buch View, so the toggle is hidden again rather than
@@ -59,27 +60,27 @@ else
                                        unaffected and stays available. *@
                                     @if (_book.File.Format is "PDF")
                                     {
-                                        <button type="button" class="btn @(_readerMode == "realistic" ? "is-active" : "")" @onclick='() => SetReaderMode("realistic")'>Realistisch</button>
+                                        <button type="button" class="btn @(_readerMode == "realistic" ? "is-active" : "")" @onclick='() => SetReaderMode("realistic")'>@I18n.T("reader.viewRealistic")</button>
                                     }
                                 </span>
                             </div>
                             @if (_readerMode == "scroll" && _book.File.Format is "EPUB" or "PDF")
                             {
                                 <div class="reader-setting-row">
-                                    <span class="reader-setting-label">Scrollbalken ausblenden</span>
+                                    <span class="reader-setting-label">@I18n.T("reader.hideScrollbarsLabel")</span>
                                     <input type="checkbox" checked="@_hideScrollbars" @onchange="SetHideScrollbars" />
                                 </div>
                             }
                             @if (_readerMode == "book" && _book.File.Format is "TXT" or "MD")
                             {
                                 <div class="reader-setting-row">
-                                    <span class="reader-setting-label">Seite pro Kapitel</span>
+                                    <span class="reader-setting-label">@I18n.T("reader.pagePerChapterLabel")</span>
                                     <input type="checkbox" checked="@_pagePerChapter" @onchange="SetPagePerChapter" />
                                 </div>
                                 @if (_pagePerChapter)
                                 {
                                     <div class="reader-setting-row">
-                                        <span class="reader-setting-label">Scrollbalken ausblenden</span>
+                                        <span class="reader-setting-label">@I18n.T("reader.hideScrollbarsLabel")</span>
                                         <input type="checkbox" checked="@_hideScrollbars" @onchange="SetHideScrollbars" />
                                     </div>
                                 }
@@ -88,7 +89,7 @@ else
                         @if (_book.File.Format is not "PDF")
                         {
                             <div class="reader-setting-row">
-                                <span class="reader-setting-label">Schriftgröße</span>
+                                <span class="reader-setting-label">@I18n.T("reader.fontSizeLabel")</span>
                                 <span class="reader-setting-group">
                                     <button type="button" class="btn" @onclick="DecreaseFontSize">A-</button>
                                     <span>@(_fontSize)px</span>
@@ -96,45 +97,45 @@ else
                                 </span>
                             </div>
                             <div class="reader-setting-row">
-                                <span class="reader-setting-label">Schriftart</span>
+                                <span class="reader-setting-label">@I18n.T("reader.fontFamilyLabel")</span>
                                 <span class="reader-setting-group">
-                                    <button type="button" class="btn @(_fontFamily == "serif" ? "is-active" : "")" @onclick='() => SetFontFamily("serif")'>Serif</button>
-                                    <button type="button" class="btn @(_fontFamily == "sans" ? "is-active" : "")" @onclick='() => SetFontFamily("sans")'>Sans</button>
+                                    <button type="button" class="btn @(_fontFamily == "serif" ? "is-active" : "")" @onclick='() => SetFontFamily("serif")'>@I18n.T("reader.fontSerif")</button>
+                                    <button type="button" class="btn @(_fontFamily == "sans" ? "is-active" : "")" @onclick='() => SetFontFamily("sans")'>@I18n.T("reader.fontSans")</button>
                                 </span>
                             </div>
                             <div class="reader-setting-row">
-                                <span class="reader-setting-label">Zeilenabstand</span>
+                                <span class="reader-setting-label">@I18n.T("reader.lineHeightLabel")</span>
                                 <span class="reader-setting-group">
-                                    <button type="button" class="btn @(_lineHeight == "tight" ? "is-active" : "")" @onclick='() => SetLineHeight("tight")'>Eng</button>
-                                    <button type="button" class="btn @(_lineHeight == "normal" ? "is-active" : "")" @onclick='() => SetLineHeight("normal")'>Normal</button>
-                                    <button type="button" class="btn @(_lineHeight == "loose" ? "is-active" : "")" @onclick='() => SetLineHeight("loose")'>Weit</button>
+                                    <button type="button" class="btn @(_lineHeight == "tight" ? "is-active" : "")" @onclick='() => SetLineHeight("tight")'>@I18n.T("reader.lineTight")</button>
+                                    <button type="button" class="btn @(_lineHeight == "normal" ? "is-active" : "")" @onclick='() => SetLineHeight("normal")'>@I18n.T("reader.lineNormal")</button>
+                                    <button type="button" class="btn @(_lineHeight == "loose" ? "is-active" : "")" @onclick='() => SetLineHeight("loose")'>@I18n.T("reader.lineLoose")</button>
                                 </span>
                             </div>
                         }
                         <div class="reader-setting-row">
-                            <span class="reader-setting-label">Seitenbreite</span>
+                            <span class="reader-setting-label">@I18n.T("reader.pageWidthLabel")</span>
                             <span class="reader-setting-group">
-                                <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>Schmal</button>
-                                <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>Normal</button>
-                                <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>Breit</button>
+                                <button type="button" class="btn @(_pageWidth == "narrow" ? "is-active" : "")" @onclick='() => SetPageWidth("narrow")'>@I18n.T("reader.widthNarrow")</button>
+                                <button type="button" class="btn @(_pageWidth == "normal" ? "is-active" : "")" @onclick='() => SetPageWidth("normal")'>@I18n.T("reader.widthNormal")</button>
+                                <button type="button" class="btn @(_pageWidth == "wide" ? "is-active" : "")" @onclick='() => SetPageWidth("wide")'>@I18n.T("reader.widthWide")</button>
                             </span>
                         </div>
-                        <button type="button" class="btn reader-settings-done" @onclick="ToggleSettingsMenu">Fertig</button>
+                        <button type="button" class="btn reader-settings-done" @onclick="ToggleSettingsMenu">@I18n.T("reader.doneButton")</button>
                     </div>
                 }
             </div>
             <div class="reader-settings-menu">
-                <button type="button" class="btn" @onclick="ToggleBookmarksMenuAsync"><Icon Name="bookmark" /> Lesezeichen</button>
+                <button type="button" class="btn" @onclick="ToggleBookmarksMenuAsync"><Icon Name="bookmark" /> @I18n.T("reader.bookmarksButton")</button>
                 @if (_bookmarksMenuOpen)
                 {
                     <div class="reader-settings-popover reader-bookmarks-popover">
                         <div class="reader-setting-row">
-                            <input type="text" class="reader-bookmark-note-input" placeholder="Notiz (optional)" value="@_newBookmarkNote" @oninput="e => _newBookmarkNote = e.Value?.ToString() ?? string.Empty" />
+                            <input type="text" class="reader-bookmark-note-input" placeholder="@I18n.T("reader.notePlaceholder")" value="@_newBookmarkNote" @oninput="e => _newBookmarkNote = e.Value?.ToString() ?? string.Empty" />
                         </div>
-                        <button type="button" class="btn btn-primary" @onclick="AddBookmarkAsync">+ Aktuelle Seite merken</button>
+                        <button type="button" class="btn btn-primary" @onclick="AddBookmarkAsync">@I18n.T("reader.addBookmarkButton")</button>
                         @if (_bookmarks is { Count: 0 })
                         {
-                            <p class="text-muted">Noch keine Lesezeichen.</p>
+                            <p class="text-muted">@I18n.T("reader.noBookmarksMessage")</p>
                         }
                         else if (_bookmarks is not null)
                         {
@@ -144,14 +145,14 @@ else
                                     <li class="reader-bookmark-item">
                                         <button type="button" class="reader-bookmark-jump" @onclick="() => GoToBookmarkAsync(bookmark)">
                                             <span class="reader-bookmark-percentage">@bookmark.Percentage.ToString("F0", CultureInfo.InvariantCulture)%</span>
-                                            <span class="reader-bookmark-note">@(string.IsNullOrWhiteSpace(bookmark.Note) ? "Lesezeichen" : bookmark.Note)</span>
+                                            <span class="reader-bookmark-note">@(string.IsNullOrWhiteSpace(bookmark.Note) ? I18n.T("reader.bookmarkDefaultLabel") : bookmark.Note)</span>
                                         </button>
-                                        <button type="button" class="btn reader-bookmark-delete" @onclick="() => DeleteBookmarkAsync(bookmark.Id)" aria-label="Lesezeichen löschen">✕</button>
+                                        <button type="button" class="btn reader-bookmark-delete" @onclick="() => DeleteBookmarkAsync(bookmark.Id)" aria-label="@I18n.T("reader.deleteBookmarkAriaLabel")">✕</button>
                                     </li>
                                 }
                             </ul>
                         }
-                        <button type="button" class="btn reader-settings-done" @onclick="ToggleBookmarksMenuAsync">Fertig</button>
+                        <button type="button" class="btn reader-settings-done" @onclick="ToggleBookmarksMenuAsync">@I18n.T("reader.doneButton")</button>
                     </div>
                 }
             </div>
@@ -194,9 +195,9 @@ else
         @if (_readerMode == "book")
         {
             <div class="reader-content-nav @(_pageWidth switch { "narrow" => "reader-content-nav--width-narrow", "wide" => "reader-content-nav--width-wide", _ => "" })">
-                <button type="button" class="btn" @onclick="PrevTxtMdPageAsync" disabled="@(_txtMdCurrentPage <= 1)">◀ Zurück</button>
-                <span>Seite @_txtMdCurrentPage / @_txtMdPageCount</span>
-                <button type="button" class="btn" @onclick="NextTxtMdPageAsync" disabled="@(_txtMdCurrentPage >= _txtMdPageCount)">Weiter ▶</button>
+                <button type="button" class="btn" @onclick="PrevTxtMdPageAsync" disabled="@(_txtMdCurrentPage <= 1)">@I18n.T("reader.previousPage")</button>
+                <span>@string.Format(I18n.T("reader.pageOf"), _txtMdCurrentPage, _txtMdPageCount)</span>
+                <button type="button" class="btn" @onclick="NextTxtMdPageAsync" disabled="@(_txtMdCurrentPage >= _txtMdPageCount)">@I18n.T("reader.nextPage")</button>
             </div>
         }
     }
@@ -210,7 +211,7 @@ else
     }
     else
     {
-        <p class="text-muted">Dieses Format wird in einer späteren Story unterstützt.</p>
+        <p class="text-muted">@I18n.T("reader.formatNotSupportedMessage")</p>
     }
 }
 
@@ -348,7 +349,7 @@ else
 
         if (book is null)
         {
-            _loadErrorMessage = bookResponse?.Error?.Message ?? "Buch konnte nicht geladen werden.";
+            _loadErrorMessage = bookResponse?.Error?.Message ?? I18n.T("reader.loadError");
             return;
         }
         _book = book;
@@ -389,7 +390,7 @@ else
 
         if (fileBytes is null)
         {
-            _loadErrorMessage = "Buchdatei konnte nicht geladen werden.";
+            _loadErrorMessage = I18n.T("reader.fileLoadError");
             return;
         }
 
