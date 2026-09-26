@@ -47,6 +47,10 @@
     height: 40%;
 }
 
+.profile-password-reset {
+    margin: 0.5rem 0 1.5rem;
+}
+
 .profile-danger-zone {
     margin-top: var(--space-4);
     padding-top: var(--space-3);

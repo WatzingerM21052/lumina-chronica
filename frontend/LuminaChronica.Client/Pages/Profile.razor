@@ -6,21 +6,23 @@
 @inject ApiClient ApiClient
 @inject LuminaAuthStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject II18nService I18n
+@inject ToastService ToastService
 
-<PageTitle>Profil — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("profile.title") — Lumina Chronica</PageTitle>
 
 <div class="profile-seal-header">
     <img src="images/profile-ex-libris-seal.webp" alt="" class="profile-seal-image" loading="eager" decoding="async" />
-    <h1>Profil</h1>
+    <h1>@I18n.T("profile.title")</h1>
 </div>
 
 @if (_profile is null)
 {
-    <LoadingIndicator Text="Profil wird geladen..." />
+    <LoadingIndicator Text="@I18n.T("profile.loading")" />
 }
 else
 {
-    <p><a href="@($"u/{_profile.Username}")">Öffentliches Profil ansehen</a></p>
+    <p><a href="@($"u/{_profile.Username}")">@I18n.T("profile.viewPublicProfile")</a></p>
 
     <div class="profile-avatar-row">
         @if (_profile.AvatarUrl is { } avatarUrl)
@@ -33,12 +35,12 @@ else
                 <Icon Name="person" Class="profile-avatar-placeholder-icon" />
             </div>
         }
-        <button type="button" id="changeAvatarButton" class="btn" @onclick="() => _isAvatarDialogOpen = true">Profilbild ändern</button>
+        <button type="button" id="changeAvatarButton" class="btn" @onclick="() => _isAvatarDialogOpen = true">@I18n.T("profile.changeAvatarButton")</button>
     </div>
 
     <AvatarUploadDialog IsOpen="_isAvatarDialogOpen" OnUploaded="OnAvatarUploaded" OnClose="() => _isAvatarDialogOpen = false" />
 
-    <h2>Konto</h2>
+    <h2>@I18n.T("profile.accountTitle")</h2>
     <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form">
         @if (_profileErrorMessage is not null)
         {
@@ -46,23 +48,23 @@ else
         }
 
         <div class="form-group">
-            <label for="username">Benutzername</label>
+            <label for="username">@I18n.T("profile.usernameLabel")</label>
             <InputText id="username" @bind-Value="_profileForm.Username" />
         </div>
 
         <div class="form-group">
-            <label for="email">E-Mail</label>
+            <label for="email">@I18n.T("profile.emailLabel")</label>
             <InputText id="email" type="email" @bind-Value="_profileForm.Email" />
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary" disabled="@(_saveProfileState != ButtonBusyState.Idle)" style="min-width: @(AsyncButtonContent.MinWidthCh("Speichern", null, "Gespeichert"))ch">
-                <AsyncButtonContent State="_saveProfileState" IdleText="Speichern" SuccessText="Gespeichert" />
+            <button type="submit" class="btn btn-primary" disabled="@(_saveProfileState != ButtonBusyState.Idle)" style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("profile.saveButton"), null, I18n.T("profile.saveSuccess")))ch">
+                <AsyncButtonContent State="_saveProfileState" IdleText="@I18n.T("profile.saveButton")" SuccessText="@I18n.T("profile.saveSuccess")" />
             </button>
         </div>
     </EditForm>
 
-    <h2>Passwort ändern</h2>
+    <h2>@I18n.T("profile.changePasswordTitle")</h2>
     <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form">
         @if (_passwordErrorMessage is not null)
         {
@@ -74,33 +76,40 @@ else
         }
 
         <div class="form-group">
-            <label for="currentPassword">Aktuelles Passwort</label>
+            <label for="currentPassword">@I18n.T("profile.currentPasswordLabel")</label>
             <InputText id="currentPassword" type="password" @bind-Value="_passwordForm.CurrentPassword" />
         </div>
 
         <div class="form-group">
-            <label for="newPassword">Neues Passwort</label>
+            <label for="newPassword">@I18n.T("profile.newPasswordLabel")</label>
             <InputText id="newPassword" type="password" @bind-Value="_passwordForm.NewPassword" />
         </div>
 
         <div class="form-group">
-            <label for="confirmNewPassword">Neues Passwort bestätigen</label>
+            <label for="confirmNewPassword">@I18n.T("profile.confirmNewPasswordLabel")</label>
             <InputText id="confirmNewPassword" type="password" @bind-Value="_passwordForm.ConfirmNewPassword" />
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary" disabled="@_isSavingPassword">Passwort ändern</button>
+            <button type="submit" class="btn btn-primary" disabled="@_isSavingPassword">@I18n.T("profile.changePasswordButton")</button>
         </div>
     </EditForm>
 
-    <h2>Verknüpfte Konten</h2>
+    <div class="profile-password-reset">
+        <p class="text-muted">@I18n.T("profile.passwordResetHint")</p>
+        <button type="button" class="btn" disabled="@(_profile is null)" @onclick="SendPasswordResetAsync">
+            @I18n.T("profile.passwordResetButton")
+        </button>
+    </div>
+
+    <h2>@I18n.T("profile.linkedAccountsTitle")</h2>
     @if (_linkBanner is not null)
     {
         <p class="@(_linkBannerIsError ? "form-error" : "form-success")">@_linkBanner</p>
     }
     @if (_linkedProviders is null)
     {
-        <p class="text-muted">Lade …</p>
+        <p class="text-muted">@I18n.T("profile.loadingLinkedAccounts")</p>
     }
     else
     {
@@ -112,11 +121,11 @@ else
                     <span>@label@(linked is not null ? $" — {linked.Email}" : "")</span>
                     @if (linked is not null)
                     {
-                        <button type="button" class="btn" @onclick="() => UnlinkProviderAsync(providerKey)">Entfernen</button>
+                        <button type="button" class="btn" @onclick="() => UnlinkProviderAsync(providerKey)">@I18n.T("profile.unlinkButton")</button>
                     }
                     else
                     {
-                        <button type="button" class="btn" @onclick="() => LinkProviderAsync(providerKey)">Verknüpfen</button>
+                        <button type="button" class="btn" @onclick="() => LinkProviderAsync(providerKey)">@I18n.T("profile.linkButton")</button>
                     }
                 </div>
             }
@@ -124,12 +133,12 @@ else
     }
 
     <div class="form-actions">
-        <button type="button" class="btn" @onclick="LogoutAsync">Abmelden</button>
+        <button type="button" class="btn" @onclick="LogoutAsync">@I18n.T("profile.logoutButton")</button>
     </div>
 
     <div class="profile-danger-zone">
-        <h2>Konto löschen</h2>
-        <p class="text-muted">Diese Aktion kann nicht rückgängig gemacht werden. Dein Konto wird sofort deaktiviert.</p>
+        <h2>@I18n.T("profile.deleteAccountTitle")</h2>
+        <p class="text-muted">@I18n.T("profile.deleteAccountWarning")</p>
 
         @if (_deleteAccountErrorMessage is not null)
         {
@@ -139,7 +148,7 @@ else
         @if (_hasRealPassword)
         {
             <div class="form-group">
-                <label for="deleteAccountPassword">Aktuelles Passwort</label>
+                <label for="deleteAccountPassword">@I18n.T("profile.currentPasswordLabel")</label>
                 <input id="deleteAccountPassword" type="password" @bind="_deleteAccountPassword" @bind:event="oninput" />
             </div>
         }
@@ -147,16 +156,16 @@ else
         @if (!_isConfirmingDelete)
         {
             <div class="form-actions">
-                <button type="button" id="confirmDeleteAccount" class="btn btn-danger" @onclick="() => _isConfirmingDelete = true">Konto löschen</button>
+                <button type="button" id="confirmDeleteAccount" class="btn btn-danger" @onclick="() => _isConfirmingDelete = true">@I18n.T("profile.deleteAccountButton")</button>
             </div>
         }
         else
         {
-            <p class="form-error">Bist du sicher? Das kann nicht rückgängig gemacht werden.</p>
+            <p class="form-error">@I18n.T("profile.deleteConfirmWarning")</p>
             <div class="form-actions">
-                <button type="button" class="btn" @onclick="() => _isConfirmingDelete = false">Abbrechen</button>
+                <button type="button" class="btn" @onclick="() => _isConfirmingDelete = false">@I18n.T("profile.deleteCancelButton")</button>
                 <button type="button" id="deleteAccountButton" class="btn btn-danger" disabled="@(_hasRealPassword && string.IsNullOrEmpty(_deleteAccountPassword))" @onclick="DeleteAccountAsync">
-                    Ja, endgültig löschen
+                    @I18n.T("profile.deleteConfirmButton")
                 </button>
             </div>
         }
@@ -217,7 +226,7 @@ else
             {
                 var providerKey = Uri.UnescapeDataString(parts[1]);
                 var label = OAuthProviders.FirstOrDefault(p => p.Key == providerKey).Label ?? providerKey;
-                _linkBanner = $"{label} wurde verknüpft.";
+                _linkBanner = $"{label} {I18n.T("profile.linkedSuffix")}";
                 _linkBannerIsError = false;
             }
             else if (parts[0] == "linkError")
@@ -236,11 +245,11 @@ else
     // on the actual reason code from the query string instead of a single
     // hardcoded message, since routes/auth.ts's callback can redirect here
     // with more than one linkError reason (already_linked, exchange_failed).
-    private static string DescribeLinkError(string reason) => reason switch
+    private string DescribeLinkError(string reason) => reason switch
     {
-        "already_linked" => "Verknüpfung fehlgeschlagen. Dieses Konto ist bereits mit einem anderen Benutzer verknüpft.",
-        "exchange_failed" => "Verknüpfung fehlgeschlagen. Die Anmeldung beim Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
-        _ => "Verknüpfung fehlgeschlagen. Bitte versuche es erneut.",
+        "already_linked" => I18n.T("profile.linkErrorAlreadyLinked"),
+        "exchange_failed" => I18n.T("profile.linkErrorExchangeFailed"),
+        _ => I18n.T("profile.linkErrorGeneric"),
     };
 
     private async Task LinkProviderAsync(string provider)
@@ -252,7 +261,7 @@ else
             return;
         }
 
-        _linkBanner = response?.Error?.Message ?? "Verknüpfen fehlgeschlagen. Bitte versuche es erneut.";
+        _linkBanner = response?.Error?.Message ?? I18n.T("profile.linkFailed");
         _linkBannerIsError = true;
     }
 
@@ -266,7 +275,7 @@ else
         }
         else
         {
-            _linkBanner = response?.Error?.Message ?? "Entfernen fehlgeschlagen. Bitte versuche es erneut.";
+            _linkBanner = response?.Error?.Message ?? I18n.T("profile.unlinkFailed");
             _linkBannerIsError = true;
         }
     }
@@ -291,7 +300,7 @@ else
             return true;
         }
 
-        _profileErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen. Bitte versuche es erneut.";
+        _profileErrorMessage = response?.Error?.Message ?? I18n.T("profile.saveError");
         return false;
     }
 
@@ -302,7 +311,7 @@ else
 
         if (_passwordForm.NewPassword != _passwordForm.ConfirmNewPassword)
         {
-            _passwordErrorMessage = "Die neuen Passwörter stimmen nicht überein.";
+            _passwordErrorMessage = I18n.T("profile.passwordMismatch");
             return;
         }
 
@@ -317,15 +326,30 @@ else
 
         if (response is { Success: true })
         {
-            _passwordSuccessMessage = "Passwort geändert.";
+            _passwordSuccessMessage = I18n.T("profile.passwordChangeSuccess");
             _passwordForm = new PasswordFormModel();
         }
         else
         {
-            _passwordErrorMessage = response?.Error?.Message ?? "Passwort ändern fehlgeschlagen. Bitte versuche es erneut.";
+            _passwordErrorMessage = response?.Error?.Message ?? I18n.T("profile.passwordChangeError");
         }
 
         _isSavingPassword = false;
+    }
+
+    // Reuses the same generic-response endpoint as the Login-page flow --
+    // the only difference is Profile already knows who's asking (via
+    // _profile.Email, already loaded by OnInitializedAsync), so there's no
+    // identifier to type in. Lives here rather than on Settings because
+    // it's the alternative for a user who doesn't know their *current*
+    // password -- the "Passwort ändern" form above requires it.
+    private async Task SendPasswordResetAsync()
+    {
+        if (_profile is null) return;
+        var ok = await ApiClient.PostAsync("/api/auth/forgot-password", new ForgotPasswordRequest { Identifier = _profile.Email });
+        ToastService.Show(
+            ok ? I18n.T("profile.passwordResetToast") : I18n.T("profile.passwordResetError"),
+            ok ? ToastKind.Success : ToastKind.Error);
     }
 
     private async Task LogoutAsync()
@@ -349,7 +373,7 @@ else
             return;
         }
 
-        _deleteAccountErrorMessage = response?.Error?.Message ?? "Konto konnte nicht gelöscht werden. Bitte versuche es erneut.";
+        _deleteAccountErrorMessage = response?.Error?.Message ?? I18n.T("profile.deleteAccountError");
         _isConfirmingDelete = false;
     }
 

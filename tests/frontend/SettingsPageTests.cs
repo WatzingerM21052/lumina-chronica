@@ -19,7 +19,6 @@ public class SettingsPageTests : BunitContext
     }
 
     private const string AllEnabledPreferencesJson = """{"success":true,"data":{"FOLLOW":true,"COMMENT":true,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true,"ACTIVITY_RATING_STARS":true}}""";
-    private const string ProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01T00:00:00Z"}}""";
 
     private RoutedFakeHttpMessageHandler UseHandler(RoutedFakeHttpMessageHandler handler)
     {
@@ -40,7 +39,7 @@ public class SettingsPageTests : BunitContext
     [Fact]
     public void Settings_RendersAllSixPreferenceRowsCheckedByDefault()
     {
-        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson).WhenPathEndsWith("/users/me", ProfileJson));
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
 
         var cut = Render<Settings>();
 
@@ -56,7 +55,7 @@ public class SettingsPageTests : BunitContext
     public void Settings_RendersDisabledPreferenceAsUnchecked()
     {
         const string json = """{"success":true,"data":{"FOLLOW":true,"COMMENT":false,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true,"ACTIVITY_RATING_STARS":true}}""";
-        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", json).WhenPathEndsWith("/users/me", ProfileJson));
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", json));
 
         var cut = Render<Settings>();
 
@@ -68,7 +67,7 @@ public class SettingsPageTests : BunitContext
     public void Settings_RendersActivityRatingStarsAsUncheckedWhenDisabled()
     {
         const string json = """{"success":true,"data":{"FOLLOW":true,"COMMENT":true,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true,"ACTIVITY_RATING_STARS":false}}""";
-        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", json).WhenPathEndsWith("/users/me", ProfileJson));
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", json));
 
         var cut = Render<Settings>();
 
@@ -88,8 +87,7 @@ public class SettingsPageTests : BunitContext
                 putBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
                 return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true}""");
             })
-            .WhenPathEndsWith("/preferences", AllEnabledPreferencesJson)
-            .WhenPathEndsWith("/users/me", ProfileJson);
+            .WhenPathEndsWith("/preferences", AllEnabledPreferencesJson);
         UseHandler(handler);
 
         var cut = Render<Settings>();
@@ -104,7 +102,7 @@ public class SettingsPageTests : BunitContext
     [Fact]
     public void Settings_ShelfCoverTextCheckbox_OnLoad_ReflectsStoredValue()
     {
-        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson).WhenPathEndsWith("/users/me", ProfileJson));
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
         JSInterop.SetupModule("./js/shelfCoverText.js")
             .Setup<bool>("getShowCoverText", _ => true)
             .SetResult(true);
@@ -118,7 +116,7 @@ public class SettingsPageTests : BunitContext
     [Fact]
     public void Settings_ShelfCoverTextCheckbox_OnLoad_DefaultsToUnchecked()
     {
-        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson).WhenPathEndsWith("/users/me", ProfileJson));
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
         JSInterop.SetupModule("./js/shelfCoverText.js")
             .Setup<bool>("getShowCoverText", _ => true)
             .SetResult(false);
@@ -132,7 +130,7 @@ public class SettingsPageTests : BunitContext
     [Fact]
     public void Settings_TogglingShelfCoverTextCheckbox_Persists()
     {
-        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson).WhenPathEndsWith("/users/me", ProfileJson));
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
         JSInterop.SetupModule("./js/shelfCoverText.js")
             .Setup<bool>("getShowCoverText", _ => true)
             .SetResult(false);
@@ -149,7 +147,7 @@ public class SettingsPageTests : BunitContext
     [Fact]
     public void Settings_LanguagePicker_HighlightsTheCurrentLanguage()
     {
-        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson).WhenPathEndsWith("/users/me", ProfileJson));
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
         // Overrides UseHandler's default "de" registration -- DI resolves
         // the last-registered implementation for a given service type.
         Services.AddSingleton<II18nService>(new FakeI18nService("en"));
@@ -161,29 +159,5 @@ public class SettingsPageTests : BunitContext
         Assert.Equal(2, languageButtons.Count);
         Assert.Contains(languageButtons, b => b.TextContent == "English" && b.GetAttribute("class")!.Contains("btn-primary"));
         Assert.Contains(languageButtons, b => b.TextContent == "Deutsch" && !b.GetAttribute("class")!.Contains("btn-primary"));
-    }
-
-    [Fact]
-    public void Settings_PasswordResetButton_SendsRequestWithOwnEmail()
-    {
-        HttpRequestMessage? postRequest = null;
-        string? postBody = null;
-        var handler = new RoutedFakeHttpMessageHandler()
-            .When(r => r.Method == HttpMethod.Post, r =>
-            {
-                postRequest = r;
-                postBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
-                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true}""");
-            })
-            .WhenPathEndsWith("/preferences", AllEnabledPreferencesJson)
-            .WhenPathEndsWith("/users/me", ProfileJson);
-        UseHandler(handler);
-
-        var cut = Render<Settings>();
-        cut.Find("button.password-reset-button").Click();
-
-        Assert.NotNull(postRequest);
-        Assert.EndsWith("/forgot-password", postRequest!.RequestUri!.AbsolutePath);
-        Assert.Contains("\"alice@example.com\"", postBody);
     }
 }
