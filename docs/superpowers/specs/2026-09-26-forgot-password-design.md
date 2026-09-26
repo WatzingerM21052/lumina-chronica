@@ -130,6 +130,19 @@ Mirrors `oauthService.ts`'s `storeExchangeCode`/`redeemExchangeCode` pair:
   never surfaced to the caller (an email provider outage shouldn't leak
   through as a distinguishable response, and shouldn't 500 the request —
   the token row already exists by that point regardless).
+  Rate-limited via the existing `rateLimitService.ts` (already used by
+  `/login` and `/register` — this codebase does have D1-backed
+  IP+identifier throttling, corrected from an earlier draft of this spec
+  that claimed otherwise). Mirrors `/login`'s `(ip, identifier)` keying —
+  an attacker must not be able to email-bomb one victim's inbox from many
+  IPs while the victim can still request their own reset — but records
+  every attempt unconditionally like `/register` does, since this route
+  has no distinguishable success/failure outcome to condition on (that's
+  the whole point of the generic response). New
+  `FORGOT_PASSWORD_MAX_ATTEMPTS = 5` constant; `/reset-password` itself
+  stays unthrottled, same as OAuth's `redeemExchangeCode` — its token is
+  a 256-bit random value, not brute-forceable within any practical rate
+  limit's relevance window.
 - `POST /api/auth/reset-password { token, newPassword }` → `200` with a
   fresh `{ token, userId }` on success (same shape as login/register), or
   `400 INVALID_RESET_TOKEN` on `InvalidResetTokenError`.
@@ -163,7 +176,9 @@ existing `de.json`/`en.json` + `FakeI18nService` pattern from i18n Phase 1.
 - **Backend (Vitest, `tests/backend/`):** new `passwordReset.test.ts`
   mirroring `oauth.test.ts`'s structure — token issuance/consumption,
   expiry, single-use, identical response for existing vs. non-existing
-  identifier, OAuth-only-account path. `emailService.ts`'s `sendEmail` is
+  identifier, OAuth-only-account path, and rate-limiting (429 after
+  `FORGOT_PASSWORD_MAX_ATTEMPTS`, same style as the existing rate-limit
+  tests for `/login`/`/register`). `emailService.ts`'s `sendEmail` is
   mocked (no real network calls in tests, same principle as every other
   external boundary in this test suite).
 - **Frontend (bUnit, `tests/frontend/`):** `ForgotPasswordPageTests.cs`,
@@ -173,10 +188,6 @@ existing `de.json`/`en.json` + `FakeI18nService` pattern from i18n Phase 1.
 
 ## Explicitly out of scope (YAGNI)
 
-- Rate limiting — this codebase has none anywhere today (not even on
-  login); not introducing a new pattern just for this endpoint.
-  Enumeration-safety plus the 1-hour/single-use token already cover the
-  realistic abuse case for an app this size.
 - Post-reset confirmation email ("your password was changed") — a second
   email template for marginal benefit; skip for this phase.
 - Invalidating other active sessions/JWTs on reset — this app has no
