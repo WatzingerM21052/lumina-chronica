@@ -16,7 +16,7 @@ public partial class ErrorMessage : ComponentBase
     public string Message { get; set; } = string.Empty;
 
     [Parameter]
-    public string RetryText { get; set; } = "Erneut versuchen";
+    public string? RetryText { get; set; }
 
     /// <summary>No delegate -- renders the message alone, no button (e.g. an error the user can't retry, only navigate away from).</summary>
     [Parameter]

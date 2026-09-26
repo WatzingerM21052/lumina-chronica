@@ -1,7 +1,9 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject II18nService I18n
 
 <a class="book-card book-card-@Size.ToString().ToLowerInvariant()" href="@(Href ?? $"library/books/{Book.Id}")">
     <div class="book-card-cover">
@@ -21,14 +23,14 @@
         @if (ShowFavorite)
         {
             <button type="button" class="book-card-favorite @(_isFavorite ? "is-favorite" : "")"
-                    title="@(_isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
+                    title="@(_isFavorite ? I18n.T("bookCard.removeFavorite") : I18n.T("bookCard.addFavorite"))"
                     @onclick="ToggleFavoriteAsync" @onclick:stopPropagation="true" @onclick:preventDefault="true">
                 @(_isFavorite ? "★" : "☆")
             </button>
         }
         @if (OwnerUsername is { } ownerUsername)
         {
-            <span class="book-card-borrowed-badge" title="@($"Geteiltes Buch von {ownerUsername}")">Geliehen von @ownerUsername</span>
+            <span class="book-card-borrowed-badge" title="@string.Format(I18n.T("bookCard.sharedByTitle"), ownerUsername)">@string.Format(I18n.T("bookCard.borrowedFrom"), ownerUsername)</span>
         }
     </div>
     <div class="book-card-info">

@@ -120,5 +120,33 @@
   "settings.notif.activityRating.label": "Own Ratings in Activity Log",
   "settings.notif.activityRating.description": "Whether your own ratings show up in your public profile",
   "settings.notif.activityRatingStars.label": "Show Star Count for Ratings",
-  "settings.notif.activityRatingStars.description": "Whether the exact star count is shown when a rating appears in the log"
+  "settings.notif.activityRatingStars.description": "Whether the exact star count is shown when a rating appears in the log",
+
+  "errorMessage.retryButton": "Try again",
+  "errorPage.defaultMessage": "Something went wrong. Please try again.",
+  "confirmDialog.confirmButton": "Yes, delete",
+  "confirmDialog.cancelButton": "Cancel",
+  "toast.dismiss": "Dismiss message",
+
+  "avatarUploadDialog.title": "Change Profile Picture",
+  "avatarUploadDialog.dropzoneLabel": "Drag your profile picture here or click to select",
+  "avatarUploadDialog.uploadButton": "Upload",
+  "avatarUploadDialog.uploadSuccess": "Uploaded",
+  "avatarUploadDialog.cancelButton": "Cancel",
+  "avatarUploadDialog.invalidType": "File type must be one of {0}.",
+  "avatarUploadDialog.tooLarge": "File exceeds the {0}MB limit.",
+  "avatarUploadDialog.uploadFailed": "Profile picture could not be uploaded.",
+
+  "followListDialog.loading": "Loading …",
+  "followListDialog.following": "✓ Following",
+  "followListDialog.follow": "+ Follow",
+  "followListDialog.loadMore": "Load more",
+  "followListDialog.closeButton": "Close",
+
+  "bookCard.removeFavorite": "Remove from favorites",
+  "bookCard.addFavorite": "Add to favorites",
+  "bookCard.sharedByTitle": "Shared book from {0}",
+  "bookCard.borrowedFrom": "Borrowed from {0}",
+
+  "shelfCard.bookCount": "{0} books"
 }

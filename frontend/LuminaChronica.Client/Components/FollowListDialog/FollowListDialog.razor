@@ -1,5 +1,7 @@
 @namespace LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
 
 @if (IsOpen)
 {
@@ -10,7 +12,7 @@
 
             @if (_isLoading && _items is null)
             {
-                <p class="text-muted">Lade …</p>
+                <p class="text-muted">@I18n.T("followListDialog.loading")</p>
             }
             else if (_items is { Count: 0 })
             {
@@ -40,7 +42,7 @@
                                 <button type="button" class="btn-follow @(isFollowing ? "is-following" : "")"
                                         disabled="@(_togglingUsername == item.Username)"
                                         @onclick="() => ToggleFollowAsync(item)">
-                                    @(isFollowing ? "✓ Gefolgt" : "+ Folgen")
+                                    @(isFollowing ? I18n.T("followListDialog.following") : I18n.T("followListDialog.follow"))
                                 </button>
                             }
                         </li>
@@ -50,13 +52,13 @@
                 @if (_items.Count < _total)
                 {
                     <div class="follow-list-dialog-actions">
-                        <button type="button" class="btn" disabled="@_isLoading" @onclick="LoadMoreAsync">Mehr laden</button>
+                        <button type="button" class="btn" disabled="@_isLoading" @onclick="LoadMoreAsync">@I18n.T("followListDialog.loadMore")</button>
                     </div>
                 }
             }
 
             <div class="follow-list-dialog-actions">
-                <button type="button" class="btn" @onclick="() => OnClose.InvokeAsync()">Schließen</button>
+                <button type="button" class="btn" @onclick="() => OnClose.InvokeAsync()">@I18n.T("followListDialog.closeButton")</button>
             </div>
         </div>
     </div>

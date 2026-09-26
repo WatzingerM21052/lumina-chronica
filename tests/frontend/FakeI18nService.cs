@@ -135,6 +135,34 @@ public class FakeI18nService : II18nService
         ["settings.notif.activityRating.description"] = "Ob deine eigenen Bewertungen in deinem öffentlichen Profil auftauchen",
         ["settings.notif.activityRatingStars.label"] = "Sternezahl bei Bewertungen anzeigen",
         ["settings.notif.activityRatingStars.description"] = "Ob die konkrete Sternezahl genannt wird, wenn eine Bewertung im Log auftaucht",
+
+        ["errorMessage.retryButton"] = "Erneut versuchen",
+        ["errorPage.defaultMessage"] = "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+        ["confirmDialog.confirmButton"] = "Ja, löschen",
+        ["confirmDialog.cancelButton"] = "Abbrechen",
+        ["toast.dismiss"] = "Meldung schließen",
+
+        ["avatarUploadDialog.title"] = "Profilbild ändern",
+        ["avatarUploadDialog.dropzoneLabel"] = "Profilbild hierher ziehen oder klicken zum Auswählen",
+        ["avatarUploadDialog.uploadButton"] = "Hochladen",
+        ["avatarUploadDialog.uploadSuccess"] = "Hochgeladen",
+        ["avatarUploadDialog.cancelButton"] = "Abbrechen",
+        ["avatarUploadDialog.invalidType"] = "Dateityp muss eines von {0} sein.",
+        ["avatarUploadDialog.tooLarge"] = "Datei überschreitet das {0}MB-Limit.",
+        ["avatarUploadDialog.uploadFailed"] = "Profilbild konnte nicht hochgeladen werden.",
+
+        ["followListDialog.loading"] = "Lade …",
+        ["followListDialog.following"] = "✓ Gefolgt",
+        ["followListDialog.follow"] = "+ Folgen",
+        ["followListDialog.loadMore"] = "Mehr laden",
+        ["followListDialog.closeButton"] = "Schließen",
+
+        ["bookCard.removeFavorite"] = "Aus Favoriten entfernen",
+        ["bookCard.addFavorite"] = "Zu Favoriten hinzufügen",
+        ["bookCard.sharedByTitle"] = "Geteiltes Buch von {0}",
+        ["bookCard.borrowedFrom"] = "Geliehen von {0}",
+
+        ["shelfCard.bookCount"] = "{0} Bücher",
     };
 
     // Only the subset actually asserted against by English-rendering tests

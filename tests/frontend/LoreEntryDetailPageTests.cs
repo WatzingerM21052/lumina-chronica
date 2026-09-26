@@ -22,6 +22,7 @@ public class LoreEntryDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         return handler;
     }
 
@@ -49,6 +50,7 @@ public class LoreEntryDetailPageTests : BunitContext
         var httpClient = new HttpClient(handlerWithHtml) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
 
         var cut = Render<LoreEntryDetail>(DefaultParams);
 
@@ -80,6 +82,7 @@ public class LoreEntryDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
 
         var cut = Render<LoreEntryDetail>(DefaultParams);
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
@@ -114,6 +117,7 @@ public class LoreEntryDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
 
         var cut = Render<LoreEntryDetail>(DefaultParams);
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();

@@ -12,6 +12,7 @@ public class ToastHostTests : BunitContext
     public void ToastHost_RendersNothing_BeforeAnyToastShown()
     {
         Services.AddSingleton<ToastService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
 
         var cut = Render<ToastHost>();
 
@@ -22,6 +23,7 @@ public class ToastHostTests : BunitContext
     public void ToastHost_RendersToast_WithKindClassAndText_WhenServiceShowsOne()
     {
         Services.AddSingleton<ToastService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         var toastService = Services.GetRequiredService<ToastService>();
 
         var cut = Render<ToastHost>();
@@ -36,6 +38,7 @@ public class ToastHostTests : BunitContext
     public void ToastHost_DefaultKind_RendersAsInfo()
     {
         Services.AddSingleton<ToastService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         var toastService = Services.GetRequiredService<ToastService>();
 
         var cut = Render<ToastHost>();
@@ -48,6 +51,7 @@ public class ToastHostTests : BunitContext
     public void ToastHost_DismissButton_RemovesThatToast()
     {
         Services.AddSingleton<ToastService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         var toastService = Services.GetRequiredService<ToastService>();
 
         var cut = Render<ToastHost>();
@@ -62,6 +66,7 @@ public class ToastHostTests : BunitContext
     public void ToastHost_MultipleToasts_StackIndependently()
     {
         Services.AddSingleton<ToastService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         var toastService = Services.GetRequiredService<ToastService>();
 
         var cut = Render<ToastHost>();

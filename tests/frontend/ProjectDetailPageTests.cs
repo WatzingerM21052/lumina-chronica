@@ -47,6 +47,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -96,6 +97,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -152,6 +154,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -193,6 +196,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -226,6 +230,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -268,6 +273,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -300,6 +306,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -332,6 +339,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -377,6 +385,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -414,6 +423,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -461,6 +471,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -501,6 +512,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -533,6 +545,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -575,6 +588,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -608,6 +622,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -647,6 +662,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -680,6 +696,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -714,6 +731,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();
@@ -751,6 +769,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser(userId: 1);
@@ -791,6 +810,7 @@ public class ProjectDetailPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<ElementMetricsService>();
         UseAuthenticatedUser();

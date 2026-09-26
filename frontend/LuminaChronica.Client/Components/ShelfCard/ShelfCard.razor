@@ -1,7 +1,9 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject II18nService I18n
 
 <a class="shelf-card" href="@($"library/shelves/{Shelf.Id}")">
     <div class="shelf-card-cover">
@@ -22,6 +24,6 @@
     </div>
     <div class="shelf-card-info">
         <div class="shelf-card-name">@Shelf.Name</div>
-        <div class="shelf-card-count">@Shelf.BookCount Bücher</div>
+        <div class="shelf-card-count">@string.Format(I18n.T("shelfCard.bookCount"), Shelf.BookCount)</div>
     </div>
 </a>

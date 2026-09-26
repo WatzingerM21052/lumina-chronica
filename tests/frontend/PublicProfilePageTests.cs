@@ -83,6 +83,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(false);
         return handler;
@@ -183,6 +184,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(false);
 
@@ -221,6 +223,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(true, "alice");
 
@@ -236,6 +239,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(true, "alice");
 
@@ -252,6 +256,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(true, "alice");
 
@@ -276,6 +281,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(true, "alice");
 
@@ -320,6 +326,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(true, "alice");
 
@@ -340,6 +347,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(true, "alice");
 
@@ -370,6 +378,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(true, "alice");
 
@@ -460,6 +469,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(false);
 
@@ -492,6 +502,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(true, "alice");
 
@@ -516,6 +527,7 @@ public class PublicProfilePageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         SetAuthenticated(false);
 
