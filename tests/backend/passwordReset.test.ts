@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../../backend/src/index";
-import { OAUTH_NO_PASSWORD_SENTINEL } from "../../backend/src/utils/crypto";
+import { OAUTH_NO_PASSWORD_SENTINEL, sha256Hex } from "../../backend/src/utils/crypto";
 import { FORGOT_PASSWORD_MAX_ATTEMPTS } from "../../backend/src/services/rateLimitService";
 import { createFakeD1 } from "./fakeD1";
 import { readJson } from "./testUtils";
@@ -43,7 +43,17 @@ describe("POST /api/auth/forgot-password", () => {
 
         const row = await env.DB.prepare("SELECT * FROM password_reset_tokens WHERE user_id = ?").bind(registered.userId).first<any>();
         expect(row).not.toBeNull();
-        expect(row.token_hash).not.toContain("http"); // never the raw URL/token, just its hash
+
+        // Extract the raw token from the mocked email body and confirm the
+        // DB stores only its hash -- not the token itself, not the URL. A
+        // weaker `not.toContain("http")` check can't distinguish "hash
+        // stored" from "raw token stored" (sha256Hex output is also
+        // "http"-free), so this recomputes the real hash and compares.
+        const html = JSON.parse(init.body).html as string;
+        const [, rawToken] = html.match(/reset-password\?token=([\w-]+)/) ?? [];
+        expect(rawToken).toBeTruthy();
+        expect(html).toContain(`${env.FRONTEND_URL}/reset-password?token=${rawToken}`);
+        expect(row.token_hash).toBe(await sha256Hex(rawToken));
         expect(row.consumed_at).toBeNull();
     });
 
