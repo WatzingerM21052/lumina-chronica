@@ -4,14 +4,28 @@ namespace LuminaChronica.Client.Models;
 
 public record BookGroup(string? Label, List<Book> Books);
 
+// Defaults preserve LibraryShelfGroupingTests.cs's existing German-language
+// assertions for callers that don't pass this (i.e. every test except
+// Library.razor itself) -- Library.razor is the only real caller and always
+// supplies I18n.T()-sourced labels.
+public record LibraryGroupLabels(
+    string NoGenre = "Ohne Genre",
+    string ThisWeek = "Diese Woche",
+    string ThisMonth = "Diesen Monat",
+    string ThisYear = "Dieses Jahr",
+    string Older = "Älter");
+
 public static class LibraryShelfGrouping
 {
     public static List<BookGroup> Group(
         IReadOnlyList<Book> books,
         string sortKey,
         IReadOnlyList<string> genreFilters,
-        IReadOnlyList<string> tagFilters)
+        IReadOnlyList<string> tagFilters,
+        LibraryGroupLabels? labels = null)
     {
+        labels ??= new LibraryGroupLabels();
+
         if (books.Count == 0)
         {
             return [];
@@ -36,17 +50,17 @@ public static class LibraryShelfGrouping
         return sortKey switch
         {
             "title" or "author" => GroupAlphabetically(books, sortKey),
-            "genre" => GroupByGenre(books),
-            _ => GroupByRecency(books),
+            "genre" => GroupByGenre(books, labels.NoGenre),
+            _ => GroupByRecency(books, labels),
         };
     }
 
-    private static List<BookGroup> GroupByGenre(IReadOnlyList<Book> books)
+    private static List<BookGroup> GroupByGenre(IReadOnlyList<Book> books, string noGenreLabel)
     {
         return books
-            .GroupBy(b => string.IsNullOrWhiteSpace(b.Genre) ? "Ohne Genre" : b.Genre)
+            .GroupBy(b => string.IsNullOrWhiteSpace(b.Genre) ? noGenreLabel : b.Genre)
             .Select(g => new BookGroup(g.Key, g.ToList()))
-            .OrderBy(g => g.Label == "Ohne Genre" ? 1 : 0)
+            .OrderBy(g => g.Label == noGenreLabel ? 1 : 0)
             .ThenBy(g => g.Label, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -65,15 +79,15 @@ public static class LibraryShelfGrouping
         return trimmed.Length == 0 ? "#" : char.ToUpperInvariant(trimmed[0]).ToString();
     }
 
-    private static List<BookGroup> GroupByRecency(IReadOnlyList<Book> books)
+    private static List<BookGroup> GroupByRecency(IReadOnlyList<Book> books, LibraryGroupLabels labels)
     {
         var today = DateTime.UtcNow.Date;
         var buckets = new (string Label, List<Book> Books)[]
         {
-            ("Diese Woche", []),
-            ("Diesen Monat", []),
-            ("Dieses Jahr", []),
-            ("Älter", []),
+            (labels.ThisWeek, []),
+            (labels.ThisMonth, []),
+            (labels.ThisYear, []),
+            (labels.Older, []),
         };
 
         foreach (var book in books)

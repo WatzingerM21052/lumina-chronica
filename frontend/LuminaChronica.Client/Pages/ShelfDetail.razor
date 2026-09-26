@@ -9,10 +9,11 @@
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 @inject NavigationManager NavigationManager
+@inject II18nService I18n
 
-<PageTitle>@(_shelf?.Name ?? "Regal") — Lumina Chronica</PageTitle>
+<PageTitle>@(_shelf?.Name ?? I18n.T("shelfDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="library/shelves">← Zurück zu den Regalen</a>
+<a href="library/shelves">@I18n.T("shelfDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -20,7 +21,7 @@
 }
 else if (_shelf is null)
 {
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="Regal wird geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="@I18n.T("shelfDetail.loading")" />
 }
 else
 {
@@ -43,10 +44,10 @@ else
             <p>@_shelf.Description</p>
         }
         <div class="form-actions">
-            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+            <button type="button" class="btn" @onclick="StartEditing">@I18n.T("shelfDetail.editButton")</button>
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("shelfDetail.deleteButton")</button>
         </div>
-        <ConfirmDialog IsOpen="_confirmingDelete" Message="Regal wirklich löschen?"
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("shelfDetail.deleteConfirmMessage")"
                        OnConfirm="DeleteShelfAsync" OnCancel="() => _confirmingDelete = false" />
     }
     else
@@ -57,12 +58,12 @@ else
                 <p class="form-error">@_saveErrorMessage</p>
             }
             <div class="form-group">
-                <label for="shelf-edit-cover">Regalbild ersetzen</label>
+                <label for="shelf-edit-cover">@I18n.T("shelfDetail.replaceCoverLabel")</label>
                 <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
                      @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
                      @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
                     <InputFile id="shelf-edit-cover" OnChange="OnEditCoverSelected" />
-                    <span class="dropzone-label">Regalbild hierher ziehen oder klicken zum Auswählen</span>
+                    <span class="dropzone-label">@I18n.T("shelfDetail.dropzoneLabel")</span>
                 </div>
                 @if (_coverSaveErrorMessage is not null)
                 {
@@ -70,16 +71,16 @@ else
                 }
             </div>
             <div class="form-group">
-                <label for="shelf-edit-name">Name</label>
+                <label for="shelf-edit-name">@I18n.T("shelfDetail.nameLabel")</label>
                 <InputText id="shelf-edit-name" @bind-Value="_editForm.Name" />
             </div>
             <div class="form-group">
-                <label for="shelf-edit-description">Beschreibung</label>
+                <label for="shelf-edit-description">@I18n.T("shelfDetail.descriptionLabel")</label>
                 <InputTextArea id="shelf-edit-description" @bind-Value="_editForm.Description" />
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">@I18n.T("shelfDetail.saveButton")</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("shelfDetail.cancelButton")</button>
             </div>
         </EditForm>
     }
@@ -90,11 +91,11 @@ else
     }
     else if (_books is null)
     {
-        <LoadingIndicator Text="Bücher werden geladen..." />
+        <LoadingIndicator Text="@I18n.T("shelfDetail.booksLoading")" />
     }
     else if (_books.Items.Count == 0)
     {
-        <p class="text-muted">Dieses Regal enthält noch keine Bücher.</p>
+        <p class="text-muted">@I18n.T("shelfDetail.noBooksMessage")</p>
     }
     else
     {
@@ -103,7 +104,7 @@ else
             {
                 <div class="shelf-book-entry">
                     <BookCard Book="book" />
-                    <button type="button" class="btn shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)">Vom Regal entfernen</button>
+                    <button type="button" class="btn shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)">@I18n.T("shelfDetail.removeBookButton")</button>
                 </div>
             }
         </div>
@@ -145,7 +146,7 @@ else
         }
         else
         {
-            _loadErrorMessage = response?.Error?.Message ?? "Regal konnte nicht geladen werden.";
+            _loadErrorMessage = response?.Error?.Message ?? I18n.T("shelfDetail.loadError");
         }
     }
 
@@ -176,7 +177,7 @@ else
         }
         else
         {
-            _booksErrorMessage = response?.Error?.Message ?? "Bücher konnten nicht geladen werden.";
+            _booksErrorMessage = response?.Error?.Message ?? I18n.T("shelfDetail.booksLoadError");
         }
     }
 
@@ -205,7 +206,7 @@ else
 
         if (response is not { Success: true, Data: not null })
         {
-            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            _saveErrorMessage = response?.Error?.Message ?? I18n.T("shelfDetail.saveError");
             return;
         }
 
@@ -227,7 +228,7 @@ else
             }
             else
             {
-                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? "Regalbild konnte nicht ersetzt werden.";
+                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? I18n.T("shelfDetail.coverSaveError");
                 return;
             }
         }
@@ -245,7 +246,7 @@ else
         else
         {
             _confirmingDelete = false;
-            _loadErrorMessage = "Löschen fehlgeschlagen.";
+            _loadErrorMessage = I18n.T("shelfDetail.deleteError");
         }
     }
 
