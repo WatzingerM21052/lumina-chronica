@@ -29,6 +29,8 @@
         <InputText id="password" type="password" @bind-Value="_request.Password" />
     </div>
 
+    <p class="text-muted"><a href="forgot-password">@I18n.T("login.forgotPasswordLink")</a></p>
+
     @if (_isSubmitting)
     {
         <LoadingIndicator Text="@I18n.T("login.submitting")" />

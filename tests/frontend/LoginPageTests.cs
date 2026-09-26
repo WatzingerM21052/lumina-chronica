@@ -78,4 +78,18 @@ public class LoginPageTests : BunitContext
         Assert.Contains("Email or Username", cut.Markup);
         Assert.DoesNotContain("Anmelden", cut.Markup);
     }
+
+    [Fact]
+    public void Login_RendersForgotPasswordLink()
+    {
+        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"unused"}}""");
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        RegisterAuthServices(this);
+
+        var cut = Render<Login>();
+
+        var link = cut.Find("a[href='forgot-password']");
+        Assert.Equal("Passwort vergessen?", link.TextContent);
+    }
 }
