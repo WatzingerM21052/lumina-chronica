@@ -12,6 +12,7 @@ public class LoginPageTests : BunitContext
     {
         context.Services.AddSingleton<TokenStore>();
         context.Services.AddSingleton<LuminaAuthStateProvider>();
+        context.Services.AddSingleton<II18nService, FakeI18nService>();
     }
 
     [Fact]
@@ -59,5 +60,22 @@ public class LoginPageTests : BunitContext
         cut.Find("form").Submit();
 
         Assert.Contains("Username/email or password is incorrect.", cut.Markup);
+    }
+
+    [Fact]
+    public void Login_RendersInEnglish_WhenLanguageIsEnglish()
+    {
+        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"unused"}}""");
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<II18nService>(new FakeI18nService("en"));
+
+        var cut = Render<Login>();
+
+        Assert.Equal("Sign In", cut.Find("h1").TextContent);
+        Assert.Contains("Email or Username", cut.Markup);
+        Assert.DoesNotContain("Anmelden", cut.Markup);
     }
 }

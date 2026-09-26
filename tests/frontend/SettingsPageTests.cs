@@ -1,3 +1,4 @@
+using System.Linq;
 using Bunit;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
@@ -25,6 +26,7 @@ public class SettingsPageTests : BunitContext
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<IThemeService>(new FakeThemeService());
+        Services.AddSingleton<II18nService, FakeI18nService>();
         // Loose so tests unrelated to the shelf-cover-text preference don't
         // need their own shelfCoverText.js setup -- an unconfigured
         // getShowCoverText() call then returns bool's default (false),
@@ -139,5 +141,22 @@ public class SettingsPageTests : BunitContext
         var invocation = Assert.Single(setHandler.Invocations);
         Assert.Equal(true, invocation.Arguments[0]);
         Assert.True(cut.Find("label.library-preference-row input[type=checkbox]").HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void Settings_LanguagePicker_HighlightsTheCurrentLanguage()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+        // Overrides UseHandler's default "de" registration -- DI resolves
+        // the last-registered implementation for a given service type.
+        Services.AddSingleton<II18nService>(new FakeI18nService("en"));
+
+        var cut = Render<Settings>();
+
+        var buttons = cut.FindAll(".settings-card .theme-picker button").ToList();
+        var languageButtons = buttons.Where(b => b.TextContent is "Deutsch" or "English").ToList();
+        Assert.Equal(2, languageButtons.Count);
+        Assert.Contains(languageButtons, b => b.TextContent == "English" && b.GetAttribute("class")!.Contains("btn-primary"));
+        Assert.Contains(languageButtons, b => b.TextContent == "Deutsch" && !b.GetAttribute("class")!.Contains("btn-primary"));
     }
 }

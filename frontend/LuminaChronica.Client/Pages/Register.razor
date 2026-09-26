@@ -5,27 +5,28 @@
 @inject LuminaAuthStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 @inject HttpClient HttpClient
+@inject II18nService I18n
 
-<PageTitle>Registrieren — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("register.title") — Lumina Chronica</PageTitle>
 
-<h1>Registrieren</h1>
+<h1>@I18n.T("register.title")</h1>
 
 <EditForm Model="_form" OnValidSubmit="SubmitAsync" class="auth-form">
     @if (_deletedAccountFound)
     {
-        <p class="form-error">Zu dieser E-Mail existiert ein gelöschter Account.</p>
+        <p class="form-error">@I18n.T("register.deletedAccountFound")</p>
         <div class="form-actions">
             <button type="button" id="restoreDeletedAccount" class="btn btn-primary"
                     disabled="@(_restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)"
-                    style="min-width: @(AsyncButtonContent.MinWidthCh("Alten Account wiederherstellen", null, "Wiederhergestellt"))ch"
+                    style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("register.restoreButton"), null, I18n.T("register.restoreSuccess")))ch"
                     @onclick="RestoreAccountAsync">
-                <AsyncButtonContent State="_restoreState" IdleText="Alten Account wiederherstellen" SuccessText="Wiederhergestellt" />
+                <AsyncButtonContent State="_restoreState" IdleText="@I18n.T("register.restoreButton")" SuccessText="@I18n.T("register.restoreSuccess")" />
             </button>
             <button type="button" id="createNewAccountAnyway" class="btn"
                     disabled="@(_restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)"
-                    style="min-width: @(AsyncButtonContent.MinWidthCh("Neuen Account erstellen", null, "Erstellt"))ch"
+                    style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("register.createNewButton"), null, I18n.T("register.createNewSuccess")))ch"
                     @onclick="CreateNewAccountAnywayAsync">
-                <AsyncButtonContent State="_createNewState" IdleText="Neuen Account erstellen" SuccessText="Erstellt" />
+                <AsyncButtonContent State="_createNewState" IdleText="@I18n.T("register.createNewButton")" SuccessText="@I18n.T("register.createNewSuccess")" />
             </button>
         </div>
     }
@@ -35,40 +36,40 @@
     }
 
     <div class="form-group">
-        <label for="username">Benutzername</label>
+        <label for="username">@I18n.T("register.usernameLabel")</label>
         <InputText id="username" @bind-Value="_form.Username" />
     </div>
 
     <div class="form-group">
-        <label for="email">E-Mail</label>
+        <label for="email">@I18n.T("register.emailLabel")</label>
         <InputText id="email" type="email" @bind-Value="_form.Email" />
     </div>
 
     <div class="form-group">
-        <label for="password">Passwort</label>
+        <label for="password">@I18n.T("register.passwordLabel")</label>
         <InputText id="password" type="password" @bind-Value="_form.Password" />
     </div>
 
     <div class="form-group">
-        <label for="confirmPassword">Passwort bestätigen</label>
+        <label for="confirmPassword">@I18n.T("register.confirmPasswordLabel")</label>
         <InputText id="confirmPassword" type="password" @bind-Value="_form.ConfirmPassword" />
     </div>
 
     @if (_isSubmitting)
     {
-        <LoadingIndicator Text="Registrieren..." />
+        <LoadingIndicator Text="@I18n.T("register.submitting")" />
     }
     else
     {
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary" disabled="@(_isSubmitting || _restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)">Konto erstellen</button>
+            <button type="submit" class="btn btn-primary" disabled="@(_isSubmitting || _restoreState != ButtonBusyState.Idle || _createNewState != ButtonBusyState.Idle)">@I18n.T("register.submitButton")</button>
         </div>
     }
 </EditForm>
 
 <OAuthButtons ApiBaseUrl="@(HttpClient.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty)" />
 
-<p class="text-muted">Bereits ein Konto? <a href="login">Anmelden</a></p>
+<p class="text-muted">@I18n.T("register.alreadyHaveAccount") <a href="login">@I18n.T("register.loginLink")</a></p>
 
 @code {
     private readonly RegisterFormModel _form = new();
@@ -85,7 +86,7 @@
 
         if (_form.Password != _form.ConfirmPassword)
         {
-            _errorMessage = "Die Passwörter stimmen nicht überein.";
+            _errorMessage = I18n.T("register.passwordMismatch");
             return;
         }
 
@@ -108,7 +109,7 @@
             return;
         }
 
-        _errorMessage = response?.Error?.Message ?? "Registrierung fehlgeschlagen. Bitte versuche es erneut.";
+        _errorMessage = response?.Error?.Message ?? I18n.T("register.defaultError");
         _isSubmitting = false;
     }
 
@@ -133,7 +134,7 @@
         }
 
         _deletedAccountFound = false;
-        _errorMessage = response?.Error?.Message ?? "Wiederherstellung fehlgeschlagen. Bitte versuche es erneut.";
+        _errorMessage = response?.Error?.Message ?? I18n.T("register.restoreDefaultError");
         return false;
     }
 
@@ -158,7 +159,7 @@
         }
 
         _deletedAccountFound = false;
-        _errorMessage = response?.Error?.Message ?? "Registrierung fehlgeschlagen. Bitte versuche es erneut.";
+        _errorMessage = response?.Error?.Message ?? I18n.T("register.defaultError");
         return false;
     }
 
