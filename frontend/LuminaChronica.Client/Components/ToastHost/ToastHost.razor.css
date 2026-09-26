@@ -18,7 +18,7 @@
     align-items: center;
     gap: var(--space-1);
     background: var(--color-bg-dark);
-    color: var(--color-bg-light);
+    color: var(--color-text-on-dark);
     border: 1px solid var(--color-gold-accent);
     border-radius: var(--radius);
     box-shadow: var(--shadow-card-hover);
@@ -52,7 +52,7 @@
 .toast-dismiss {
     background: none;
     border: none;
-    color: var(--color-bg-light);
+    color: var(--color-text-on-dark);
     opacity: 0.6;
     cursor: pointer;
     padding: 0;
