@@ -5,10 +5,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lumina Chronica</title>
-    <!-- "/" here is correct for local `dotnet run`. The GitHub Pages deploy
-         workflow rewrites this to "/lumina-chronica/" in the published
-         output only — see .github/workflows/frontend-deploy.yml. -->
-    <base href="/" />
+    <!-- "/" is correct for local `dotnet run` and for the custom domain
+         (luminachronica.com), which GitHub Pages serves from the repo
+         root. The old project-page URL (*.github.io/lumina-chronica/)
+         keeps working as a fallback if the custom domain is ever
+         unreachable (DNS issues, etc.) -- it needs the "/lumina-chronica/"
+         subpath instead, which this inline script switches to before any
+         relative-URL resource below is requested. Must run before the
+         first <link>/<script> that fetches a relative URL. -->
+    <base href="/" id="app-base" />
+    <script>
+        if (location.hostname.endsWith(".github.io")) {
+            document.getElementById("app-base").setAttribute("href", "/lumina-chronica/");
+        }
+    </script>
     <link rel="preload" id="webassembly" />
     <link rel="preload" href="fonts/fraunces-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="Styles/fonts.css" />
