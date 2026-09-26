@@ -2,11 +2,15 @@
 @inject II18nService I18n
 
 <nav class="nav-menu">
-    <NavLink href="" Match="NavLinkMatch.All"><Icon Name="home" /> @I18n.T("nav.home")</NavLink>
-    <NavLink href="library"><Icon Name="book" /> @I18n.T("nav.library")</NavLink>
-    <NavLink href="projects"><Icon Name="project" /> @I18n.T("nav.projects")</NavLink>
-    <NavLink href="discover"><Icon Name="discover" /> @I18n.T("nav.discover")</NavLink>
-    <NavLink href="statistics"><Icon Name="chart" /> @I18n.T("nav.statistics")</NavLink>
-    <NavLink href="offline"><Icon Name="box" /> @I18n.T("nav.offline")</NavLink>
-    <NavLink href="settings"><Icon Name="settings" /> @I18n.T("nav.settings")</NavLink>
+    <AuthorizeView>
+        <Authorized>
+            <NavLink href="" Match="NavLinkMatch.All"><Icon Name="home" /> @I18n.T("nav.home")</NavLink>
+            <NavLink href="library"><Icon Name="book" /> @I18n.T("nav.library")</NavLink>
+            <NavLink href="projects"><Icon Name="project" /> @I18n.T("nav.projects")</NavLink>
+            <NavLink href="discover"><Icon Name="discover" /> @I18n.T("nav.discover")</NavLink>
+            <NavLink href="statistics"><Icon Name="chart" /> @I18n.T("nav.statistics")</NavLink>
+            <NavLink href="offline"><Icon Name="box" /> @I18n.T("nav.offline")</NavLink>
+            <NavLink href="settings"><Icon Name="settings" /> @I18n.T("nav.settings")</NavLink>
+        </Authorized>
+    </AuthorizeView>
 </nav>

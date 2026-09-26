@@ -1,4 +1,6 @@
 @page "/settings"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject IThemeService ThemeService
@@ -6,20 +8,19 @@
 @inject IJSRuntime JsRuntime
 @inject II18nService I18n
 @inject NavigationManager NavigationManager
-@inject ToastService ToastService
 
-<PageTitle>Einstellungen — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("settings.title") — Lumina Chronica</PageTitle>
 
 <div class="settings-hero">
     <img src="images/settings-hero.webp" alt="" class="settings-hero-image" loading="eager" decoding="async" />
     <div class="settings-hero-scrim"></div>
     <div class="settings-hero-content">
-        <h1>Einstellungen</h1>
+        <h1>@I18n.T("settings.title")</h1>
     </div>
 </div>
 
 <div class="settings-card">
-    <h2>Theme</h2>
+    <h2>@I18n.T("settings.themeTitle")</h2>
     <div class="theme-picker">
         @foreach (var (value, label) in Themes)
         {
@@ -37,39 +38,32 @@
 </div>
 
 <div class="settings-card">
-    <h2>@I18n.T("settings.passwordResetTitle")</h2>
-    <button class="btn password-reset-button" disabled="@(_userEmail is null)" @onclick="SendPasswordResetAsync">
-        @I18n.T("settings.passwordResetButton")
-    </button>
-</div>
-
-<div class="settings-card">
-    <h2>Bibliothek</h2>
+    <h2>@I18n.T("settings.libraryTitle")</h2>
     <label class="library-preference-row">
         <input type="checkbox" checked="@_showShelfCoverText" @onchange="e => SetShowShelfCoverTextAsync((bool)e.Value!)" />
         <span>
-            <strong>Titel/Autor auf Regal-Cover anzeigen</strong>
-            <span class="text-muted"> — die meisten echten Cover-Bilder tragen Titel/Autor bereits selbst</span>
+            <strong>@I18n.T("settings.showCoverTextLabel")</strong>
+            <span class="text-muted"> — @I18n.T("settings.showCoverTextDescription")</span>
         </span>
     </label>
 </div>
 
 <div class="settings-card">
-    <h2>Benachrichtigungen</h2>
+    <h2>@I18n.T("settings.notificationsTitle")</h2>
     @if (_preferences is null)
     {
-        <p class="text-muted">Lade …</p>
+        <p class="text-muted">@I18n.T("settings.loadingPreferences")</p>
     }
     else
     {
         <div class="notification-preferences">
-            @foreach (var (type, label, description) in NotificationTypes)
+            @foreach (var type in NotificationTypes)
             {
                 <label class="notification-preference-row">
-                    <input type="checkbox" checked="@GetPreference(type)" @onchange="e => SetPreferenceAsync(type, (bool)e.Value!)" />
+                    <input type="checkbox" checked="@GetPreference(type.Type)" @onchange="e => SetPreferenceAsync(type.Type, (bool)e.Value!)" />
                     <span>
-                        <strong>@label</strong>
-                        <span class="text-muted"> — @description</span>
+                        <strong>@I18n.T(type.LabelKey)</strong>
+                        <span class="text-muted"> — @I18n.T(type.DescriptionKey)</span>
                     </span>
                 </label>
             }
@@ -86,7 +80,7 @@
         ("system", "System"),
     ];
 
-    // (preference type, label, description) -- FOLLOW/COMMENT/RATING/SHARE
+    // (preference type, label key, description key) -- FOLLOW/COMMENT/RATING/SHARE
     // gate an in-app notification and default to enabled. ACTIVITY_RATING
     // gates whether a rating shows up in the profile's own "Aktivitäten"
     // log at all; ACTIVITY_RATING_STARS separately gates whether the
@@ -95,30 +89,31 @@
     // sensitive part, not just that a rating happened). Both default to
     // disabled -- opt-in, not opt-out, since both reveal something
     // genuinely personal on a page anyone can view.
-    private static readonly (string Type, string Label, string Description)[] NotificationTypes =
+    //
+    // Label/description are i18n keys, not raw text: this array is a
+    // private static readonly field, so it can't call the instance method
+    // I18n.T() at field-initialization time -- the lookup happens in the
+    // markup's @foreach instead.
+    private static readonly (string Type, string LabelKey, string DescriptionKey)[] NotificationTypes =
     [
-        ("FOLLOW", "Neuer Follower", "Wenn dir jemand folgt"),
-        ("COMMENT", "Neuer Kommentar", "Wenn jemand dein Buch oder Projekt kommentiert"),
-        ("RATING", "Neue Bewertung", "Wenn jemand dein Buch bewertet"),
-        ("SHARE", "Buch geteilt", "Wenn dir ein Buch freigegeben wird"),
-        ("ACTIVITY_RATING", "Eigene Bewertungen im Aktivitäten-Log", "Ob deine eigenen Bewertungen in deinem öffentlichen Profil auftauchen"),
-        ("ACTIVITY_RATING_STARS", "Sternezahl bei Bewertungen anzeigen", "Ob die konkrete Sternezahl genannt wird, wenn eine Bewertung im Log auftaucht"),
+        ("FOLLOW", "settings.notif.follow.label", "settings.notif.follow.description"),
+        ("COMMENT", "settings.notif.comment.label", "settings.notif.comment.description"),
+        ("RATING", "settings.notif.rating.label", "settings.notif.rating.description"),
+        ("SHARE", "settings.notif.share.label", "settings.notif.share.description"),
+        ("ACTIVITY_RATING", "settings.notif.activityRating.label", "settings.notif.activityRating.description"),
+        ("ACTIVITY_RATING_STARS", "settings.notif.activityRatingStars.label", "settings.notif.activityRatingStars.description"),
     ];
 
     private string? _currentTheme;
     private NotificationPreferences? _preferences;
     private bool _showShelfCoverText;
     private IJSObjectReference? _shelfCoverTextModule;
-    private string? _userEmail;
 
     protected override async Task OnInitializedAsync()
     {
         _currentTheme = await ThemeService.GetThemeAsync();
         var response = await ApiClient.GetAsync<NotificationPreferences>("/api/notifications/preferences");
         _preferences = response is { Success: true, Data: not null } ? response.Data : new NotificationPreferences();
-
-        var profile = await ApiClient.GetAsync<UserProfile>("/api/users/me");
-        _userEmail = profile is { Success: true, Data: not null } ? profile.Data.Email : null;
 
         _shelfCoverTextModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelfCoverText.js");
         _showShelfCoverText = await _shelfCoverTextModule.InvokeAsync<bool>("getShowCoverText");
@@ -147,18 +142,6 @@
     {
         await I18n.SetLanguageAsync(language);
         NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
-    }
-
-    // Reuses the same generic-response endpoint as the Login-page flow --
-    // the only difference is Settings already knows who's asking, so there's
-    // no identifier to type in.
-    private async Task SendPasswordResetAsync()
-    {
-        if (_userEmail is null) return;
-        var ok = await ApiClient.PostAsync("/api/auth/forgot-password", new ForgotPasswordRequest { Identifier = _userEmail });
-        ToastService.Show(
-            ok ? I18n.T("settings.passwordResetToast") : I18n.T("settings.passwordResetError"),
-            ok ? ToastKind.Success : ToastKind.Error);
     }
 
     private bool GetPreference(string type) => type switch

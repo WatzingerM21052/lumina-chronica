@@ -40,6 +40,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
 
@@ -56,6 +58,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
 
@@ -73,6 +77,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
 
@@ -89,6 +95,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
         Assert.Empty(cut.FindAll(".avatar-upload-dialog"));
@@ -117,6 +125,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
         var blobModule = JSInterop.SetupModule("./js/blobUrl.js");
         blobModule.Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-avatar-url");
         blobModule.SetupVoid("revokeObjectUrl", _ => true).SetVoidResult();
@@ -157,6 +167,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
         cut.Find("#changeAvatarButton").Click();
@@ -176,6 +188,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
         cut.Find("#changeAvatarButton").Click();
@@ -195,6 +209,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
 
@@ -224,6 +240,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
         cut.Find("#deleteAccountPassword").Input("wrong password");
@@ -251,6 +269,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
 
@@ -270,6 +290,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
         Services.GetRequiredService<NavigationManager>().NavigateTo("profile?linked=google");
 
         var cut = Render<Profile>();
@@ -287,6 +309,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
         Services.GetRequiredService<NavigationManager>().NavigateTo("profile?linkError=already_linked");
 
         var cut = Render<Profile>();
@@ -308,6 +332,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
         Services.GetRequiredService<NavigationManager>().NavigateTo("profile?linkError=exchange_failed");
 
         var cut = Render<Profile>();
@@ -337,6 +363,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
         var unlinkButton = cut.FindAll(".linked-account-row button").First(b => b.TextContent == "Entfernen");
@@ -365,6 +393,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
         var unlinkButton = cut.FindAll(".linked-account-row button").First(b => b.TextContent == "Entfernen");
@@ -397,6 +427,8 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<TokenStore>();
         Services.AddSingleton<LuminaAuthStateProvider>();
         Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
 
         var cut = Render<Profile>();
         var linkButton = cut.FindAll(".linked-account-row button").First(b => b.TextContent == "Verknüpfen");
@@ -404,5 +436,49 @@ public class ProfilePageTests : BunitContext
 
         Assert.Contains("Unknown OAuth provider \"google\".", cut.Markup);
         Assert.Contains("form-error", cut.Markup);
+    }
+
+    [Fact]
+    public void Profile_PasswordResetButton_SendsRequestWithProfileEmailAndShowsToast()
+    {
+        // The password-reset button moved here from Settings (Settings
+        // requires the *current* password to change it; this is the
+        // alternative for someone who's forgotten it). It reuses the
+        // profile already loaded by OnInitializedAsync instead of a
+        // second GET /api/users/me -- unlike the old Settings feature it
+        // replaced, which fetched the profile solely for this purpose.
+        HttpRequestMessage? postRequest = null;
+        string? postBody = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post, r =>
+            {
+                postRequest = r;
+                postBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true}""");
+            })
+            .When(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/linked"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":[]}"""))
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
+        var toastService = Services.GetRequiredService<ToastService>();
+        ToastMessage? shownToast = null;
+        toastService.OnShow += toast => shownToast = toast;
+
+        var cut = Render<Profile>();
+        var button = cut.Find(".profile-password-reset button");
+        Assert.False(button.HasAttribute("disabled"));
+        button.Click();
+
+        Assert.NotNull(postRequest);
+        Assert.EndsWith("/forgot-password", postRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("\"alice@example.com\"", postBody);
+        Assert.NotNull(shownToast);
+        Assert.Equal(ToastKind.Success, shownToast!.Kind);
     }
 }
