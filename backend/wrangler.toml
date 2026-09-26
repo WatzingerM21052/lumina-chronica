@@ -3,9 +3,13 @@ main = "src/index.ts"
 compatibility_date = "2026-07-29"
 
 # Not secret -- where OAuth callbacks (issue #40) redirect the browser back
-# to after issuing an exchange code. Overridden in .dev.vars for local dev.
+# to after issuing an exchange code, and where password-reset emails link
+# to. Overridden in .dev.vars for local dev. Custom domain (2026-09-26,
+# see docs/superpowers/specs/2026-09-26-forgot-password-design.md and PR
+# #473) -- no path segment, unlike the old GitHub Pages *project* site URL,
+# since a custom domain is served from the repo root.
 [vars]
-FRONTEND_URL = "https://watzingerm21052.github.io/lumina-chronica"
+FRONTEND_URL = "https://luminachronica.com"
 
 [[d1_databases]]
 binding = "DB"
