@@ -252,6 +252,64 @@ public class ProfilePageTests : BunitContext
     }
 
     [Fact]
+    public void Profile_DeleteAccount_DisablesButtonWhileInFlight_PreventingDoubleSubmit()
+    {
+        // Regression coverage: a live test found the DELETE request could fire
+        // twice from a single confirm click (no guard against a second click
+        // landing while the first request was still in flight) -- one request
+        // soft-deleted the account, the concurrent one then hit "user
+        // disappeared" and surfaced as a confusing failure despite the
+        // deletion having actually succeeded. Counts requests reaching the
+        // handler directly rather than trusting the UI alone.
+        var handler = new HangingDeleteHttpMessageHandler(ProfileJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
+
+        var cut = Render<Profile>();
+        cut.Find("#deleteAccountPassword").Input("correct password");
+        cut.Find("#confirmDeleteAccount").Click();
+        cut.Find("#deleteAccountButton").Click();
+
+        Assert.Equal(1, handler.DeleteRequestCount);
+        Assert.True(cut.Find("#deleteAccountButton").HasAttribute("disabled"));
+
+        // The button is disabled, so this is what a real second click hits --
+        // nothing should reach the handler while the first request is pending.
+        cut.Find("#deleteAccountButton").Click();
+        Assert.Equal(1, handler.DeleteRequestCount);
+    }
+
+    // Routes GET /linked and GET /me normally, but every DELETE request hangs
+    // forever (after being counted) -- lets a test observe the button's
+    // disabled state and request count while the delete is still in flight.
+    private sealed class HangingDeleteHttpMessageHandler(string profileJson) : HttpMessageHandler
+    {
+        private int _deleteRequestCount;
+        public int DeleteRequestCount => _deleteRequestCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.Method == HttpMethod.Delete)
+            {
+                Interlocked.Increment(ref _deleteRequestCount);
+                return new TaskCompletionSource<HttpResponseMessage>().Task;
+            }
+
+            if (request.RequestUri!.AbsolutePath.EndsWith("/linked"))
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":[]}"""));
+            }
+
+            return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(profileJson));
+        }
+    }
+
+    [Fact]
     public void Profile_RendersLinkedAccountsSection_ShowingLinkedAndUnlinkedProviders()
     {
         // GET /api/auth/oauth/linked returns one linked provider (Google) and
