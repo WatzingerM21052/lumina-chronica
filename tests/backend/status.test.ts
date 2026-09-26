@@ -21,6 +21,16 @@ describe("GET /api/status", () => {
             "https://watzingerm21052.github.io"
         );
     });
+
+    it("allows the custom domain origin via CORS", async () => {
+        const res = await app.request("/api/status", {
+            headers: { Origin: "https://luminachronica.com" },
+        });
+
+        expect(res.headers.get("access-control-allow-origin")).toBe(
+            "https://luminachronica.com"
+        );
+    });
 });
 
 describe("unknown routes", () => {
