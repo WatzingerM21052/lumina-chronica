@@ -186,10 +186,10 @@ else
 
     private bool _isAvatarDialogOpen;
 
-    // TODO: hardcoded true until UserProfile exposes whether the account has a
-    // real password (vs. OAuth-only) -- password_hash is intentionally never
-    // serialized today. Wiring this up for real is a follow-up once that gap
-    // is closed; out of scope for this task per the design doc.
+    // Set from UserProfile.HasPassword once loaded -- defaults true so the
+    // password field/requirement doesn't flash away then back during the
+    // initial load, matching how a real-password account (the common case)
+    // actually behaves.
     private bool _hasRealPassword = true;
     private bool _isConfirmingDelete;
     private bool _isDeletingAccount;
@@ -213,6 +213,7 @@ else
         {
             _profile = response.Data;
             _profileForm = new ProfileFormModel { Username = _profile.Username, Email = _profile.Email };
+            _hasRealPassword = _profile.HasPassword;
         }
 
         var linkedResponse = await ApiClient.GetAsync<List<LinkedOAuthProvider>>("/api/auth/oauth/linked");

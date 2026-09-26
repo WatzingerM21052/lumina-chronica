@@ -79,6 +79,9 @@ public class UserProfile
 
     [JsonPropertyName("createdAt")]
     public string CreatedAt { get; set; } = string.Empty;
+
+    [JsonPropertyName("hasPassword")]
+    public bool HasPassword { get; set; }
 }
 
 public class UpdateProfileRequest

@@ -13,6 +13,11 @@ export type UserProfile = {
     avatarUrl: string | null;
     roleName: string;
     createdAt: string;
+    // Lets Profile.razor's "Konto löschen" section know whether to require
+    // (and even show) a current-password field -- an OAuth-only account has
+    // nothing to verify it against, mirroring deleteUser's own
+    // OAUTH_NO_PASSWORD_SENTINEL check below.
+    hasPassword: boolean;
 };
 
 type UserProfileRow = {
@@ -23,6 +28,7 @@ type UserProfileRow = {
     avatar_key: string | null;
     created_at: string;
     role_name: string;
+    password_hash: string;
 };
 
 function r2AvatarKey(userId: number, ext: string): string {
@@ -50,6 +56,7 @@ function toProfile(row: UserProfileRow, origin: string): UserProfile {
         avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin),
         roleName: row.role_name,
         createdAt: row.created_at,
+        hasPassword: row.password_hash !== OAUTH_NO_PASSWORD_SENTINEL,
     };
 }
 
@@ -79,7 +86,7 @@ export async function getUserByUsername(db: D1Database, username: string, origin
 export async function getUserProfile(db: D1Database, userId: number, origin: string): Promise<UserProfile | null> {
     const row = await db
         .prepare(
-            `SELECT users.id, users.username, users.email, users.avatar_url, users.avatar_key, users.created_at, roles.name AS role_name
+            `SELECT users.id, users.username, users.email, users.avatar_url, users.avatar_key, users.created_at, users.password_hash, roles.name AS role_name
              FROM users JOIN roles ON roles.id = users.role_id
              WHERE users.id = ? AND users.deleted_at IS NULL`
         )

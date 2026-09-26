@@ -11,7 +11,7 @@ namespace LuminaChronica.Client.Tests;
 
 public class ProfilePageTests : BunitContext
 {
-    private const string ProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01"}}""";
+    private const string ProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01","hasPassword":true}}""";
 
     // Profile now also fires GET /api/auth/oauth/linked from OnInitializedAsync,
     // so every test needs a route for it -- under the single-fixed-response
@@ -216,6 +216,36 @@ public class ProfilePageTests : BunitContext
 
         Assert.NotNull(cut.Find("#deleteAccountPassword"));
         Assert.Contains("Konto löschen", cut.Markup);
+    }
+
+    [Fact]
+    public void Profile_DeleteAccount_OAuthOnlyAccount_HidesPasswordField_AndEnablesButtonWithoutOne()
+    {
+        // Regression coverage: HasPassword used to not exist on UserProfile at
+        // all, so this page hardcoded _hasRealPassword = true regardless of
+        // the actual account -- an OAuth-only user (no password to type) saw
+        // a required password field and a permanently-disabled delete button,
+        // even though deleteUser on the backend never required one for such
+        // an account in the first place. Found live: a real OAuth-only user
+        // asked how they were supposed to delete an account they have no
+        // password for.
+        const string oauthOnlyProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01","hasPassword":false}}""";
+        var handler = NoLinkedProvidersHandler(oauthOnlyProfileJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
+
+        var cut = Render<Profile>();
+
+        Assert.Empty(cut.FindAll("#deleteAccountPassword"));
+
+        cut.Find("#confirmDeleteAccount").Click();
+
+        Assert.False(cut.Find("#deleteAccountButton").HasAttribute("disabled"));
     }
 
     [Fact]
