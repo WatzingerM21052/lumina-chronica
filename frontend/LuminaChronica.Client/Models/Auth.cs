@@ -26,6 +26,21 @@ public class LoginRequest
     public string Password { get; set; } = string.Empty;
 }
 
+public class ForgotPasswordRequest
+{
+    [JsonPropertyName("identifier")]
+    public string Identifier { get; set; } = string.Empty;
+}
+
+public class ResetPasswordRequest
+{
+    [JsonPropertyName("token")]
+    public string Token { get; set; } = string.Empty;
+
+    [JsonPropertyName("newPassword")]
+    public string NewPassword { get; set; } = string.Empty;
+}
+
 // Mirrors backend/src/services/authService.ts's AuthResult.
 public class AuthResult
 {

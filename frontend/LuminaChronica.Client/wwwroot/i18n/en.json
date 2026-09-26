@@ -18,6 +18,7 @@
   "login.noAccount": "Don't have an account yet?",
   "login.registerLink": "Register",
   "login.defaultError": "Sign-in failed. Please try again.",
+  "login.forgotPasswordLink": "Forgot your password?",
 
   "register.title": "Register",
   "register.usernameLabel": "Username",
@@ -39,5 +40,29 @@
 
   "oauth.divider": "or",
   "oauth.google": "Sign in with Google",
-  "oauth.github": "Sign in with GitHub"
+  "oauth.github": "Sign in with GitHub",
+
+  "forgotPassword.title": "Forgot Password",
+  "forgotPassword.identifierLabel": "Email or Username",
+  "forgotPassword.submitButton": "Send Reset Link",
+  "forgotPassword.submitting": "Sending...",
+  "forgotPassword.successMessage": "If an account with these details exists, an email with a reset link has been sent.",
+  "forgotPassword.defaultError": "Request failed. Please try again.",
+  "forgotPassword.backToLogin": "Back to Sign In",
+
+  "resetPassword.title": "Set New Password",
+  "resetPassword.newPasswordLabel": "New Password",
+  "resetPassword.confirmPasswordLabel": "Confirm Password",
+  "resetPassword.submitButton": "Set Password",
+  "resetPassword.submitting": "Setting...",
+  "resetPassword.passwordMismatch": "The passwords do not match.",
+  "resetPassword.invalidToken": "This link is invalid or has expired.",
+  "resetPassword.backToForgotPassword": "Request a New Link",
+  "resetPassword.successToast": "Password changed successfully.",
+  "resetPassword.defaultError": "Reset failed. Please try again.",
+
+  "settings.passwordResetTitle": "Password",
+  "settings.passwordResetButton": "Send Password Reset Link",
+  "settings.passwordResetToast": "A reset link has been sent to your email address.",
+  "settings.passwordResetError": "Sending failed. Please try again."
 }

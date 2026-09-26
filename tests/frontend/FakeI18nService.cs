@@ -32,6 +32,7 @@ public class FakeI18nService : II18nService
         ["login.noAccount"] = "Noch kein Konto?",
         ["login.registerLink"] = "Registrieren",
         ["login.defaultError"] = "Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
+        ["login.forgotPasswordLink"] = "Passwort vergessen?",
 
         ["register.title"] = "Registrieren",
         ["register.usernameLabel"] = "Benutzername",
@@ -54,6 +55,30 @@ public class FakeI18nService : II18nService
         ["oauth.divider"] = "oder",
         ["oauth.google"] = "Mit Google anmelden",
         ["oauth.github"] = "Mit GitHub anmelden",
+
+        ["forgotPassword.title"] = "Passwort vergessen",
+        ["forgotPassword.identifierLabel"] = "E-Mail oder Benutzername",
+        ["forgotPassword.submitButton"] = "Reset-Link senden",
+        ["forgotPassword.submitting"] = "Wird gesendet...",
+        ["forgotPassword.successMessage"] = "Falls ein Konto mit diesen Angaben existiert, wurde eine E-Mail mit einem Reset-Link verschickt.",
+        ["forgotPassword.defaultError"] = "Anfrage fehlgeschlagen. Bitte versuche es erneut.",
+        ["forgotPassword.backToLogin"] = "Zurück zur Anmeldung",
+
+        ["resetPassword.title"] = "Neues Passwort setzen",
+        ["resetPassword.newPasswordLabel"] = "Neues Passwort",
+        ["resetPassword.confirmPasswordLabel"] = "Passwort bestätigen",
+        ["resetPassword.submitButton"] = "Passwort setzen",
+        ["resetPassword.submitting"] = "Wird gesetzt...",
+        ["resetPassword.passwordMismatch"] = "Die Passwörter stimmen nicht überein.",
+        ["resetPassword.invalidToken"] = "Dieser Link ist ungültig oder abgelaufen.",
+        ["resetPassword.backToForgotPassword"] = "Neuen Link anfordern",
+        ["resetPassword.successToast"] = "Passwort erfolgreich geändert.",
+        ["resetPassword.defaultError"] = "Zurücksetzen fehlgeschlagen. Bitte versuche es erneut.",
+
+        ["settings.passwordResetTitle"] = "Passwort",
+        ["settings.passwordResetButton"] = "Passwort-Reset-Link senden",
+        ["settings.passwordResetToast"] = "Reset-Link wurde an deine E-Mail-Adresse gesendet.",
+        ["settings.passwordResetError"] = "Senden fehlgeschlagen. Bitte versuche es erneut.",
     };
 
     // Only the subset actually asserted against by English-rendering tests
