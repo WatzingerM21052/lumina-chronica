@@ -27,7 +27,7 @@ import {
     storeExchangeCode,
     unlinkProvider,
 } from "../services/oauthService";
-import { requestPasswordReset } from "../services/passwordResetService";
+import { InvalidResetTokenError, requestPasswordReset, resetPassword } from "../services/passwordResetService";
 import { RateLimitedError, assertNotRateLimited, clearRateLimit, recordFailedAttempt } from "../services/rateLimitService";
 
 export const authRoute = new Hono<AppEnv>();
@@ -148,6 +148,26 @@ authRoute.post("/forgot-password", async (c) => {
     }
 
     return c.json(success({ message: "If an account exists, a reset email has been sent." }));
+});
+
+authRoute.post("/reset-password", async (c) => {
+    const body = await c.req.json<{ token?: string; newPassword?: string }>().catch(() => null);
+    if (!body?.token || !body?.newPassword) {
+        return c.json(failure("VALIDATION_ERROR", "token and newPassword are required."), 400);
+    }
+    if (body.newPassword.length < MIN_PASSWORD_LENGTH) {
+        return c.json(failure("VALIDATION_ERROR", `newPassword must be at least ${MIN_PASSWORD_LENGTH} characters.`), 400);
+    }
+
+    try {
+        const result = await resetPassword(c.env.DB, c.env.JWT_SECRET, body.token, body.newPassword);
+        return c.json(success(result));
+    } catch (err) {
+        if (err instanceof InvalidResetTokenError) {
+            return c.json(failure("INVALID_RESET_TOKEN", "This reset link is invalid or has expired."), 400);
+        }
+        throw err;
+    }
 });
 
 authRoute.post("/login", async (c) => {

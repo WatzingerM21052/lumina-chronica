@@ -112,3 +112,71 @@ describe("POST /api/auth/forgot-password", () => {
         expect((await readJson(res)).success).toBe(true);
     });
 });
+
+async function requestResetAndGetRawToken(identifier: string): Promise<string> {
+    await app.request("/api/auth/forgot-password", jsonRequest({ identifier }), env);
+    const [, init] = (globalThis.fetch as any).mock.calls.at(-1);
+    const html = JSON.parse(init.body).html as string;
+    const match = html.match(/token=([\w-]+)/);
+    if (!match) throw new Error("no token found in the stubbed email body");
+    return match[1];
+}
+
+describe("POST /api/auth/reset-password", () => {
+    beforeEach(async () => {
+        await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "alice", email: "alice@example.com", password: "old password" }),
+            env
+        );
+    });
+
+    it("sets a new password, consumes the token, and logs the user in", async () => {
+        const rawToken = await requestResetAndGetRawToken("alice@example.com");
+
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ token: rawToken, newPassword: "new password" }), env);
+        const json = await readJson(res);
+        expect(res.status).toBe(200);
+        expect(typeof json.data.token).toBe("string");
+        expect(typeof json.data.userId).toBe("number");
+
+        const login = await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "new password" }), env);
+        expect(login.status).toBe(200);
+
+        const oldLogin = await app.request("/api/auth/login", jsonRequest({ identifier: "alice@example.com", password: "old password" }), env);
+        expect(oldLogin.status).toBe(401);
+    });
+
+    it("rejects re-using an already-consumed token", async () => {
+        const rawToken = await requestResetAndGetRawToken("alice@example.com");
+        await app.request("/api/auth/reset-password", jsonRequest({ token: rawToken, newPassword: "new password" }), env);
+
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ token: rawToken, newPassword: "another password" }), env);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("INVALID_RESET_TOKEN");
+    });
+
+    it("rejects an unknown token", async () => {
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ token: "not-a-real-token", newPassword: "new password" }), env);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("INVALID_RESET_TOKEN");
+    });
+
+    it("rejects an expired token", async () => {
+        const rawToken = await requestResetAndGetRawToken("alice@example.com");
+        await env.DB.prepare("UPDATE password_reset_tokens SET expires_at = ? WHERE user_id = (SELECT id FROM users WHERE email = ?)")
+            .bind(new Date(Date.now() - 1000).toISOString(), "alice@example.com")
+            .run();
+
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ token: rawToken, newPassword: "new password" }), env);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("INVALID_RESET_TOKEN");
+    });
+
+    it("rejects a too-short new password", async () => {
+        const rawToken = await requestResetAndGetRawToken("alice@example.com");
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ token: rawToken, newPassword: "short" }), env);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
+    });
+});
