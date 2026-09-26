@@ -6,6 +6,7 @@
 @inject IJSRuntime JsRuntime
 @inject II18nService I18n
 @inject NavigationManager NavigationManager
+@inject ToastService ToastService
 
 <PageTitle>Einstellungen — Lumina Chronica</PageTitle>
 
@@ -33,6 +34,13 @@
         <button class="btn @(I18n.CurrentLanguage == "de" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("de")'>Deutsch</button>
         <button class="btn @(I18n.CurrentLanguage == "en" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("en")'>English</button>
     </div>
+</div>
+
+<div class="settings-card">
+    <h2>@I18n.T("settings.passwordResetTitle")</h2>
+    <button class="btn password-reset-button" disabled="@(_userEmail is null)" @onclick="SendPasswordResetAsync">
+        @I18n.T("settings.passwordResetButton")
+    </button>
 </div>
 
 <div class="settings-card">
@@ -101,12 +109,16 @@
     private NotificationPreferences? _preferences;
     private bool _showShelfCoverText;
     private IJSObjectReference? _shelfCoverTextModule;
+    private string? _userEmail;
 
     protected override async Task OnInitializedAsync()
     {
         _currentTheme = await ThemeService.GetThemeAsync();
         var response = await ApiClient.GetAsync<NotificationPreferences>("/api/notifications/preferences");
         _preferences = response is { Success: true, Data: not null } ? response.Data : new NotificationPreferences();
+
+        var profile = await ApiClient.GetAsync<UserProfile>("/api/users/me");
+        _userEmail = profile is { Success: true, Data: not null } ? profile.Data.Email : null;
 
         _shelfCoverTextModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelfCoverText.js");
         _showShelfCoverText = await _shelfCoverTextModule.InvokeAsync<bool>("getShowCoverText");
@@ -135,6 +147,18 @@
     {
         await I18n.SetLanguageAsync(language);
         NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    // Reuses the same generic-response endpoint as the Login-page flow --
+    // the only difference is Settings already knows who's asking, so there's
+    // no identifier to type in.
+    private async Task SendPasswordResetAsync()
+    {
+        if (_userEmail is null) return;
+        var ok = await ApiClient.PostAsync("/api/auth/forgot-password", new ForgotPasswordRequest { Identifier = _userEmail });
+        ToastService.Show(
+            ok ? I18n.T("settings.passwordResetToast") : I18n.T("settings.passwordResetError"),
+            ok ? ToastKind.Success : ToastKind.Error);
     }
 
     private bool GetPreference(string type) => type switch
