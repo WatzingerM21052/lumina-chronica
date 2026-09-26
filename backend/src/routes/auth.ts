@@ -27,6 +27,7 @@ import {
     storeExchangeCode,
     unlinkProvider,
 } from "../services/oauthService";
+import { requestPasswordReset } from "../services/passwordResetService";
 import { RateLimitedError, assertNotRateLimited, clearRateLimit, recordFailedAttempt } from "../services/rateLimitService";
 
 export const authRoute = new Hono<AppEnv>();
@@ -114,6 +115,39 @@ authRoute.post("/restore", async (c) => {
         if (err instanceof UsernameTakenError) return c.json(failure("USERNAME_TAKEN", "This username is already taken."), 409);
         throw err;
     }
+});
+
+authRoute.post("/forgot-password", async (c) => {
+    const body = await c.req.json<{ identifier?: string }>().catch(() => null);
+    if (!body?.identifier) {
+        return c.json(failure("VALIDATION_ERROR", "identifier is required."), 400);
+    }
+
+    // Keyed by (ip, identifier), same rationale as /login: an attacker must
+    // not be able to email-bomb one victim's inbox from many IPs, while the
+    // victim can still request their own reset from their own IP. Every
+    // attempt counts regardless of outcome (like /register), since this
+    // route has no distinguishable success/failure to condition on -- that
+    // asymmetry is the whole point of the generic response below.
+    let rateLimit;
+    try {
+        rateLimit = await assertNotRateLimited(c, "forgot-password", body.identifier);
+    } catch (err) {
+        if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
+        throw err;
+    }
+    await recordFailedAttempt(c.env.DB, "forgot-password", rateLimit.ip, rateLimit.identifier);
+
+    try {
+        await requestPasswordReset(c.env.DB, c.env.RESEND_API_KEY, c.env.FRONTEND_URL, body.identifier);
+    } catch (err) {
+        // An email-provider outage shouldn't leak through as a
+        // distinguishable response, or 500 the request -- the token row
+        // (if any) already exists by this point regardless.
+        console.error("forgot-password: sendEmail failed", err);
+    }
+
+    return c.json(success({ message: "If an account exists, a reset email has been sent." }));
 });
 
 authRoute.post("/login", async (c) => {
