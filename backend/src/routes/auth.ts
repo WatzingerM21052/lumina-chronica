@@ -141,10 +141,11 @@ authRoute.post("/forgot-password", async (c) => {
     try {
         await requestPasswordReset(c.env.DB, c.env.RESEND_API_KEY, c.env.FRONTEND_URL, body.identifier);
     } catch (err) {
-        // An email-provider outage shouldn't leak through as a
-        // distinguishable response, or 500 the request -- the token row
-        // (if any) already exists by this point regardless.
-        console.error("forgot-password: sendEmail failed", err);
+        // A failure anywhere in requestPasswordReset (DB lookup, token
+        // insert, or the email send itself) shouldn't leak through as a
+        // distinguishable response, or 500 the request -- whatever token
+        // row was created (if any) already exists by this point regardless.
+        console.error("forgot-password: requestPasswordReset failed", err);
     }
 
     return c.json(success({ message: "If an account exists, a reset email has been sent." }));

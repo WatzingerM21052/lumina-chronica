@@ -1,4 +1,5 @@
-// Throttles POST /api/auth/login and /api/auth/register. D1-backed (see
+// Throttles POST /api/auth/login, /api/auth/register, and
+// /api/auth/forgot-password. D1-backed (see
 // database/migrations/0014_auth_rate_limit.sql for why this is a fixed
 // window rather than a precise algorithm, and why login keys on (ip,
 // identifier) instead of identifier alone).

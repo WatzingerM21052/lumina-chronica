@@ -20,11 +20,13 @@ async function findUserByIdentifier(db: D1Database, identifier: string): Promise
         .first<UserRow>();
 }
 
-// Never throws and never reveals whether a match was found -- the caller
-// (the /forgot-password route) always returns the same generic response
-// regardless of what happens in here. Token generation mirrors
-// oauthService.ts's storeExchangeCode: randomToken() + sha256Hex(), only
-// the hash stored.
+// Never *reveals* whether a match was found -- the caller (the
+// /forgot-password route) always returns the same generic response
+// regardless of what happens in here. This function CAN throw, though:
+// sendEmail() below can fail, and it's the /forgot-password route in
+// auth.ts that is responsible for catching that and still returning the
+// generic success response. Token generation mirrors oauthService.ts's
+// storeExchangeCode: randomToken() + sha256Hex(), only the hash stored.
 export async function requestPasswordReset(db: D1Database, resendApiKey: string, frontendUrl: string, identifier: string): Promise<void> {
     const user = await findUserByIdentifier(db, identifier);
     if (!user) return;
@@ -71,11 +73,20 @@ export async function resetPassword(db: D1Database, jwtSecret: string, rawToken:
         .first<{ user_id: number }>();
     if (!row) throw new InvalidResetTokenError();
 
+    // The account may have been soft-deleted after the reset was requested
+    // but before the link was clicked -- consuming the token above still
+    // happens (prevents replay), but a deleted account must not receive a
+    // working password or a valid session.
+    const user = await db
+        .prepare("SELECT role_id FROM users WHERE id = ? AND deleted_at IS NULL")
+        .bind(row.user_id)
+        .first<{ role_id: number }>();
+    if (!user) throw new InvalidResetTokenError();
+
     const passwordHash = await hashPassword(newPassword);
     await db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(passwordHash, row.user_id).run();
 
-    const user = await db.prepare("SELECT role_id FROM users WHERE id = ?").bind(row.user_id).first<{ role_id: number }>();
-    const role = user ? await roleName(db, user.role_id) : "USER";
+    const role = await roleName(db, user.role_id);
     const token = await signJwt({ sub: row.user_id, role }, jwtSecret, JWT_EXPIRY_SECONDS);
     return { token, userId: row.user_id };
 }

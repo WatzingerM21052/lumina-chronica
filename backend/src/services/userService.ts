@@ -250,6 +250,13 @@ export async function deleteUser(db: D1Database, storage: R2Bucket, userId: numb
     await db.prepare("DELETE FROM oauth_exchange_codes WHERE user_id = ?").bind(userId).run();
     await db.prepare("DELETE FROM oauth_states WHERE linking_user_id = ?").bind(userId).run();
 
+    // Same defense-in-depth as the OAuth cleanup above -- a reset token
+    // minted before deletion shouldn't remain consumable after (the
+    // deleted_at guard in passwordResetService.ts's resetPassword already
+    // blocks this even if a row survives, but there's no reason to leave
+    // dead rows around).
+    await db.prepare("DELETE FROM password_reset_tokens WHERE user_id = ?").bind(userId).run();
+
     if (row.avatar_key) {
         await storage.delete(row.avatar_key).catch((err) => {
             console.error(`Failed to delete R2 avatar ${row.avatar_key} for deleted user ${userId}:`, err);

@@ -3,15 +3,17 @@ import app from "../../backend/src/index";
 import { OAUTH_NO_PASSWORD_SENTINEL, sha256Hex } from "../../backend/src/utils/crypto";
 import { FORGOT_PASSWORD_MAX_ATTEMPTS } from "../../backend/src/services/rateLimitService";
 import { createFakeD1 } from "./fakeD1";
+import { createFakeR2 } from "./fakeR2";
 import { readJson } from "./testUtils";
 
-type TestEnv = { DB: D1Database; JWT_SECRET: string; RESEND_API_KEY: string; FRONTEND_URL: string };
+type TestEnv = { DB: D1Database; STORAGE: R2Bucket; JWT_SECRET: string; RESEND_API_KEY: string; FRONTEND_URL: string };
 
 let env: TestEnv;
 
 beforeEach(() => {
     env = {
         DB: createFakeD1(),
+        STORAGE: createFakeR2(),
         JWT_SECRET: "test-secret-do-not-use-in-production",
         RESEND_API_KEY: "test-resend-key",
         FRONTEND_URL: "https://example.test/some-app",
@@ -178,5 +180,31 @@ describe("POST /api/auth/reset-password", () => {
         const res = await app.request("/api/auth/reset-password", jsonRequest({ token: rawToken, newPassword: "short" }), env);
         expect(res.status).toBe(400);
         expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("rejects a reset for an account that was soft-deleted after the token was issued", async () => {
+        const rawToken = await requestResetAndGetRawToken("alice@example.com");
+
+        const login = await app.request(
+            "/api/auth/login",
+            jsonRequest({ identifier: "alice@example.com", password: "old password" }),
+            env
+        );
+        const { data: loginData } = await readJson(login);
+
+        const deleteRes = await app.request(
+            "/api/users/me",
+            {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${loginData.token}` },
+                body: JSON.stringify({ currentPassword: "old password" }),
+            },
+            env
+        );
+        expect(deleteRes.status).toBe(200);
+
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ token: rawToken, newPassword: "new password" }), env);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("INVALID_RESET_TOKEN");
     });
 });

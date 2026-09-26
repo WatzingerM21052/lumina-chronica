@@ -99,6 +99,41 @@ public class ResetPasswordPageTests : BunitContext
     }
 
     [Fact]
+    public void ResetPassword_Submit_SendsTheUrlTokenInTheRequestBody()
+    {
+        // None of the tests above assert what actually gets sent to the
+        // API -- they only check what the page renders. This confirms the
+        // token extracted from the "?token=" query string is the same
+        // value that ends up in the POST body, not e.g. a stale or
+        // re-parsed value. Same capture pattern as SettingsPageTests.cs's
+        // Settings_PasswordResetButton_SendsRequestWithOwnEmail.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        HttpRequestMessage? postRequest = null;
+        string? postBody = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post, r =>
+            {
+                postRequest = r;
+                postBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"token":"jwt","userId":1}}""");
+            });
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        RegisterAuthServices(this);
+        Services.GetRequiredService<NavigationManager>().NavigateTo("reset-password?token=some-specific-token-value");
+
+        var cut = Render<ResetPassword>();
+        cut.Find("#newPassword").Change("new password");
+        cut.Find("#confirmPassword").Change("new password");
+        cut.Find("form").Submit();
+
+        Assert.NotNull(postRequest);
+        Assert.EndsWith("/reset-password", postRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("\"token\":\"some-specific-token-value\"", postBody);
+    }
+
+    [Fact]
     public void ResetPassword_OnInvalidTokenError_ShowsInvalidTokenMessage()
     {
         var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_RESET_TOKEN","message":"This reset link is invalid or has expired."}}""");

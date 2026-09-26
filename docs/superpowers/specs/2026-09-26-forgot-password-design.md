@@ -114,9 +114,12 @@ Mirrors `oauthService.ts`'s `storeExchangeCode`/`redeemExchangeCode` pair:
     reset") — no token generated. Helps the actual account owner without
     leaking anything to an attacker who doesn't have mailbox access.
 - `resetPassword(db, rawToken, newPassword)`: atomic consume, same
-  `UPDATE ... WHERE token_hash = ? AND consumed_at IS NULL AND expires_at
-  > CURRENT_TIMESTAMP RETURNING user_id` pattern as
-  `redeemExchangeCode`. No matching row → throws `InvalidResetTokenError`.
+  `UPDATE ... WHERE token_hash = ? AND consumed_at IS NULL AND
+  julianday(expires_at) > julianday('now') RETURNING user_id` pattern as
+  `redeemExchangeCode` — `julianday(...)` rather than a plain `expires_at >
+  CURRENT_TIMESTAMP` text comparison, the same SQLite text-vs-ISO-timestamp
+  pitfall already documented (and worked around) elsewhere in this
+  codebase. No matching row → throws `InvalidResetTokenError`.
   On success: hash the new password (`hashPassword`), update
   `users.password_hash`, sign and return a fresh JWT (`signJwt`) so the
   user is immediately logged in — same as the OAuth exchange flow's own
@@ -163,10 +166,12 @@ Mirrors `oauthService.ts`'s `storeExchangeCode`/`redeemExchangeCode` pair:
   used token) → error message with a link back to `/forgot-password`.
 - **`Settings.razor`:** new button near the existing preferences,
   "Passwort-Reset-Link senden" — calls `forgot-password` directly with the
-  logged-in user's own email (already available from the page's existing
-  profile fetch), no form, just a confirmation toast on click. Reuses the
-  identical backend endpoint and email flow as the Login-page path; the
-  only difference is the app already knows who's asking.
+  logged-in user's own email, no form, just a confirmation toast on click.
+  The page had no existing profile fetch to reuse for this; a new
+  `GET /api/users/me` call was added to `OnInitializedAsync` specifically
+  to obtain the email. Reuses the identical backend endpoint and email
+  flow as the Login-page path; the only difference is the app already
+  knows who's asking.
 
 All four new/changed UI surfaces get `II18nService` keys following the
 existing `de.json`/`en.json` + `FakeI18nService` pattern from i18n Phase 1.
