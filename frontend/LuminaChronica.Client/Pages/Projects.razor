@@ -8,13 +8,14 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
+@inject II18nService I18n
 
-<PageTitle>Projekte — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("projects.title") — Lumina Chronica</PageTitle>
 
 <div class="library-header">
-    <h1>Projekte</h1>
+    <h1>@I18n.T("projects.title")</h1>
     <button type="button" class="btn btn-primary" @onclick="() => _showCreateForm = !_showCreateForm">
-        @(_showCreateForm ? "Abbrechen" : "Projekt erstellen")
+        @(_showCreateForm ? I18n.T("projects.cancelButton") : I18n.T("projects.createButton"))
     </button>
 </div>
 
@@ -26,28 +27,28 @@
             <p class="form-error">@_createErrorMessage</p>
         }
         <div class="form-group">
-            <label for="project-title">Titel</label>
+            <label for="project-title">@I18n.T("projects.titleLabel")</label>
             <InputText id="project-title" @bind-Value="_createForm.Title" />
         </div>
         <div class="form-group">
-            <label for="project-type">Art</label>
+            <label for="project-type">@I18n.T("projects.typeLabel")</label>
             <InputSelect id="project-type" @bind-Value="_createForm.Type">
                 @foreach (var type in ProjectTypeLabel.Options)
                 {
-                    <option value="@type">@ProjectTypeLabel.For(type)</option>
+                    <option value="@type">@ProjectTypeLabel.For(type, I18n)</option>
                 }
             </InputSelect>
         </div>
         <div class="form-group">
-            <label for="project-description">Beschreibung</label>
+            <label for="project-description">@I18n.T("projects.descriptionLabel")</label>
             <InputTextArea id="project-description" @bind-Value="_createForm.Description" />
         </div>
         <div class="form-group">
-            <label for="project-cover">Cover (optional)</label>
+            <label for="project-cover">@I18n.T("projects.coverLabel")</label>
             <InputFile id="project-cover" OnChange="OnCoverSelected" />
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Erstellen</button>
+            <button type="submit" class="btn btn-primary">@I18n.T("projects.createSubmitButton")</button>
         </div>
     </EditForm>
 }
@@ -58,12 +59,12 @@
 }
 else if (_projects is null)
 {
-    <LoadingIndicator Text="Projekte werden geladen..." />
+    <LoadingIndicator Text="@I18n.T("projects.loading")" />
 }
 else if (_projects.Count == 0)
 {
-    <EmptyState Message="Du hast noch keine Projekte erstellt. Beginne mit deiner ersten Welt, Geschichte oder Kampagne."
-                ActionText="Projekt erstellen"
+    <EmptyState Message="@I18n.T("projects.emptyMessage")"
+                ActionText="@I18n.T("projects.createButton")"
                 OnAction="() => _showCreateForm = true" />
 }
 else
@@ -96,7 +97,7 @@ else
         }
         else
         {
-            _errorMessage = response?.Error?.Message ?? "Projekte konnten nicht geladen werden.";
+            _errorMessage = response?.Error?.Message ?? I18n.T("projects.loadError");
         }
     }
 
@@ -108,7 +109,7 @@ else
 
         if (string.IsNullOrWhiteSpace(_createForm.Title))
         {
-            _createErrorMessage = "Bitte gib einen Titel ein.";
+            _createErrorMessage = I18n.T("projects.titleRequiredError");
             return;
         }
 
@@ -139,7 +140,7 @@ else
         }
         else
         {
-            _createErrorMessage = response?.Error?.Message ?? "Projekt konnte nicht erstellt werden.";
+            _createErrorMessage = response?.Error?.Message ?? I18n.T("projects.createError");
         }
     }
 

@@ -9,10 +9,11 @@
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 @inject NavigationManager NavigationManager
+@inject II18nService I18n
 
-<PageTitle>@(_location?.Name ?? "Ort") — Lumina Chronica</PageTitle>
+<PageTitle>@(_location?.Name ?? I18n.T("locationDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="@($"projects/{ProjectId}")">← Zurück zum Projekt</a>
+<a href="@($"projects/{ProjectId}")">@I18n.T("locationDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -20,7 +21,7 @@
 }
 else if (_location is null)
 {
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Map" Text="Ort wird geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Map" Text="@I18n.T("locationDetail.loading")" />
 }
 else
 {
@@ -38,20 +39,20 @@ else
     @if (!_isEditing)
     {
         <h1>@_location.Name</h1>
-        <p class="text-muted">@(_location.X is not null ? "Auf der Karte platziert" : "Nicht auf der Karte platziert")</p>
+        <p class="text-muted">@(_location.X is not null ? I18n.T("locationDetail.placedOnMap") : I18n.T("locationDetail.notPlacedOnMap"))</p>
         @if (!string.IsNullOrWhiteSpace(_location.Description))
         {
             <p>@_location.Description</p>
         }
         <div class="form-actions">
-            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
+            <button type="button" class="btn" @onclick="StartEditing">@I18n.T("locationDetail.editButton")</button>
             @if (_location.X is not null)
             {
-                <button type="button" class="btn" @onclick="RemovePositionAsync">Von der Karte entfernen</button>
+                <button type="button" class="btn" @onclick="RemovePositionAsync">@I18n.T("locationDetail.removeFromMapButton")</button>
             }
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("locationDetail.deleteButton")</button>
         </div>
-        <ConfirmDialog IsOpen="_confirmingDelete" Message="Ort wirklich löschen?"
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("locationDetail.deleteConfirmMessage")"
                        OnConfirm="DeleteLocationAsync" OnCancel="() => _confirmingDelete = false" />
     }
     else
@@ -62,12 +63,12 @@ else
                 <p class="form-error">@_saveErrorMessage</p>
             }
             <div class="form-group">
-                <label for="location-edit-image">Bild ersetzen</label>
+                <label for="location-edit-image">@I18n.T("locationDetail.replaceImageLabel")</label>
                 <div class="dropzone @(_isDraggingImage ? "dropzone--active" : "")"
                      @ondragenter="() => _isDraggingImage = true" @ondragleave="() => _isDraggingImage = false"
                      @ondragover:preventDefault @ondrop="() => _isDraggingImage = false">
                     <InputFile id="location-edit-image" OnChange="OnEditImageSelected" />
-                    <span class="dropzone-label">Bild hierher ziehen oder klicken zum Auswählen</span>
+                    <span class="dropzone-label">@I18n.T("locationDetail.dropzoneLabel")</span>
                 </div>
                 @if (_imageSaveErrorMessage is not null)
                 {
@@ -75,16 +76,16 @@ else
                 }
             </div>
             <div class="form-group">
-                <label for="location-edit-name">Name</label>
+                <label for="location-edit-name">@I18n.T("locationDetail.nameLabel")</label>
                 <InputText id="location-edit-name" @bind-Value="_editForm.Name" />
             </div>
             <div class="form-group">
-                <label for="location-edit-description">Beschreibung</label>
+                <label for="location-edit-description">@I18n.T("locationDetail.descriptionLabel")</label>
                 <InputTextArea id="location-edit-description" @bind-Value="_editForm.Description" />
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">@I18n.T("locationDetail.saveButton")</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("locationDetail.cancelButton")</button>
             </div>
         </EditForm>
     }
@@ -122,7 +123,7 @@ else
         }
         else
         {
-            _loadErrorMessage = response?.Error?.Message ?? "Ort konnte nicht geladen werden.";
+            _loadErrorMessage = response?.Error?.Message ?? I18n.T("locationDetail.loadError");
         }
     }
 
@@ -168,7 +169,7 @@ else
 
         if (response is not { Success: true, Data: not null })
         {
-            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            _saveErrorMessage = response?.Error?.Message ?? I18n.T("locationDetail.saveError");
             return;
         }
 
@@ -190,7 +191,7 @@ else
             }
             else
             {
-                _imageSaveErrorMessage = imageResponse?.Error?.Message ?? "Bild konnte nicht ersetzt werden.";
+                _imageSaveErrorMessage = imageResponse?.Error?.Message ?? I18n.T("locationDetail.imageSaveError");
                 return;
             }
         }
@@ -221,7 +222,7 @@ else
         else
         {
             _confirmingDelete = false;
-            _loadErrorMessage = "Löschen fehlgeschlagen.";
+            _loadErrorMessage = I18n.T("locationDetail.deleteError");
         }
     }
 

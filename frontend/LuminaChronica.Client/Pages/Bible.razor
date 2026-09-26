@@ -5,8 +5,9 @@
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BibleClientService BibleClient
+@inject II18nService I18n
 
-<PageTitle>Die Heilige Schrift — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("bible.title") — Lumina Chronica</PageTitle>
 
 @if (_bibleTheme == DarkAcademiaTheme)
 {
@@ -15,8 +16,8 @@
 
 <div class="bible-page @(_bibleTheme == DarkAcademiaTheme ? "bible-page--dark-academia" : "")">
     <div class="bible-theme-toggle">
-        <button type="button" class="btn @(_bibleTheme == DefaultTheme ? "is-active" : "")" @onclick='() => SetBibleThemeAsync(DefaultTheme)'>Standard</button>
-        <button type="button" class="btn @(_bibleTheme == DarkAcademiaTheme ? "is-active" : "")" @onclick='() => SetBibleThemeAsync(DarkAcademiaTheme)'>Dark Academia</button>
+        <button type="button" class="btn @(_bibleTheme == DefaultTheme ? "is-active" : "")" @onclick='() => SetBibleThemeAsync(DefaultTheme)'>@I18n.T("bible.themeDefault")</button>
+        <button type="button" class="btn @(_bibleTheme == DarkAcademiaTheme ? "is-active" : "")" @onclick='() => SetBibleThemeAsync(DarkAcademiaTheme)'>@I18n.T("bible.themeDarkAcademia")</button>
     </div>
 
     @if (_bibleTheme == DefaultTheme)
@@ -25,25 +26,25 @@
             <img src="images/bible-hero.jpg" alt="" class="bible-hero-image" />
             <div class="bible-hero-scrim"></div>
             <div class="bible-hero-content">
-                <h1>Die Heilige Schrift</h1>
-                <p class="bible-hero-subtitle">"Tut alles ohne Murren und Bedenken." — Philipper 2,14</p>
+                <h1>@I18n.T("bible.title")</h1>
+                <p class="bible-hero-subtitle">@I18n.T("bible.heroQuote")</p>
             </div>
             <p class="bible-hero-credit">
-                Foto: Diego Delso,
+                @I18n.T("bible.photoCredit")
                 <a href="https://delso.photo" target="_blank" rel="noopener noreferrer">delso.photo</a>,
-                Lizenz <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA</a>
+                @I18n.T("bible.license") <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA</a>
             </p>
         </div>
     }
     else
     {
-        <h1 class="bible-title-immersive">Die Heilige Schrift</h1>
+        <h1 class="bible-title-immersive">@I18n.T("bible.title")</h1>
         <span class="bible-title-rule" aria-hidden="true"></span>
     }
 
     <div class="bible-controls">
         <label class="bible-control">
-            <span>Übersetzung</span>
+            <span>@I18n.T("bible.translationLabel")</span>
             <select value="@_selectedTranslationId" @onchange="OnTranslationChangedAsync">
                 @foreach (var translation in _translations)
                 {
@@ -53,7 +54,7 @@
         </label>
 
         <label class="bible-control">
-            <span>Buch</span>
+            <span>@I18n.T("bible.bookLabel")</span>
             <select value="@_selectedBookId" @onchange="OnBookChangedAsync" disabled="@(_books.Count == 0)">
                 @foreach (var book in _books)
                 {
@@ -63,7 +64,7 @@
         </label>
 
         <label class="bible-control">
-            <span>Kapitel</span>
+            <span>@I18n.T("bible.chapterLabel")</span>
             <select value="@_chapter?.Id" @onchange="OnChapterChangedAsync" disabled="@(_chapters.Count == 0)">
                 @foreach (var chapterRef in _chapters)
                 {
@@ -73,14 +74,14 @@
         </label>
 
         <div class="bible-nav-buttons">
-            <button type="button" class="btn" disabled="@(_chapter?.Previous is null)" @onclick="GoToPreviousChapterAsync">← Vorheriges Kapitel</button>
-            <button type="button" class="btn" disabled="@(_chapter?.Next is null)" @onclick="GoToNextChapterAsync">Nächstes Kapitel →</button>
+            <button type="button" class="btn" disabled="@(_chapter?.Previous is null)" @onclick="GoToPreviousChapterAsync">@I18n.T("bible.previousChapter")</button>
+            <button type="button" class="btn" disabled="@(_chapter?.Next is null)" @onclick="GoToNextChapterAsync">@I18n.T("bible.nextChapter")</button>
         </div>
     </div>
 
     <div class="bible-search">
-        <input type="search" placeholder="Bibel durchsuchen..." @bind="_searchQuery" @bind:event="oninput" @onkeydown="OnSearchKeyDownAsync" />
-        <button type="button" class="btn" disabled="@string.IsNullOrWhiteSpace(_searchQuery)" @onclick="SearchAsync">Suchen</button>
+        <input type="search" placeholder="@I18n.T("bible.searchPlaceholder")" @bind="_searchQuery" @bind:event="oninput" @onkeydown="OnSearchKeyDownAsync" />
+        <button type="button" class="btn" disabled="@string.IsNullOrWhiteSpace(_searchQuery)" @onclick="SearchAsync">@I18n.T("bible.searchButton")</button>
     </div>
 
     @if (_searchResults is { Count: > 0 })
@@ -99,7 +100,7 @@
     }
     else if (_searchResults is not null)
     {
-        <p class="text-muted">Keine Treffer gefunden.</p>
+        <p class="text-muted">@I18n.T("bible.noResultsMessage")</p>
     }
 
     @if (_errorMessage is not null)
@@ -108,7 +109,7 @@
     }
     else if (_isLoadingChapter)
     {
-        <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Reading" Text="Kapitel wird geladen..." />
+        <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Reading" Text="@I18n.T("bible.loading")" />
     }
     else if (_chapter is not null)
     {
@@ -122,10 +123,10 @@
                 <strong>@_selectedTranslation?.Abbreviation</strong> — @_chapter.Copyright
             </p>
             <p class="bible-attribution-links">
-                Bereitgestellt über <a href="https://api.bible" target="_blank" rel="noopener noreferrer">api.bible</a>.
+                @I18n.T("bible.providedVia") <a href="https://api.bible" target="_blank" rel="noopener noreferrer">api.bible</a>.
                 @if (_selectedTranslation?.IsBiblica == true)
                 {
-                    <text> Übersetzung von <a href="https://www.biblica.com" target="_blank" rel="noopener noreferrer">Biblica</a>.</text>
+                    <text> @I18n.T("bible.translationBy") <a href="https://www.biblica.com" target="_blank" rel="noopener noreferrer">Biblica</a>.</text>
                 }
             </p>
         </footer>
@@ -223,7 +224,7 @@
         }
         else
         {
-            _errorMessage = response?.Error?.Message ?? "Der Bibeltext konnte gerade nicht geladen werden. Bitte versuche es erneut.";
+            _errorMessage = response?.Error?.Message ?? I18n.T("bible.loadError");
         }
 
         _isLoadingChapter = false;
