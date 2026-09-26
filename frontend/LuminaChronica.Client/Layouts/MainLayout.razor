@@ -1,8 +1,10 @@
 @inherits LayoutComponentBase
 @implements IAsyncDisposable
 @using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
 @inject NavigationManager Navigation
 @inject IJSRuntime JsRuntime
+@inject II18nService I18n
 
 <div class="app-shell">
     <header class="app-header" @ref="_headerRef">
@@ -15,11 +17,11 @@
             <Authorized>
                 <div class="app-header-actions">
                     <NotificationBell />
-                    <a class="app-profile" href="profile"><Icon Name="person" /> Profil</a>
+                    <a class="app-profile" href="profile"><Icon Name="person" /> @I18n.T("nav.profile")</a>
                 </div>
             </Authorized>
             <NotAuthorized>
-                <a class="app-profile" href="login"><Icon Name="person" /> Anmelden</a>
+                <a class="app-profile" href="login"><Icon Name="person" /> @I18n.T("nav.login")</a>
             </NotAuthorized>
         </AuthorizeView>
     </header>
@@ -40,7 +42,7 @@
 
     <footer class="app-footer">
         <span class="text-muted">Lumina Chronica — Where stories become knowledge and knowledge becomes worlds.</span>
-        <a class="app-footer-link" href="impressum">Impressum</a>
+        <a class="app-footer-link" href="impressum">@I18n.T("nav.impressum")</a>
     </footer>
 </div>
 

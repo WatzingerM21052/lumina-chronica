@@ -4,6 +4,8 @@
 @inject IThemeService ThemeService
 @inject ApiClient ApiClient
 @inject IJSRuntime JsRuntime
+@inject II18nService I18n
+@inject NavigationManager NavigationManager
 
 <PageTitle>Einstellungen — Lumina Chronica</PageTitle>
 
@@ -22,6 +24,14 @@
         {
             <button class="btn @(_currentTheme == value ? "btn-primary" : "")" @onclick="() => SetThemeAsync(value)">@label</button>
         }
+    </div>
+</div>
+
+<div class="settings-card">
+    <h2>Sprache</h2>
+    <div class="theme-picker">
+        <button class="btn @(I18n.CurrentLanguage == "de" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("de")'>Deutsch</button>
+        <button class="btn @(I18n.CurrentLanguage == "en" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("en")'>English</button>
     </div>
 </div>
 
@@ -113,6 +123,18 @@
     {
         await ThemeService.SetThemeAsync(theme);
         _currentTheme = theme;
+    }
+
+    // Full reload (not an in-place re-render) -- see I18nService's own
+    // comment on SetLanguageAsync for why: reactively re-rendering every
+    // I18n.T()-using component app-wide would need a cascading-subscription
+    // mechanism nothing else in this app has yet, for a switch that happens
+    // rarely. NavigationManager.Uri already reflects "settings" (this page),
+    // so the reload lands the user back here with the new language applied.
+    private async Task SetLanguageAsync(string language)
+    {
+        await I18n.SetLanguageAsync(language);
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }
 
     private bool GetPreference(string type) => type switch

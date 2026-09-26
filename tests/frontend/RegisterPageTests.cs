@@ -12,6 +12,7 @@ public class RegisterPageTests : BunitContext
     {
         context.Services.AddSingleton<TokenStore>();
         context.Services.AddSingleton<LuminaAuthStateProvider>();
+        context.Services.AddSingleton<II18nService, FakeI18nService>();
     }
 
     [Fact]
@@ -84,5 +85,22 @@ public class RegisterPageTests : BunitContext
 
         Assert.NotNull(cut.Find("#restoreDeletedAccount"));
         Assert.NotNull(cut.Find("#createNewAccountAnyway"));
+    }
+
+    [Fact]
+    public void Register_RendersInEnglish_WhenLanguageIsEnglish()
+    {
+        var handler = new FakeHttpMessageHandler("""{"success":true,"data":{"token":"unused","userId":1}}""");
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<II18nService>(new FakeI18nService("en"));
+
+        var cut = Render<Register>();
+
+        Assert.Equal("Register", cut.Find("h1").TextContent);
+        Assert.Contains("Create Account", cut.Markup);
+        Assert.DoesNotContain("Registrieren", cut.Markup);
     }
 }

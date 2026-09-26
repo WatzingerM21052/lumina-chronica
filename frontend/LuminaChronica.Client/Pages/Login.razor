@@ -5,10 +5,11 @@
 @inject LuminaAuthStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 @inject HttpClient HttpClient
+@inject II18nService I18n
 
-<PageTitle>Anmelden — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("login.title") — Lumina Chronica</PageTitle>
 
-<h1>Anmelden</h1>
+<h1>@I18n.T("login.title")</h1>
 
 <EditForm Model="_request" OnValidSubmit="SubmitAsync" class="auth-form">
     <DataAnnotationsValidator />
@@ -19,30 +20,30 @@
     }
 
     <div class="form-group">
-        <label for="identifier">E-Mail oder Benutzername</label>
+        <label for="identifier">@I18n.T("login.identifierLabel")</label>
         <InputText id="identifier" @bind-Value="_request.Identifier" />
     </div>
 
     <div class="form-group">
-        <label for="password">Passwort</label>
+        <label for="password">@I18n.T("login.passwordLabel")</label>
         <InputText id="password" type="password" @bind-Value="_request.Password" />
     </div>
 
     @if (_isSubmitting)
     {
-        <LoadingIndicator Text="Anmelden..." />
+        <LoadingIndicator Text="@I18n.T("login.submitting")" />
     }
     else
     {
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Anmelden</button>
+            <button type="submit" class="btn btn-primary">@I18n.T("login.submitButton")</button>
         </div>
     }
 </EditForm>
 
 <OAuthButtons ApiBaseUrl="@(HttpClient.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty)" />
 
-<p class="text-muted">Noch kein Konto? <a href="register">Registrieren</a></p>
+<p class="text-muted">@I18n.T("login.noAccount") <a href="register">@I18n.T("login.registerLink")</a></p>
 
 @code {
     private readonly LoginRequest _request = new();
@@ -63,7 +64,7 @@
             return;
         }
 
-        _errorMessage = response?.Error?.Message ?? "Anmeldung fehlgeschlagen. Bitte versuche es erneut.";
+        _errorMessage = response?.Error?.Message ?? I18n.T("login.defaultError");
         _isSubmitting = false;
     }
 }
