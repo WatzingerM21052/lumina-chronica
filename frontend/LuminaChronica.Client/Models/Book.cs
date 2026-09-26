@@ -105,11 +105,13 @@ public static class BookVisibilityOption
 {
     public static readonly IReadOnlyList<string> Options = ["PRIVATE", "SHARED", "PUBLIC"];
 
-    public static string For(string visibility) => visibility switch
+    // i18n optional (defaults to the original hardcoded German), same
+    // reasoning as ProjectTypeLabel.For/VisibilityOption.For in Project.cs.
+    public static string For(string visibility, Services.II18nService? i18n = null) => visibility switch
     {
-        "PRIVATE" => "Privat",
-        "SHARED" => "Geteilt (nur ausgewählte Personen)",
-        "PUBLIC" => "Öffentlich (jeder angemeldete Nutzer)",
+        "PRIVATE" => i18n?.T("bookVisibility.private") ?? "Privat",
+        "SHARED" => i18n?.T("bookVisibility.shared") ?? "Geteilt (nur ausgewählte Personen)",
+        "PUBLIC" => i18n?.T("bookVisibility.public") ?? "Öffentlich (jeder angemeldete Nutzer)",
         _ => visibility,
     };
 }
