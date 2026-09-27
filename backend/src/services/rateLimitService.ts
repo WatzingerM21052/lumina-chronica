@@ -21,6 +21,14 @@ export const FORGOT_PASSWORD_MAX_ATTEMPTS = 5;
 export const FORGOT_PASSWORD_RESEND_MAX_ATTEMPTS = 1;
 const FORGOT_PASSWORD_RESEND_WINDOW_MS = 60 * 1000;
 
+// §3.5: outer backstops against *spraying identifiers* at these two new
+// routes -- NOT the brute-force defense (that's MAX_CODE_ATTEMPTS, living
+// on the password_reset_tokens row itself, immune to IP rotation). Generous
+// on purpose: verify-reset-code fires on every keystroke-driven live check
+// (§4.3), so a tight cap here would break normal typing, not just abuse.
+export const VERIFY_RESET_CODE_MAX_ATTEMPTS = 30;
+export const RESET_PASSWORD_MAX_ATTEMPTS = 10;
+
 export class RateLimitedError extends Error {
     constructor(public readonly retryAfterSeconds: number) {
         super("Too many attempts.");
@@ -91,6 +99,8 @@ function maxAttemptsFor(route: string): number {
     if (route === "login") return LOGIN_MAX_ATTEMPTS;
     if (route === "forgot-password") return FORGOT_PASSWORD_MAX_ATTEMPTS;
     if (route === "forgot-password-resend") return FORGOT_PASSWORD_RESEND_MAX_ATTEMPTS;
+    if (route === "verify-reset-code") return VERIFY_RESET_CODE_MAX_ATTEMPTS;
+    if (route === "reset-password") return RESET_PASSWORD_MAX_ATTEMPTS;
     return REGISTER_MAX_ATTEMPTS;
 }
 

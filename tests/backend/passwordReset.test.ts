@@ -6,7 +6,7 @@ import { createFakeD1 } from "./fakeD1";
 import { createFakeR2 } from "./fakeR2";
 import { readJson } from "./testUtils";
 
-type TestEnv = { DB: D1Database; STORAGE: R2Bucket; JWT_SECRET: string; RESEND_API_KEY: string; FRONTEND_URL: string };
+type TestEnv = { DB: D1Database; STORAGE: R2Bucket; JWT_SECRET: string; RESEND_API_KEY: string; FRONTEND_URL: string; PASSWORD_CODE_SECRET: string };
 
 let env: TestEnv;
 
@@ -17,6 +17,7 @@ beforeEach(() => {
         JWT_SECRET: "test-secret-do-not-use-in-production",
         RESEND_API_KEY: "test-resend-key",
         FRONTEND_URL: "https://example.test/some-app",
+        PASSWORD_CODE_SECRET: "test-code-secret-do-not-use-in-production",
     };
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: "email-id" }), { status: 200 })));
 });

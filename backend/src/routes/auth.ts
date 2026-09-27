@@ -27,7 +27,8 @@ import {
     storeExchangeCode,
     unlinkProvider,
 } from "../services/oauthService";
-import { InvalidResetTokenError, requestPasswordReset, resetPassword } from "../services/passwordResetService";
+import type { ResetPasswordCredential } from "../services/passwordResetService";
+import { InvalidResetTokenError, requestPasswordReset, resetPassword, verifyResetCode } from "../services/passwordResetService";
 import { RateLimitedError, assertNotRateLimited, assertResendNotRateLimited, clearRateLimit, recordFailedAttempt, recordResendAttempt } from "../services/rateLimitService";
 
 export const authRoute = new Hono<AppEnv>();
@@ -155,7 +156,7 @@ authRoute.post("/forgot-password", async (c) => {
     await recordFailedAttempt(c.env.DB, "forgot-password", rateLimit.ip, rateLimit.identifier);
 
     try {
-        await requestPasswordReset(c.env.DB, c.env.RESEND_API_KEY, c.env.FRONTEND_URL, body.identifier);
+        await requestPasswordReset(c.env.DB, c.env, body.identifier);
     } catch (err) {
         // A failure anywhere in requestPasswordReset (DB lookup, token
         // insert, or the email send itself) shouldn't leak through as a
@@ -167,21 +168,67 @@ authRoute.post("/forgot-password", async (c) => {
     return c.json(success({ message: "If an account exists, a reset email has been sent." }));
 });
 
+// §3.5: always 200 with { valid, attemptsLeft } -- never a distinct error
+// shape for "no such user" vs "wrong code" vs "code locked/expired", that
+// uniformity is the whole anti-enumeration point (see
+// passwordResetService.ts's verifyResetCode doc comment). Throttled
+// generously since the dialog's live check (§4.3) fires on every completed
+// 6-digit entry while typing, not just on deliberate submits.
+authRoute.post("/verify-reset-code", async (c) => {
+    const body = await c.req.json<{ identifier?: string; code?: string }>().catch(() => null);
+    if (!body?.identifier || !body?.code) {
+        return c.json(failure("VALIDATION_ERROR", "identifier and code are required."), 400);
+    }
+
+    let rateLimit;
+    try {
+        rateLimit = await assertNotRateLimited(c, "verify-reset-code", body.identifier);
+    } catch (err) {
+        if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
+        throw err;
+    }
+    await recordFailedAttempt(c.env.DB, "verify-reset-code", rateLimit.ip, rateLimit.identifier);
+
+    const result = await verifyResetCode(c.env.DB, c.env.PASSWORD_CODE_SECRET, body.identifier, body.code);
+    return c.json(success(result));
+});
+
 authRoute.post("/reset-password", async (c) => {
-    const body = await c.req.json<{ token?: string; newPassword?: string }>().catch(() => null);
-    if (!body?.token || !body?.newPassword) {
-        return c.json(failure("VALIDATION_ERROR", "token and newPassword are required."), 400);
+    const body = await c.req.json<{ token?: string; identifier?: string; code?: string; newPassword?: string }>().catch(() => null);
+    if (!body?.newPassword) {
+        return c.json(failure("VALIDATION_ERROR", "newPassword is required."), 400);
     }
     if (body.newPassword.length < MIN_PASSWORD_LENGTH) {
         return c.json(failure("VALIDATION_ERROR", `newPassword must be at least ${MIN_PASSWORD_LENGTH} characters.`), 400);
     }
 
+    // Exactly one credential (D3's hybrid: a link token, or an
+    // identifier+code pair) -- never both, never neither. Reject ambiguous
+    // or incomplete bodies before doing any throttling/DB work.
+    const hasToken = Boolean(body.token);
+    const hasCode = Boolean(body.identifier && body.code);
+    if (hasToken === hasCode) {
+        return c.json(failure("VALIDATION_ERROR", "Provide exactly one of: token, or identifier+code."), 400);
+    }
+
+    const throttleKey = body.identifier ?? body.token ?? "";
+    let rateLimit;
     try {
-        const result = await resetPassword(c.env.DB, c.env.JWT_SECRET, body.token, body.newPassword);
+        rateLimit = await assertNotRateLimited(c, "reset-password", throttleKey);
+    } catch (err) {
+        if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
+        throw err;
+    }
+    await recordFailedAttempt(c.env.DB, "reset-password", rateLimit.ip, rateLimit.identifier);
+
+    const credential: ResetPasswordCredential = hasToken ? { kind: "token", rawToken: body.token! } : { kind: "code", identifier: body.identifier!, code: body.code! };
+
+    try {
+        const result = await resetPassword(c.env.DB, c.env, credential, body.newPassword);
         return c.json(success(result));
     } catch (err) {
         if (err instanceof InvalidResetTokenError) {
-            return c.json(failure("INVALID_RESET_TOKEN", "This reset link is invalid or has expired."), 400);
+            return c.json(failure("INVALID_RESET_TOKEN", "This reset link or code is invalid or has expired."), 400);
         }
         throw err;
     }
