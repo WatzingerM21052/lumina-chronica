@@ -87,3 +87,36 @@ D1 3–5 Kandidaten als SVG → D2 Vergleichsseite, der Nutzer wählt → D3 all
 Themes Alexandria/Babylon (#358), Worldbuilding Premium Design (#269), Bibel-Seite (#239/#143),
 EPUB Realistische Ansicht (#189), `app.css` gliedern, Regal-Deko, KI (#270/#14), native Apps (#15),
 recipemaster.at-Vergleich (braucht lokale Chrome-Session).
+
+## 4. Lokal testen mit echten Daten (so wurde der UI-Durchgang gemacht)
+
+Aus einer Cloud-Session sind die Live-API und externe Seiten meist gesperrt. Backend und Frontend lassen sich aber lokal starten:
+
+1. **Abhängigkeiten:** `npm ci` in `backend/` und `tests/backend/`. Das .NET-10-SDK gibt es in der Cloud per `apt-get install -y dotnet-sdk-10.0`, der Download von dot.net ist dort gesperrt.
+2. **`backend/.dev.vars`** (per gitignore ausgeschlossen, nur lokale Platzhalter):
+   ```
+   JWT_SECRET="local-dev-secret-not-for-production-use"
+   PASSWORD_CODE_SECRET="local-dev-code-secret-not-for-production-use"
+   RESEND_API_KEY=
+   FRONTEND_URL="http://localhost:5289"
+   ```
+3. **Lokale D1 migrieren:** `cd backend && npx wrangler d1 migrations apply lumina-chronica-db --local`
+4. **Backend:** `npx wrangler dev --local --port 8787 --ip 127.0.0.1`
+5. **Frontend:** `ASPNETCORE_ENVIRONMENT=Development dotnet run --project frontend/LuminaChronica.Client --urls http://localhost:5289`.
+   `wwwroot/appsettings.Development.json` zeigt bereits auf `http://127.0.0.1:8787`.
+6. **Testdaten über die API:**
+   - Nutzer: `POST /api/auth/register` (JSON: username, email, password). Den Token aus der Antwort merken.
+   - Bücher: `POST /api/books/upload` (multipart, Pflicht: `title` und `file`, z. B. eine kleine `.md`-Datei).
+   - Regal: `POST /api/shelves` (multipart, Pflicht: `name`).
+   - Projekt: `POST /api/projects` (multipart, Pflicht: `title`, `type=WORLD`).
+7. **Screenshots mit Playwright:** Das globale Paket `playwright` liegt unter `$(npm root -g)`, Chromium unter `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Für eingeloggte Seiten den Token per `addInitScript` in `localStorage["lumina_auth_token"]` setzen. Pro Seite bei 1280px und 390px aufnehmen und `document.documentElement.scrollWidth - innerWidth` prüfen, das deckt horizontales Überlaufen auf.
+8. **Stolperfallen:**
+   - Nach CSS- oder Razor-Änderungen muss der Dev-Server neu gestartet werden, weil gescoptes CSS beim Build gebündelt wird.
+   - Den Server per PID beenden (`ps -eo pid,args | awk '/[b]lazor-devserver/ {print $1}'`), nicht per `pkill -f` mit einem Muster, das auch in der eigenen Shell-Befehlszeile steht.
+   - Footer-Buttons im Dialog tragen den CSS-Scope der aufrufenden Komponente. Regeln in `Dialog.razor.css` brauchen deshalb `::deep`.
+
+## 5. Kleine Notizen aus der Session (2026-09-27)
+
+- **M-6:** Bei reinen Google/GitHub-Konten reicht die Sitzung als Nachweis für die Änderung der E-Mail-Adresse, die alte Adresse wird benachrichtigt. Vom Nutzer bestätigt: „reicht“.
+- **H-1 und M-6** sind im Backend deployt (manueller `backend-deploy.yml`-Lauf).
+- **Veraltete Zeile** in `documentation/Roadmap.md`, Abschnitt Password-reset Phase 2: „Not yet started: Phase 3 …“. Die Phasen 3 bis 5 sind inzwischen erledigt; beim nächsten Doku-Update bereinigen.
