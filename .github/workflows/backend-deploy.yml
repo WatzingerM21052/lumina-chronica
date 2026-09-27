@@ -24,6 +24,15 @@ jobs:
 
       - run: npm ci
 
+      # Same gate as the frontend deploy: never ship a Worker whose own suite
+      # or typecheck is red.
+      - name: Typecheck backend
+        run: npx tsc --noEmit
+
+      - name: Run backend tests
+        run: npm ci && npx vitest run
+        working-directory: tests/backend
+
       - uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

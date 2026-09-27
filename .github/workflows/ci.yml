@@ -1,0 +1,61 @@
+name: CI
+
+# Runs both test suites on every PR and on every push to main. Before this
+# workflow existed, nothing ran the tests at all: the frontend deployed to
+# GitHub Pages untested on every push to main, and Dependabot PRs were merged
+# with no signal (review M-8, docs/reviews/2026-09-27-fable-full-review.md).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-tests:
+    name: Frontend tests (bUnit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run frontend tests
+        run: dotnet test tests/frontend/LuminaChronica.Client.Tests.csproj --nologo
+
+  backend-tests:
+    name: Backend tests (Vitest) + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      # The tests import the Worker source straight from backend/src, whose
+      # own imports (hono, ...) resolve against backend/node_modules -- so
+      # both folders need their dependencies installed.
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install test dependencies
+        run: npm ci
+        working-directory: tests/backend
+
+      - name: Typecheck backend
+        run: npx tsc --noEmit
+        working-directory: backend
+
+      - name: Run backend tests
+        run: npx vitest run
+        working-directory: tests/backend

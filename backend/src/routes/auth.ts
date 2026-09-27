@@ -403,7 +403,7 @@ authRoute.get("/oauth/linked", requireAuth, async (c) => {
 // same envelope).
 authRoute.delete("/oauth/:provider", requireAuth, async (c) => {
     try {
-        await unlinkProvider(c.env.DB, c.get("userId"), c.req.param("provider"));
+        await unlinkProvider(c.env.DB, c.get("userId"), c.req.param("provider") ?? ""); // same requireAuth + path-param typing gap as the /oauth/:provider/link route above
         return c.json(success(null));
     } catch (err) {
         if (err instanceof OAuthUnlinkBlockedError) {

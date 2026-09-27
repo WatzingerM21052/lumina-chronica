@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "frontend/**"
+      - "tests/frontend/**"
       - ".github/workflows/frontend-deploy.yml"
   workflow_dispatch:
 
@@ -29,6 +30,12 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
+
+      # Gate the deploy on the test suite: a push to main goes live
+      # immediately, so a red suite must stop it here rather than only
+      # showing up in ci.yml's parallel run afterwards.
+      - name: Run frontend tests
+        run: dotnet test tests/frontend/LuminaChronica.Client.Tests.csproj --nologo
 
       - name: Publish Blazor WebAssembly app
         run: dotnet publish frontend/LuminaChronica.Client/LuminaChronica.Client.csproj -c Release -o release --nologo
