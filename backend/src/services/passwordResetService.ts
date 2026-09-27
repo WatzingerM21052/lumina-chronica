@@ -10,8 +10,8 @@ import type { EmailLanguage } from "../emails/strings";
 // D2 (docs/superpowers/specs/2026-09-27-password-reset-modernization-design.md
 // §3.4). TTL applies to both credentials sharing one row -- the code and
 // the emailed link expire together, not separately (D3's hybrid).
-const CODE_TTL_SECONDS = 20 * 60;
-const MAX_CODE_ATTEMPTS = 10; // D4/D5 -- a live check burns an attempt too, so this must be generous, not tight
+export const CODE_TTL_SECONDS = 20 * 60;
+export const MAX_CODE_ATTEMPTS = 10; // D4/D5 -- a live check burns an attempt too, so this must be generous, not tight
 const JWT_EXPIRY_SECONDS = 60 * 60 * 24 * 7; // matches authService.ts's own login session length
 
 export class InvalidResetTokenError extends Error {}
