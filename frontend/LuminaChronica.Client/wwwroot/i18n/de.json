@@ -91,6 +91,8 @@
   "profile.accountTitle": "Konto",
   "profile.usernameLabel": "Benutzername",
   "profile.emailLabel": "E-Mail",
+  "profile.emailChangePasswordLabel": "Aktuelles Passwort (zur Bestätigung)",
+  "profile.emailChangeHint": "Du änderst die E-Mail-Adresse, über die du dein Passwort zurücksetzen kannst. Deine bisherige Adresse bekommt eine Benachrichtigung.",
   "profile.saveButton": "Speichern",
   "profile.saveSuccess": "Gespeichert",
   "profile.saveError": "Speichern fehlgeschlagen. Bitte versuche es erneut.",

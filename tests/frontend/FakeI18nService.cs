@@ -108,6 +108,8 @@ public class FakeI18nService : II18nService
         ["profile.saveButton"] = "Speichern",
         ["profile.saveSuccess"] = "Gespeichert",
         ["profile.saveError"] = "Speichern fehlgeschlagen. Bitte versuche es erneut.",
+        ["profile.emailChangePasswordLabel"] = "Aktuelles Passwort (zur Bestätigung)",
+        ["profile.emailChangeHint"] = "Du änderst die E-Mail-Adresse, über die du dein Passwort zurücksetzen kannst. Deine bisherige Adresse bekommt eine Benachrichtigung.",
         ["profile.changePasswordTitle"] = "Passwort ändern",
         ["profile.currentPasswordLabel"] = "Aktuelles Passwort",
         ["profile.newPasswordLabel"] = "Neues Passwort",
