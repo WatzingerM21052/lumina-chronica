@@ -6,6 +6,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- "Buch hinzufügen" now goes straight to the upload page instead of opening a chooser whose three options all led there anyway. The upload page is ordered the way adding a book actually works: 1. choose the file (EPUB/PDF fill in title, author and cover automatically), 2. optionally look up missing details by ISBN or title, 3. review and complete the rest.
 - Dialogs (aesthetic pass, Phase 5 of the password-reset modernization): delete and discard confirmations now use a red button instead of the brass primary one, every dialog footer puts Abbrechen first and the main action on the right, the ✕ close button is a proper 40×40 touch target, dialogs use a little less padding on phones, and the password-reset popup's steps slide in (fade only with reduced motion). Comment, sharing, timeline and toast surfaces now use the larger container radius.
 
 ### Fixed
