@@ -8,6 +8,10 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 - Password reset: at most 5 reset emails per account per 24 hours (review H-1). Previously, rotating IPs and alternating an account's email and username could request a fresh reset code about twice a minute without limit, both multiplying the code-guessing budget and flooding the owner's inbox. Over the cap, the request is answered exactly like one for an unknown account and the last code/link already sent stays valid.
 
+### Fixed
+
+- Tests: the Projects "Bücher" tab search-suggestion bUnit test (`ProjectDetail_BooksTab_SearchInput_AfterDebounce_…`) no longer depends on wall-clock timing. It used to race the page's real 400ms `System.Threading.Timer` debounce against a 2s `WaitForAssertion`, and a cold, parallel full-suite run could delay the timer's thread-pool callback past that window. Now CI gates deploys on this suite, so that race could block a deploy. `ProjectDetail.razor` now creates the timer through an injected `TimeProvider` (`TimeProvider.System` in `Program.cs`, so behavior is unchanged), and the test drives a `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`, test project only), also asserting that nothing fires before the full 400ms.
+
 ## [3.5.0] - 2026-08-09
 
 ### Added
