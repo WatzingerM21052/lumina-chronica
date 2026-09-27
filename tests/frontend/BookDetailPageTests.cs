@@ -13,6 +13,14 @@ namespace LuminaChronica.Client.Tests;
 
 public class BookDetailPageTests : BunitContext
 {
+    public BookDetailPageTests()
+    {
+        // The ConfirmDialog now renders on the Dialog primitive, which
+        // imports ./js/dialog.js for scroll-lock in OnAfterRenderAsync --
+        // none of these tests are about that interop itself.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     // Comments (v3.3, issue #325) injects AuthenticationStateProvider to read
     // the current user's id via the ClaimTypes.NameIdentifier claim (same
     // claim LuminaAuthStateProvider populates from the real JWT's `sub`).

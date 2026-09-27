@@ -98,12 +98,14 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<ToastService>();
 
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
         var cut = Render<Profile>();
-        Assert.Empty(cut.FindAll(".avatar-upload-dialog"));
+        Assert.Empty(cut.FindAll("#avatarDialogUpload"));
 
         cut.Find("#changeAvatarButton").Click();
 
-        Assert.Single(cut.FindAll(".avatar-upload-dialog"));
+        Assert.Single(cut.FindAll("#avatarDialogUpload"));
     }
 
     [Fact]
@@ -130,6 +132,7 @@ public class ProfilePageTests : BunitContext
         var blobModule = JSInterop.SetupModule("./js/blobUrl.js");
         blobModule.Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-avatar-url");
         blobModule.SetupVoid("revokeObjectUrl", _ => true).SetVoidResult();
+        JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = Render<Profile>();
         cut.Find("#changeAvatarButton").Click();
@@ -145,7 +148,7 @@ public class ProfilePageTests : BunitContext
 
         Assert.Equal(HttpMethod.Put, avatarRequest?.Method);
         Assert.Equal("/api/users/me/avatar", avatarRequest?.RequestUri?.AbsolutePath);
-        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".avatar-upload-dialog")));
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("#avatarDialogUpload")));
     }
 
     [Fact]
@@ -169,6 +172,7 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<ToastService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = Render<Profile>();
         cut.Find("#changeAvatarButton").Click();
@@ -190,14 +194,15 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<ToastService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = Render<Profile>();
         cut.Find("#changeAvatarButton").Click();
-        Assert.Single(cut.FindAll(".avatar-upload-dialog"));
+        Assert.Single(cut.FindAll("#avatarDialogUpload"));
 
-        cut.Find(".avatar-upload-dialog-actions .btn:not(.btn-primary)").Click();
+        cut.Find(".dialog-actions .btn:not(.btn-primary)").Click();
 
-        Assert.Empty(cut.FindAll(".avatar-upload-dialog"));
+        Assert.Empty(cut.FindAll("#avatarDialogUpload"));
     }
 
     [Fact]

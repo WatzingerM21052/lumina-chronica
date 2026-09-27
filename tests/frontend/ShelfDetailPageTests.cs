@@ -8,6 +8,14 @@ namespace LuminaChronica.Client.Tests;
 
 public class ShelfDetailPageTests : BunitContext
 {
+    public ShelfDetailPageTests()
+    {
+        // The ConfirmDialog now renders on the Dialog primitive, which
+        // imports ./js/dialog.js for scroll-lock in OnAfterRenderAsync --
+        // none of these tests are about that interop itself.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     private const string ShelfJson = """{"success":true,"data":{"id":1,"name":"Fantasy Sammlung","description":"Meine liebsten Bücher","coverUrl":null,"visibility":"PRIVATE","bookCount":1,"createdAt":"2026-01-01"}}""";
 
     private const string ShelfBooksJson = """

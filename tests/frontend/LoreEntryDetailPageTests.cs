@@ -8,6 +8,14 @@ namespace LuminaChronica.Client.Tests;
 
 public class LoreEntryDetailPageTests : BunitContext
 {
+    public LoreEntryDetailPageTests()
+    {
+        // The ConfirmDialog now renders on the Dialog primitive, which
+        // imports ./js/dialog.js for scroll-lock in OnAfterRenderAsync --
+        // none of these tests are about that interop itself.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     private const string EntryJson = """
         {"success":true,"data":{
             "id":3,"projectId":1,"title":"The Silver Vale",

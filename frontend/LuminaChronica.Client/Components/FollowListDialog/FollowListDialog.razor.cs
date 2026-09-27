@@ -1,7 +1,6 @@
 using LuminaChronica.Client.Models;
 using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 
 namespace LuminaChronica.Client.Components;
 
@@ -9,8 +8,9 @@ namespace LuminaChronica.Client.Components;
 // item raised 2026-09-25: the counts on /u/{username} were plain text, not
 // clickable). One component handles both directions -- Kind picks the
 // endpoint -- since the markup/paging/per-row-follow-toggle behavior is
-// otherwise identical. Mirrors ConfirmDialog/AvatarUploadDialog's overlay/
-// initial-focus/Escape-to-cancel conventions.
+// otherwise identical. Built on the shared Dialog primitive (Phase 4
+// migration); only the paging/follow-toggle logic is specific to this
+// component.
 public partial class FollowListDialog : ComponentBase
 {
     private const int PageSize = 20;
@@ -37,7 +37,6 @@ public partial class FollowListDialog : ComponentBase
     [Inject]
     private ApiClient ApiClient { get; set; } = null!;
 
-    private ElementReference _dialogElement;
     private bool _wasOpen;
     private List<FollowListItem>? _items;
     private int _total;
@@ -45,14 +44,20 @@ public partial class FollowListDialog : ComponentBase
     private bool _isLoading;
     private string? _togglingUsername;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
+        // _wasOpen flips before the await, not after -- LoadFirstPageAsync's
+        // own StateHasChanged() calls (in LoadMoreAsync) trigger a re-render
+        // while this method is still suspended on the API call, and that
+        // re-render's own OnAfterRenderAsync must see _wasOpen already true,
+        // or it re-enters this branch and fires a second, duplicate request.
         if (IsOpen && !_wasOpen)
         {
-            await _dialogElement.FocusAsync();
-            await LoadFirstPageAsync();
+            _wasOpen = true;
+            return LoadFirstPageAsync();
         }
         _wasOpen = IsOpen;
+        return Task.CompletedTask;
     }
 
     private async Task LoadFirstPageAsync()
@@ -103,6 +108,4 @@ public partial class FollowListDialog : ComponentBase
 
         _togglingUsername = null;
     }
-
-    private Task HandleKeyDownAsync(KeyboardEventArgs e) => e.Key == "Escape" ? OnClose.InvokeAsync() : Task.CompletedTask;
 }
