@@ -2,12 +2,13 @@
 @using LuminaChronica.Client.Services
 @inject II18nService I18n
 
-<Dialog IsOpen="IsOpen" Role="alertdialog" ShowCloseButton="false" OnClose="CancelAsync">
+<Dialog IsOpen="IsOpen" Role="alertdialog" ShowCloseButton="false" OnClose="CancelAsync"
+        AriaLabelledBy="@_messageId" InitialFocusSelector=".confirm-dialog-cancel">
     <ChildContent>
-        <p>@Message</p>
+        <p id="@_messageId">@Message</p>
     </ChildContent>
     <Footer>
         <button type="button" class="btn btn-primary" @onclick="ConfirmAsync">@(ConfirmText ?? I18n.T("confirmDialog.confirmButton"))</button>
-        <button type="button" class="btn" @onclick="CancelAsync">@(CancelText ?? I18n.T("confirmDialog.cancelButton"))</button>
+        <button type="button" class="btn confirm-dialog-cancel" @onclick="CancelAsync">@(CancelText ?? I18n.T("confirmDialog.cancelButton"))</button>
     </Footer>
 </Dialog>

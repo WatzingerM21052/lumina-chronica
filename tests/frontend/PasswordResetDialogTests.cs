@@ -45,6 +45,21 @@ public class PasswordResetDialogTests : BunitContext
     }
 
     [Fact]
+    public void AdvancingAStep_MovesFocusToTheNewStepsFirstField()
+    {
+        // Review M-3: the clicked "send code" button is removed by the step
+        // change, which dropped focus to <body> -- Escape and Tab then no
+        // longer reached the dialog and screen readers heard nothing.
+        RegisterServices(ForgotPasswordAlwaysOk());
+
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        var before = JSInterop.Invocations["focusFirst"].Count;
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
+
+        cut.WaitForAssertion(() => Assert.True(JSInterop.Invocations["focusFirst"].Count > before), Wait);
+    }
+
+    [Fact]
     public void OpensAtIdentify_WithNoInitialIdentifierOrLinkToken()
     {
         RegisterServices(ForgotPasswordAlwaysOk());

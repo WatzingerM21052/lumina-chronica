@@ -43,6 +43,7 @@ public class ForgotPasswordPageTests : BunitContext
         navManager.NavigateTo("forgot-password");
 
         var cut = Render<ForgotPassword>();
+        cut.Find(".dialog-overlay").MouseDown();
         cut.Find(".dialog-overlay").Click();
 
         Assert.Equal(navManager.BaseUri, navManager.Uri);

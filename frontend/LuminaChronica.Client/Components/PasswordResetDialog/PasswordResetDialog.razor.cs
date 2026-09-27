@@ -70,6 +70,10 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
 
     private bool _wasOpen;
     private PasswordResetStep _step;
+    private Dialog? _dialog;
+    // The step last focused for -- a step change swaps out the button that
+    // had focus, so focus is moved to the new step's first field (review M-3).
+    private PasswordResetStep? _focusedStep;
 
     // LinkToken opens straight at PasswordEntry with no Identify/CodeEntry
     // ever happening in that session -- the step rail (which assumes all
@@ -104,6 +108,25 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
     private int _resendSecondsRemaining;
 
     private CancellationTokenSource? _autoCloseCts;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!IsOpen)
+        {
+            _focusedStep = null;
+            return;
+        }
+        if (_focusedStep is null)
+        {
+            _focusedStep = _step; // the Dialog's own open-time focus handles the first step
+            return;
+        }
+        if (_focusedStep != _step && _dialog is not null)
+        {
+            _focusedStep = _step;
+            await _dialog.FocusFirstAsync();
+        }
+    }
 
     protected override void OnParametersSet()
     {

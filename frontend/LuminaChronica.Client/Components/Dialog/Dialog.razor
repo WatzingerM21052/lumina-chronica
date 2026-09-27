@@ -4,10 +4,11 @@
 
 @if (IsOpen)
 {
-    <div class="dialog-overlay" @onclick="HandleOverlayClickAsync">
+    <div class="dialog-overlay" @onmousedown="HandleOverlayPointerDown" @onclick="HandleOverlayClickAsync">
         <div class="dialog dialog--@SizeClass" role="@Role" aria-modal="true"
-             aria-labelledby="@(Title is not null ? EffectiveTitleId : null)"
-             tabindex="-1" @ref="_dialogElement" @onclick:stopPropagation="true" @onkeydown="HandleKeyDownAsync">
+             aria-labelledby="@EffectiveLabelledBy"
+             tabindex="-1" @ref="_dialogElement" @onclick:stopPropagation="true"
+             @onmousedown="HandleCardPointerDown" @onmousedown:stopPropagation="true" @onkeydown="HandleKeyDownAsync">
 
             @if (Title is not null || ShowCloseButton)
             {
