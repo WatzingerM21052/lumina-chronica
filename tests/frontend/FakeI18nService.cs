@@ -118,6 +118,9 @@ public class FakeI18nService : II18nService
 
         ["settings.title"] = "Einstellungen",
         ["settings.themeTitle"] = "Theme",
+        ["settings.languageTitle"] = "Sprache",
+        ["settings.languageGerman"] = "Deutsch",
+        ["settings.languageEnglish"] = "Englisch",
         ["settings.libraryTitle"] = "Bibliothek",
         ["settings.showCoverTextLabel"] = "Titel/Autor auf Regal-Cover anzeigen",
         ["settings.showCoverTextDescription"] = "die meisten echten Cover-Bilder tragen Titel/Autor bereits selbst",
@@ -711,6 +714,9 @@ public class FakeI18nService : II18nService
         ["register.title"] = "Register",
         ["register.usernameLabel"] = "Username",
         ["register.submitButton"] = "Create Account",
+        ["settings.languageTitle"] = "Language",
+        ["settings.languageGerman"] = "German",
+        ["settings.languageEnglish"] = "English",
     };
 
     public FakeI18nService(string language = "de")
