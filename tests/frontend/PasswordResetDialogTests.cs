@@ -470,4 +470,21 @@ public class PasswordResetDialogTests : BunitContext
         cut.WaitForAssertion(() => Assert.Contains("Bitte in 15 Minuten erneut versuchen.", cut.Markup), Wait);
         Assert.DoesNotContain("Too many attempts", cut.Markup);
     }
+
+    [Fact]
+    public void StepPanel_SlidesInForwardOnAdvance_AndBackwardOnChangeIdentifier()
+    {
+        // §7.3 motion: forward steps enter from the right, a step back from
+        // the left -- the direction lives on the keyed panel as .is-back.
+        RegisterServices(ForgotPasswordAlwaysOk());
+
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
+        Assert.DoesNotContain("is-back", cut.Find(".password-reset-panel").ClassList);
+
+        cut.Find("button.link-button").Click(); // "Andere E-Mail-Adresse"
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#passwordResetIdentifier")), Wait);
+        Assert.Contains("is-back", cut.Find(".password-reset-panel").ClassList);
+    }
 }

@@ -89,10 +89,21 @@
     color: var(--color-text-primary);
 }
 
+/* §7.3 density/touch: the glyph stays small, but the hit area is a 40px
+   square (same floor as the footer buttons below) -- the bare glyph was a
+   ~16px target. The negative margin pulls that extra area into the
+   header's padding so the ✕ still sits flush with the title's top-right. */
 .dialog-close {
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-1)) 0 0;
     background: none;
-    border: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
     padding: 0;
     font-size: var(--font-size-body);
     line-height: 1;
@@ -102,6 +113,7 @@
 
 .dialog-close:hover {
     color: var(--color-text-primary);
+    border-color: var(--color-border);
 }
 
 .dialog-body {
@@ -115,7 +127,12 @@
     margin-top: var(--space-3);
 }
 
-.dialog-actions .btn {
+/* ::deep, not a plain descendant selector: the buttons are Footer content,
+   rendered by the CONSUMING component and carrying its CSS-isolation
+   scope, not Dialog's -- a plain `.dialog-actions .btn` here never matched
+   a single real footer button (caught in a Phase 5 screenshot: 36px-tall,
+   not full-width on mobile). ::deep scopes only .dialog-actions. */
+.dialog-actions ::deep .btn {
     min-height: 2.5rem;
 }
 
@@ -147,7 +164,18 @@
 }
 
 @media (max-width: 40rem) {
-    .dialog-actions .btn {
+    /* --space-4 padding plus the overlay's own --space-3 gutter would eat
+       ~112px of a 360px phone's width before any content -- one step
+       tighter on both keeps a dialog readable there. */
+    .dialog-overlay {
+        padding: var(--space-2);
+    }
+
+    .dialog {
+        padding: var(--space-3);
+    }
+
+    .dialog-actions ::deep .btn {
         flex: 1;
     }
 

@@ -266,4 +266,33 @@ public class DialogTests : BunitContext
         Assert.Contains(".confirm-dialog-cancel", invocation.Arguments);
         Assert.NotNull(cut.Find("button.confirm-dialog-cancel"));
     }
+
+    [Fact]
+    public void ConfirmDialog_IsDestructiveByDefault_WithCancelFirstAndTheRedActionLast()
+    {
+        // §7.3 color discipline: every current ConfirmDialog confirms a delete
+        // or a discard, so the confirm button is --color-error (btn-danger),
+        // never the brass primary; the one action sits rightmost, after Abbrechen.
+        var cut = Render<ConfirmDialog>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Message, "Regal wirklich löschen?"));
+
+        var buttons = cut.FindAll(".dialog-actions button");
+        Assert.Equal(2, buttons.Count);
+        Assert.Contains("confirm-dialog-cancel", buttons[0].ClassList);
+        Assert.Contains("btn-danger", buttons[1].ClassList);
+        Assert.Empty(cut.FindAll(".dialog-actions .btn-primary"));
+    }
+
+    [Fact]
+    public void ConfirmDialog_NonDestructive_UsesThePrimaryButton()
+    {
+        var cut = Render<ConfirmDialog>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Message, "Weiter?")
+            .Add(p => p.Destructive, false));
+
+        Assert.Single(cut.FindAll(".dialog-actions .btn-primary"));
+        Assert.Empty(cut.FindAll(".dialog-actions .btn-danger"));
+    }
 }

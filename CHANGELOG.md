@@ -4,6 +4,14 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+### Changed
+
+- Dialogs (aesthetic pass, Phase 5 of the password-reset modernization): delete and discard confirmations now use a red button instead of the brass primary one, every dialog footer puts Abbrechen first and the main action on the right, the ✕ close button is a proper 40×40 touch target, dialogs use a little less padding on phones, and the password-reset popup's steps slide in (fade only with reduced motion). Comment, sharing, timeline and toast surfaces now use the larger container radius.
+
+### Fixed
+
+- Dialog footer buttons never received their intended 40px height or full width on phones: the rule lived in the dialog's scoped CSS and couldn't reach buttons passed in from other components.
+
 ### Security
 
 - Profile: changing the account's email address now requires the current password, and the previous address receives a notification with the new address masked (review M-6). Before this, anyone holding a logged-in session could redirect password resets to their own inbox without knowing the password. Accounts that only sign in via Google/GitHub have no password, so for them the session is still the proof; the notification still goes out.

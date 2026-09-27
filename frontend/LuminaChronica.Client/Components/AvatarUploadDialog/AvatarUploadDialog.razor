@@ -24,12 +24,12 @@
         </div>
     </ChildContent>
     <Footer>
+        <button type="button" class="btn" @onclick="CancelAsync">@I18n.T("avatarUploadDialog.cancelButton")</button>
         <button type="button" id="avatarDialogUpload" class="btn btn-primary"
                 disabled="@(_selectedBytes is null || _uploadState != ButtonBusyState.Idle)"
                 style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("avatarUploadDialog.uploadButton"), null, I18n.T("avatarUploadDialog.uploadSuccess")))ch"
                 @onclick="UploadAsync">
             <AsyncButtonContent State="_uploadState" IdleText="@I18n.T("avatarUploadDialog.uploadButton")" SuccessText="@I18n.T("avatarUploadDialog.uploadSuccess")" />
         </button>
-        <button type="button" class="btn" @onclick="CancelAsync">@I18n.T("avatarUploadDialog.cancelButton")</button>
     </Footer>
 </Dialog>
