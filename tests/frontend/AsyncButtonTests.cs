@@ -1,5 +1,6 @@
 using Bunit;
 using LuminaChronica.Client.Components;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
@@ -31,11 +32,33 @@ public class AsyncButtonTests : BunitContext
     [Fact]
     public async Task RunAsync_SlowSuccess_ShowsLoadingThenSuccessThenIdle()
     {
+        // A fake clock and a hand-completed action, not a real
+        // Task.Delay(300) racing the real 180ms threshold -- under
+        // thread-pool contention in a full parallel suite run the 300ms
+        // delay could finish first and Loading was never observed.
         var states = new List<ButtonBusyState>();
+        var time = new FakeTimeProvider();
+        var work = new TaskCompletionSource<bool>();
 
-        await AsyncButtonRunner.RunAsync(
-            async () => { await Task.Delay(300); return true; },
-            state => states.Add(state));
+        // Task.Run: no SynchronizationContext in there, so RunAsync's awaits
+        // resume inline inside Advance/SetResult and each step is
+        // observable immediately afterwards.
+        await Task.Run(async () =>
+        {
+            var run = AsyncButtonRunner.RunAsync(() => work.Task, states.Add, time);
+
+            time.Advance(TimeSpan.FromMilliseconds(179));
+            Assert.Empty(states);
+
+            time.Advance(TimeSpan.FromMilliseconds(1));
+            Assert.Equal([ButtonBusyState.Loading], states);
+
+            work.SetResult(true);
+            Assert.Equal([ButtonBusyState.Loading, ButtonBusyState.Success], states);
+
+            time.Advance(TimeSpan.FromMilliseconds(1000));
+            await run;
+        });
 
         Assert.Equal([ButtonBusyState.Loading, ButtonBusyState.Success, ButtonBusyState.Idle], states);
     }

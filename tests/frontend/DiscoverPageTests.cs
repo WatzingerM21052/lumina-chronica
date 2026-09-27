@@ -3,12 +3,23 @@ using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
 
 public class DiscoverPageTests : BunitContext
 {
+    // The user-search debounce timer is created through the injected
+    // TimeProvider, so tests advance this clock explicitly instead of waiting
+    // out a real 400ms timer against a WaitForAssertion timeout.
+    private readonly FakeTimeProvider _timeProvider = new();
+
+    public DiscoverPageTests()
+    {
+        Services.AddSingleton<TimeProvider>(_timeProvider);
+    }
+
     private const string BooksJson =
         """{"success":true,"data":{"items":[{"id":1,"title":"Discoverable Book","author":"Jane Doe","coverUrl":null,"genre":null,"averageRating":4.5,"ratingCount":2,"myRating":null,"ownerUsername":"alice"}],"total":1,"page":1,"pageSize":20}}""";
 
@@ -198,6 +209,7 @@ public class DiscoverPageTests : BunitContext
 
         var cut = Render<Discover>();
         cut.Find("input").Input("ali");
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
 
         cut.WaitForAssertion(() => Assert.Contains("Autor / Worldbuilder", cut.Find(".discover-author-role").TextContent), TimeSpan.FromSeconds(2));
     }
@@ -253,6 +265,7 @@ public class DiscoverPageTests : BunitContext
 
         var cut = Render<Discover>();
         cut.Find("input").Input("ali");
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
 
         cut.WaitForAssertion(() => Assert.Contains("alice", cut.Markup), TimeSpan.FromSeconds(2));
     }
@@ -271,6 +284,7 @@ public class DiscoverPageTests : BunitContext
 
         var cut = Render<Discover>();
         cut.Find("input").Input("ali");
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
 
         cut.WaitForAssertion(() =>
         {

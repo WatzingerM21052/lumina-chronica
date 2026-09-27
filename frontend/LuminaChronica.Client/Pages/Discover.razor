@@ -8,6 +8,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
 @inject II18nService I18n
+@inject TimeProvider TimeProvider
 
 <PageTitle>@I18n.T("discover.pageTitle") — Lumina Chronica</PageTitle>
 
@@ -137,7 +138,7 @@
 
     private string _userSearchTerm = string.Empty;
     private List<DiscoverUser>? _userSearchResults;
-    private System.Threading.Timer? _userSearchDebounceTimer;
+    private ITimer? _userSearchDebounceTimer;
     private bool _isSearchingUsers;
     private IJSObjectReference? _motionModule;
     private IJSObjectReference? _lazyCoverModule;
@@ -220,7 +221,11 @@
         _isSearchingUsers = !string.IsNullOrWhiteSpace(_userSearchTerm);
 
         _userSearchDebounceTimer?.Dispose();
-        _userSearchDebounceTimer = new System.Threading.Timer(
+        // Created through the injected TimeProvider (TimeProvider.System in
+        // Program.cs) rather than `new System.Threading.Timer` so bUnit tests
+        // can advance a fake clock instead of racing a real 400ms timer
+        // against a wall-clock WaitForAssertion timeout.
+        _userSearchDebounceTimer = TimeProvider.CreateTimer(
             _ => InvokeAsync(async () =>
             {
                 await SearchUsersAsync();
@@ -229,8 +234,8 @@
                 StateHasChanged();
             }),
             null,
-            400,
-            Timeout.Infinite);
+            TimeSpan.FromMilliseconds(400),
+            Timeout.InfiniteTimeSpan);
     }
 
     private async Task SearchUsersAsync()

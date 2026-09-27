@@ -51,6 +51,12 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
     [Inject]
     private II18nService I18n { get; set; } = default!;
 
+    // Drives every delay/timer below (code and confirm debounces, resend
+    // countdown, auto-close) so bUnit tests can advance a FakeTimeProvider
+    // instead of racing real timers against WaitForAssertion timeouts.
+    [Inject]
+    private TimeProvider TimeProvider { get; set; } = default!;
+
     [Parameter, EditorRequired]
     public bool IsOpen { get; set; }
 
@@ -104,7 +110,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
     private bool _isSubmittingReset;
     private string? _resetError;
 
-    private System.Threading.Timer? _resendTimer;
+    private ITimer? _resendTimer;
     private int _resendSecondsRemaining;
 
     private CancellationTokenSource? _autoCloseCts;
@@ -252,7 +258,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
     {
         _resendSecondsRemaining = ResendCooldownSeconds;
         _resendTimer?.Dispose();
-        _resendTimer = new System.Threading.Timer(_ =>
+        _resendTimer = TimeProvider.CreateTimer(_ =>
         {
             _resendSecondsRemaining--;
             if (_resendSecondsRemaining <= 0)
@@ -260,7 +266,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
                 StopResendCooldown();
             }
             InvokeAsync(StateHasChanged);
-        }, null, 1000, 1000);
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     private void StopResendCooldown()
@@ -317,7 +323,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
         _codeDebounceCts = cts;
         try
         {
-            await Task.Delay(CodeDebounceMs, cts.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(CodeDebounceMs), TimeProvider, cts.Token);
         }
         catch (TaskCanceledException)
         {
@@ -417,7 +423,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
         _confirmDebounceCts = cts;
         try
         {
-            await Task.Delay(ConfirmDebounceMs, cts.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(ConfirmDebounceMs), TimeProvider, cts.Token);
         }
         catch (TaskCanceledException)
         {
@@ -532,7 +538,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
     {
         try
         {
-            await Task.Delay(AutoCloseAfterMs, token);
+            await Task.Delay(TimeSpan.FromMilliseconds(AutoCloseAfterMs), TimeProvider, token);
         }
         catch (TaskCanceledException)
         {

@@ -36,9 +36,9 @@ builder.Services.AddScoped<OfflineStorageService>();
 builder.Services.AddScoped<BibleClientService>();
 builder.Services.AddScoped<BibleAtmosphereService>();
 builder.Services.AddScoped<ToastService>();
-// Injected by components whose debounce timers tests need to control
-// (ProjectDetail.razor's book search) -- bUnit tests register a
-// FakeTimeProvider instead.
+// Injected by components whose debounce/delay timers tests need to control
+// (the search-as-you-type pages, PasswordResetDialog) -- bUnit tests
+// register a FakeTimeProvider instead.
 builder.Services.AddSingleton(TimeProvider.System);
 
 var host = builder.Build();

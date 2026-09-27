@@ -5,12 +5,22 @@ using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
 
 public class ProfilePageTests : BunitContext
 {
+    // Profile's PasswordResetDialog injects TimeProvider for its debounces and
+    // timers.
+    private readonly FakeTimeProvider _timeProvider = new();
+
+    public ProfilePageTests()
+    {
+        Services.AddSingleton<TimeProvider>(_timeProvider);
+    }
+
     private const string ProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01","hasPassword":true}}""";
 
     // Profile now also fires GET /api/auth/oauth/linked from OnInitializedAsync,

@@ -7,18 +7,23 @@ using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
 
 public class BookDetailPageTests : BunitContext
 {
+    // BookDetail injects TimeProvider for its share-search debounce timer.
+    private readonly FakeTimeProvider _timeProvider = new();
+
     public BookDetailPageTests()
     {
         // The ConfirmDialog now renders on the Dialog primitive, which
         // imports ./js/dialog.js for scroll-lock in OnAfterRenderAsync --
         // none of these tests are about that interop itself.
         JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddSingleton<TimeProvider>(_timeProvider);
     }
 
     // Comments (v3.3, issue #325) injects AuthenticationStateProvider to read

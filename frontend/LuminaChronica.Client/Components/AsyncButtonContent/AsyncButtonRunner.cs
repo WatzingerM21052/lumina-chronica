@@ -16,10 +16,12 @@ public static class AsyncButtonRunner
 
     /// <param name="action">The real work. Must not throw -- return false on failure (matching this codebase's existing convention of catching internally and setting a page-level error message) rather than letting an exception escape.</param>
     /// <param name="setState">Applies the new state and re-renders (e.g. <c>state => { _saveState = state; StateHasChanged(); }</c>).</param>
-    public static async Task RunAsync(Func<Task<bool>> action, Action<ButtonBusyState> setState)
+    /// <param name="timeProvider">Clock for both delays; defaults to <see cref="TimeProvider.System"/>. Tests pass a FakeTimeProvider so the Loading threshold doesn't depend on real elapsed time.</param>
+    public static async Task RunAsync(Func<Task<bool>> action, Action<ButtonBusyState> setState, TimeProvider? timeProvider = null)
     {
+        timeProvider ??= TimeProvider.System;
         var work = action();
-        var delay = Task.Delay(ShowLoadingAfter);
+        var delay = Task.Delay(ShowLoadingAfter, timeProvider);
         if (await Task.WhenAny(work, delay) != work)
         {
             setState(ButtonBusyState.Loading);
@@ -29,7 +31,7 @@ public static class AsyncButtonRunner
         if (success)
         {
             setState(ButtonBusyState.Success);
-            await Task.Delay(HoldSuccessFor);
+            await Task.Delay(HoldSuccessFor, timeProvider);
         }
 
         setState(ButtonBusyState.Idle);
