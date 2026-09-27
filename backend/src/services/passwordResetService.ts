@@ -186,20 +186,42 @@ async function consumeByCode(db: D1Database, codeSecret: string, identifier: str
     if (!user) return null;
 
     const codeHash = await hmacSha256Hex(codeSecret, code);
-    // Same shape as consumeByToken, keyed by user_id + code_hash instead of
-    // a token_hash, and additionally requiring attempt_count to still be
-    // under the cap -- a code that's already been guessed MAX_CODE_ATTEMPTS
-    // times must not be spendable even if the final guess happens to be
-    // right (D4's whole point: the cap is a hard stop, not just a counter).
-    return db
+    // MUST burn an attempt on every call, matched or not -- this endpoint
+    // changes the password directly, so it is itself a code-guessing oracle
+    // if a wrong guess here is free. (The original version filtered by
+    // code_hash in the WHERE clause: that correctly rejected wrong codes
+    // but never touched attempt_count, letting an attacker skip
+    // /verify-reset-code entirely and spray this endpoint at zero cost per
+    // guess -- the row-level cap this comment used to point to as the
+    // one IP-rotation-immune defense was silently bypassable through the
+    // one route that actually matters. Caught by outside review, not by
+    // the original test, which only exhausted attempts via
+    // /verify-reset-code.) Same single-atomic-statement shape as
+    // verifyResetCode's live check, but ALSO consumes the row on a match,
+    // in the same round trip -- consumed_at only changes when code_hash
+    // matches (the CASE), attempt_count always increments.
+    const row = await db
+        .withSession("first-primary")
         .prepare(
-            "UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP " +
-                "WHERE user_id = ? AND code_hash = ? AND consumed_at IS NULL " +
-                "AND julianday(expires_at) > julianday('now') AND attempt_count < ? " +
-                "RETURNING user_id"
+            `UPDATE password_reset_tokens
+                SET attempt_count = attempt_count + 1,
+                    consumed_at = CASE WHEN code_hash = ?2 THEN CURRENT_TIMESTAMP ELSE consumed_at END
+              WHERE id = (
+                  SELECT id FROM password_reset_tokens
+                   WHERE user_id = ?1
+                     AND consumed_at IS NULL
+                     AND julianday(expires_at) > julianday('now')
+                     AND attempt_count < ?3
+                   ORDER BY created_at DESC, id DESC
+                   LIMIT 1
+              )
+          RETURNING (code_hash = ?2) AS matched, user_id`
         )
         .bind(user.id, codeHash, MAX_CODE_ATTEMPTS)
-        .first<{ user_id: number }>();
+        .first<{ matched: number; user_id: number }>();
+
+    if (!row || row.matched !== 1) return null;
+    return { user_id: row.user_id };
 }
 
 async function sendPasswordChangedEmail(db: D1Database, env: Pick<Bindings, "RESEND_API_KEY" | "FRONTEND_URL">, userId: number): Promise<void> {

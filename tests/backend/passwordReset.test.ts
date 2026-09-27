@@ -350,6 +350,27 @@ describe("POST /api/auth/reset-password", () => {
         expect((await readJson(res)).error.code).toBe("INVALID_RESET_TOKEN");
     });
 
+    it("also locks the code when every wrong guess goes straight through reset-password, bypassing verify-reset-code entirely", async () => {
+        // Regression test: consumeByCode used to filter by code_hash in its
+        // WHERE clause, so a wrong guess matched no row and never touched
+        // attempt_count -- an attacker could skip /verify-reset-code
+        // completely and spray this endpoint at zero cost per guess. Clear
+        // the OUTER (ip, identifier) throttle between iterations so this
+        // test isolates the row-level code cap, not that unrelated backstop.
+        const code = await requestResetAndGetCode("alice@example.com");
+
+        for (let i = 0; i < MAX_CODE_ATTEMPTS; i++) {
+            const res = await app.request("/api/auth/reset-password", jsonRequest({ identifier: "alice@example.com", code: "000000", newPassword: "new password" }), env);
+            expect(res.status).toBe(400);
+            expect((await readJson(res)).error.code).toBe("INVALID_RESET_TOKEN");
+            await env.DB.prepare("DELETE FROM auth_rate_limits WHERE route = 'reset-password'").run();
+        }
+
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ identifier: "alice@example.com", code, newPassword: "new password" }), env);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("INVALID_RESET_TOKEN");
+    });
+
     it("rejects a body with both a token and an identifier+code (ambiguous)", async () => {
         const rawToken = await requestResetAndGetRawToken("alice@example.com");
         const res = await app.request(
