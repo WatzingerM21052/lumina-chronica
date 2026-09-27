@@ -1,7 +1,7 @@
 # Forgot Password — Design
 
 **Date:** 2026-09-26
-**Status:** Approved
+**Status:** Approved, in Teilen abgelöst durch `2026-09-27-password-reset-modernization-design.md` (6-stelliger Code zusätzlich zum Link, TTL 20 min statt 1 h, Dialog statt eigener Seite, Pro-Konto-Limit). Wo sich beide widersprechen, gilt der neuere Spec.
 
 ## Goal
 
