@@ -79,4 +79,44 @@ public class ProjectsPageTests : BunitContext
         Assert.Equal(HttpMethod.Post, createRequest?.Method);
         Assert.Equal("/api/projects", createRequest?.RequestUri?.AbsolutePath);
     }
+    private void UseEmptyProjectList()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":[]}"""));
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+    }
+
+    [Fact]
+    public void Projects_CreateDialog_Escape_WithTypedTitle_AsksBeforeDiscarding()
+    {
+        UseEmptyProjectList();
+
+        var cut = Render<Projects>();
+        cut.Find("button.btn-primary").Click();
+        cut.Find("#project-title").Change("Halb getippt");
+        cut.Find("#project-create-form").Closest(".dialog")!.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+        Assert.NotNull(cut.Find("#project-title"));
+    }
+
+    [Fact]
+    public void Projects_CreateDialog_ReopenedAfterDiscarding_StartsEmpty()
+    {
+        // Review N-2: cancelling only hid the dialog, so reopening showed
+        // (and would submit) the previous half-filled form.
+        UseEmptyProjectList();
+
+        var cut = Render<Projects>();
+        cut.Find("button.btn-primary").Click();
+        cut.Find("#project-title").Change("Halb getippt");
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+
+        cut.Find("button.btn-primary").Click();
+        Assert.Equal("", ((AngleSharp.Html.Dom.IHtmlInputElement)cut.Find("#project-title")).Value);
+    }
 }

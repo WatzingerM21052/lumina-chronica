@@ -164,6 +164,9 @@ public class FakeI18nService : II18nService
         ["confirmDialog.confirmButton"] = "Ja, löschen",
         ["confirmDialog.cancelButton"] = "Abbrechen",
         ["dialog.closeButton"] = "Schließen",
+        ["dialog.discardChangesCancel"] = "Weiter bearbeiten",
+        ["dialog.discardChangesConfirm"] = "Verwerfen",
+        ["dialog.discardChangesMessage"] = "Ungespeicherte Änderungen verwerfen?",
         ["toast.dismiss"] = "Meldung schließen",
 
         ["avatarUploadDialog.title"] = "Profilbild ändern",
@@ -213,6 +216,7 @@ public class FakeI18nService : II18nService
         ["shelfDetail.backLink"] = "← Zurück zu den Regalen",
         ["shelfDetail.loading"] = "Regal wird geladen...",
         ["shelfDetail.editButton"] = "Bearbeiten",
+        ["shelfDetail.editDialogTitle"] = "Regal bearbeiten",
         ["shelfDetail.deleteButton"] = "Löschen",
         ["shelfDetail.deleteConfirmMessage"] = "Regal wirklich löschen?",
         ["shelfDetail.replaceCoverLabel"] = "Regalbild ersetzen",

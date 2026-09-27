@@ -102,6 +102,49 @@ public class ShelfDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void ShelfDetail_EditDialog_HasItsOwnTitle_NotTheButtonLabel()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ShelfDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
+
+        Assert.Equal("Regal bearbeiten", cut.Find(".dialog-title").TextContent.Trim());
+    }
+
+    [Fact]
+    public void ShelfDetail_EditDialog_Escape_WithoutChanges_ClosesImmediately()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ShelfDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
+        cut.Find(".dialog").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        Assert.Empty(cut.FindAll("#shelf-edit-name"));
+        Assert.DoesNotContain("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+    }
+
+    [Fact]
+    public void ShelfDetail_EditDialog_Escape_WithChanges_AsksBeforeDiscarding()
+    {
+        // Review M-4: Escape/overlay/Cancel used to drop a half-typed rename
+        // without asking, unlike BookDetail's edit dialog.
+        UseDefaultRoutes();
+
+        var cut = Render<ShelfDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
+        cut.Find("#shelf-edit-name").Change("Halb getippt");
+        cut.Find("#shelf-edit-form").Closest(".dialog")!.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+        Assert.NotNull(cut.Find("#shelf-edit-name"));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+        Assert.Empty(cut.FindAll("#shelf-edit-name"));
+    }
+
+    [Fact]
     public void ShelfDetail_EditDialog_SaveAsync_SendsUpdateAndClosesDialog()
     {
         HttpRequestMessage? putRequest = null;

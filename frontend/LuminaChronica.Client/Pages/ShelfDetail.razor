@@ -48,7 +48,7 @@ else
     <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("shelfDetail.deleteConfirmMessage")"
                    OnConfirm="DeleteShelfAsync" OnCancel="() => _confirmingDelete = false" />
 
-    <Dialog IsOpen="_isEditing" Title="@I18n.T("shelfDetail.editButton")" OnClose="() => _isEditing = false">
+    <Dialog IsOpen="_isEditing" Title="@I18n.T("shelfDetail.editDialogTitle")" OnClose="RequestCloseEdit">
         <ChildContent>
             <EditForm id="shelf-edit-form" Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
                 @if (_saveErrorMessage is not null)
@@ -79,10 +79,13 @@ else
             </EditForm>
         </ChildContent>
         <Footer>
-            <button type="submit" form="shelf-edit-form" class="btn btn-primary">@I18n.T("shelfDetail.saveButton")</button>
-            <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("shelfDetail.cancelButton")</button>
+            <button type="submit" form="shelf-edit-form" class="btn btn-primary" disabled="@_isSaving">@I18n.T("shelfDetail.saveButton")</button>
+            <button type="button" class="btn" @onclick="RequestCloseEdit">@I18n.T("shelfDetail.cancelButton")</button>
         </Footer>
     </Dialog>
+    <ConfirmDialog IsOpen="_confirmingDiscardEdit" Message="@I18n.T("dialog.discardChangesMessage")"
+                   ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
+                   OnConfirm="ConfirmDiscardEdit" OnCancel="() => _confirmingDiscardEdit = false" />
 
     @if (_booksErrorMessage is not null)
     {
@@ -126,6 +129,9 @@ else
     private IBrowserFile? _selectedEditCover;
     private bool _isDraggingCover;
     private EditFormModel _editForm = new();
+    private EditFormModel _editFormSnapshot = new();
+    private bool _confirmingDiscardEdit;
+    private bool _isSaving;
     private bool _confirmingDelete;
 
     protected override async Task OnParametersSetAsync()
@@ -184,6 +190,7 @@ else
     {
         if (_shelf is null) return;
         _editForm = new EditFormModel { Name = _shelf.Name, Description = _shelf.Description };
+        _editFormSnapshot = _editForm with { };
         _saveErrorMessage = null;
         _coverSaveErrorMessage = null;
         _selectedEditCover = null;
@@ -192,7 +199,42 @@ else
 
     private void OnEditCoverSelected(InputFileChangeEventArgs e) => _selectedEditCover = e.File;
 
+    // Same dirty-state guard as BookDetail's edit dialog (D12), but Escape
+    // and overlay stay enabled and route through here instead of being
+    // switched off (review M-4/N-4).
+    private bool IsEditFormDirty => _editForm != _editFormSnapshot || _selectedEditCover is not null;
+
+    private void RequestCloseEdit()
+    {
+        if (IsEditFormDirty)
+        {
+            _confirmingDiscardEdit = true;
+            return;
+        }
+        _isEditing = false;
+    }
+
+    private void ConfirmDiscardEdit()
+    {
+        _confirmingDiscardEdit = false;
+        _isEditing = false;
+    }
+
     private async Task SaveAsync()
+    {
+        if (_isSaving) return;
+        _isSaving = true;
+        try
+        {
+            await SaveCoreAsync();
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task SaveCoreAsync()
     {
         _saveErrorMessage = null;
         _coverSaveErrorMessage = null;
@@ -267,7 +309,7 @@ else
         }
     }
 
-    private class EditFormModel
+    private record EditFormModel
     {
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }

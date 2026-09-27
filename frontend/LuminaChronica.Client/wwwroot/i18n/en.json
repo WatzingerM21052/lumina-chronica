@@ -150,6 +150,9 @@
   "confirmDialog.confirmButton": "Yes, delete",
   "confirmDialog.cancelButton": "Cancel",
   "dialog.closeButton": "Close",
+  "dialog.discardChangesCancel": "Keep editing",
+  "dialog.discardChangesConfirm": "Discard",
+  "dialog.discardChangesMessage": "Discard unsaved changes?",
   "toast.dismiss": "Dismiss message",
 
   "avatarUploadDialog.title": "Change Profile Picture",
@@ -199,6 +202,7 @@
   "shelfDetail.backLink": "← Back to Shelves",
   "shelfDetail.loading": "Loading shelf...",
   "shelfDetail.editButton": "Edit",
+  "shelfDetail.editDialogTitle": "Edit shelf",
   "shelfDetail.deleteButton": "Delete",
   "shelfDetail.deleteConfirmMessage": "Really delete this shelf?",
   "shelfDetail.replaceCoverLabel": "Replace Shelf Cover",

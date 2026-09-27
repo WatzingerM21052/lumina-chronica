@@ -14,12 +14,12 @@
 
 <div class="library-header">
     <h1>@I18n.T("projects.title")</h1>
-    <button type="button" class="btn btn-primary" @onclick="() => _showCreateForm = true">
+    <button type="button" class="btn btn-primary" @onclick="OpenCreateForm">
         @I18n.T("projects.createButton")
     </button>
 </div>
 
-<Dialog IsOpen="_showCreateForm" Title="@I18n.T("projects.createButton")" OnClose="() => _showCreateForm = false">
+<Dialog IsOpen="_showCreateForm" Title="@I18n.T("projects.createButton")" OnClose="RequestCloseCreate">
     <ChildContent>
         <EditForm id="project-create-form" Model="_createForm" OnValidSubmit="CreateProjectAsync" class="auth-form">
             @if (_createErrorMessage is not null)
@@ -50,10 +50,13 @@
         </EditForm>
     </ChildContent>
     <Footer>
-        <button type="submit" form="project-create-form" class="btn btn-primary">@I18n.T("projects.createSubmitButton")</button>
-        <button type="button" class="btn" @onclick="() => _showCreateForm = false">@I18n.T("projects.cancelButton")</button>
+        <button type="submit" form="project-create-form" class="btn btn-primary" disabled="@_isCreating">@I18n.T("projects.createSubmitButton")</button>
+        <button type="button" class="btn" @onclick="RequestCloseCreate">@I18n.T("projects.cancelButton")</button>
     </Footer>
 </Dialog>
+<ConfirmDialog IsOpen="_confirmingDiscardCreate" Message="@I18n.T("dialog.discardChangesMessage")"
+               ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
+               OnConfirm="ConfirmDiscardCreate" OnCancel="() => _confirmingDiscardCreate = false" />
 
 @if (_errorMessage is not null)
 {
@@ -67,7 +70,7 @@ else if (_projects.Count == 0)
 {
     <EmptyState Message="@I18n.T("projects.emptyMessage")"
                 ActionText="@I18n.T("projects.createButton")"
-                OnAction="() => _showCreateForm = true" />
+                OnAction="OpenCreateForm" />
 }
 else
 {
@@ -85,6 +88,8 @@ else
     private bool _showCreateForm;
     private string? _createErrorMessage;
     private CreateProjectFormModel _createForm = new();
+    private bool _confirmingDiscardCreate;
+    private bool _isCreating;
     private IBrowserFile? _selectedCover;
 
     protected override Task OnInitializedAsync() => LoadProjectsAsync();
@@ -105,7 +110,50 @@ else
 
     private void OnCoverSelected(InputFileChangeEventArgs e) => _selectedCover = e.File;
 
+    // Every open starts from a clean form: cancelling used to only hide the
+    // dialog, so a reopen showed -- and would submit -- the previous
+    // half-filled values and cover (review N-2).
+    private void OpenCreateForm()
+    {
+        _createForm = new CreateProjectFormModel();
+        _selectedCover = null;
+        _createErrorMessage = null;
+        _showCreateForm = true;
+    }
+
+    private bool IsCreateFormDirty => _createForm != new CreateProjectFormModel() || _selectedCover is not null;
+
+    private void RequestCloseCreate()
+    {
+        if (IsCreateFormDirty)
+        {
+            _confirmingDiscardCreate = true;
+            return;
+        }
+        _showCreateForm = false;
+    }
+
+    private void ConfirmDiscardCreate()
+    {
+        _confirmingDiscardCreate = false;
+        _showCreateForm = false;
+    }
+
     private async Task CreateProjectAsync()
+    {
+        if (_isCreating) return;
+        _isCreating = true;
+        try
+        {
+            await CreateProjectCoreAsync();
+        }
+        finally
+        {
+            _isCreating = false;
+        }
+    }
+
+    private async Task CreateProjectCoreAsync()
     {
         _createErrorMessage = null;
 
@@ -152,7 +200,7 @@ else
     // "token" grammar, but the backend's parser requires it always quoted.
     private static string QuoteFieldName(string value) => $"\"{value}\"";
 
-    private class CreateProjectFormModel
+    private record CreateProjectFormModel
     {
         public string Title { get; set; } = string.Empty;
         public string Type { get; set; } = "WORLD";
