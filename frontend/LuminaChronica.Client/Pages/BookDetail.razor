@@ -209,6 +209,51 @@ else
                         <p class="form-error">@_saveErrorMessage</p>
                     }
 
+                    <h3 class="form-section-title">@I18n.T("bookDetail.editSectionGeneral")</h3>
+                    <div class="form-group">
+                        <label for="edit-title">@I18n.T("bookDetail.titleLabel")</label>
+                        <InputText id="edit-title" @bind-Value="_editForm.Title" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-author">@I18n.T("bookDetail.authorLabel")</label>
+                        <InputText id="edit-author" @bind-Value="_editForm.Author" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-description">@I18n.T("bookDetail.descriptionLabel")</label>
+                        <InputTextArea id="edit-description" @bind-Value="_editForm.Description" />
+                    </div>
+                    <h3 class="form-section-title">@I18n.T("bookDetail.editSectionDetails")</h3>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="edit-genre">@I18n.T("bookDetail.genreLabel")</label>
+                            <InputText id="edit-genre" @bind-Value="_editForm.Genre" />
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-language">@I18n.T("bookDetail.languageLabel")</label>
+                            <InputText id="edit-language" @bind-Value="_editForm.Language" />
+                        </div>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="edit-publisher">@I18n.T("bookDetail.publisherLabel")</label>
+                            <InputText id="edit-publisher" @bind-Value="_editForm.Publisher" />
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-releaseDate">@I18n.T("bookDetail.releaseDateLabel")</label>
+                            <InputDate id="edit-releaseDate" @bind-Value="_editForm.ReleaseDateValue" />
+                        </div>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="edit-pages">@I18n.T("bookDetail.pagesLabel")</label>
+                            <InputNumber id="edit-pages" @bind-Value="_editForm.Pages" />
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-tags">@I18n.T("bookDetail.tagsInputLabel")</label>
+                            <InputText id="edit-tags" @bind-Value="_editForm.Tags" />
+                        </div>
+                    </div>
+                    <h3 class="form-section-title">@I18n.T("bookDetail.editSectionCover")</h3>
                     <div class="form-group">
                         <label for="edit-cover">@I18n.T("bookDetail.replaceCoverLabel")</label>
                         <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "") @(_selectedEditCover is not null ? "dropzone--filled" : "")"
@@ -231,30 +276,7 @@ else
                             <p class="form-error">@_coverSaveErrorMessage</p>
                         }
                     </div>
-                    <div class="form-group">
-                        <label for="edit-title">@I18n.T("bookDetail.titleLabel")</label>
-                        <InputText id="edit-title" @bind-Value="_editForm.Title" />
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-author">@I18n.T("bookDetail.authorLabel")</label>
-                        <InputText id="edit-author" @bind-Value="_editForm.Author" />
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-description">@I18n.T("bookDetail.descriptionLabel")</label>
-                        <InputTextArea id="edit-description" @bind-Value="_editForm.Description" />
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-genre">@I18n.T("bookDetail.genreLabel")</label>
-                        <InputText id="edit-genre" @bind-Value="_editForm.Genre" />
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-language">@I18n.T("bookDetail.languageLabel")</label>
-                        <InputText id="edit-language" @bind-Value="_editForm.Language" />
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-tags">@I18n.T("bookDetail.tagsInputLabel")</label>
-                        <InputText id="edit-tags" @bind-Value="_editForm.Tags" />
-                    </div>
+                    <h3 class="form-section-title">@I18n.T("bookDetail.editSectionLookup")</h3>
                     <div class="form-group">
                         <label for="edit-isbn">ISBN</label>
                         <div class="isbn-enrichment-row">
@@ -323,18 +345,7 @@ else
                             </div>
                         }
                     </div>
-                    <div class="form-group">
-                        <label for="edit-publisher">@I18n.T("bookDetail.publisherLabel")</label>
-                        <InputText id="edit-publisher" @bind-Value="_editForm.Publisher" />
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-releaseDate">@I18n.T("bookDetail.releaseDateLabel")</label>
-                        <InputDate id="edit-releaseDate" @bind-Value="_editForm.ReleaseDateValue" />
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-pages">@I18n.T("bookDetail.pagesLabel")</label>
-                        <InputNumber id="edit-pages" @bind-Value="_editForm.Pages" />
-                    </div>
+                    <h3 class="form-section-title">@I18n.T("bookDetail.editSectionVisibility")</h3>
                     <div class="form-group">
                         <label for="edit-visibility">@I18n.T("bookDetail.visibilityLabel")</label>
                         <InputSelect id="edit-visibility" @bind-Value="_editForm.Visibility" @bind-Value:after="OnVisibilityChangedAsync">
