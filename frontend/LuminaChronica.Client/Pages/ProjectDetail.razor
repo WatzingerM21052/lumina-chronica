@@ -31,41 +31,101 @@ else if (_project is null)
 }
 else
 {
-    <div class="form-actions">
-        <button type="button" class="btn @(_activeTab == "overview" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "overview")">@I18n.T("projectDetail.tabOverview")</button>
-        <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "characters")">@I18n.T("projectDetail.tabCharacters")</button>
-        <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "map")">@I18n.T("projectDetail.tabMap")</button>
-        <button type="button" class="btn @(_activeTab == "timeline" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "timeline")">@I18n.T("projectDetail.tabTimeline")</button>
-        <button type="button" class="btn @(_activeTab == "lore" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "lore")">@I18n.T("projectDetail.tabLore")</button>
-        <button type="button" class="btn @(_activeTab == "books" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "books")">@I18n.T("projectDetail.tabBooks")</button>
-        <button type="button" class="btn @(_activeTab == "files" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "files")">@I18n.T("projectDetail.tabFiles")</button>
+    <div class="form-actions project-tabs" role="tablist">
+        <button type="button" class="btn @(_activeTab == "overview" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "overview" ? "true" : "false")" @onclick="@(() => _activeTab = "overview")">@I18n.T("projectDetail.tabOverview")</button>
+        <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "characters" ? "true" : "false")" @onclick="@(() => _activeTab = "characters")">@I18n.T("projectDetail.tabCharacters")</button>
+        <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "map" ? "true" : "false")" @onclick="@(() => _activeTab = "map")">@I18n.T("projectDetail.tabMap")</button>
+        <button type="button" class="btn @(_activeTab == "timeline" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "timeline" ? "true" : "false")" @onclick="@(() => _activeTab = "timeline")">@I18n.T("projectDetail.tabTimeline")</button>
+        <button type="button" class="btn @(_activeTab == "lore" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "lore" ? "true" : "false")" @onclick="@(() => _activeTab = "lore")">@I18n.T("projectDetail.tabLore")</button>
+        <button type="button" class="btn @(_activeTab == "books" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "books" ? "true" : "false")" @onclick="@(() => _activeTab = "books")">@I18n.T("projectDetail.tabBooks")</button>
+        <button type="button" class="btn @(_activeTab == "files" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "files" ? "true" : "false")" @onclick="@(() => _activeTab = "files")">@I18n.T("projectDetail.tabFiles")</button>
     </div>
 
     @if (_activeTab == "overview")
     {
-        <div class="book-detail-cover">
-            @if (_coverObjectUrl is not null)
-            {
-                <img src="@_coverObjectUrl" alt="@_project.Title" />
-            }
-            else
-            {
-                <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="project" /></div>
-            }
-        </div>
+        <div class="book-detail project-overview">
+            <div class="book-detail-cover">
+                @if (_coverObjectUrl is not null)
+                {
+                    <img src="@_coverObjectUrl" alt="@_project.Title" />
+                }
+                else
+                {
+                    <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="project" /></div>
+                }
+            </div>
 
+            <div class="book-detail-info">
+                @if (!_isEditing)
+                {
+                    <h1>@_project.Title</h1>
+                    <p class="text-muted">@ProjectTypeLabel.For(_project.Type, I18n)</p>
+                    @if (!string.IsNullOrWhiteSpace(_project.Description))
+                    {
+                        <p>@_project.Description</p>
+                    }
+                    <div class="form-actions">
+                        <button type="button" class="btn" @onclick="StartEditing">@I18n.T("projectDetail.editButton")</button>
+                        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("projectDetail.deleteButton")</button>
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+                        @if (_saveErrorMessage is not null)
+                        {
+                            <p class="form-error">@_saveErrorMessage</p>
+                        }
+                        <div class="form-group">
+                            <label for="project-edit-cover">@I18n.T("projectDetail.replaceCoverLabel")</label>
+                            <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
+                                 @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
+                                 @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
+                                <InputFile id="project-edit-cover" OnChange="OnEditCoverSelected" />
+                                <span class="dropzone-label">@I18n.T("projectDetail.coverDropzoneLabel")</span>
+                            </div>
+                            @if (_coverSaveErrorMessage is not null)
+                            {
+                                <p class="form-error">@_coverSaveErrorMessage</p>
+                            }
+                        </div>
+                        <div class="form-group">
+                            <label for="project-edit-title">@I18n.T("projectDetail.titleLabel")</label>
+                            <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
+                        </div>
+                        <div class="form-group">
+                            <label for="project-edit-type">@I18n.T("projectDetail.typeLabel")</label>
+                            <InputSelect id="project-edit-type" @bind-Value="_editForm.Type">
+                                @foreach (var type in ProjectTypeLabel.Options)
+                                {
+                                    <option value="@type">@ProjectTypeLabel.For(type, I18n)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="form-group">
+                            <label for="project-edit-description">@I18n.T("projectDetail.descriptionLabel")</label>
+                            <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
+                        </div>
+                        <div class="form-group">
+                            <label for="project-edit-visibility">@I18n.T("projectDetail.visibilityLabel")</label>
+                            <InputSelect id="project-edit-visibility" @bind-Value="_editForm.Visibility">
+                                @foreach (var option in VisibilityOption.Options)
+                                {
+                                    <option value="@option">@VisibilityOption.For(option, I18n)</option>
+                                }
+                            </InputSelect>
+                            <p class="text-muted">@I18n.T("projectDetail.visibilityHint")</p>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.saveButton")</button>
+                            <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("projectDetail.cancelButton")</button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
         @if (!_isEditing)
         {
-            <h1>@_project.Title</h1>
-            <p class="text-muted">@ProjectTypeLabel.For(_project.Type, I18n)</p>
-            @if (!string.IsNullOrWhiteSpace(_project.Description))
-            {
-                <p>@_project.Description</p>
-            }
-            <div class="form-actions">
-                <button type="button" class="btn" @onclick="StartEditing">@I18n.T("projectDetail.editButton")</button>
-                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("projectDetail.deleteButton")</button>
-            </div>
             <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("projectDetail.deleteConfirmMessage")"
                            OnConfirm="DeleteProjectAsync" OnCancel="() => _confirmingDelete = false" />
 
@@ -111,59 +171,6 @@ else
                     </EditForm>
                 }
             </section>
-        }
-        else
-        {
-            <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
-                @if (_saveErrorMessage is not null)
-                {
-                    <p class="form-error">@_saveErrorMessage</p>
-                }
-                <div class="form-group">
-                    <label for="project-edit-cover">@I18n.T("projectDetail.replaceCoverLabel")</label>
-                    <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
-                         @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
-                         @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
-                        <InputFile id="project-edit-cover" OnChange="OnEditCoverSelected" />
-                        <span class="dropzone-label">@I18n.T("projectDetail.coverDropzoneLabel")</span>
-                    </div>
-                    @if (_coverSaveErrorMessage is not null)
-                    {
-                        <p class="form-error">@_coverSaveErrorMessage</p>
-                    }
-                </div>
-                <div class="form-group">
-                    <label for="project-edit-title">@I18n.T("projectDetail.titleLabel")</label>
-                    <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
-                </div>
-                <div class="form-group">
-                    <label for="project-edit-type">@I18n.T("projectDetail.typeLabel")</label>
-                    <InputSelect id="project-edit-type" @bind-Value="_editForm.Type">
-                        @foreach (var type in ProjectTypeLabel.Options)
-                        {
-                            <option value="@type">@ProjectTypeLabel.For(type, I18n)</option>
-                        }
-                    </InputSelect>
-                </div>
-                <div class="form-group">
-                    <label for="project-edit-description">@I18n.T("projectDetail.descriptionLabel")</label>
-                    <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
-                </div>
-                <div class="form-group">
-                    <label for="project-edit-visibility">@I18n.T("projectDetail.visibilityLabel")</label>
-                    <InputSelect id="project-edit-visibility" @bind-Value="_editForm.Visibility">
-                        @foreach (var option in VisibilityOption.Options)
-                        {
-                            <option value="@option">@VisibilityOption.For(option, I18n)</option>
-                        }
-                    </InputSelect>
-                    <p class="text-muted">@I18n.T("projectDetail.visibilityHint")</p>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.saveButton")</button>
-                    <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("projectDetail.cancelButton")</button>
-                </div>
-            </EditForm>
         }
     }
     else if (_activeTab == "characters")

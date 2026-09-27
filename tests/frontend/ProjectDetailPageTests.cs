@@ -75,6 +75,38 @@ public class ProjectDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void ProjectDetail_Tabs_AreATablist_WithTheActiveTabSelected()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        var tabs = cut.FindAll(".project-tabs[role=tablist] [role=tab]");
+
+        Assert.Equal(7, tabs.Count);
+        Assert.Equal("true", tabs[0].GetAttribute("aria-selected"));
+        Assert.All(tabs.Skip(1), t => Assert.Equal("false", t.GetAttribute("aria-selected")));
+
+        tabs[1].Click(); // "Charaktere"
+
+        var updated = cut.FindAll(".project-tabs [role=tab]");
+        Assert.Equal("false", updated[0].GetAttribute("aria-selected"));
+        Assert.Equal("true", updated[1].GetAttribute("aria-selected"));
+    }
+
+    [Fact]
+    public void ProjectDetail_Overview_PutsTheCoverBesideTheInfoColumn()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        // Same header shape as BookDetail: cover and title in one .book-detail row.
+        var header = cut.Find(".book-detail.project-overview");
+        Assert.NotNull(header.QuerySelector(".book-detail-cover"));
+        Assert.Contains("Aetherfall", header.QuerySelector(".book-detail-info h1")!.TextContent);
+    }
+
+    [Fact]
     public void ProjectDetail_DeleteButton_OpensConfirmDialog()
     {
         UseDefaultRoutes();

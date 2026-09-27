@@ -25,6 +25,14 @@ a.btn:hover {
     text-decoration: none;
 }
 
+/* ...and be the same height as a real <button> next to it: <a> inherits
+   the body's 1.6 line-height, <button> uses the UA's `normal`, so "Lesen"
+   stood a few px taller than "Bearbeiten"/"Löschen" in the same row. */
+a.btn {
+    display: inline-block;
+    line-height: normal;
+}
+
 a:hover {
     color: var(--color-primary-hover);
 }
@@ -2278,6 +2286,19 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
 .book-detail-info {
     flex: 1;
     min-width: 0;
+}
+
+/* Cover beside the info column only where there is room for both: a
+   12rem cover plus a display-size title scrolled the page sideways on a
+   phone (BookDetail by 55px, ProjectDetail's overview by 85px). */
+@media (max-width: 40rem) {
+    .book-detail {
+        flex-direction: column;
+    }
+
+    .book-detail-cover {
+        width: 9rem;
+    }
 }
 
 .book-detail-title-row {
