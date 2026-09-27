@@ -2,6 +2,7 @@ import type { Bindings } from "../models/env";
 import { OAUTH_NO_PASSWORD_SENTINEL, hashPassword, hmacSha256Hex, randomNumericCode, randomToken, sha256Hex, signJwt } from "../utils/crypto";
 import { roleName } from "./authService";
 import { sendEmail } from "./emailService";
+import { consumeAccountResetBudget } from "./rateLimitService";
 import { renderOAuthNoPasswordEmail } from "../emails/oauthNoPassword";
 import { renderPasswordChangedEmail } from "../emails/passwordChanged";
 import { renderPasswordResetCodeEmail } from "../emails/passwordResetCode";
@@ -53,6 +54,15 @@ async function userLanguage(db: D1Database, userId: number): Promise<EmailLangua
 export async function requestPasswordReset(db: D1Database, env: Pick<Bindings, "RESEND_API_KEY" | "FRONTEND_URL" | "PASSWORD_CODE_SECRET">, identifier: string): Promise<void> {
     const user = await findUserByIdentifier(db, identifier);
     if (!user) return;
+
+    // Review H-1: per-account cap on reset emails (rateLimitService.ts's
+    // RESET_EMAILS_PER_ACCOUNT_MAX), covering the OAuth-only branch too --
+    // its informational mail is just as floodable. Over budget returns
+    // exactly like the unknown-identifier path above: no mail, and the
+    // route's generic 200, so hitting the cap reveals nothing about the
+    // account. Deliberately BEFORE the D6 invalidation below: an over-budget
+    // request must not burn the link and code the owner last received.
+    if (!(await consumeAccountResetBudget(db, user.id))) return;
 
     const language = await userLanguage(db, user.id);
 
