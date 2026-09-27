@@ -6,6 +6,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Form dialogs (Regal anlegen/bearbeiten, Projekt erstellen, Buch bearbeiten) no longer render a card inside the dialog card with an empty band above it; the fields now use the dialog's full width. The shelf and project cover pickers are the same drag-and-drop zone as everywhere else instead of the browser's bare "Choose File" control. Link buttons ("Buch hinzufügen", "Regale", "Lesen") are no longer underlined, and the comment button is a normal right-aligned button instead of a full-width bar.
 - "Buch hinzufügen" now goes straight to the upload page instead of opening a chooser whose three options all led there anyway. The upload page is ordered the way adding a book actually works: 1. choose the file (EPUB/PDF fill in title, author and cover automatically), 2. optionally look up missing details by ISBN or title, 3. review and complete the rest.
 - Dialogs (aesthetic pass, Phase 5 of the password-reset modernization): delete and discard confirmations now use a red button instead of the brass primary one, every dialog footer puts Abbrechen first and the main action on the right, the ✕ close button is a proper 40×40 touch target, dialogs use a little less padding on phones, and the password-reset popup's steps slide in (fade only with reduced motion). Comment, sharing, timeline and toast surfaces now use the larger container radius.
 
