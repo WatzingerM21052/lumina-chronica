@@ -335,9 +335,23 @@ Turning this into a popup does **not** delete the routes. The component takes
 | Entry | Opens at | Params |
 |---|---|---|
 | `Login.razor` — "Passwort vergessen?" | `Identify` | — |
-| `Profile.razor` — password-reset button | `CodeEntry` (request fired immediately, email already known) | `InitialIdentifier = <own email>` |
+| `Profile.razor` — password-reset button | `Identify`, with the field pre-filled | `InitialIdentifier = <own email>` |
 | `/reset-password?token=…` (emailed link) | `PasswordEntry` | `LinkToken = <token>` — the code steps are skipped entirely, the token *is* the proof |
 | `/forgot-password` (bookmark, old email) | `Identify` | — |
+
+**CORRECTED 2026-09-27, live review after Phase 3 shipped**: the Profile row
+originally skipped straight to `CodeEntry` and auto-fired the request, on the
+reasoning that Profile already knows the user's email so there was nothing left
+to ask for. Live-tested, this read as broken rather than as a shortcut: the user
+saw the dialog jump straight to "check your email" with no visible confirmation
+of *which* email, and the step rail displayed a "1 E-Mail" segment that was never
+actually shown in that session. Fixed by having `InitialIdentifier` only
+pre-fill the field — Identify is never skipped, the request only fires once the
+user submits it themselves, same as `Login.razor`'s flow. `LinkToken` still
+skips both `Identify` and `CodeEntry` (the token really is a different kind of
+proof, not just a filled-in field), and the step rail is hidden entirely for
+that flow rather than showing a misleading 3-segment rail for a single-step
+session.
 
 `ForgotPassword.razor` and `ResetPassword.razor` shrink to thin shells: parse the
 query string, render `<PasswordResetDialog IsOpen="true" … />`, navigate home on

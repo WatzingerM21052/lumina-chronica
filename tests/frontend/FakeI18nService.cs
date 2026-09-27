@@ -69,6 +69,7 @@ public class FakeI18nService : II18nService
         ["passwordReset.rateLimited"] = "Zu viele Versuche. Bitte in {0} Minuten erneut versuchen.",
         ["passwordReset.codeTitle"] = "Gib den Code ein",
         ["passwordReset.codeIntro"] = "Falls ein Konto mit diesen Angaben existiert, haben wir dir einen Code und einen Link per E-Mail geschickt.",
+        ["passwordReset.codeIntroWithEmail"] = "Falls ein Konto mit diesen Angaben existiert, haben wir einen Code und einen Link an {0} geschickt.",
         ["passwordReset.codeLabel"] = "Bestätigungscode",
         ["passwordReset.codeInvalid"] = "Der Code stimmt nicht.",
         ["passwordReset.codeConfirmedAnnouncement"] = "Code bestätigt.",

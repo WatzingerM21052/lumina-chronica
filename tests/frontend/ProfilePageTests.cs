@@ -249,6 +249,33 @@ public class ProfilePageTests : BunitContext
     }
 
     [Fact]
+    public void Profile_OAuthOnlyAccount_HidesThePasswordResetButton()
+    {
+        // An OAuth-only account has no password to reset -- clicking
+        // through would fire /forgot-password same as any other account,
+        // but the backend sends a different email for that case (no code
+        // at all, just a "sign in with Google/GitHub instead" notice, see
+        // requestPasswordReset's OAUTH_NO_PASSWORD_SENTINEL branch), which
+        // would make the popup's "enter the code we sent you" step
+        // actively misleading for a code that was never sent. Hide the
+        // entry point entirely rather than let it open a dialog promising
+        // something that won't happen.
+        const string oauthOnlyProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01","hasPassword":false}}""";
+        var handler = NoLinkedProvidersHandler(oauthOnlyProfileJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
+
+        var cut = Render<Profile>();
+
+        Assert.Empty(cut.FindAll(".profile-password-reset"));
+    }
+
+    [Fact]
     public void Profile_DeleteAccount_WrongPassword_ShowsErrorWithoutNavigating()
     {
         // FakeHttpMessageHandler (used by the other tests in this file) returns
@@ -536,11 +563,12 @@ public class ProfilePageTests : BunitContext
         // second GET /api/users/me -- unlike the old Settings feature it
         // replaced, which fetched the profile solely for this purpose.
         //
-        // Per the password-reset modernization design doc §4.1, the
-        // button now opens PasswordResetDialog directly at CodeEntry
-        // (InitialIdentifier = the profile's own email) instead of firing
-        // the request and showing a toast itself -- the dialog fires that
-        // same request on open and manages its own success/error state,
+        // Per the password-reset modernization design doc §4.1 (as
+        // corrected after live review -- see PasswordResetDialog.razor.cs's
+        // Open()), the button opens PasswordResetDialog at Identify with
+        // the profile's own email pre-filled, not straight at CodeEntry --
+        // the user still sees and submits it themselves, same as Login's
+        // flow. The dialog manages its own success/error state from there,
         // so there's no toast here to assert on anymore.
         HttpRequestMessage? postRequest = null;
         string? postBody = null;
@@ -567,6 +595,13 @@ public class ProfilePageTests : BunitContext
         var button = cut.Find(".profile-password-reset button");
         Assert.False(button.HasAttribute("disabled"));
         button.Click();
+
+        // Pre-filled, not yet sent.
+        var identifierInput = (AngleSharp.Html.Dom.IHtmlInputElement)cut.Find("#passwordResetIdentifier");
+        Assert.Equal("alice@example.com", identifierInput.Value);
+        Assert.Null(postRequest);
+
+        cut.Find(".dialog button.btn-primary").Click();
 
         Assert.NotNull(postRequest);
         Assert.EndsWith("/forgot-password", postRequest!.RequestUri!.AbsolutePath);
