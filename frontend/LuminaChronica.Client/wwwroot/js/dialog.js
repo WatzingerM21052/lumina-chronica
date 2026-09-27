@@ -26,6 +26,10 @@ const FOCUSABLE =
     'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), ' +
     'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const FIELDS = 'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])';
+// Fields whose Blazor binding only updates on "change" and that are safe to
+// re-fire it on -- never file inputs (InputFile would re-raise OnChange with
+// an empty file list) or checkboxes/radios (they bind on change already).
+const TEXT_FIELDS = 'input:not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea';
 
 function focusables(el) {
     return Array.from(el.querySelectorAll(FOCUSABLE)).filter((node) => node.offsetParent !== null || node === document.activeElement);
@@ -45,7 +49,7 @@ function onKeyDown(e) {
     const { el, dotNetRef } = top;
     const focusInside = el.contains(document.activeElement);
 
-    if (e.key === "Escape" && focusInside && document.activeElement.matches(FIELDS)) {
+    if (e.key === "Escape" && focusInside && document.activeElement.matches(TEXT_FIELDS)) {
         // Blazor's InputText/InputTextArea only update their model on
         // "change" (i.e. on blur). Without this, typing and pressing Escape
         // straight away closes the dialog before the dirty-state guard ever
