@@ -71,3 +71,9 @@
     gap: var(--space-2);
     padding: var(--space-1) 0;
 }
+
+/* Same field width as the account/password forms above (.profile-form),
+   instead of a password field stretched across the whole page. */
+.profile-danger-zone .form-group {
+    max-width: 32rem;
+}

@@ -539,6 +539,46 @@ select:focus-visible,
     box-shadow: var(--shadow-card);
 }
 
+/* Profile's account/password forms sit under left-aligned section
+   headings, so they align left too -- the centered login-card placement of
+   .auth-form left them floating in the middle, detached from their titles. */
+.auth-form.profile-form {
+    max-width: 32rem;
+    margin: 0 0 var(--space-3);
+}
+
+/* Named sections inside a longer form (e.g. the book-edit dialog): editing
+   is non-linear -- you jump to the field you came for -- so sections with
+   a heading beat a step-by-step wizard there. */
+.form-section-title {
+    margin: var(--space-2) 0 0;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
+    font-family: var(--font-family-display);
+    font-size: var(--font-size-body-lg);
+    font-weight: 600;
+}
+
+.form-section-title:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+/* Two short fields side by side (Genre | Sprache, Verlag | Datum); one
+   column on phones. */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+}
+
+@media (max-width: 40rem) {
+    .form-grid-2 {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 /* Inside a Dialog the dialog itself is the card: the form's own card
    chrome (border, shadow, padding, centered 24rem/34rem column) turned
    every dialog form into a card-in-a-card with a blank band above it and,

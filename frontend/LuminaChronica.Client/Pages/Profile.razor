@@ -41,7 +41,7 @@ else
     <AvatarUploadDialog IsOpen="_isAvatarDialogOpen" OnUploaded="OnAvatarUploaded" OnClose="() => _isAvatarDialogOpen = false" />
 
     <h2>@I18n.T("profile.accountTitle")</h2>
-    <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form">
+    <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form profile-form">
         @if (_profileErrorMessage is not null)
         {
             <p class="form-error">@_profileErrorMessage</p>
@@ -79,7 +79,7 @@ else
     </EditForm>
 
     <h2>@I18n.T("profile.changePasswordTitle")</h2>
-    <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form">
+    <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form profile-form">
         @if (_passwordErrorMessage is not null)
         {
             <p class="form-error">@_passwordErrorMessage</p>
