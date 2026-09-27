@@ -149,3 +149,44 @@ export async function sha256Hex(input: string): Promise<string> {
     const digest = await crypto.subtle.digest("SHA-256", textEncoder.encode(input));
     return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
+
+// Password-reset codes (docs/superpowers/specs/2026-09-27-password-reset-modernization-design.md
+// §3). A plain sha256Hex like the token above would be wrong here: token_hash
+// covers a 256-bit random value where a preimage search is hopeless, but a
+// 6-digit code is only a 10^6 keyspace -- a bare SHA-256 dump of it reverses
+// in milliseconds. HMAC-SHA256 keyed with a Worker secret (PASSWORD_CODE_SECRET)
+// makes that dictionary attack require the secret too, same reasoning as
+// signJwt's HMAC.
+export async function hmacSha256Hex(secret: string, value: string): Promise<string> {
+    // An empty/undefined secret would still "work" -- crypto.subtle happily
+    // HMACs against a zero-length key -- and produce stable-looking,
+    // completely worthless hashes that no missing-.dev.vars-entry or
+    // forgotten-`wrangler secret put` would ever surface as a bug. Fail
+    // loudly instead of silently hashing against nothing.
+    if (!secret) throw new Error("hmacSha256Hex: secret must not be empty");
+    const key = await hmacKey(secret);
+    const signature = await crypto.subtle.sign("HMAC", key, textEncoder.encode(value));
+    return [...new Uint8Array(signature)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// A 6-digit reset code (D1: chosen over 8 alphanumeric chars -- easier to
+// type/read, and keeps autocomplete="one-time-code" working). Built from
+// individually-sampled digits via rejection sampling, NOT `byte % 10` on a
+// single random byte per digit: 256 isn't a multiple of 10, so `% 10` maps
+// bytes 0-5 (6 values) to digit 0 but bytes 250-255 only exist for digits
+// 0-5 too (250%10=0 ... 255%10=5) -- every digit 0-5 gets 26 possible byte
+// values while 6-9 only get 25, a real (if small) bias in a security-facing
+// random value. Rejecting bytes >= 250 (the largest multiple of 10 that
+// fits in a byte) before taking `% 10` removes the bias entirely.
+export function randomNumericCode(length = 6): string {
+    const REJECTION_CEILING = 250; // largest multiple of 10 <= 256
+    let code = "";
+    while (code.length < length) {
+        const bytes = crypto.getRandomValues(new Uint8Array(length - code.length));
+        for (const byte of bytes) {
+            if (byte >= REJECTION_CEILING) continue;
+            code += (byte % 10).toString();
+        }
+    }
+    return code;
+}

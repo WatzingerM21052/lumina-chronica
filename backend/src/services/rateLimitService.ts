@@ -9,6 +9,26 @@ export const LOGIN_MAX_ATTEMPTS = 8;
 export const REGISTER_MAX_ATTEMPTS = 8;
 export const FORGOT_PASSWORD_MAX_ATTEMPTS = 5;
 
+// D2 (docs/superpowers/specs/2026-09-27-password-reset-modernization-design.md
+// §3.4 step 0): the 60s "Code erneut senden" cooldown for the popup's resend
+// button. A SEPARATE, additional throttle from forgot-password's own
+// 5-per-15-min one above -- that one is the abuse backstop, this one is the
+// fast, obvious "why is the resend button disabled" UX signal. Reuses this
+// same table/mechanism (and the route's existing RATE_LIMITED/429 response
+// shape, including Retry-After -- the frontend drives the visible countdown
+// straight off that header, no separate response shape needed) rather than
+// inventing a new one.
+export const FORGOT_PASSWORD_RESEND_MAX_ATTEMPTS = 1;
+const FORGOT_PASSWORD_RESEND_WINDOW_MS = 60 * 1000;
+
+// §3.5: outer backstops against *spraying identifiers* at these two new
+// routes -- NOT the brute-force defense (that's MAX_CODE_ATTEMPTS, living
+// on the password_reset_tokens row itself, immune to IP rotation). Generous
+// on purpose: verify-reset-code fires on every keystroke-driven live check
+// (§4.3), so a tight cap here would break normal typing, not just abuse.
+export const VERIFY_RESET_CODE_MAX_ATTEMPTS = 30;
+export const RESET_PASSWORD_MAX_ATTEMPTS = 10;
+
 export class RateLimitedError extends Error {
     constructor(public readonly retryAfterSeconds: number) {
         super("Too many attempts.");
@@ -55,9 +75,9 @@ async function checkLimit(db: D1Database, route: string, ip: string, identifier:
 // as text is a silent bug ('T' > ' ' in ASCII, so expires_at > CURRENT_TIMESTAMP
 // was always true and the window never actually expired). Binding both
 // sides in the same format sidesteps the mismatch entirely.
-async function recordAttempt(db: D1Database, route: string, ip: string, identifier: string): Promise<void> {
+async function recordAttempt(db: D1Database, route: string, ip: string, identifier: string, windowMs: number): Promise<void> {
     const nowIso = new Date().toISOString();
-    const freshExpiresAt = new Date(Date.now() + WINDOW_MS).toISOString();
+    const freshExpiresAt = new Date(Date.now() + windowMs).toISOString();
     await db
         .prepare(
             `INSERT INTO auth_rate_limits (route, ip, identifier, attempt_count, expires_at)
@@ -78,7 +98,15 @@ async function clearAttempts(db: D1Database, route: string, ip: string, identifi
 function maxAttemptsFor(route: string): number {
     if (route === "login") return LOGIN_MAX_ATTEMPTS;
     if (route === "forgot-password") return FORGOT_PASSWORD_MAX_ATTEMPTS;
+    if (route === "forgot-password-resend") return FORGOT_PASSWORD_RESEND_MAX_ATTEMPTS;
+    if (route === "verify-reset-code") return VERIFY_RESET_CODE_MAX_ATTEMPTS;
+    if (route === "reset-password") return RESET_PASSWORD_MAX_ATTEMPTS;
     return REGISTER_MAX_ATTEMPTS;
+}
+
+function windowMsFor(route: string): number {
+    if (route === "forgot-password-resend") return FORGOT_PASSWORD_RESEND_WINDOW_MS;
+    return WINDOW_MS;
 }
 
 // Throws RateLimitedError if the (ip, identifier) pair is already at the
@@ -89,8 +117,23 @@ export async function assertNotRateLimited(c: { env: { DB: D1Database }; req: { 
     return { ip, identifier };
 }
 
+// D2's resend cooldown (see the const above): deliberately IP-INDEPENDENT
+// (ip = "", matching `register`'s existing bucket shape) and callable with
+// a bare identifier string, not a Hono context -- it must be checkable
+// before any user lookup, and its whole point is that the response is
+// identical whether or not `identifier` resolves to a real account. Do not
+// key this one on IP; an attacker probing identifiers would just rotate IPs
+// to dodge the cooldown, undermining the exact symmetry this exists for.
+export async function assertResendNotRateLimited(db: D1Database, identifier: string): Promise<void> {
+    await checkLimit(db, "forgot-password-resend", "", identifier, FORGOT_PASSWORD_RESEND_MAX_ATTEMPTS);
+}
+
+export async function recordResendAttempt(db: D1Database, identifier: string): Promise<void> {
+    await recordAttempt(db, "forgot-password-resend", "", identifier, windowMsFor("forgot-password-resend"));
+}
+
 export async function recordFailedAttempt(db: D1Database, route: string, ip: string, identifier: string): Promise<void> {
-    await recordAttempt(db, route, ip, identifier);
+    await recordAttempt(db, route, ip, identifier, windowMsFor(route));
 }
 
 export async function clearRateLimit(db: D1Database, route: string, ip: string, identifier: string): Promise<void> {
