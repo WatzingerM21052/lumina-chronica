@@ -590,6 +590,7 @@ public class FakeI18nService : II18nService
         ["impressum.country"] = "Österreich",
         ["impressum.contactTitle"] = "Kontakt",
         ["impressum.emailLabel"] = "E-Mail",
+        ["impressum.supportEmailLabel"] = "Support / Allgemeine Anfragen",
         ["impressum.responsibleTitle"] = "Verantwortlich für den Inhalt",
         ["impressum.addressLine"] = "Aigen 27, 4710 Hofkirchen an der Trattnach, Österreich",
         ["impressum.disclaimerTitle"] = "Haftungsausschluss",
