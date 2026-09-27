@@ -199,7 +199,10 @@ else
             }
             else
             {
-                <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+                <Dialog IsOpen="_isEditing" Size="DialogSize.Large" Title="@I18n.T("bookDetail.editDialogTitle")"
+                        CloseOnOverlayClick="false" CloseOnEscape="false" OnClose="RequestCloseEditAsync">
+                <ChildContent>
+                <EditForm id="book-edit-form" Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
                     @if (_saveErrorMessage is not null)
                     {
                         <p class="form-error">@_saveErrorMessage</p>
@@ -353,10 +356,6 @@ else
                         }
                     </div>
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" disabled="@_isSaving">@I18n.T("bookDetail.saveButton")</button>
-                        <button type="button" class="btn" @onclick="CancelEditing">@I18n.T("bookDetail.cancelButton")</button>
-                    </div>
                 </EditForm>
 
                 @if (_editForm.Visibility == "SHARED")
@@ -399,6 +398,16 @@ else
                         }
                     </div>
                 }
+                </ChildContent>
+                <Footer>
+                    <button type="submit" form="book-edit-form" class="btn btn-primary" disabled="@_isSaving">@I18n.T("bookDetail.saveButton")</button>
+                    <button type="button" class="btn" @onclick="RequestCloseEditAsync">@I18n.T("bookDetail.cancelButton")</button>
+                </Footer>
+                </Dialog>
+                <ConfirmDialog IsOpen="_confirmingDiscardEdit" Message="@I18n.T("bookDetail.discardEditConfirmMessage")"
+                               ConfirmText="@I18n.T("bookDetail.discardEditConfirmButton")"
+                               CancelText="@I18n.T("bookDetail.discardEditCancelButton")"
+                               OnConfirm="ConfirmDiscardEdit" OnCancel="() => _confirmingDiscardEdit = false" />
             }
         </div>
     </div>
@@ -464,6 +473,8 @@ else
     private IBrowserFile? _selectedEditCover;
     private bool _isDraggingCover;
     private EditFormModel _editForm = new();
+    private EditFormModel _editFormSnapshot = new();
+    private bool _confirmingDiscardEdit;
 
     private List<DiscoverUser>? _shareUsers;
     private readonly HashSet<string> _shareActionInProgress = [];
@@ -778,7 +789,30 @@ else
         _shareSearchTerm = string.Empty;
         _shareSearchResults = null;
         _shareUsers = null;
+        // Snapshot taken after every field above is set, and before the user
+        // can touch anything -- the dirty-state guard (D12/Phase 4 item 18)
+        // compares live _editForm against this frozen copy.
+        _editFormSnapshot = _editForm with { };
         if (_editForm.Visibility == "SHARED") await LoadSharesAsync();
+    }
+
+    private bool IsEditFormDirty => _editForm != _editFormSnapshot || _selectedEditCover is not null || _pendingCoverBytes is not null;
+
+    private Task RequestCloseEditAsync()
+    {
+        if (IsEditFormDirty)
+        {
+            _confirmingDiscardEdit = true;
+            return Task.CompletedTask;
+        }
+        CancelEditing();
+        return Task.CompletedTask;
+    }
+
+    private void ConfirmDiscardEdit()
+    {
+        _confirmingDiscardEdit = false;
+        CancelEditing();
     }
 
     // Fetch the share list lazily, the first time the dropdown is switched
@@ -1155,7 +1189,12 @@ else
         _shareSearchDebounceTimer?.Dispose();
     }
 
-    private class EditFormModel
+    // A record, not a class -- IsEditFormDirty compares the live instance
+    // against a snapshot taken at StartEditingAsync via structural (not
+    // reference) equality. ReleaseDateValue is a hand-written property (no
+    // backing field), so it's correctly excluded from that comparison --
+    // ReleaseDate itself, the auto-property it delegates to, already covers it.
+    private record EditFormModel
     {
         public string Title { get; set; } = string.Empty;
         public string? Author { get; set; }
