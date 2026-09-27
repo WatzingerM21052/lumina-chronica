@@ -49,6 +49,11 @@
     --radius-lg: 10px;
     --shadow-card: 0 1px 3px rgba(30, 20, 10, 0.14), 0 1px 2px rgba(30, 20, 10, 0.08);
     --shadow-card-hover: 0 8px 20px rgba(30, 20, 10, 0.18), 0 2px 6px rgba(30, 20, 10, 0.1);
+    /* A modal floating over a dimmed page is a third elevation level above
+       the two above -- same warm-brown tint, just higher, so a dialog reads
+       as "above the page" rather than "a card that happens to be centered"
+       (the three pre-existing dialogs all borrow --shadow-card-hover today). */
+    --shadow-overlay: 0 24px 48px rgba(30, 20, 10, 0.28), 0 4px 12px rgba(30, 20, 10, 0.14);
 
     /* Motion (issue #341) — one small, consistent timing system instead of
        each component picking its own duration. Three bands only:

@@ -33,6 +33,10 @@
     --color-bg-paper: #f2e9d8;
     --color-bg-light: #fbf6ec;
     --color-bg-dark: #241a12;
+    /* Dialog overlay scrim -- tinted toward this theme's own --color-bg-dark
+       rather than a generic rgba(0,0,0,0.5), so a modal reads as the app
+       dimming itself instead of a cold, unrelated black layer. */
+    --color-overlay-scrim: rgba(36, 26, 18, 0.45);
     --color-bg-card: #fbf6ec;
     --color-bg-reader: #f7f0e3;
 
