@@ -1456,7 +1456,7 @@ First of the three additional Profile functions the user asked about while revie
 
 Backend: 360/360 tests passing (354 existing + 6 new, all in `users.test.ts`: upload requires auth, uploads and serves via the public route, replaces and cleans up the old R2 object, rejects a disallowed file type, 404s for a user/username with no avatar set). Frontend: 400/400 tests passing (396 existing + 4 new: placeholder-vs-image rendering, immediate upload on file selection, disallowed-file-type error handling).
 
-## Password-reset modernization + app-wide dialog convention (in progress)
+## Password-reset modernization + app-wide dialog convention (complete)
 
 Design doc: `docs/superpowers/specs/2026-09-27-password-reset-modernization-design.md`. Multi-phase effort: hybrid backend reset flow (code + link), a shared `Dialog` primitive, the actual reset popup built on it, then an app-wide dialog rollout and aesthetic pass.
 
@@ -1484,4 +1484,17 @@ Frontend: 464/464 (449 existing + 16 new `PasswordResetDialogTests.cs` cases, mi
 
 **Review follow-up H-1 — per-account cap on reset emails (complete)**: the 60s cooldown keys on the raw identifier and the 5-per-15-min throttle on `(ip, identifier)`, so rotating IPs while alternating an account's email and username still produced a fresh code about twice a minute (≈28,800 guesses/day against one account, plus the matching inbox flood). New `forgot-password-account` bucket in the existing `auth_rate_limits` table, keyed on the resolved user id: at most 5 reset emails (including the OAuth-only info mail) per account per 24 h. Over the cap the request is silently dropped (generic 200, like an unknown identifier) *before* the D6 invalidation, so the owner's last-received link/code keeps working. No migration. Backend: 448/448 (6 new).
 
-Not yet started: Phase 4 (BookDetail edit → `Dialog Size="Large"`, "Buch hinzufügen" chooser dialog, shelf/project create dialogs, migrating `ConfirmDialog`/`AvatarUploadDialog`/`FollowListDialog` onto the shared primitive), Phase 5 (aesthetic pass — radius/shadow/scrim/motion rules across all dialogs and all four themes, including `prefers-reduced-motion`).
+**Review follow-up M-6 — email change needs the password + notice to the old address (complete)**: `PUT /api/users/me` now rejects a changed email without the correct current password (checked before the `EMAIL_TAKEN` lookup); OAuth-only accounts stay session-authenticated, same asymmetry as account deletion. After the change, the previous address gets a localized notice (`emails/emailChanged.ts`) with the new address masked. Profile shows a "current password" field only while the typed email actually differs from the saved one (and only for accounts with a real password). `userLanguage` moved from `passwordResetService.ts` to `userService.ts` and the email timestamp format into `emails/strings.ts`'s `formatEmailTimestamp`, since both are now shared. Known residual risk: for an OAuth-only account, a stolen session can still change the email (with the old address notified) — closing that would need re-authentication through the provider. Backend: 456/456 (8 new). Frontend: 495/495 (4 new).
+
+**Phase 5 — aesthetic pass (complete)**: an audit of every dialog and card against the design doc's §7.3 rules, most of which Phase 2 had already built into the `Dialog` primitive (overlay shadow, tinted + blurred scrim, `.dialog-title`, enter motion). What was still off:
+- **Footer buttons were never actually styled** (a real Phase 2 bug, found in a screenshot, not by a test): the `min-height: 2.5rem` and mobile full-width rules in `Dialog.razor.css` targeted `.dialog-actions .btn`, but footer buttons are content from the *consuming* component and carry its CSS-isolation scope, so the selector never matched a single real button — exactly the scoped-CSS trap §6.1 warned about. Fixed with `::deep`; confirmed in the browser: 40px tall, full-width at 375px.
+- **Destructive confirms were brass**: `ConfirmDialog` used `btn-primary` for every "Löschen"/"Verwerfen". It now defaults to `Destructive = true` → `btn-danger` (`--color-error`, moved from `Profile.razor.css` to global `app.css`); pass `false` for a confirm that loses nothing. Contrast checked in all four themes (5 variants incl. `system` light/dark): at least 4.89:1 at rest and on hover.
+- **Button order**: every dialog footer now reads Abbrechen → primary action (rightmost), matching the reference; tab order follows the visual order since the DOM was reordered, not flipped with CSS.
+- **✕ touch target**: was the bare ~16px glyph, now a 40×40 hit area (same floor as the footer buttons) with a hover outline.
+- **Mobile density**: below 40rem the dialog padding drops to `--space-3` and the overlay gutter to `--space-2`.
+- **Step transitions** in `PasswordResetDialog`: a keyed panel per step, 200ms crossfade + 12px slide (forward from the right, back from the left); under `prefers-reduced-motion` only the fade remains (verified by browser emulation).
+- **Radius rule** (containers `--radius-lg`, controls `--radius`, pills `999px`): `.book-share-manager`, `.book-comment-item`, `.timeline-event-card` and the toast moved to `--radius-lg`. Deliberately untouched: the skeuomorphic 3D shelf-book/plaque/checkbox radii, the statistics star-chart heatmap, and cover images.
+
+Frontend: 498/498 (3 new). Backend unchanged.
+
+All five phases are done.

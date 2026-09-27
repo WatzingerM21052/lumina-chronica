@@ -41,8 +41,8 @@
         </EditForm>
     </ChildContent>
     <Footer>
-        <button type="submit" form="shelf-create-form" class="btn btn-primary" disabled="@_isCreating">@I18n.T("shelves.createSubmitButton")</button>
         <button type="button" class="btn" @onclick="RequestCloseCreate">@I18n.T("shelves.cancelButton")</button>
+        <button type="submit" form="shelf-create-form" class="btn btn-primary" disabled="@_isCreating">@I18n.T("shelves.createSubmitButton")</button>
     </Footer>
 </Dialog>
 <ConfirmDialog IsOpen="_confirmingDiscardCreate" Message="@I18n.T("dialog.discardChangesMessage")"

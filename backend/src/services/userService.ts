@@ -1,4 +1,9 @@
+import type { Bindings } from "../models/env";
 import { OAUTH_NO_PASSWORD_SENTINEL, hashPassword, verifyPassword } from "../utils/crypto";
+import { renderEmailChangedEmail } from "../emails/emailChanged";
+import type { EmailLanguage } from "../emails/strings";
+import { formatEmailTimestamp } from "../emails/strings";
+import { sendEmail } from "./emailService";
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 
 export class InvalidPasswordError extends Error {}
@@ -103,7 +108,49 @@ export type UpdateProfileInput = {
     newPassword?: string;
 };
 
-export async function updateUserProfile(db: D1Database, userId: number, input: UpdateProfileInput, origin: string): Promise<UserProfile> {
+// D9 (docs/superpowers/specs/2026-09-27-password-reset-modernization-design.md):
+// every user gets a user_settings row at registration (authService.ts), so
+// this always finds one for a real user_id -- the fallback only covers a
+// defensive edge case. Note: as of this writing nothing in the app writes a
+// non-default value into user_settings.language (the frontend's language
+// switch is purely client-side, see I18nService.SetLanguageAsync), so this
+// resolves to "de" for every real user today. That's a pre-existing gap in
+// the language-sync feature; this read starts working automatically once
+// something writes the column.
+export async function userLanguage(db: D1Database, userId: number): Promise<EmailLanguage> {
+    const row = await db.prepare("SELECT language FROM user_settings WHERE user_id = ?").bind(userId).first<{ language: string }>();
+    return row?.language === "en" ? "en" : "de";
+}
+
+export async function updateUserProfile(
+    db: D1Database,
+    env: Pick<Bindings, "RESEND_API_KEY" | "FRONTEND_URL">,
+    userId: number,
+    input: UpdateProfileInput,
+    origin: string
+): Promise<UserProfile> {
+    const current = await db
+        .prepare("SELECT email, password_hash FROM users WHERE id = ?")
+        .bind(userId)
+        .first<{ email: string; password_hash: string }>();
+    if (!current) throw new Error("User disappeared during profile update.");
+
+    // Review M-6: the email is the account's recovery channel -- whoever
+    // controls it can reset the password (and, via OAuth auto-linking on a
+    // verified email, sign in through Google/GitHub). So changing it needs
+    // the same proof as changing the password: a stolen session token alone
+    // must not be enough to take the account over for good. Only an actual
+    // CHANGE counts -- Profile.razor always sends the current email along
+    // with a username edit. OAuth-only accounts have no password to check,
+    // so the session is the proof there, the same asymmetry deleteUser and
+    // the password-change check below already have.
+    const emailChanging = Boolean(input.email) && input.email !== current.email;
+    if (emailChanging && current.password_hash !== OAUTH_NO_PASSWORD_SENTINEL) {
+        if (!input.currentPassword || !(await verifyPassword(input.currentPassword, current.password_hash))) {
+            throw new InvalidPasswordError();
+        }
+    }
+
     if (input.username) {
         const taken = await db.prepare("SELECT id FROM users WHERE username = ? AND id != ?").bind(input.username, userId).first();
         if (taken) throw new UsernameTakenError();
@@ -123,8 +170,7 @@ export async function updateUserProfile(db: D1Database, userId: number, input: U
         // crash. Setting an initial real password for such an account is a
         // distinct, not-yet-built flow (it shouldn't require a "current
         // password" that never existed) -- out of scope here.
-        const current = await db.prepare("SELECT password_hash FROM users WHERE id = ?").bind(userId).first<{ password_hash: string }>();
-        if (!current || !input.currentPassword || !(await verifyPassword(input.currentPassword, current.password_hash))) {
+        if (!input.currentPassword || !(await verifyPassword(input.currentPassword, current.password_hash))) {
             throw new InvalidPasswordError();
         }
         newPasswordHash = await hashPassword(input.newPassword);
@@ -151,9 +197,26 @@ export async function updateUserProfile(db: D1Database, userId: number, input: U
         await db.prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`).bind(...values).run();
     }
 
+    if (emailChanging) await sendEmailChangedNotice(db, env, userId, current.email, input.email!);
+
     const profile = await getUserProfile(db, userId, origin);
     if (!profile) throw new Error("User disappeared during profile update.");
     return profile;
+}
+
+// M-6's second half: tell the OLD address, after the write committed. It's
+// the only signal the real owner gets if the change wasn't theirs -- the new
+// address is the attacker's in that case. A failed send must never fail the
+// already-committed change (same reasoning as passwordResetService.ts's
+// confirmation email), so it's logged and swallowed.
+async function sendEmailChangedNotice(db: D1Database, env: Pick<Bindings, "RESEND_API_KEY" | "FRONTEND_URL">, userId: number, oldEmail: string, newEmail: string): Promise<void> {
+    try {
+        const language = await userLanguage(db, userId);
+        const email = renderEmailChangedEmail(language, env.FRONTEND_URL, formatEmailTimestamp(language), newEmail);
+        await sendEmail(env.RESEND_API_KEY, oldEmail, email.subject, email.html, email.text);
+    } catch (err) {
+        console.error("updateUserProfile: email-changed notice failed", err);
+    }
 }
 
 // Separate from updateUserProfile (JSON metadata only) since an avatar

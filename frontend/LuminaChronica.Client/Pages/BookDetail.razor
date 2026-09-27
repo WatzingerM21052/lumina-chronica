@@ -401,8 +401,8 @@ else
                 }
                 </ChildContent>
                 <Footer>
-                    <button type="submit" form="book-edit-form" class="btn btn-primary" disabled="@_isSaving">@I18n.T("bookDetail.saveButton")</button>
                     <button type="button" class="btn" @onclick="RequestCloseEditAsync">@I18n.T("bookDetail.cancelButton")</button>
+                    <button type="submit" form="book-edit-form" class="btn btn-primary" disabled="@_isSaving">@I18n.T("bookDetail.saveButton")</button>
                 </Footer>
                 </Dialog>
                 <ConfirmDialog IsOpen="_confirmingDiscardEdit" Message="@I18n.T("bookDetail.discardEditConfirmMessage")"

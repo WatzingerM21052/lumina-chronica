@@ -623,4 +623,93 @@ public class ProfilePageTests : BunitContext
         Assert.Contains("\"alice@example.com\"", postBody);
         Assert.NotNull(cut.Find("#passwordResetCode"));
     }
+
+    // Review M-6: changing the email needs the current password (the backend
+    // enforces it); the field appears only once the address actually differs.
+    private void AddProfileServices(RoutedFakeHttpMessageHandler handler)
+    {
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
+    }
+
+    [Fact]
+    public void Profile_EmailChange_ShowsPasswordFieldOnlyWhileEmailDiffers()
+    {
+        AddProfileServices(NoLinkedProvidersHandler());
+        var cut = Render<Profile>();
+
+        Assert.Empty(cut.FindAll("#emailChangePassword"));
+
+        cut.Find("#email").Input("alice.new@example.org");
+        Assert.Single(cut.FindAll("#emailChangePassword"));
+
+        cut.Find("#email").Input("alice@example.com");
+        Assert.Empty(cut.FindAll("#emailChangePassword"));
+    }
+
+    [Fact]
+    public void Profile_EmailChange_SendsCurrentPasswordWithTheNewEmail()
+    {
+        string? putBody = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Put, r =>
+            {
+                putBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"id":1,"username":"alice","email":"alice.new@example.org","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01","hasPassword":true}}""");
+            })
+            .When(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/linked"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":[]}"""))
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+        AddProfileServices(handler);
+        var cut = Render<Profile>();
+
+        cut.Find("#email").Input("alice.new@example.org");
+        cut.Find("#emailChangePassword").Input("correct horse");
+        cut.Find("#email").Closest("form")!.Submit();
+
+        cut.WaitForAssertion(() => Assert.NotNull(putBody));
+        Assert.Contains("\"email\":\"alice.new@example.org\"", putBody);
+        Assert.Contains("\"currentPassword\":\"correct horse\"", putBody);
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("#emailChangePassword")));
+    }
+
+    [Fact]
+    public void Profile_UsernameOnlyEdit_SendsNoPassword()
+    {
+        string? putBody = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Put, r =>
+            {
+                putBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                return RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson);
+            })
+            .When(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/linked"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":[]}"""))
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+        AddProfileServices(handler);
+        var cut = Render<Profile>();
+
+        cut.Find("#username").Change("alice2");
+        cut.Find("#email").Closest("form")!.Submit();
+
+        cut.WaitForAssertion(() => Assert.NotNull(putBody));
+        Assert.DoesNotContain("correct horse", putBody);
+        Assert.Matches("\"currentPassword\":null|^(?!.*currentPassword)", putBody);
+    }
+
+    [Fact]
+    public void Profile_EmailChange_OAuthOnlyAccount_ShowsNoPasswordField()
+    {
+        const string oauthOnlyProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01","hasPassword":false}}""";
+        AddProfileServices(NoLinkedProvidersHandler(oauthOnlyProfileJson));
+        var cut = Render<Profile>();
+
+        cut.Find("#email").Input("alice.new@example.org");
+        Assert.Empty(cut.FindAll("#emailChangePassword"));
+    }
 }

@@ -22,6 +22,11 @@ const de = {
     "passwordChanged.body": "Das Passwort für dein Lumina-Chronica-Konto wurde am {0} geändert.",
     "passwordChanged.notYouNote": "Warst du das nicht? Dann schreib uns bitte umgehend an {0} — und setze dein Passwort erneut zurück, solange du noch Zugriff auf dieses E-Mail-Postfach hast.",
 
+    "emailChanged.subject": "Lumina Chronica: E-Mail-Adresse geändert",
+    "emailChanged.heading": "Deine E-Mail-Adresse wurde geändert",
+    "emailChanged.body": "Die E-Mail-Adresse deines Lumina-Chronica-Kontos wurde am {0} auf {1} geändert. Diese Adresse erhält ab jetzt keine Nachrichten zu deinem Konto mehr.",
+    "emailChanged.notYouNote": "Warst du das nicht? Dann schreib uns bitte umgehend an {0} — ein Passwort-Reset über diese Adresse ist nicht mehr möglich.",
+
     "oauthNoPassword.subject": "Lumina Chronica: Kein Passwort zum Zurücksetzen",
     "oauthNoPassword.heading": "Kein Passwort zum Zurücksetzen",
     "oauthNoPassword.body": "Dieser Account meldet sich über Google oder GitHub an und hat kein eigenes Passwort. Melde dich stattdessen über den jeweiligen Button an.",
@@ -43,6 +48,11 @@ const en: Partial<typeof de> = {
     "passwordChanged.body": "The password for your Lumina Chronica account was changed on {0}.",
     "passwordChanged.notYouNote": "Wasn't you? Please email us right away at {0} — and reset your password again while you still have access to this inbox.",
 
+    "emailChanged.subject": "Lumina Chronica: Your email address was changed",
+    "emailChanged.heading": "Your email address was changed",
+    "emailChanged.body": "The email address of your Lumina Chronica account was changed to {1} on {0}. This address will no longer receive messages about your account.",
+    "emailChanged.notYouNote": "Wasn't you? Please email us right away at {0} — a password reset via this address is no longer possible.",
+
     "oauthNoPassword.subject": "Lumina Chronica: No password to reset",
     "oauthNoPassword.heading": "No password to reset",
     "oauthNoPassword.body": "This account signs in via Google or GitHub and has no password of its own. Use that provider's button to sign in instead.",
@@ -53,4 +63,11 @@ const dictionaries: Record<EmailLanguage, Partial<typeof de>> = { de, en };
 export function emailT(language: EmailLanguage, key: keyof typeof de, ...args: string[]): string {
     const template = dictionaries[language]?.[key] ?? de[key];
     return args.reduce<string>((text, arg, i) => text.split(`{${i}}`).join(arg), template);
+}
+
+// Shared by every "something changed on your account" email, so the
+// timestamps read the same across templates. UTC on purpose: the Worker
+// doesn't know the reader's timezone.
+export function formatEmailTimestamp(language: EmailLanguage, date: Date = new Date()): string {
+    return date.toLocaleString(language === "en" ? "en-GB" : "de-AT", { timeZone: "UTC", dateStyle: "long", timeStyle: "short" });
 }

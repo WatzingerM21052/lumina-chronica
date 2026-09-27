@@ -125,7 +125,7 @@ usersRoute.put("/me", requireAuth, async (c) => {
     }
 
     try {
-        const profile = await updateUserProfile(c.env.DB, c.get("userId"), body, new URL(c.req.url).origin);
+        const profile = await updateUserProfile(c.env.DB, c.env, c.get("userId"), body, new URL(c.req.url).origin);
         return c.json(success(profile));
     } catch (err) {
         if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);

@@ -91,6 +91,8 @@
   "profile.accountTitle": "Account",
   "profile.usernameLabel": "Username",
   "profile.emailLabel": "Email",
+  "profile.emailChangePasswordLabel": "Current password (to confirm)",
+  "profile.emailChangeHint": "You're changing the address used to reset your password. Your previous address will be notified.",
   "profile.saveButton": "Save",
   "profile.saveSuccess": "Saved",
   "profile.saveError": "Save failed. Please try again.",

@@ -1,12 +1,13 @@
 import type { Bindings } from "../models/env";
 import { OAUTH_NO_PASSWORD_SENTINEL, hashPassword, hmacSha256Hex, randomNumericCode, randomToken, sha256Hex, signJwt } from "../utils/crypto";
 import { roleName } from "./authService";
+import { userLanguage } from "./userService";
 import { sendEmail } from "./emailService";
 import { consumeAccountResetBudget } from "./rateLimitService";
 import { renderOAuthNoPasswordEmail } from "../emails/oauthNoPassword";
 import { renderPasswordChangedEmail } from "../emails/passwordChanged";
 import { renderPasswordResetCodeEmail } from "../emails/passwordResetCode";
-import type { EmailLanguage } from "../emails/strings";
+import { formatEmailTimestamp } from "../emails/strings";
 
 // D2 (docs/superpowers/specs/2026-09-27-password-reset-modernization-design.md
 // §3.4). TTL applies to both credentials sharing one row -- the code and
@@ -26,21 +27,6 @@ async function findUserByIdentifier(db: D1Database, identifier: string): Promise
         .prepare("SELECT id, email, password_hash, role_id FROM users WHERE (email = ?1 OR username = ?1) AND deleted_at IS NULL")
         .bind(identifier)
         .first<UserRow>();
-}
-
-// D9: every user gets a user_settings row at registration (authService.ts),
-// so this always finds one for a real user_id -- the ?? fallback only
-// covers a defensive edge case, not the common path. Note for future
-// readers: as of this writing nothing in the app ever writes a non-default
-// value into user_settings.language (the frontend's language switch is
-// purely local/client-side, see I18nService.SetLanguageAsync) -- so this
-// resolves to "de" for every real user today. That's a pre-existing gap in
-// the language-sync feature, not a bug in this lookup: the column and this
-// read are both correct and will start working automatically the moment
-// something writes to that column.
-async function userLanguage(db: D1Database, userId: number): Promise<EmailLanguage> {
-    const row = await db.prepare("SELECT language FROM user_settings WHERE user_id = ?").bind(userId).first<{ language: string }>();
-    return row?.language === "en" ? "en" : "de";
 }
 
 // Never *reveals* whether a match was found -- the caller (the
@@ -248,8 +234,7 @@ async function sendPasswordChangedEmail(db: D1Database, env: Pick<Bindings, "RES
         if (!user) return;
 
         const language = await userLanguage(db, userId);
-        const changedAt = new Date().toLocaleString(language === "en" ? "en-GB" : "de-AT", { timeZone: "UTC", dateStyle: "long", timeStyle: "short" });
-        const email = renderPasswordChangedEmail(language, env.FRONTEND_URL, changedAt);
+        const email = renderPasswordChangedEmail(language, env.FRONTEND_URL, formatEmailTimestamp(language));
         await sendEmail(env.RESEND_API_KEY, user.email, email.subject, email.html, email.text);
     } catch (err) {
         // A failed confirmation send must never undo or fail an already-

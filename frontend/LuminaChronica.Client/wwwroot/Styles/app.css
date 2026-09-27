@@ -339,6 +339,24 @@ button:not(:disabled):active,
     background-color: var(--color-primary-active);
 }
 
+/* Destructive actions (§7.3 of the password-reset modernization design
+   doc): --color-error, never --color-secondary -- oxblood is structural,
+   not a warning. Outlined at rest, filled on hover, so a delete button
+   reads as serious without shouting louder than the page's one primary
+   action. Global (was scoped to Profile.razor.css) so ConfirmDialog can
+   use it for every delete/discard confirmation. */
+.btn-danger {
+    background-color: transparent;
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+
+.btn-danger:hover {
+    background-color: var(--color-error);
+    border-color: var(--color-error);
+    color: var(--color-bg-card);
+}
+
 /* App-wide base styling for text-like form fields. Before this rule,
    every input/select/textarea in the app rendered on unstyled browser
    defaults -- there was no project-wide rule for them (confirmed via
@@ -603,7 +621,7 @@ select:focus-visible,
     margin-top: var(--space-2);
     padding: var(--space-2);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     background-color: var(--color-bg-light);
 }
 
@@ -653,7 +671,7 @@ select:focus-visible,
 .book-comment-item {
     padding: var(--space-2);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
 }
 
 .book-comment-header {

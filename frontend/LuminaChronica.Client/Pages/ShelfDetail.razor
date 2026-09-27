@@ -79,8 +79,8 @@ else
             </EditForm>
         </ChildContent>
         <Footer>
-            <button type="submit" form="shelf-edit-form" class="btn btn-primary" disabled="@_isSaving">@I18n.T("shelfDetail.saveButton")</button>
             <button type="button" class="btn" @onclick="RequestCloseEdit">@I18n.T("shelfDetail.cancelButton")</button>
+            <button type="submit" form="shelf-edit-form" class="btn btn-primary" disabled="@_isSaving">@I18n.T("shelfDetail.saveButton")</button>
         </Footer>
     </Dialog>
     <ConfirmDialog IsOpen="_confirmingDiscardEdit" Message="@I18n.T("dialog.discardChangesMessage")"
