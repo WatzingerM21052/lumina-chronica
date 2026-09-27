@@ -48,47 +48,32 @@ public class LibraryPageTests : BunitContext
     // the library is empty) EmptyState's own action button both carry the
     // same "Buch hinzufügen" text, so these tests select by the header's
     // own wrapper rather than by button text.
+    // There is only one way to add a book (a file is always required, the
+    // ISBN/search lookup is a helper inside the upload form), so "Buch
+    // hinzufügen" links straight to the upload page -- the three-option
+    // chooser dialog that used to sit in front of it routed every option to
+    // that same page and was removed.
     [Fact]
-    public void Library_AddBookButton_OpensChooserDialog()
+    public void Library_AddBookButton_LinksStraightToTheUploadPage()
     {
         UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
         JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = Render<Library>();
+
+        Assert.Equal("library/upload", cut.Find(".library-header a.btn-primary").GetAttribute("href"));
         Assert.Empty(cut.FindAll(".dialog"));
-
-        cut.Find(".library-header .btn-primary").Click();
-
-        Assert.Single(cut.FindAll(".dialog"));
-        Assert.Contains("Datei hochladen", cut.Markup);
-        Assert.Contains("ISBN suchen", cut.Markup);
-        Assert.Contains("Manuell anlegen", cut.Markup);
     }
 
     [Fact]
-    public void Library_AddBookChooser_ClickingAnOption_NavigatesToUploadPage()
+    public void Library_EmptyStateAddBookAction_LinksStraightToTheUploadPage()
     {
         UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
         JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = Render<Library>();
-        cut.Find(".library-header .btn-primary").Click();
-        cut.Find(".add-book-chooser-option").Click();
 
-        var navigation = Services.GetRequiredService<NavigationManager>();
-        Assert.EndsWith("library/upload", navigation.Uri);
-    }
-
-    [Fact]
-    public void Library_EmptyStateAddBookAction_OpensChooserDialog()
-    {
-        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
-        JSInterop.Mode = JSRuntimeMode.Loose;
-
-        var cut = Render<Library>();
-        cut.Find(".empty-state .btn-primary").Click();
-
-        Assert.Single(cut.FindAll(".dialog"));
+        Assert.Equal("library/upload", cut.Find(".empty-state a.btn-primary").GetAttribute("href"));
     }
 
     [Fact]

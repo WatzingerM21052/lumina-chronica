@@ -904,6 +904,19 @@ value is the labeled entry moment itself (the "polished first impression"),
 not a router. No `?mode=` query param or auto-focus behavior was added to
 manufacture a distinction the page doesn't have.
 
+**REVERSED 2026-09-27, after user feedback — the chooser is gone.** Once
+built it was a dialog with three options that all led to the same page, and
+the user called it out directly ("warum ein Dialog mit 3 Optionen die mich
+alle zur gleichen Unterseite bringen?"). A dropdown would have the same flaw:
+there is only ONE way to add a book, because a file is always required
+(`BookUpload.razor`'s `fileRequiredError`); ISBN/title lookup is a helper
+inside that form, not an alternative path, and manual entry is simply
+editing the fields. So "Buch hinzufügen" now links straight to
+`library/upload`, and the page itself was reordered into that one flow:
+1. Buchdatei (choosing an EPUB/PDF auto-fills title, author and cover),
+2. Daten ergänzen (optional ISBN/search lookup), 3. Details prüfen. The file
+used to sit at the very bottom, after every field it would have filled.
+
 **Book edit — `BookDetail.razor` lines 202-360. UPDATED: make it a wide centered
 modal, not a sheet.** Today it's the worst of both worlds: the edit form
 *replaces* the book detail inline, so you lose the content you were editing

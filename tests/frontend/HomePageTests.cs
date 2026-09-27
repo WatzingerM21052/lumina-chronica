@@ -84,10 +84,9 @@ public class HomePageTests : BunitContext
         Assert.Contains("Deine Bibliothek ist noch leer", cut.Markup);
     }
 
-    // Phase 4 item 19 (dialog rollout, design doc §6.3/D13) -- same chooser
-    // dialog as Library's, reached from Home's own empty-state action.
+    // Same direct link as Library's "Buch hinzufügen" (no chooser dialog).
     [Fact]
-    public void Home_EmptyStateAddBookAction_OpensChooserDialog()
+    public void Home_EmptyStateAddBookAction_LinksStraightToTheUploadPage()
     {
         UseHandler(new RoutedFakeHttpMessageHandler()
             .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
@@ -97,9 +96,7 @@ public class HomePageTests : BunitContext
         JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = Render<Home>();
-        cut.Find(".empty-state .btn-primary").Click();
-
-        Assert.Single(cut.FindAll(".dialog"));
+        Assert.Equal("library/upload", cut.Find(".empty-state a.btn-primary").GetAttribute("href"));
     }
 
     [Fact]

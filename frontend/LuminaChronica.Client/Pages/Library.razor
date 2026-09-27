@@ -17,11 +17,10 @@
     <h1>@I18n.T("library.title")</h1>
     <div class="form-actions">
         <a class="btn" href="library/shelves">@I18n.T("library.shelvesLink")</a>
-        <button type="button" class="btn btn-primary" @onclick="() => _showAddBookChooser = true">@I18n.T("library.addBookLink")</button>
+        <a class="btn btn-primary" href="library/upload">@I18n.T("library.addBookLink")</a>
     </div>
 </div>
 
-<AddBookChooserDialog IsOpen="_showAddBookChooser" OnClose="() => _showAddBookChooser = false" />
 
 <div class="library-toolbar">
     <div class="library-search-wrapper">
@@ -102,7 +101,7 @@ else if (_allItems.Count == 0 && !HasActiveFilters)
 {
     <EmptyState Message="@I18n.T("library.emptyMessage")"
                 ActionText="@I18n.T("library.addBookLink")"
-                OnAction="() => _showAddBookChooser = true" />
+                ActionHref="library/upload" />
 }
 else if (_allItems.Count == 0)
 {
@@ -164,7 +163,6 @@ else
     private List<Book>? _suggestions;
     private string? _errorMessage;
     private LibraryViewMode _viewMode = LibraryViewMode.Grid;
-    private bool _showAddBookChooser;
 
     private string _searchTerm = string.Empty;
     private IReadOnlyList<string> _genreFilters = [];

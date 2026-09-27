@@ -869,6 +869,31 @@ select:focus-visible,
     box-shadow: var(--shadow-card);
 }
 
+/* Upload flow sections: 1. file (auto-fills from EPUB/PDF), 2. optional
+   ISBN/search lookup, 3. review the rest. The file comes first because
+   choosing it is what fills the fields below. */
+.book-form-step-title {
+    margin: var(--space-3) 0 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+    font-family: var(--font-family-display);
+    font-size: var(--font-size-h3);
+    font-weight: 600;
+}
+
+.book-form-step-title:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+/* The card is a flex column with a --space-2 gap; the negative top margin
+   tucks the hint under its title instead of adding a second gap. */
+.book-form-step-hint {
+    margin: calc(-1 * var(--space-1)) 0 0;
+    font-size: var(--font-size-small);
+}
+
 .book-form-cover-preview {
     display: flex;
     align-items: center;
