@@ -882,6 +882,15 @@ routes onward. That's the modern pattern (the dialog is the *entry*, not the
 form), it's ~40 lines, and it gives the polished first impression the user is
 asking for without pretending a 685-line form is a popup.
 
+**CORRECTED 2026-09-27, implementation of Phase 4 item 19:** "routes onward"
+above assumed three distinct destinations existed for the three options to
+route to. They don't — `BookUpload.razor` is a single page that already
+handles file upload, ISBN lookup, and manual entry together, in one combined
+form. All three chooser options navigate to the same `library/upload`; the
+value is the labeled entry moment itself (the "polished first impression"),
+not a router. No `?mode=` query param or auto-focus behavior was added to
+manufacture a distinction the page doesn't have.
+
 **Book edit — `BookDetail.razor` lines 202-360. UPDATED: make it a wide centered
 modal, not a sheet.** Today it's the worst of both worlds: the edit form
 *replaces* the book detail inline, so you lose the content you were editing

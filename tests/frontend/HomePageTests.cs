@@ -84,6 +84,24 @@ public class HomePageTests : BunitContext
         Assert.Contains("Deine Bibliothek ist noch leer", cut.Markup);
     }
 
+    // Phase 4 item 19 (dialog rollout, design doc §6.3/D13) -- same chooser
+    // dialog as Library's, reached from Home's own empty-state action.
+    [Fact]
+    public void Home_EmptyStateAddBookAction_OpensChooserDialog()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":6}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson));
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Home>();
+        cut.Find(".empty-state .btn-primary").Click();
+
+        Assert.Single(cut.FindAll(".dialog"));
+    }
+
     [Fact]
     public void Home_ShowsRecentBooks_WhenLibraryHasBooks()
     {

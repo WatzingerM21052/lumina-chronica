@@ -6,11 +6,12 @@
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
-@inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
 @inject II18nService I18n
 
 <PageTitle>Lumina Chronica</PageTitle>
+
+<AddBookChooserDialog IsOpen="_showAddBookChooser" OnClose="() => _showAddBookChooser = false" />
 
 <div class="home-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
 <div class="home-hero" @ref="_heroRef">
@@ -57,7 +58,7 @@ else if (_books.Count == 0)
 {
     <EmptyState Message="@I18n.T("home.emptyLibraryMessage")"
                 ActionText="@I18n.T("home.addBookAction")"
-                OnAction="GoToUpload" />
+                OnAction="() => _showAddBookChooser = true" />
 }
 else
 {
@@ -119,6 +120,7 @@ else
     private IJSObjectReference? _motionModule;
 
     private List<Book>? _books;
+    private bool _showAddBookChooser;
     private int _totalBooks;
     private DashboardResponse? _dashboard;
     private List<Project>? _projects;
@@ -166,8 +168,6 @@ else
         {
         }
     }
-
-    private void GoToUpload() => NavigationManager.NavigateTo("library/upload");
 
     public async ValueTask DisposeAsync()
     {
