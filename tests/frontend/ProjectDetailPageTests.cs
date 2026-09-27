@@ -4,6 +4,7 @@ using Bunit.TestDoubles;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
@@ -17,12 +18,19 @@ public class ProjectDetailPageTests : BunitContext
     // lets a test control _currentUserId.
     private void UseAuthenticatedUser(int userId = 1) => AddAuthorization().SetClaims(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
 
+    // The Bücher tab's search debounce timer is created through the
+    // injected TimeProvider, so tests advance this clock explicitly instead
+    // of waiting out a real 400ms timer -- which, under a loaded full-suite
+    // run, could fire late enough to blow a WaitForAssertion timeout.
+    private readonly FakeTimeProvider _timeProvider = new();
+
     public ProjectDetailPageTests()
     {
         // Loose mode: only the map-with-content test actually exercises the
         // blobUrl.js interop (a real mapUrl); every other test's mapUrl is
         // null so LoadMapAsync short-circuits before touching JS.
         JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddSingleton<TimeProvider>(_timeProvider);
     }
 
     private const string ProjectJson = """{"success":true,"data":{"id":1,"title":"Aetherfall","description":"Ein sky-shattered Kontinent","type":"WORLD","coverUrl":null,"mapUrl":null,"visibility":"PRIVATE","createdAt":"2026-01-01"}}""";
@@ -740,10 +748,14 @@ public class ProjectDetailPageTests : BunitContext
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bücher").Click();
         cut.Find("input[type=search]").Input("Killi");
 
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(399));
+        Assert.DoesNotContain("Killimooin", cut.Markup);
+
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(1));
         cut.WaitForAssertion(() => Assert.Contains("Killimooin", cut.Markup), TimeSpan.FromSeconds(2));
         cut.Find(".library-search-suggestions button").Click();
 
-        Assert.NotNull(addRequest);
+        cut.WaitForAssertion(() => Assert.NotNull(addRequest), TimeSpan.FromSeconds(2));
     }
 
     // Comments (v3.3, issue #325). GET /api/projects/:id is strictly

@@ -15,6 +15,7 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject II18nService I18n
+@inject TimeProvider TimeProvider
 
 <PageTitle>@(_project?.Title ?? I18n.T("projectDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
@@ -665,7 +666,7 @@ else
     private string? _linkedBooksErrorMessage;
     private string _bookSearchTerm = string.Empty;
     private List<Book>? _bookSuggestions;
-    private System.Threading.Timer? _bookSearchDebounceTimer;
+    private ITimer? _bookSearchDebounceTimer;
     private string? _addBookErrorMessage;
 
     // Comments (v3.3, issue #325). GET /api/projects/:id is strictly
@@ -1160,7 +1161,11 @@ else
         _bookSearchTerm = e.Value?.ToString() ?? string.Empty;
 
         _bookSearchDebounceTimer?.Dispose();
-        _bookSearchDebounceTimer = new System.Threading.Timer(
+        // Created through the injected TimeProvider (TimeProvider.System in
+        // Program.cs) rather than `new System.Threading.Timer` so bUnit tests
+        // can advance a fake clock instead of racing a real 400ms timer
+        // against a wall-clock WaitForAssertion timeout.
+        _bookSearchDebounceTimer = TimeProvider.CreateTimer(
             _ => InvokeAsync(async () =>
             {
                 await LoadBookSuggestionsAsync();
@@ -1170,8 +1175,8 @@ else
                 StateHasChanged();
             }),
             null,
-            400,
-            Timeout.Infinite);
+            TimeSpan.FromMilliseconds(400),
+            Timeout.InfiniteTimeSpan);
     }
 
     private async Task LoadBookSuggestionsAsync()

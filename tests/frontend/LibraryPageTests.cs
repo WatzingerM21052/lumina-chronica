@@ -4,12 +4,23 @@ using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
 
 public class LibraryPageTests : BunitContext
 {
+    // The search debounce timer is created through the injected TimeProvider,
+    // so tests advance this clock explicitly instead of waiting out a real
+    // 400ms timer against a WaitForAssertion timeout.
+    private readonly FakeTimeProvider _timeProvider = new();
+
+    public LibraryPageTests()
+    {
+        Services.AddSingleton<TimeProvider>(_timeProvider);
+    }
+
     private void UseApiResponse(string responseJson)
     {
         var handler = new FakeHttpMessageHandler(responseJson);
@@ -250,6 +261,8 @@ public class LibraryPageTests : BunitContext
 
         var cut = Render<Library>();
         cut.Find("input[type=search]").Input("Killi");
+        Assert.Empty(cut.FindAll(".library-search-suggestions"));
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
 
         // Verifies the debounced fetch/filter data flow (correct URLs,
         // correct response parsing). Note: this does NOT catch the
@@ -257,7 +270,9 @@ public class LibraryPageTests : BunitContext
         // of bug that shipped once in this exact code path -- bUnit's test
         // renderer doesn't reproduce that gap the way a real browser does;
         // that one is only caught by live testing.
-        cut.WaitForAssertion(() => Assert.Contains("Killimooin", cut.Markup), TimeSpan.FromSeconds(2));
+        // The initial (non-search) load already lists "Killimooin", so check
+        // the suggestion list itself -- only the debounced fetch fills it.
+        cut.WaitForAssertion(() => Assert.Contains("Killimooin", cut.Find(".library-search-suggestions").TextContent), TimeSpan.FromSeconds(2));
     }
 
     [Fact]

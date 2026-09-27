@@ -9,6 +9,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
 @inject II18nService I18n
+@inject TimeProvider TimeProvider
 
 <PageTitle>@I18n.T("library.title") — Lumina Chronica</PageTitle>
 
@@ -194,7 +195,7 @@ else
 
     private IJSObjectReference? _libraryPreferencesModule;
 
-    private System.Threading.Timer? _searchDebounceTimer;
+    private ITimer? _searchDebounceTimer;
 
     private ElementReference _shelfRef;
     private IJSObjectReference? _shelfPhysicsModule;
@@ -406,7 +407,11 @@ else
         _searchTerm = e.Value?.ToString() ?? string.Empty;
 
         _searchDebounceTimer?.Dispose();
-        _searchDebounceTimer = new System.Threading.Timer(
+        // Created through the injected TimeProvider (TimeProvider.System in
+        // Program.cs) rather than `new System.Threading.Timer` so bUnit tests
+        // can advance a fake clock instead of racing a real 400ms timer
+        // against a wall-clock WaitForAssertion timeout.
+        _searchDebounceTimer = TimeProvider.CreateTimer(
             _ => InvokeAsync(async () =>
             {
                 await LoadSuggestionsAsync();
@@ -422,8 +427,8 @@ else
                 StateHasChanged();
             }),
             null,
-            400,
-            Timeout.Infinite);
+            TimeSpan.FromMilliseconds(400),
+            Timeout.InfiniteTimeSpan);
     }
 
     private async Task LoadSuggestionsAsync()

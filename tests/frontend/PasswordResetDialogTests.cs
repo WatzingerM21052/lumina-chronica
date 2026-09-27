@@ -2,6 +2,7 @@ using Bunit;
 using LuminaChronica.Client.Components;
 using LuminaChronica.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
@@ -13,7 +14,18 @@ namespace LuminaChronica.Client.Tests;
 // builds on top of it.
 public class PasswordResetDialogTests : BunitContext
 {
+    // Every delay in the dialog (code/confirm debounces, resend countdown,
+    // auto-close) runs on the injected TimeProvider, so tests advance this
+    // clock explicitly instead of racing real timers.
+    private readonly FakeTimeProvider _timeProvider = new();
+
+    public PasswordResetDialogTests()
+    {
+        Services.AddSingleton<TimeProvider>(_timeProvider);
+    }
+
     private static readonly TimeSpan Wait = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan CodeDebounce = TimeSpan.FromMilliseconds(400);
 
     private void RegisterServices(HttpMessageHandler handler)
     {
@@ -176,6 +188,7 @@ public class PasswordResetDialogTests : BunitContext
         var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("123456");
+        _timeProvider.Advance(CodeDebounce);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#passwordResetNewPassword")), Wait);
     }
@@ -189,6 +202,7 @@ public class PasswordResetDialogTests : BunitContext
         var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("000000");
+        _timeProvider.Advance(CodeDebounce);
 
         cut.WaitForAssertion(() => Assert.Contains("Der Code stimmt nicht.", cut.Markup), Wait);
         Assert.NotNull(cut.Find("#passwordResetCode"));
@@ -216,10 +230,12 @@ public class PasswordResetDialogTests : BunitContext
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
 
         cut.Find("#passwordResetCode").Input("123456");
+        _timeProvider.Advance(CodeDebounce);
         cut.WaitForAssertion(() => Assert.Contains("Verbindung fehlgeschlagen", cut.Markup), Wait);
 
         cut.Find("#passwordResetCode").Input("12345");
         cut.Find("#passwordResetCode").Input("123456");
+        _timeProvider.Advance(CodeDebounce);
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#passwordResetNewPassword")), Wait);
         Assert.Equal(2, callCount);
     }
@@ -243,6 +259,7 @@ public class PasswordResetDialogTests : BunitContext
         var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("123456");
+        _timeProvider.Advance(CodeDebounce);
 
         cut.WaitForAssertion(() => Assert.Contains("Link in der E-Mail", cut.Markup), Wait);
         Assert.DoesNotContain("Verbindung fehlgeschlagen", cut.Markup);
@@ -269,16 +286,19 @@ public class PasswordResetDialogTests : BunitContext
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
 
         cut.Find("#passwordResetCode").Input("111111");
+        _timeProvider.Advance(CodeDebounce);
         cut.WaitForAssertion(() => Assert.Equal(1, callCount), Wait);
 
         cut.Find("#passwordResetCode").Input("222222");
+        _timeProvider.Advance(CodeDebounce);
         cut.WaitForAssertion(() => Assert.Equal(2, callCount), Wait);
 
         cut.Find("#passwordResetCode").Input("111111");
+        _timeProvider.Advance(CodeDebounce);
         cut.WaitForAssertion(() => Assert.Equal(3, callCount), Wait);
 
         cut.Find("#passwordResetCode").Input("111111");
-        Thread.Sleep(600); // let a (nonexistent) 4th debounce fire before asserting it didn't
+        _timeProvider.Advance(CodeDebounce); // let a (nonexistent) 4th debounce fire before asserting it didn't
         Assert.Equal(3, callCount);
     }
 
@@ -291,6 +311,7 @@ public class PasswordResetDialogTests : BunitContext
         var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("000000");
+        _timeProvider.Advance(CodeDebounce);
         cut.WaitForAssertion(() => Assert.Contains("Der Code stimmt nicht.", cut.Markup), Wait);
 
         // 7 left is above the <=3 threshold -- showing "Noch 7 Versuche"
@@ -308,6 +329,7 @@ public class PasswordResetDialogTests : BunitContext
         var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("000000");
+        _timeProvider.Advance(CodeDebounce);
 
         cut.WaitForAssertion(() => Assert.Contains("Noch 3 Versuche", cut.Markup), Wait);
     }
@@ -321,6 +343,7 @@ public class PasswordResetDialogTests : BunitContext
         var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("000000");
+        _timeProvider.Advance(CodeDebounce);
 
         cut.WaitForAssertion(() => Assert.Contains("Dieser Code ist nicht mehr gültig.", cut.Markup), Wait);
         Assert.Empty(cut.FindAll("#passwordResetCode"));
@@ -340,6 +363,7 @@ public class PasswordResetDialogTests : BunitContext
         var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
         SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("123456");
+        _timeProvider.Advance(CodeDebounce);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#passwordResetNewPassword")), Wait);
     }

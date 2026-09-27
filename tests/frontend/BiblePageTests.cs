@@ -2,6 +2,7 @@ using Bunit;
 using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
@@ -50,11 +51,16 @@ public class BiblePageTests : BunitContext
         }}
         """;
 
+    // The pre-scroll delay runs on the injected TimeProvider, so the scroll
+    // test advances this clock instead of racing a real 80ms delay.
+    private readonly FakeTimeProvider _timeProvider = new();
+
     public BiblePageTests()
     {
         // Loose mode: getLastTranslationId returning null (default) is
         // exactly the "no saved preference yet" case this page starts from.
         JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddSingleton<TimeProvider>(_timeProvider);
     }
 
     private void UseHandler(RoutedFakeHttpMessageHandler handler)
@@ -86,14 +92,15 @@ public class BiblePageTests : BunitContext
         Assert.Contains("Phil. 2", cut.Markup);
         Assert.Contains("Do everything without grumbling", cut.Markup);
 
-        // The component awaits a short Task.Delay before scrolling (lets the
-        // browser apply the DOM patch first) -- WaitForAssertion retries
-        // until that continuation actually runs instead of racing it.
+        // The component awaits a short (80ms) delay before scrolling (lets
+        // the browser apply the DOM patch first) -- advance the fake clock
+        // past it; WaitForAssertion then covers the continuation running.
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(80));
         cut.WaitForAssertion(() =>
         {
             var invocation = Assert.Single(scrollHandler.Invocations);
             Assert.Equal("PHP 2:14", invocation.Arguments[1]);
-        });
+        }, TimeSpan.FromSeconds(2));
     }
 
     [Fact]

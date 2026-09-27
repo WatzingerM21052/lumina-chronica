@@ -17,6 +17,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ToastService ToastService
 @inject II18nService I18n
+@inject TimeProvider TimeProvider
 
 <PageTitle>@(_book?.Title ?? I18n.T("bookDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
@@ -480,7 +481,7 @@ else
     private readonly HashSet<string> _shareActionInProgress = [];
     private string _shareSearchTerm = string.Empty;
     private List<DiscoverUser>? _shareSearchResults;
-    private System.Threading.Timer? _shareSearchDebounceTimer;
+    private ITimer? _shareSearchDebounceTimer;
 
     private bool _isLookingUpEnrichment;
     private string? _enrichmentStatus;
@@ -837,7 +838,11 @@ else
         _shareSearchTerm = e.Value?.ToString() ?? string.Empty;
 
         _shareSearchDebounceTimer?.Dispose();
-        _shareSearchDebounceTimer = new System.Threading.Timer(
+        // Created through the injected TimeProvider (TimeProvider.System in
+        // Program.cs) rather than `new System.Threading.Timer` so bUnit tests
+        // can advance a fake clock instead of racing a real 400ms timer
+        // against a wall-clock WaitForAssertion timeout.
+        _shareSearchDebounceTimer = TimeProvider.CreateTimer(
             _ => InvokeAsync(async () =>
             {
                 await SearchShareCandidatesAsync();
@@ -846,8 +851,8 @@ else
                 StateHasChanged();
             }),
             null,
-            400,
-            Timeout.Infinite);
+            TimeSpan.FromMilliseconds(400),
+            Timeout.InfiniteTimeSpan);
     }
 
     private async Task SearchShareCandidatesAsync()

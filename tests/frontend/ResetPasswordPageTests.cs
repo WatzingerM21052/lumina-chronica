@@ -3,6 +3,7 @@ using LuminaChronica.Client.Pages;
 using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
@@ -15,6 +16,14 @@ namespace LuminaChronica.Client.Tests;
 // right step for whether one is present, and closing it navigates home.
 public class ResetPasswordPageTests : BunitContext
 {
+    // PasswordResetDialog injects TimeProvider for its debounces and timers.
+    private readonly FakeTimeProvider _timeProvider = new();
+
+    public ResetPasswordPageTests()
+    {
+        Services.AddSingleton<TimeProvider>(_timeProvider);
+    }
+
     private void RegisterServices(HttpMessageHandler handler)
     {
         Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });

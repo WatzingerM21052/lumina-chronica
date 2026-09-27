@@ -6,6 +6,7 @@
 @inject ApiClient ApiClient
 @inject BibleClientService BibleClient
 @inject II18nService I18n
+@inject TimeProvider TimeProvider
 
 <PageTitle>@I18n.T("bible.title") — Lumina Chronica</PageTitle>
 
@@ -232,7 +233,10 @@
 
         if (_chapter is not null)
         {
-            await Task.Delay(80, _cts.Token); // let the content render before scrolling to it
+            // let the content render before scrolling to it; on the injected
+            // TimeProvider so bUnit tests advance a fake clock instead of
+            // racing this real delay
+            await Task.Delay(TimeSpan.FromMilliseconds(80), TimeProvider, _cts.Token);
 
             if (highlightSid is not null)
             {
