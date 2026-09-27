@@ -32,13 +32,44 @@ public class ForgotPasswordRequest
     public string Identifier { get; set; } = string.Empty;
 }
 
+// Backend now accepts exactly one credential: a link token, or an
+// identifier+code pair (see routes/auth.ts's /reset-password). Token and
+// Identifier/Code are mutually exclusive -- callers set one pair, never both.
 public class ResetPasswordRequest
 {
     [JsonPropertyName("token")]
-    public string Token { get; set; } = string.Empty;
+    public string? Token { get; set; }
+
+    [JsonPropertyName("identifier")]
+    public string? Identifier { get; set; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
 
     [JsonPropertyName("newPassword")]
     public string NewPassword { get; set; } = string.Empty;
+}
+
+// Posted to POST /api/auth/verify-reset-code -- a non-consuming live check
+// while the user is still typing the code (§4.3 of the password-reset
+// modernization design doc).
+public class VerifyResetCodeRequest
+{
+    [JsonPropertyName("identifier")]
+    public string Identifier { get; set; } = string.Empty;
+
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = string.Empty;
+}
+
+// Mirrors backend/src/services/passwordResetService.ts's VerifyResetCodeResult.
+public class VerifyResetCodeResult
+{
+    [JsonPropertyName("valid")]
+    public bool Valid { get; set; }
+
+    [JsonPropertyName("attemptsLeft")]
+    public int AttemptsLeft { get; set; }
 }
 
 // Mirrors backend/src/services/authService.ts's AuthResult.

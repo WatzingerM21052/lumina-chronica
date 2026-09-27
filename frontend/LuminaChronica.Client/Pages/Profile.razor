@@ -97,9 +97,10 @@ else
 
     <div class="profile-password-reset">
         <p class="text-muted">@I18n.T("profile.passwordResetHint")</p>
-        <button type="button" class="btn" disabled="@(_profile is null)" @onclick="SendPasswordResetAsync">
+        <button type="button" class="btn" disabled="@(_profile is null)" @onclick="() => _showPasswordResetDialog = true">
             @I18n.T("profile.passwordResetButton")
         </button>
+        <PasswordResetDialog IsOpen="_showPasswordResetDialog" InitialIdentifier="@_profile?.Email" OnClose="() => _showPasswordResetDialog = false" />
     </div>
 
     <h2>@I18n.T("profile.linkedAccountsTitle")</h2>
@@ -185,6 +186,7 @@ else
     private string? _passwordSuccessMessage;
 
     private bool _isAvatarDialogOpen;
+    private bool _showPasswordResetDialog;
 
     // Set from UserProfile.HasPassword once loaded -- defaults true so the
     // password field/requirement doesn't flash away then back during the
@@ -339,20 +341,13 @@ else
         _isSavingPassword = false;
     }
 
-    // Reuses the same generic-response endpoint as the Login-page flow --
-    // the only difference is Profile already knows who's asking (via
-    // _profile.Email, already loaded by OnInitializedAsync), so there's no
-    // identifier to type in. Lives here rather than on Settings because
-    // it's the alternative for a user who doesn't know their *current*
-    // password -- the "Passwort ändern" form above requires it.
-    private async Task SendPasswordResetAsync()
-    {
-        if (_profile is null) return;
-        var ok = await ApiClient.PostAsync("/api/auth/forgot-password", new ForgotPasswordRequest { Identifier = _profile.Email });
-        ToastService.Show(
-            ok ? I18n.T("profile.passwordResetToast") : I18n.T("profile.passwordResetError"),
-            ok ? ToastKind.Success : ToastKind.Error);
-    }
+    // _showPasswordResetDialog above opens PasswordResetDialog directly at
+    // CodeEntry (InitialIdentifier = _profile.Email, already loaded by
+    // OnInitializedAsync, fires the request immediately) -- there's no
+    // identifier to type in, unlike the Login-page flow, since Profile
+    // already knows who's asking. Lives here rather than on Settings
+    // because it's the alternative for a user who doesn't know their
+    // *current* password -- the "Passwort ändern" form above requires it.
 
     private async Task LogoutAsync()
     {

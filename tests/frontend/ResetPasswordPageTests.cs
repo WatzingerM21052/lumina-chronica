@@ -7,108 +7,83 @@ using Xunit;
 
 namespace LuminaChronica.Client.Tests;
 
+// ResetPassword.razor is now a thin shell (D14) that parses "?token=" and
+// renders PasswordResetDialog with LinkToken set -- the real form/state-
+// machine behavior is covered by DialogTests.cs and (once it exists)
+// PasswordResetDialogTests.cs. These tests only cover what's left of this
+// page itself: it extracts the token correctly, opens the dialog at the
+// right step for whether one is present, and closing it navigates home.
 public class ResetPasswordPageTests : BunitContext
 {
-    private static void RegisterAuthServices(BunitContext context)
+    private void RegisterServices(HttpMessageHandler handler)
     {
-        context.Services.AddSingleton<TokenStore>();
-        context.Services.AddSingleton<LuminaAuthStateProvider>();
-        context.Services.AddSingleton<ToastService>();
-        context.Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<ToastService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
     [Fact]
-    public void ResetPassword_WithToken_RendersForm()
+    public void ResetPassword_WithToken_OpensTheDialogAtPasswordEntry()
     {
-        var handler = new FakeHttpMessageHandler("""{"success":true,"data":{"token":"jwt","userId":1}}""");
-        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
-        Services.AddSingleton<ApiClient>();
-        RegisterAuthServices(this);
+        RegisterServices(new FakeHttpMessageHandler("""{"success":true,"data":{"token":"jwt","userId":1}}"""));
         Services.GetRequiredService<NavigationManager>().NavigateTo("reset-password?token=abc123");
 
         var cut = Render<ResetPassword>();
 
-        Assert.NotNull(cut.Find("#newPassword"));
-        Assert.NotNull(cut.Find("#confirmPassword"));
+        Assert.NotNull(cut.Find("#passwordResetNewPassword"));
+        Assert.NotNull(cut.Find("#passwordResetConfirmPassword"));
     }
 
     [Fact]
-    public void ResetPassword_WithoutToken_ShowsInvalidTokenMessage()
+    public void ResetPassword_WithoutToken_OpensTheDialogAtIdentify()
     {
-        var handler = new FakeHttpMessageHandler("""{"success":true}""");
-        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
-        Services.AddSingleton<ApiClient>();
-        RegisterAuthServices(this);
+        // No "invalid link" dead end anymore (§4.1/D14) -- a tokenless
+        // visit to this route just opens the same dialog fresh, as if it
+        // were /forgot-password.
+        RegisterServices(new FakeHttpMessageHandler("""{"success":true}"""));
 
         var cut = Render<ResetPassword>();
 
-        Assert.Contains("Dieser Link ist ungültig oder abgelaufen.", cut.Markup);
-        Assert.Empty(cut.FindAll("#newPassword"));
-    }
-
-    [Fact]
-    public void ResetPassword_MismatchedPasswords_ShowsErrorWithoutCallingApi()
-    {
-        var handler = new FakeHttpMessageHandler("""{"success":true,"data":{"token":"jwt","userId":1}}""");
-        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
-        Services.AddSingleton<ApiClient>();
-        RegisterAuthServices(this);
-        Services.GetRequiredService<NavigationManager>().NavigateTo("reset-password?token=abc123");
-
-        var cut = Render<ResetPassword>();
-        cut.Find("#newPassword").Change("new password");
-        cut.Find("#confirmPassword").Change("does not match");
-        cut.Find("form").Submit();
-
-        Assert.Contains("Die Passwörter stimmen nicht überein.", cut.Markup);
+        Assert.NotNull(cut.Find("#passwordResetIdentifier"));
+        Assert.Empty(cut.FindAll("#passwordResetNewPassword"));
     }
 
     [Fact]
     public void ResetPassword_OnSuccess_LogsInAndNavigatesHome()
     {
-        // Loose mode: a successful reset calls MarkUserAsAuthenticatedAsync,
-        // which lazy-imports js/auth.js via TokenStore -- unrelated to what
-        // this test actually verifies. Same pattern as
-        // OAuthCallbackPageTests.cs's OAuthCallback_WithValidCode_LogsInAndRedirectsHome
-        // (ResetPassword.razor's success path is structurally identical to
-        // OAuthCallback.razor's).
-        JSInterop.Mode = JSRuntimeMode.Loose;
-
         var handler = new FakeHttpMessageHandler("""{"success":true,"data":{"token":"jwt-value","userId":1}}""");
-        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
-        Services.AddSingleton<ApiClient>();
-        RegisterAuthServices(this);
+        RegisterServices(handler);
         var navManager = Services.GetRequiredService<NavigationManager>();
         navManager.NavigateTo("reset-password?token=abc123");
 
         var cut = Render<ResetPassword>();
-        cut.Find("#newPassword").Change("new password");
-        cut.Find("#confirmPassword").Change("new password");
-        cut.Find("form").Submit();
+        cut.Find("#passwordResetNewPassword").Input("new password");
+        cut.Find("#passwordResetConfirmPassword").Input("new password");
+        cut.Find("button.btn-primary").Click();
 
-        // WaitForAssertion, not a plain Assert: the success path does
-        // `await Task.Yield(); NavigationManager.NavigateTo(...)` (see
-        // ResetPassword.razor) so ToastHost's StateHasChanged from
-        // ToastService.Show wins the render race against the navigation --
-        // same reasoning as BookDetail.razor's DeleteAsync. That yield
-        // posts its continuation to the renderer's dispatcher, so
-        // `form.Submit()` returns before the navigation actually runs.
-        // Same idiom as the other async-race assertions in this test suite
-        // (e.g. BiblePageTests.cs, ProfilePageTests.cs).
+        // The success step's own auto-close (3s) or its "Weiter zur
+        // Bibliothek" button both funnel through PasswordResetDialog's
+        // CloseAsync -> OnClose -> this page's NavigateTo(""). Click the
+        // button directly rather than waiting out the timer -- wait for
+        // the step transition to actually land first, since the button at
+        // this same selector was "Passwort setzen" a moment ago.
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("#passwordResetNewPassword")));
+        cut.Find("button.btn-primary").Click();
+
         cut.WaitForAssertion(() => Assert.Equal(navManager.BaseUri, navManager.Uri));
     }
 
     [Fact]
     public void ResetPassword_Submit_SendsTheUrlTokenInTheRequestBody()
     {
-        // None of the tests above assert what actually gets sent to the
-        // API -- they only check what the page renders. This confirms the
-        // token extracted from the "?token=" query string is the same
-        // value that ends up in the POST body, not e.g. a stale or
-        // re-parsed value. Same capture pattern as SettingsPageTests.cs's
+        // Confirms the token extracted from the "?token=" query string is
+        // the same value that ends up in the POST body, not e.g. a stale
+        // or re-parsed value. Same capture pattern as SettingsPageTests.cs's
         // Settings_PasswordResetButton_SendsRequestWithOwnEmail.
-        JSInterop.Mode = JSRuntimeMode.Loose;
-
         HttpRequestMessage? postRequest = null;
         string? postBody = null;
         var handler = new RoutedFakeHttpMessageHandler()
@@ -118,15 +93,13 @@ public class ResetPasswordPageTests : BunitContext
                 postBody = r.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
                 return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"token":"jwt","userId":1}}""");
             });
-        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
-        Services.AddSingleton<ApiClient>();
-        RegisterAuthServices(this);
+        RegisterServices(handler);
         Services.GetRequiredService<NavigationManager>().NavigateTo("reset-password?token=some-specific-token-value");
 
         var cut = Render<ResetPassword>();
-        cut.Find("#newPassword").Change("new password");
-        cut.Find("#confirmPassword").Change("new password");
-        cut.Find("form").Submit();
+        cut.Find("#passwordResetNewPassword").Input("new password");
+        cut.Find("#passwordResetConfirmPassword").Input("new password");
+        cut.Find("button.btn-primary").Click();
 
         Assert.NotNull(postRequest);
         Assert.EndsWith("/reset-password", postRequest!.RequestUri!.AbsolutePath);
@@ -134,19 +107,21 @@ public class ResetPasswordPageTests : BunitContext
     }
 
     [Fact]
-    public void ResetPassword_OnInvalidTokenError_ShowsInvalidTokenMessage()
+    public void ResetPassword_OnInvalidTokenError_DropsBackToIdentify()
     {
+        // The only legitimate backwards transition (§4.5) -- but a link
+        // token with no identifier on file has nothing for CodeEntry to
+        // work with, so it drops back to Identify instead (a deliberate
+        // corner the design doc's own diagram doesn't cover explicitly).
         var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"INVALID_RESET_TOKEN","message":"This reset link is invalid or has expired."}}""");
-        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
-        Services.AddSingleton<ApiClient>();
-        RegisterAuthServices(this);
+        RegisterServices(handler);
         Services.GetRequiredService<NavigationManager>().NavigateTo("reset-password?token=expired-token");
 
         var cut = Render<ResetPassword>();
-        cut.Find("#newPassword").Change("new password");
-        cut.Find("#confirmPassword").Change("new password");
-        cut.Find("form").Submit();
+        cut.Find("#passwordResetNewPassword").Input("new password");
+        cut.Find("#passwordResetConfirmPassword").Input("new password");
+        cut.Find("button.btn-primary").Click();
 
-        Assert.Contains("Dieser Link ist ungültig oder abgelaufen.", cut.Markup);
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#passwordResetIdentifier")));
     }
 }

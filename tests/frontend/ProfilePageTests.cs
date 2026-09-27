@@ -527,7 +527,7 @@ public class ProfilePageTests : BunitContext
     }
 
     [Fact]
-    public void Profile_PasswordResetButton_SendsRequestWithProfileEmailAndShowsToast()
+    public void Profile_PasswordResetButton_OpensDialogAndSendsRequestWithProfileEmail()
     {
         // The password-reset button moved here from Settings (Settings
         // requires the *current* password to change it; this is the
@@ -535,6 +535,13 @@ public class ProfilePageTests : BunitContext
         // profile already loaded by OnInitializedAsync instead of a
         // second GET /api/users/me -- unlike the old Settings feature it
         // replaced, which fetched the profile solely for this purpose.
+        //
+        // Per the password-reset modernization design doc §4.1, the
+        // button now opens PasswordResetDialog directly at CodeEntry
+        // (InitialIdentifier = the profile's own email) instead of firing
+        // the request and showing a toast itself -- the dialog fires that
+        // same request on open and manages its own success/error state,
+        // so there's no toast here to assert on anymore.
         HttpRequestMessage? postRequest = null;
         string? postBody = null;
         var handler = new RoutedFakeHttpMessageHandler()
@@ -554,9 +561,7 @@ public class ProfilePageTests : BunitContext
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<ToastService>();
-        var toastService = Services.GetRequiredService<ToastService>();
-        ToastMessage? shownToast = null;
-        toastService.OnShow += toast => shownToast = toast;
+        JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = Render<Profile>();
         var button = cut.Find(".profile-password-reset button");
@@ -566,7 +571,6 @@ public class ProfilePageTests : BunitContext
         Assert.NotNull(postRequest);
         Assert.EndsWith("/forgot-password", postRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("\"alice@example.com\"", postBody);
-        Assert.NotNull(shownToast);
-        Assert.Equal(ToastKind.Success, shownToast!.Kind);
+        Assert.NotNull(cut.Find("#passwordResetCode"));
     }
 }
