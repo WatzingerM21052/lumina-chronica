@@ -71,6 +71,13 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
     private bool _wasOpen;
     private PasswordResetStep _step;
 
+    // LinkToken opens straight at PasswordEntry with no Identify/CodeEntry
+    // ever happening in that session -- the step rail (which assumes all
+    // three are reachable) is pointless there and gets hidden entirely.
+    // InitialIdentifier (Profile's entry point) does NOT skip Identify --
+    // see OpenAsync's comment on why that changed from the original design.
+    private bool _hasCodeStep;
+
     private string _identifier = string.Empty;
     private string _codeDigits = string.Empty;
     private string _lastCheckedCode = string.Empty;
@@ -98,17 +105,25 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
 
     private CancellationTokenSource? _autoCloseCts;
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
         if (IsOpen && !_wasOpen)
         {
-            await OpenAsync();
+            Open();
         }
         _wasOpen = IsOpen;
     }
 
-    private async Task OpenAsync()
+    private void Open()
     {
+        // InitialIdentifier (Profile's own-email entry point) pre-fills
+        // the field but does NOT skip Identify or auto-fire the request --
+        // it originally did (matching the design doc's own table), but
+        // that meant the user never saw which email the code was about to
+        // go to and the step rail showed a "1 E-Mail" segment that was
+        // never actually visited, which read as broken rather than as a
+        // shortcut. Pre-filling and still requiring the normal submit
+        // keeps the flow identical to Login's, just with less typing.
         _identifier = InitialIdentifier ?? string.Empty;
         _codeDigits = string.Empty;
         _lastCheckedCode = string.Empty;
@@ -123,16 +138,11 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
         _isSubmittingIdentify = false;
         _isSubmittingReset = false;
         StopResendCooldown();
+        _hasCodeStep = string.IsNullOrEmpty(LinkToken);
 
         if (!string.IsNullOrEmpty(LinkToken))
         {
             _step = PasswordResetStep.PasswordEntry;
-        }
-        else if (!string.IsNullOrEmpty(InitialIdentifier))
-        {
-            _step = PasswordResetStep.CodeEntry;
-            await FireForgotPasswordRequestAsync();
-            StartResendCooldown();
         }
         else
         {
@@ -352,7 +362,10 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
         _attemptsLeft = null;
         _requestError = null;
         await FireForgotPasswordRequestAsync();
-        StartResendCooldown();
+        if (_requestError is null)
+        {
+            StartResendCooldown();
+        }
     }
 
     // --- Step 3: PasswordEntry ------------------------------------------
@@ -445,16 +458,32 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
 
     // --- Step 4: Success --------------------------------------------------
 
-    private string SuccessEmailNote()
+    // Only ever masks/shows the identifier the user themselves just typed
+    // one step earlier -- never something the backend disclosed, which
+    // would reopen the exact enumeration hole D2 closes. When the typed
+    // identifier is a username, not an email, there is genuinely no email
+    // address on the client to show at all (the account's real email is
+    // never sent to the browser pre-reset) -- the generic fallback text
+    // is the correct behavior there, not a missing feature.
+    private string? MaskedIdentifierEmail()
     {
         var at = _identifier.IndexOf('@');
-        if (at <= 0) return I18n.T("passwordReset.successEmailNoteGeneric");
+        if (at <= 0) return null;
 
         var local = _identifier[..at];
         var domain = _identifier[at..];
-        var masked = local[..1] + "•••" + domain;
-        return string.Format(I18n.T("passwordReset.successEmailNote"), masked);
+        return local[..1] + "•••" + domain;
     }
+
+    private string CodeIntroText() =>
+        MaskedIdentifierEmail() is { } masked
+            ? string.Format(I18n.T("passwordReset.codeIntroWithEmail"), masked)
+            : I18n.T("passwordReset.codeIntro");
+
+    private string SuccessEmailNote() =>
+        MaskedIdentifierEmail() is { } masked
+            ? string.Format(I18n.T("passwordReset.successEmailNote"), masked)
+            : I18n.T("passwordReset.successEmailNoteGeneric");
 
     private void ScheduleAutoClose()
     {

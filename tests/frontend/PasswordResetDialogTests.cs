@@ -29,6 +29,21 @@ public class PasswordResetDialogTests : BunitContext
     private static RoutedFakeHttpMessageHandler ForgotPasswordAlwaysOk() =>
         new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/forgot-password", """{"success":true,"data":{"message":"ok"}}""");
 
+    // Identify is never skipped, even when InitialIdentifier pre-fills it
+    // (Profile's entry point) -- the user must see and submit it
+    // themselves, same as Login's flow (see PasswordResetDialog.razor.cs's
+    // Open() comment for why that changed from the original design).
+    private static void SubmitIdentifyAndAdvanceToCodeEntry<TComponent>(Bunit.IRenderedComponent<TComponent> cut, string identifier = "alice@example.com")
+        where TComponent : Microsoft.AspNetCore.Components.IComponent
+    {
+        var identifierInput = cut.Find("#passwordResetIdentifier");
+        if (((AngleSharp.Html.Dom.IHtmlInputElement)identifierInput).Value != identifier)
+        {
+            identifierInput.Input(identifier);
+        }
+        cut.Find("button.btn-primary").Click();
+    }
+
     [Fact]
     public void OpensAtIdentify_WithNoInitialIdentifierOrLinkToken()
     {
@@ -41,8 +56,15 @@ public class PasswordResetDialogTests : BunitContext
     }
 
     [Fact]
-    public void OpensAtCodeEntry_AndFiresTheRequest_WhenInitialIdentifierGiven()
+    public void OpensAtIdentify_WithTheFieldPreFilled_WhenInitialIdentifierGiven_AndDoesNotAutoFire()
     {
+        // Profile's entry point pre-fills the field (less typing for a
+        // user who's already authenticated as themselves) but must NOT
+        // skip Identify or fire the request before the user sees it --
+        // silently jumping straight to "check your email" left the user
+        // with no visible confirmation of which address the code was
+        // about to go to, and a step rail advertising a step it never
+        // actually showed.
         HttpRequestMessage? postRequest = null;
         var handler = new RoutedFakeHttpMessageHandler()
             .When(r => r.RequestUri!.AbsolutePath.EndsWith("/forgot-password"), r =>
@@ -56,14 +78,55 @@ public class PasswordResetDialogTests : BunitContext
             .Add(p => p.IsOpen, true)
             .Add(p => p.InitialIdentifier, "alice@example.com"));
 
+        var identifierInput = (AngleSharp.Html.Dom.IHtmlInputElement)cut.Find("#passwordResetIdentifier");
+        Assert.Equal("alice@example.com", identifierInput.Value);
+        Assert.Empty(cut.FindAll("#passwordResetCode"));
+        Assert.Null(postRequest);
+
+        cut.Find("button.btn-primary").Click();
+
         Assert.NotNull(cut.Find("#passwordResetCode"));
         Assert.NotNull(postRequest);
         Assert.EndsWith("/forgot-password", postRequest!.RequestUri!.AbsolutePath);
     }
 
     [Fact]
-    public void OpensAtPasswordEntry_WhenLinkTokenGiven()
+    public void CodeEntryIntro_ShowsTheTypedEmail_MaskedButRecognizable()
     {
+        // Only ever echoes back what the user themselves just typed one
+        // step earlier -- not something the backend disclosed, so this
+        // can't reopen the D2 enumeration hole. Masked ("a•••@...") rather
+        // than shown in full, matching the Success step's own treatment.
+        RegisterServices(ForgotPasswordAlwaysOk());
+
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut, "alice@example.com");
+
+        Assert.Contains("a•••@example.com", cut.Markup);
+    }
+
+    [Fact]
+    public void CodeEntryIntro_FallsBackToGenericText_WhenTheTypedIdentifierIsAUsername()
+    {
+        // A username has no email address the client can show at all --
+        // the account's real email is never sent to the browser pre-reset
+        // (that's the whole anti-enumeration point). The generic fallback
+        // is correct here, not a gap.
+        RegisterServices(ForgotPasswordAlwaysOk());
+
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut, "alice");
+
+        Assert.Contains("per E-Mail geschickt", cut.Markup);
+        Assert.DoesNotContain("@", cut.Markup);
+    }
+
+    [Fact]
+    public void OpensAtPasswordEntry_WhenLinkTokenGiven_AndHidesTheStepRail()
+    {
+        // LinkToken skips Identify AND CodeEntry entirely -- the token IS
+        // the proof. With only one real step ever shown in that session,
+        // the 3-dot rail has nothing meaningful to display.
         RegisterServices(ForgotPasswordAlwaysOk());
 
         var cut = Render<PasswordResetDialog>(parameters => parameters
@@ -73,6 +136,7 @@ public class PasswordResetDialogTests : BunitContext
         Assert.NotNull(cut.Find("#passwordResetNewPassword"));
         Assert.Empty(cut.FindAll("#passwordResetCode"));
         Assert.Empty(cut.FindAll("#passwordResetIdentifier"));
+        Assert.Empty(cut.FindAll(".password-reset-steps"));
     }
 
     private RoutedFakeHttpMessageHandler HandlerForCode(Func<string, string> responseForCode, Action<string>? onVerifyCall = null)
@@ -94,10 +158,8 @@ public class PasswordResetDialogTests : BunitContext
         var handler = HandlerForCode(_ => """{"success":true,"data":{"valid":true,"attemptsLeft":9}}""");
         RegisterServices(handler);
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
-
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("123456");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#passwordResetNewPassword")), Wait);
@@ -109,10 +171,8 @@ public class PasswordResetDialogTests : BunitContext
         var handler = HandlerForCode(_ => """{"success":true,"data":{"valid":false,"attemptsLeft":8}}""");
         RegisterServices(handler);
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
-
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("000000");
 
         cut.WaitForAssertion(() => Assert.Contains("Der Code stimmt nicht.", cut.Markup), Wait);
@@ -136,9 +196,8 @@ public class PasswordResetDialogTests : BunitContext
         var handler = HandlerForCode(_ => """{"success":true,"data":{"valid":false,"attemptsLeft":8}}""", _ => callCount++);
         RegisterServices(handler);
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
 
         cut.Find("#passwordResetCode").Input("111111");
         cut.WaitForAssertion(() => Assert.Equal(1, callCount), Wait);
@@ -160,16 +219,13 @@ public class PasswordResetDialogTests : BunitContext
         var handler = HandlerForCode(_ => """{"success":true,"data":{"valid":false,"attemptsLeft":7}}""");
         RegisterServices(handler);
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
-
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("000000");
         cut.WaitForAssertion(() => Assert.Contains("Der Code stimmt nicht.", cut.Markup), Wait);
 
-        // 9 (10 - 7 spent... actually attemptsLeft IS what's left, 7 left)
-        // is above the <=3 threshold -- showing "Noch 7 Versuche" this
-        // early is exactly the anxiety-inducing, attacker-informing
+        // 7 left is above the <=3 threshold -- showing "Noch 7 Versuche"
+        // this early is exactly the anxiety-inducing, attacker-informing
         // behavior §4.3 says not to do.
         Assert.DoesNotContain("Versuche", cut.Markup);
     }
@@ -180,10 +236,8 @@ public class PasswordResetDialogTests : BunitContext
         var handler = HandlerForCode(_ => """{"success":true,"data":{"valid":false,"attemptsLeft":3}}""");
         RegisterServices(handler);
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
-
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("000000");
 
         cut.WaitForAssertion(() => Assert.Contains("Noch 3 Versuche", cut.Markup), Wait);
@@ -195,10 +249,8 @@ public class PasswordResetDialogTests : BunitContext
         var handler = HandlerForCode(_ => """{"success":true,"data":{"valid":false,"attemptsLeft":0}}""");
         RegisterServices(handler);
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
-
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("000000");
 
         cut.WaitForAssertion(() => Assert.Contains("Dieser Code ist nicht mehr gültig.", cut.Markup), Wait);
@@ -216,25 +268,22 @@ public class PasswordResetDialogTests : BunitContext
         var handler = HandlerForCode(_ => """{"success":true,"data":{"valid":true,"attemptsLeft":0}}""");
         RegisterServices(handler);
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
-
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
         cut.Find("#passwordResetCode").Input("123456");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#passwordResetNewPassword")), Wait);
     }
 
     [Fact]
-    public void ResendButton_IsDisabledImmediatelyAfterTheInitialSendAndAfterAResend()
+    public void ResendButton_IsDisabledImmediatelyAfterTheInitialSend()
     {
         RegisterServices(ForgotPasswordAlwaysOk());
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
 
-        // The auto-fired initial request already started the cooldown --
+        // The just-fired initial request already started the cooldown --
         // no separate "Erneut senden" button should be clickable yet, just
         // the countdown text in its place.
         Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent == "Erneut senden");
@@ -321,15 +370,13 @@ public class PasswordResetDialogTests : BunitContext
         // component believes is an empty field.
         RegisterServices(ForgotPasswordAlwaysOk());
 
-        var cut = Render<PasswordResetDialog>(parameters => parameters
-            .Add(p => p.IsOpen, true)
-            .Add(p => p.InitialIdentifier, "alice@example.com"));
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut, "alice@example.com");
 
         cut.Find("#passwordResetCode").Input("123456");
         cut.Find("button.link-button").Click(); // "Andere E-Mail-Adresse"
 
-        cut.Find("#passwordResetIdentifier").Input("bob@example.com");
-        cut.Find("button.btn-primary").Click(); // back to CodeEntry
+        SubmitIdentifyAndAdvanceToCodeEntry(cut, "bob@example.com");
 
         var codeInput = (AngleSharp.Html.Dom.IHtmlInputElement)cut.Find("#passwordResetCode");
         Assert.Equal(string.Empty, codeInput.Value);
@@ -349,8 +396,7 @@ public class PasswordResetDialogTests : BunitContext
         RegisterServices(handler);
 
         var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
-        cut.Find("#passwordResetIdentifier").Input("alice@example.com");
-        cut.Find("button.btn-primary").Click();
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
 
         cut.WaitForAssertion(() => Assert.Contains("Bitte in 15 Minuten erneut versuchen.", cut.Markup), Wait);
         Assert.DoesNotContain("Too many attempts", cut.Markup);

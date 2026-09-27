@@ -55,6 +55,7 @@
   "passwordReset.rateLimited": "Too many attempts. Please try again in {0} minutes.",
   "passwordReset.codeTitle": "Enter the code",
   "passwordReset.codeIntro": "If an account with these details exists, we've sent you a code and a link by email.",
+  "passwordReset.codeIntroWithEmail": "If an account with these details exists, we've sent a code and a link to {0}.",
   "passwordReset.codeLabel": "Verification code",
   "passwordReset.codeInvalid": "That code isn't right.",
   "passwordReset.codeConfirmedAnnouncement": "Code confirmed.",

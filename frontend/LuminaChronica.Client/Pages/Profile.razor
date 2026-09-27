@@ -95,13 +95,16 @@ else
         </div>
     </EditForm>
 
-    <div class="profile-password-reset">
-        <p class="text-muted">@I18n.T("profile.passwordResetHint")</p>
-        <button type="button" class="btn" disabled="@(_profile is null)" @onclick="() => _showPasswordResetDialog = true">
-            @I18n.T("profile.passwordResetButton")
-        </button>
-        <PasswordResetDialog IsOpen="_showPasswordResetDialog" InitialIdentifier="@_profile?.Email" OnClose="() => _showPasswordResetDialog = false" />
-    </div>
+    @if (_hasRealPassword)
+    {
+        <div class="profile-password-reset">
+            <p class="text-muted">@I18n.T("profile.passwordResetHint")</p>
+            <button type="button" class="btn" disabled="@(_profile is null)" @onclick="() => _showPasswordResetDialog = true">
+                @I18n.T("profile.passwordResetButton")
+            </button>
+            <PasswordResetDialog IsOpen="_showPasswordResetDialog" InitialIdentifier="@_profile?.Email" OnClose="() => _showPasswordResetDialog = false" />
+        </div>
+    }
 
     <h2>@I18n.T("profile.linkedAccountsTitle")</h2>
     @if (_linkBanner is not null)
