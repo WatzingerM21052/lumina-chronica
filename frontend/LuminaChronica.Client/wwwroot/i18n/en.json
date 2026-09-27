@@ -76,6 +76,7 @@
   "passwordReset.submitting": "Setting...",
   "passwordReset.codeExpiredMessage": "This code has expired. Please enter it again.",
   "passwordReset.networkError": "Connection failed. Please try again.",
+  "passwordReset.codeUnsupported": "Code verification is currently unavailable. Please use the link in the email.",
   "passwordReset.successTitle": "Password changed",
   "passwordReset.successMessage": "Your password has been changed.",
   "passwordReset.successEmailNote": "We've sent a confirmation to {0}.",

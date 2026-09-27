@@ -90,6 +90,7 @@ public class FakeI18nService : II18nService
         ["passwordReset.submitting"] = "Wird gesetzt...",
         ["passwordReset.codeExpiredMessage"] = "Der Code ist abgelaufen. Bitte gib ihn erneut ein.",
         ["passwordReset.networkError"] = "Verbindung fehlgeschlagen. Bitte versuche es erneut.",
+        ["passwordReset.codeUnsupported"] = "Die Code-Prüfung ist gerade nicht verfügbar. Bitte nutze den Link in der E-Mail.",
         ["passwordReset.successTitle"] = "Passwort geändert",
         ["passwordReset.successMessage"] = "Dein Passwort wurde geändert.",
         ["passwordReset.successEmailNote"] = "Wir haben dir eine Bestätigung an {0} geschickt.",

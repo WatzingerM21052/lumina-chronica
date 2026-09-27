@@ -177,6 +177,23 @@ describe("POST /api/auth/forgot-password", () => {
         expect(other.status).toBe(200);
     });
 
+    it("a request that fails before issuing a new code leaves the previously issued link intact", async () => {
+        // Regression (review K-2): the invalidate-old-rows UPDATE used to run
+        // BEFORE the HMAC, so a missing PASSWORD_CODE_SECRET threw only after
+        // every live link had already been burned -- the generic 200 hid it,
+        // and nobody could reset at all, not even via an older email.
+        await app.request("/api/auth/register", jsonRequest({ username: "fay", email: "fay@example.com", password: "correct horse" }), env);
+        const firstToken = await requestResetAndGetRawToken("fay@example.com");
+        await env.DB.prepare("DELETE FROM auth_rate_limits WHERE route = 'forgot-password-resend'").run();
+
+        const brokenEnv = { ...env, PASSWORD_CODE_SECRET: "" };
+        const failed = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "fay@example.com" }), brokenEnv);
+        expect(failed.status).toBe(200);
+
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ token: firstToken, newPassword: "new password" }), env);
+        expect(res.status).toBe(200);
+    });
+
     it("does not fail the request if the email provider errors", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => new Response("server error", { status: 500 })));
         await app.request("/api/auth/register", jsonRequest({ username: "bob", email: "bob@example.com", password: "correct horse" }), env);
@@ -348,6 +365,23 @@ describe("POST /api/auth/reset-password", () => {
         const res = await app.request("/api/auth/reset-password", jsonRequest({ identifier: "alice@example.com", code, newPassword: "new password" }), env);
         expect(res.status).toBe(400);
         expect((await readJson(res)).error.code).toBe("INVALID_RESET_TOKEN");
+    });
+
+    it("a correct code on the last allowed live check still works for the reset (a match never burns an attempt)", async () => {
+        // Regression (review M-1): verify used to increment unconditionally,
+        // so 9 typos + the right code showed "valid, 0 left" in the dialog
+        // and the following submit then failed on the exhausted row.
+        const code = await requestResetAndGetCode("alice@example.com");
+
+        for (let i = 0; i < MAX_CODE_ATTEMPTS - 1; i++) {
+            await app.request("/api/auth/verify-reset-code", jsonRequest({ identifier: "alice@example.com", code: "000000" }), env);
+        }
+
+        const verify = await app.request("/api/auth/verify-reset-code", jsonRequest({ identifier: "alice@example.com", code }), env);
+        expect((await readJson(verify)).data).toEqual({ valid: true, attemptsLeft: 1 });
+
+        const res = await app.request("/api/auth/reset-password", jsonRequest({ identifier: "alice@example.com", code, newPassword: "new password" }), env);
+        expect(res.status).toBe(200);
     });
 
     it("also locks the code when every wrong guess goes straight through reset-password, bypassing verify-reset-code entirely", async () => {
