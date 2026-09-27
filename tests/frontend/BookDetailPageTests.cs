@@ -293,6 +293,63 @@ public class BookDetailPageTests : BunitContext
         Assert.NotNull(cut.Find("#edit-title"));
     }
 
+    // Phase 4 item 18 (dialog rollout, design doc §6.3) -- the edit form is
+    // now a Dialog(Large) with CloseOnOverlayClick/CloseOnEscape both false,
+    // so the only way out is Speichern or Abbrechen/✕, and both of the
+    // latter must check for unsaved changes first (D12's dirty-state guard).
+    [Fact]
+    public void BookDetail_EditDialog_CancelWithNoChanges_ClosesImmediately()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+
+        Assert.Empty(cut.FindAll("#edit-title"));
+        Assert.Empty(cut.FindAll("#book-edit-form"));
+    }
+
+    [Fact]
+    public void BookDetail_EditDialog_CancelWithUnsavedChanges_AsksForConfirmation_AndOnlyClosesOnConfirm()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#edit-button").Click();
+        cut.Find("#edit-title").Change("Dune Messiah");
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+
+        // Still open -- the discard-confirmation is up, not the closed form.
+        Assert.NotNull(cut.Find("#edit-title"));
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+
+        // Backing out of the confirmation leaves the edit dialog open with
+        // the typed change intact.
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter bearbeiten").Click();
+        Assert.Equal("Dune Messiah", cut.Find("#edit-title").GetAttribute("value"));
+
+        // Asking again and this time confirming actually discards and closes.
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+
+        Assert.Empty(cut.FindAll("#edit-title"));
+    }
+
     [Fact]
     public void BookDetail_EditForm_VisibilitySelector_ShowsCurrentValueAndSendsChange()
     {
