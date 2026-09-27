@@ -13,6 +13,7 @@ public class OAuthCallbackPageTests : BunitContext
     {
         context.Services.AddSingleton<TokenStore>();
         context.Services.AddSingleton<LuminaAuthStateProvider>();
+        context.Services.AddSingleton<II18nService, FakeI18nService>();
     }
 
     [Fact]

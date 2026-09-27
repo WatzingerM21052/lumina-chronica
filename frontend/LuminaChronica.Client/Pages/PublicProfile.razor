@@ -8,18 +8,19 @@
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 @inject IJSRuntime JsRuntime
+@inject II18nService I18n
 
 <PageTitle>@(_profile?.Username ?? Username) — Lumina Chronica</PageTitle>
 
 @if (_notFound)
 {
     <div class="empty-state">
-        <p>Dieses Profil existiert nicht.</p>
+        <p>@I18n.T("publicProfile.notFoundMessage")</p>
     </div>
 }
 else if (_profile is null)
 {
-    <span class="visually-hidden" role="status">Profil wird geladen…</span>
+    <span class="visually-hidden" role="status">@I18n.T("publicProfile.profileLoading")</span>
     <div class="profile-hero profile-hero-skeleton" aria-hidden="true" aria-busy="true">
         <div class="profile-hero-portrait-wrap">
             <SkeletonBlock Width="7rem" Height="7rem" Circle="true" />
@@ -47,14 +48,14 @@ else
             }
         </div>
         <div class="profile-hero-body">
-            <p class="profile-hero-eyebrow">Öffentliches Archiv</p>
+            <p class="profile-hero-eyebrow">@I18n.T("publicProfile.eyebrow")</p>
             <h1 class="profile-hero-name">@_profile.Username</h1>
             <p class="profile-hero-meta">
                 <button type="button" id="showFollowersButton" class="profile-hero-meta-link" @onclick="() => _isFollowersOpen = true">
-                    <strong>@_profile.FollowerCount</strong> Follower
+                    <strong>@_profile.FollowerCount</strong> @I18n.T("publicProfile.followersLabel")
                 </button>
                 <button type="button" id="showFollowingButton" class="profile-hero-meta-link" @onclick="() => _isFollowingOpen = true">
-                    <strong>@_profile.FollowingCount</strong> Folgt
+                    <strong>@_profile.FollowingCount</strong> @I18n.T("publicProfile.followingLabel")
                 </button>
             </p>
         </div>
@@ -64,7 +65,7 @@ else
                 <AuthorizeView>
                     <Authorized>
                         <button type="button" class="btn-follow @(_profile.IsFollowing ? "is-following" : "")" disabled="@_isTogglingFollow" @onclick="ToggleFollowAsync">
-                            @(_profile.IsFollowing ? "✓ Gefolgt" : "+ Folgen")
+                            @(_profile.IsFollowing ? I18n.T("publicProfile.followingButton") : I18n.T("publicProfile.followButton"))
                         </button>
                     </Authorized>
                 </AuthorizeView>
@@ -72,21 +73,21 @@ else
         }
     </div>
 
-    <FollowListDialog IsOpen="_isFollowersOpen" Username="@Username" Kind="followers" Title="Follower" EmptyText="Noch keine Follower." OnClose="() => _isFollowersOpen = false" />
-    <FollowListDialog IsOpen="_isFollowingOpen" Username="@Username" Kind="following" Title="Folgt" EmptyText="Folgt noch niemandem." OnClose="() => _isFollowingOpen = false" />
+    <FollowListDialog IsOpen="_isFollowersOpen" Username="@Username" Kind="followers" Title="@I18n.T("publicProfile.followersLabel")" EmptyText="@I18n.T("publicProfile.noFollowersMessage")" OnClose="() => _isFollowersOpen = false" />
+    <FollowListDialog IsOpen="_isFollowingOpen" Username="@Username" Kind="following" Title="@I18n.T("publicProfile.followingLabel")" EmptyText="@I18n.T("publicProfile.noFollowingMessage")" OnClose="() => _isFollowingOpen = false" />
 
     <section class="profile-chapter" data-reveal>
         <div class="profile-chapter-numeral-row"><span>I</span></div>
-        <h2 class="chapter-title">Bibliothek <span class="chapter-caption">— Werke dieser Sammlung</span></h2>
+        <h2 class="chapter-title">@I18n.T("publicProfile.libraryChapterTitle") <span class="chapter-caption">— @I18n.T("publicProfile.libraryChapterCaption")</span></h2>
         @if (_profile.Books.Count == 0)
         {
             @if (_profile.IsOwnProfile)
             {
-                <EmptyState Ornament="❦" Message="Beginne deine Sammlung." ActionText="Buch hinzufügen" ActionHref="library/upload" />
+                <EmptyState Ornament="❦" Message="@I18n.T("publicProfile.ownEmptyLibraryMessage")" ActionText="@I18n.T("publicProfile.ownEmptyLibraryAction")" ActionHref="library/upload" />
             }
             else
             {
-                <EmptyState Ornament="❦" Message="@($"{_profile.Username} hat noch keine öffentlichen Bücher.")" />
+                <EmptyState Ornament="❦" Message="@string.Format(I18n.T("publicProfile.otherEmptyLibraryMessage"), _profile.Username)" />
             }
         }
         else
@@ -109,13 +110,13 @@ else
                                 {
                                     <AuthorizeView>
                                         <NotAuthorized>
-                                            <span class="text-muted">Anmelden zum Lesen</span>
+                                            <span class="text-muted">@I18n.T("publicProfile.loginToReadMessage")</span>
                                         </NotAuthorized>
                                     </AuthorizeView>
                                 }
                                 else
                                 {
-                                    <span class="text-muted">Privat geteilt</span>
+                                    <span class="text-muted">@I18n.T("publicProfile.privatelySharedMessage")</span>
                                 }
                             }
                         </FooterContent>
@@ -127,10 +128,10 @@ else
 
     <section class="profile-chapter" data-reveal>
         <div class="profile-chapter-numeral-row"><span>II</span></div>
-        <h2 class="chapter-title">Projekte <span class="chapter-caption">— Welten dieser Sammlung</span></h2>
+        <h2 class="chapter-title">@I18n.T("publicProfile.projectsChapterTitle") <span class="chapter-caption">— @I18n.T("publicProfile.projectsChapterCaption")</span></h2>
         @if (_profile.Projects.Count == 0)
         {
-            <EmptyState Ornament="❦" Message="Dieses Archiv wurde noch mit keiner Welt gefüllt." />
+            <EmptyState Ornament="❦" Message="@I18n.T("publicProfile.emptyProjectsMessage")" />
         }
         else
         {
@@ -156,10 +157,10 @@ else
 
     <section class="profile-chapter" data-reveal>
         <div class="profile-chapter-numeral-row"><span>III</span></div>
-        <h2 class="chapter-title">Aktivität <span class="chapter-caption">— zuletzt geschehen</span></h2>
+        <h2 class="chapter-title">@I18n.T("publicProfile.activityChapterTitle") <span class="chapter-caption">— @I18n.T("publicProfile.activityChapterCaption")</span></h2>
         @if (_profile.Activities.Count == 0)
         {
-            <EmptyState Ornament="❦" Message="Noch keine öffentlichen Aktivitäten." />
+            <EmptyState Ornament="❦" Message="@I18n.T("publicProfile.emptyActivityMessage")" />
         }
         else
         {
@@ -306,15 +307,15 @@ else
     // stores null, not a real value, in that case) -- rendered without a
     // star count rather than falling back to "0 Sternen", which would read
     // as a real (and wrong) rating value.
-    private static string ActivityText(ProfileActivity activity)
+    private string ActivityText(ProfileActivity activity)
     {
-        var title = activity.TargetTitle ?? "(gelöscht)";
+        var title = activity.TargetTitle ?? I18n.T("publicProfile.activityDeletedTitle");
         return (activity.Type, activity.Rating) switch
         {
-            ("RATING_GIVEN", { } rating) => $"hat „{title}“ mit {rating} {(rating == 1 ? "Stern" : "Sternen")} bewertet",
-            ("RATING_GIVEN", null) => $"hat „{title}“ bewertet",
-            ("BOOK_PUBLIC", _) => $"hat das Buch „{title}“ veröffentlicht",
-            ("PROJECT_PUBLIC", _) => $"hat das Projekt „{title}“ veröffentlicht",
+            ("RATING_GIVEN", { } rating) => string.Format(I18n.T("publicProfile.activityRatedWithStars"), title, rating, rating == 1 ? I18n.T("publicProfile.activityRatingStarSingular") : I18n.T("publicProfile.activityRatingStarPlural")),
+            ("RATING_GIVEN", null) => string.Format(I18n.T("publicProfile.activityRatedNoStars"), title),
+            ("BOOK_PUBLIC", _) => string.Format(I18n.T("publicProfile.activityBookPublished"), title),
+            ("PROJECT_PUBLIC", _) => string.Format(I18n.T("publicProfile.activityProjectPublished"), title),
             _ => title,
         };
     }

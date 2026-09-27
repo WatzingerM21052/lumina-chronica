@@ -1,5 +1,7 @@
 @namespace LuminaChronica.Client.Components
 @using System.Globalization
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
 
 @* Shared "catalog entry" primitive for PUBLIC-facing book/project cards
    (Discover.razor, PublicProfile.razor) -- deliberately carries NO
@@ -33,7 +35,7 @@
         @if (OwnerUsername is { } ownerUsername)
         {
             <div class="catalog-card-owner">
-                von
+                @I18n.T("catalogCard.byPrefix")
                 @* A <span> + stopPropagation, not a nested <a> -- the card
                    itself is already an <a href>, and a second anchor inside
                    it is invalid HTML with unreliable click behavior.
@@ -62,13 +64,13 @@
                 @if (RatingCount > 0)
                 {
                     var average = RatingAverage?.ToString("0.0", CultureInfo.InvariantCulture);
-                    <span aria-label="@($"Durchschnittliche Bewertung: {average} von 5 Sternen, {RatingCount} {(RatingCount == 1 ? "Bewertung" : "Bewertungen")}")">
+                    <span aria-label="@string.Format(I18n.T("bookDetail.averageRatingAriaLabel"), average, RatingCount, RatingCount == 1 ? I18n.T("bookDetail.ratingSingular") : I18n.T("bookDetail.ratingPlural"))">
                         <span class="catalog-card-rating-star" aria-hidden="true">★</span> @average · @RatingCount
                     </span>
                 }
                 else
                 {
-                    <span class="text-muted">Noch keine Bewertungen</span>
+                    <span class="text-muted">@I18n.T("bookDetail.noRatingsMessage")</span>
                 }
             </div>
         }

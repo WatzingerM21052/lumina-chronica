@@ -7,16 +7,17 @@
 @inject BlobUrlService BlobUrlService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
+@inject II18nService I18n
 
-<PageTitle>Entdecken — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("discover.pageTitle") — Lumina Chronica</PageTitle>
 
-<h1 data-reveal style="--reveal-delay: 0ms">Entdecken <span class="discover-heading-caption">— Werke und Welten aus aller Welt</span></h1>
+<h1 data-reveal style="--reveal-delay: 0ms">@I18n.T("discover.heading") <span class="discover-heading-caption">— @I18n.T("discover.headingCaption")</span></h1>
 
 <section class="discover-section" data-reveal style="--reveal-delay: 60ms">
-    <h2 class="discover-subheading">Nutzer suchen</h2>
+    <h2 class="discover-subheading">@I18n.T("discover.searchUsersTitle")</h2>
     <div class="discover-search-field">
         <Icon Name="search" Class="discover-search-icon" />
-        <input placeholder="Benutzername…" aria-label="Nutzer nach Benutzername durchsuchen" @oninput="OnUserSearchInput" />
+        <input placeholder="@I18n.T("discover.usernamePlaceholder")" aria-label="@I18n.T("discover.searchUsersAriaLabel")" @oninput="OnUserSearchInput" />
     </div>
 
     @* aria-live="polite" -- announces the debounced search's outcome
@@ -28,7 +29,7 @@
     <div aria-live="polite" aria-busy="@(_isSearchingUsers ? "true" : "false")">
         @if (_isSearchingUsers)
         {
-            <p class="text-muted">Suche läuft…</p>
+            <p class="text-muted">@I18n.T("discover.searching")</p>
         }
         else if (_userSearchResults is { Count: > 0 })
         {
@@ -47,7 +48,7 @@
                             }
                             <span class="discover-author-info">
                                 <span class="discover-author-name">@user.Username</span>
-                                <span class="discover-author-role">Autor / Worldbuilder</span>
+                                <span class="discover-author-role">@I18n.T("discover.authorRoleLabel")</span>
                             </span>
                         </a>
                     </li>
@@ -56,26 +57,26 @@
         }
         else if (!string.IsNullOrWhiteSpace(_userSearchTerm))
         {
-            <p class="text-muted">Keine Nutzer gefunden.</p>
+            <p class="text-muted">@I18n.T("discover.noUsersFoundMessage")</p>
         }
     </div>
 </section>
 
 <section class="discover-section" data-reveal style="--reveal-delay: 120ms">
     <div class="discover-books-toolbar">
-        <h2 class="chapter-title">Bibliotheksregal <span class="chapter-caption">— öffentliche Bücher</span></h2>
+        <h2 class="chapter-title">@I18n.T("discover.bookshelfTitle") <span class="chapter-caption">— @I18n.T("discover.bookshelfCaption")</span></h2>
         <div class="discover-sort-field">
-            <label class="discover-sort-label" for="discover-sort">Sortieren</label>
+            <label class="discover-sort-label" for="discover-sort">@I18n.T("discover.sortLabel")</label>
             <select id="discover-sort" @bind="_sort" @bind:after="LoadBooksAsync">
-                <option value="newest">Neueste</option>
-                <option value="rating">Beste Bewertung</option>
+                <option value="newest">@I18n.T("discover.sortNewest")</option>
+                <option value="rating">@I18n.T("discover.sortBestRated")</option>
             </select>
         </div>
     </div>
 
     @if (_books is null)
     {
-        <span class="visually-hidden" role="status">Bücher werden geladen…</span>
+        <span class="visually-hidden" role="status">@I18n.T("discover.booksLoading")</span>
         <div class="catalog-grid" aria-hidden="true" aria-busy="true">
             @for (var i = 0; i < 6; i++)
             {
@@ -85,7 +86,7 @@
     }
     else if (_books.Count == 0)
     {
-        <EmptyState Ornament="❦" Message="Dieses Regal wartet noch auf seinen ersten Eintrag." />
+        <EmptyState Ornament="❦" Message="@I18n.T("discover.emptyShelfMessage")" />
     }
     else
     {
