@@ -93,9 +93,18 @@ describe("POST /api/auth/forgot-password", () => {
     });
 
     it("returns 429 after too many requests against the same identifier", async () => {
+        // Isolates the 5-per-15-min throttle being tested here from D2's
+        // separate 60s resend cooldown (rateLimitService.ts) -- without
+        // this, the 2nd loop iteration would already 429 on the cooldown,
+        // not the mechanism this test exists to check. Deleting the
+        // cooldown's own row between iterations simulates "60s have
+        // passed" without touching global time (which real JWT iat/exp
+        // checks elsewhere also depend on -- fake timers would risk
+        // side-effecting those instead of just this one throttle).
         for (let i = 0; i < FORGOT_PASSWORD_MAX_ATTEMPTS; i++) {
             const res = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "alice@example.com" }), env);
             expect(res.status).toBe(200);
+            await env.DB.prepare("DELETE FROM auth_rate_limits WHERE route = 'forgot-password-resend'").run();
         }
 
         const res = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "alice@example.com" }), env);
@@ -103,6 +112,44 @@ describe("POST /api/auth/forgot-password", () => {
         expect(res.status).toBe(429);
         expect(json.error.code).toBe("RATE_LIMITED");
         expect(res.headers.get("Retry-After")).not.toBeNull();
+    });
+
+    it("returns 429 on a resend within 60s of the previous request, before any 5-per-15-min throttling kicks in", async () => {
+        const first = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "alice@example.com" }), env);
+        expect(first.status).toBe(200);
+
+        const second = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "alice@example.com" }), env);
+        const json = await readJson(second);
+        expect(second.status).toBe(429);
+        expect(json.error.code).toBe("RATE_LIMITED");
+        expect(second.headers.get("Retry-After")).not.toBeNull();
+    });
+
+    it("resend cooldown fires identically for an existing, a non-existing, and an OAuth-only identifier (D2's enumeration-safety fix)", async () => {
+        const register = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "carol", email: "carol@example.com", password: "correct horse" }),
+            env
+        );
+        const { data: registered } = await readJson(register);
+        await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(OAUTH_NO_PASSWORD_SENTINEL, registered.userId).run();
+
+        for (const identifier of ["alice@example.com", "nobody-at-all@example.com", "carol@example.com"]) {
+            const first = await app.request("/api/auth/forgot-password", jsonRequest({ identifier }), env);
+            expect(first.status).toBe(200);
+
+            const second = await app.request("/api/auth/forgot-password", jsonRequest({ identifier }), env);
+            expect(second.status).toBe(429);
+            expect((await readJson(second)).error.code).toBe("RATE_LIMITED");
+        }
+    });
+
+    it("the resend cooldown does not block a different identifier", async () => {
+        const first = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "alice@example.com" }), env);
+        expect(first.status).toBe(200);
+
+        const other = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "someone-else@example.com" }), env);
+        expect(other.status).toBe(200);
     });
 
     it("does not fail the request if the email provider errors", async () => {

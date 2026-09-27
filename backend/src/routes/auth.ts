@@ -28,7 +28,7 @@ import {
     unlinkProvider,
 } from "../services/oauthService";
 import { InvalidResetTokenError, requestPasswordReset, resetPassword } from "../services/passwordResetService";
-import { RateLimitedError, assertNotRateLimited, clearRateLimit, recordFailedAttempt } from "../services/rateLimitService";
+import { RateLimitedError, assertNotRateLimited, assertResendNotRateLimited, clearRateLimit, recordFailedAttempt, recordResendAttempt } from "../services/rateLimitService";
 
 export const authRoute = new Hono<AppEnv>();
 
@@ -122,6 +122,22 @@ authRoute.post("/forgot-password", async (c) => {
     if (!body?.identifier) {
         return c.json(failure("VALIDATION_ERROR", "identifier is required."), 400);
     }
+
+    // D2's 60s resend cooldown (docs/superpowers/specs/2026-09-27-password-
+    // reset-modernization-design.md §3.4 step 0) -- checked FIRST, before
+    // the identifier is looked up against any user, and before the existing
+    // (ip, identifier) abuse throttle below. Deliberately IP-independent and
+    // keyed on the raw identifier alone: the point is that "please wait" (a
+    // 429, same shape as the abuse throttle) fires identically whether or
+    // not this identifier resolves to a real account, so submitting twice
+    // fast can't be used to confirm account existence.
+    try {
+        await assertResendNotRateLimited(c.env.DB, body.identifier);
+    } catch (err) {
+        if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
+        throw err;
+    }
+    await recordResendAttempt(c.env.DB, body.identifier);
 
     // Keyed by (ip, identifier), same rationale as /login: an attacker must
     // not be able to email-bomb one victim's inbox from many IPs, while the

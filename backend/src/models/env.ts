@@ -11,6 +11,11 @@ export type Bindings = {
     JWT_SECRET: string;
     BIBLE_API_KEY: string;
     RESEND_API_KEY: string;
+    // Keys the HMAC-SHA256 hash of password-reset codes (a plain sha256Hex
+    // over a 6-digit / 10^6 keyspace would be reversible in milliseconds --
+    // see passwordResetService.ts). Separate from JWT_SECRET so rotating one
+    // never invalidates the other.
+    PASSWORD_CODE_SECRET: string;
     FRONTEND_URL: string;
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;
