@@ -54,8 +54,22 @@ else
 
         <div class="form-group">
             <label for="email">@I18n.T("profile.emailLabel")</label>
-            <InputText id="email" type="email" @bind-Value="_profileForm.Email" />
+            @* Plain input bound on every keystroke (not InputText, which only
+               updates on blur) so the password field below appears as soon
+               as the address actually differs. *@
+            <input id="email" type="email" @bind="_profileForm.Email" @bind:event="oninput" />
         </div>
+
+        @if (RequiresPasswordForEmailChange)
+        {
+            @* Review M-6: the backend refuses an email change without the
+               current password -- the email is the account's recovery channel. *@
+            <div class="form-group">
+                <label for="emailChangePassword">@I18n.T("profile.emailChangePasswordLabel")</label>
+                <input id="emailChangePassword" type="password" autocomplete="current-password" @bind="_profileForm.CurrentPassword" @bind:event="oninput" />
+                <p class="text-muted">@I18n.T("profile.emailChangeHint")</p>
+            </div>
+        }
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary" disabled="@(_saveProfileState != ButtonBusyState.Idle)" style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("profile.saveButton"), null, I18n.T("profile.saveSuccess")))ch">
@@ -298,12 +312,18 @@ else
     {
         _profileErrorMessage = null;
 
-        var request = new UpdateProfileRequest { Username = _profileForm.Username, Email = _profileForm.Email };
+        var request = new UpdateProfileRequest
+        {
+            Username = _profileForm.Username,
+            Email = _profileForm.Email,
+            CurrentPassword = RequiresPasswordForEmailChange ? _profileForm.CurrentPassword : null,
+        };
         var response = await ApiClient.PutAsync<UpdateProfileRequest, UserProfile>("/api/users/me", request);
 
         if (response is { Success: true, Data: not null })
         {
             _profile = response.Data;
+            _profileForm.CurrentPassword = string.Empty;
             return true;
         }
 
@@ -392,10 +412,17 @@ else
         _isAvatarDialogOpen = false;
     }
 
+    // OAuth-only accounts have no password to confirm with -- the backend
+    // lets their session stand as the proof (userService.ts's
+    // updateUserProfile), so the field would be a dead end for them.
+    private bool RequiresPasswordForEmailChange =>
+        _hasRealPassword && _profile is not null && !string.Equals(_profileForm.Email, _profile.Email, StringComparison.Ordinal);
+
     private class ProfileFormModel
     {
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string CurrentPassword { get; set; } = string.Empty;
     }
 
     private class PasswordFormModel

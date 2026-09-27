@@ -10,7 +10,7 @@ export type PasswordChangedEmail = { subject: string; html: string; text: string
 // user provided -- NOT the noreply@ sender. Deliberately not read from env;
 // this is display copy, not infrastructure config, same reasoning as the
 // address itself not needing DNS/domain setup.
-const CONTACT_EMAIL = "luminachronica@gmx.at";
+export const CONTACT_EMAIL = "luminachronica@gmx.at";
 
 // changedAt must already be a fully-formatted, localized string -- this
 // module has no opinion on date formatting, matching how frontend

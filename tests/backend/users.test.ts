@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../../backend/src/index";
 import { createFakeD1 } from "./fakeD1";
 import { createFakeR2 } from "./fakeR2";
 import { readJson } from "./testUtils";
+import { OAUTH_NO_PASSWORD_SENTINEL } from "../../backend/src/utils/crypto";
 
-let env: { DB: D1Database; STORAGE: R2Bucket; JWT_SECRET: string };
+let env: { DB: D1Database; STORAGE: R2Bucket; JWT_SECRET: string; RESEND_API_KEY: string; FRONTEND_URL: string };
 let token: string;
 
 function jsonRequest(method: string, body: unknown, authToken?: string) {
@@ -19,7 +20,16 @@ function jsonRequest(method: string, body: unknown, authToken?: string) {
 }
 
 beforeEach(async () => {
-    env = { DB: createFakeD1(), STORAGE: createFakeR2(), JWT_SECRET: "test-secret-do-not-use-in-production" };
+    env = {
+        DB: createFakeD1(),
+        STORAGE: createFakeR2(),
+        JWT_SECRET: "test-secret-do-not-use-in-production",
+        RESEND_API_KEY: "test-resend-key",
+        FRONTEND_URL: "https://example.test/some-app",
+    };
+    // The email-change notice (review M-6) goes out through Resend -- never
+    // over the real network in tests.
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: "email-id" }), { status: 200 })));
     const registerRes = await app.request(
         "/api/auth/register",
         {
@@ -109,6 +119,92 @@ describe("PUT /api/users/me", () => {
             env
         );
         expect(loginRes.status).toBe(200);
+    });
+});
+
+describe("PUT /api/users/me -- email change (review M-6)", () => {
+    async function currentEmail() {
+        const res = await app.request("/api/users/me", { headers: { Authorization: `Bearer ${token}` } }, env);
+        return (await readJson(res)).data.email as string;
+    }
+
+    function sentEmails() {
+        return (globalThis.fetch as any).mock.calls.map(([, init]: [string, RequestInit]) => JSON.parse(init.body as string));
+    }
+
+    it("rejects an email change without the current password and changes nothing", async () => {
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { email: "mallory@example.com" }, token), env);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("INVALID_PASSWORD");
+        expect(await currentEmail()).toBe("alice@example.com");
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it("rejects an email change with the wrong current password", async () => {
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { email: "mallory@example.com", currentPassword: "wrong password" }, token), env);
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("INVALID_PASSWORD");
+        expect(await currentEmail()).toBe("alice@example.com");
+    });
+
+    it("does not let a username edit through without the password when the email changes alongside it", async () => {
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { username: "alice2", email: "mallory@example.com" }, token), env);
+        expect(res.status).toBe(400);
+
+        const me = await app.request("/api/users/me", { headers: { Authorization: `Bearer ${token}` } }, env);
+        expect((await readJson(me)).data.username).toBe("alice");
+    });
+
+    it("changes the email with the correct password and notifies ONLY the old address, with the new one masked", async () => {
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { email: "alice.new@example.org", currentPassword: "correct horse" }, token), env);
+        expect(res.status).toBe(200);
+        expect(await currentEmail()).toBe("alice.new@example.org");
+
+        const mails = sentEmails();
+        expect(mails).toHaveLength(1);
+        expect(mails[0].to).toBe("alice@example.com");
+        expect(mails[0].subject).toContain("E-Mail-Adresse geändert");
+        expect(mails[0].text).toContain("a•••@example.org");
+        expect(mails[0].text).not.toContain("alice.new@example.org");
+        expect(mails[0].html).not.toContain("alice.new@example.org");
+    });
+
+    it("needs no password when the submitted email is unchanged (Profile.razor always sends it with a username edit)", async () => {
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { username: "alice2", email: "alice@example.com" }, token), env);
+        expect(res.status).toBe(200);
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it("checks the password before revealing whether the new email is taken", async () => {
+        await app.request(
+            "/api/auth/register",
+            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "bob", email: "bob@example.com", password: "correct horse" }) },
+            env
+        );
+
+        const withoutPassword = await app.request("/api/users/me", jsonRequest("PUT", { email: "bob@example.com" }, token), env);
+        expect((await readJson(withoutPassword)).error.code).toBe("INVALID_PASSWORD");
+
+        const withPassword = await app.request("/api/users/me", jsonRequest("PUT", { email: "bob@example.com", currentPassword: "correct horse" }, token), env);
+        expect(withPassword.status).toBe(409);
+        expect((await readJson(withPassword)).error.code).toBe("EMAIL_TAKEN");
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it("lets an OAuth-only account change its email without a password, and still notifies the old address", async () => {
+        await env.DB.prepare("UPDATE users SET password_hash = ? WHERE email = ?").bind(OAUTH_NO_PASSWORD_SENTINEL, "alice@example.com").run();
+
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { email: "alice.new@example.org" }, token), env);
+        expect(res.status).toBe(200);
+        expect(sentEmails()[0].to).toBe("alice@example.com");
+    });
+
+    it("keeps the change even when the notice fails to send", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => new Response("server error", { status: 500 })));
+
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { email: "alice.new@example.org", currentPassword: "correct horse" }, token), env);
+        expect(res.status).toBe(200);
+        expect(await currentEmail()).toBe("alice.new@example.org");
     });
 });
 
