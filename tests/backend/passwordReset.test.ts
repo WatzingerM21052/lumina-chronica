@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../../backend/src/index";
 import { OAUTH_NO_PASSWORD_SENTINEL, hmacSha256Hex, sha256Hex } from "../../backend/src/utils/crypto";
-import { FORGOT_PASSWORD_MAX_ATTEMPTS } from "../../backend/src/services/rateLimitService";
+import { FORGOT_PASSWORD_MAX_ATTEMPTS, RESET_EMAILS_PER_ACCOUNT_MAX } from "../../backend/src/services/rateLimitService";
 import { MAX_CODE_ATTEMPTS } from "../../backend/src/services/passwordResetService";
 import { createFakeD1 } from "./fakeD1";
 import { createFakeR2 } from "./fakeR2";
@@ -192,6 +192,94 @@ describe("POST /api/auth/forgot-password", () => {
 
         const res = await app.request("/api/auth/reset-password", jsonRequest({ token: firstToken, newPassword: "new password" }), env);
         expect(res.status).toBe(200);
+    });
+
+    describe("per-account cap on reset emails (review H-1)", () => {
+        // Each request comes from a fresh IP and alternates email/username,
+        // i.e. exactly the rotation that walks past every identifier- or
+        // (ip, identifier)-keyed throttle. The 60s cooldown row is deleted
+        // between requests to simulate "a minute has passed" (same technique
+        // as the 5-per-15-min test above).
+        async function requestFromFreshIp(identifier: string, i: number) {
+            const res = await app.request(
+                "/api/auth/forgot-password",
+                { method: "POST", headers: { "Content-Type": "application/json", "CF-Connecting-IP": `203.0.113.${i}` }, body: JSON.stringify({ identifier }) },
+                env
+            );
+            await env.DB.prepare("DELETE FROM auth_rate_limits WHERE route = 'forgot-password-resend'").run();
+            return res;
+        }
+
+        async function exhaustBudget(email: string, username: string) {
+            for (let i = 0; i < RESET_EMAILS_PER_ACCOUNT_MAX; i++) {
+                const res = await requestFromFreshIp(i % 2 === 0 ? email : username, i);
+                expect(res.status).toBe(200);
+            }
+            expect(globalThis.fetch).toHaveBeenCalledTimes(RESET_EMAILS_PER_ACCOUNT_MAX);
+        }
+
+        it("stops issuing codes past the cap, however the IP and identifier are rotated", async () => {
+            const register = await app.request("/api/auth/register", jsonRequest({ username: "gil", email: "gil@example.com", password: "correct horse" }), env);
+            const { data: registered } = await readJson(register);
+            await exhaustBudget("gil@example.com", "gil");
+
+            const over = await requestFromFreshIp("gil", 99);
+            expect(over.status).toBe(200);
+            expect(globalThis.fetch).toHaveBeenCalledTimes(RESET_EMAILS_PER_ACCOUNT_MAX);
+
+            const { count } = (await env.DB.prepare("SELECT COUNT(*) AS count FROM password_reset_tokens WHERE user_id = ?").bind(registered.userId).first<{ count: number }>())!;
+            expect(count).toBe(RESET_EMAILS_PER_ACCOUNT_MAX);
+        });
+
+        it("answers an over-cap request byte-identically to an unknown identifier", async () => {
+            await app.request("/api/auth/register", jsonRequest({ username: "hana", email: "hana@example.com", password: "correct horse" }), env);
+            await exhaustBudget("hana@example.com", "hana");
+
+            const over = await requestFromFreshIp("hana@example.com", 99);
+            const unknown = await requestFromFreshIp("nobody-here@example.com", 100);
+            expect(over.status).toBe(unknown.status);
+            expect(await over.text()).toBe(await unknown.text());
+        });
+
+        it("an over-cap request does not invalidate the last link the owner received", async () => {
+            await app.request("/api/auth/register", jsonRequest({ username: "ivo", email: "ivo@example.com", password: "correct horse" }), env);
+            await exhaustBudget("ivo@example.com", "ivo");
+            const [, init] = (globalThis.fetch as any).mock.calls.at(-1);
+            const [, lastToken] = (JSON.parse(init.body).html as string).match(/token=([\w-]+)/) ?? [];
+
+            await requestFromFreshIp("ivo@example.com", 99);
+
+            const res = await app.request("/api/auth/reset-password", jsonRequest({ token: lastToken, newPassword: "new password" }), env);
+            expect(res.status).toBe(200);
+        });
+
+        it("also caps the OAuth-only informational email", async () => {
+            const register = await app.request("/api/auth/register", jsonRequest({ username: "jo", email: "jo@example.com", password: "correct horse" }), env);
+            const { data: registered } = await readJson(register);
+            await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(OAUTH_NO_PASSWORD_SENTINEL, registered.userId).run();
+            await exhaustBudget("jo@example.com", "jo");
+
+            await requestFromFreshIp("jo@example.com", 99);
+            expect(globalThis.fetch).toHaveBeenCalledTimes(RESET_EMAILS_PER_ACCOUNT_MAX);
+        });
+
+        it("is per account: another account is unaffected", async () => {
+            await app.request("/api/auth/register", jsonRequest({ username: "kim", email: "kim@example.com", password: "correct horse" }), env);
+            await app.request("/api/auth/register", jsonRequest({ username: "lea", email: "lea@example.com", password: "correct horse" }), env);
+            await exhaustBudget("kim@example.com", "kim");
+
+            await requestFromFreshIp("lea@example.com", 99);
+            expect(globalThis.fetch).toHaveBeenCalledTimes(RESET_EMAILS_PER_ACCOUNT_MAX + 1);
+        });
+
+        it("issues codes again once the window has expired", async () => {
+            await app.request("/api/auth/register", jsonRequest({ username: "max", email: "max@example.com", password: "correct horse" }), env);
+            await exhaustBudget("max@example.com", "max");
+            await env.DB.prepare("UPDATE auth_rate_limits SET expires_at = ? WHERE route = 'forgot-password-account'").bind(new Date(Date.now() - 1000).toISOString()).run();
+
+            await requestFromFreshIp("max@example.com", 99);
+            expect(globalThis.fetch).toHaveBeenCalledTimes(RESET_EMAILS_PER_ACCOUNT_MAX + 1);
+        });
     });
 
     it("does not fail the request if the email provider errors", async () => {

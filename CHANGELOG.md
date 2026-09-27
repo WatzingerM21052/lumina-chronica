@@ -4,6 +4,10 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+### Security
+
+- Password reset: at most 5 reset emails per account per 24 hours (review H-1). Previously, rotating IPs and alternating an account's email and username could request a fresh reset code about twice a minute without limit, both multiplying the code-guessing budget and flooding the owner's inbox. Over the cap, the request is answered exactly like one for an unknown account and the last code/link already sent stays valid.
+
 ## [3.5.0] - 2026-08-09
 
 ### Added

@@ -1,5 +1,5 @@
-// Throttles POST /api/auth/login, /api/auth/register, and
-// /api/auth/forgot-password. D1-backed (see
+// Throttles POST /api/auth/login, /api/auth/register, the password-reset
+// routes, and (per account) outgoing reset emails. D1-backed (see
 // database/migrations/0014_auth_rate_limit.sql for why this is a fixed
 // window rather than a precise algorithm, and why login keys on (ip,
 // identifier) instead of identifier alone).
@@ -28,6 +28,22 @@ const FORGOT_PASSWORD_RESEND_WINDOW_MS = 60 * 1000;
 // (§4.3), so a tight cap here would break normal typing, not just abuse.
 export const VERIFY_RESET_CODE_MAX_ATTEMPTS = 30;
 export const RESET_PASSWORD_MAX_ATTEMPTS = 10;
+
+// Review H-1: a per-ACCOUNT cap on issued reset emails. Every other throttle
+// on /forgot-password keys on the submitted identifier (the 60s cooldown) or
+// on (ip, identifier) (the 5-per-15-min one) -- so rotating IPs and
+// alternating an account's email and username got an attacker a fresh
+// 6-digit code (MAX_CODE_ATTEMPTS more guesses) roughly twice a minute,
+// indefinitely, and flooded the victim's inbox at the same rate. This bucket
+// is keyed on the resolved user id, IP-independent (ip = ""), so neither
+// trick moves it: it bounds the guess budget at
+// RESET_EMAILS_PER_ACCOUNT_MAX x MAX_CODE_ATTEMPTS per account per window,
+// and the inbox at RESET_EMAILS_PER_ACCOUNT_MAX mails. Checked only after
+// the account lookup, so exceeding it must stay silent (same generic 200 as
+// an unknown identifier) -- see requestPasswordReset.
+export const RESET_EMAILS_PER_ACCOUNT_MAX = 5;
+const RESET_EMAILS_PER_ACCOUNT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const ACCOUNT_RESET_ROUTE = "forgot-password-account";
 
 export class RateLimitedError extends Error {
     constructor(public readonly retryAfterSeconds: number) {
@@ -74,21 +90,27 @@ async function checkLimit(db: D1Database, route: string, ip: string, identifier:
 // stored as toISOString()'s "YYYY-MM-DDTHH:MM:SS.sssZ"; comparing the two
 // as text is a silent bug ('T' > ' ' in ASCII, so expires_at > CURRENT_TIMESTAMP
 // was always true and the window never actually expired). Binding both
-// sides in the same format sidesteps the mismatch entirely.
-async function recordAttempt(db: D1Database, route: string, ip: string, identifier: string, windowMs: number): Promise<void> {
+// sides in the same format sidesteps the mismatch entirely. Returns the
+// window's count INCLUDING this attempt, read back from the write itself
+// (RETURNING) -- so a caller can check-and-record in one atomic step, with
+// no separate read that could race a concurrent request or hit a lagging
+// replica.
+async function recordAttempt(db: D1Database, route: string, ip: string, identifier: string, windowMs: number): Promise<number> {
     const nowIso = new Date().toISOString();
     const freshExpiresAt = new Date(Date.now() + windowMs).toISOString();
-    await db
+    const row = await db
         .prepare(
             `INSERT INTO auth_rate_limits (route, ip, identifier, attempt_count, expires_at)
              VALUES (?1, ?2, ?3, 1, ?4)
              ON CONFLICT(route, ip, identifier) DO UPDATE SET
                  attempt_count = CASE WHEN expires_at > ?5 THEN attempt_count + 1 ELSE 1 END,
                  expires_at = CASE WHEN expires_at > ?5 THEN expires_at ELSE ?4 END,
-                 updated_at = CURRENT_TIMESTAMP`
+                 updated_at = CURRENT_TIMESTAMP
+             RETURNING attempt_count`
         )
         .bind(route, ip, identifier, freshExpiresAt, nowIso)
-        .run();
+        .first<{ attempt_count: number }>();
+    return row?.attempt_count ?? 1;
 }
 
 async function clearAttempts(db: D1Database, route: string, ip: string, identifier: string): Promise<void> {
@@ -130,6 +152,17 @@ export async function assertResendNotRateLimited(db: D1Database, identifier: str
 
 export async function recordResendAttempt(db: D1Database, identifier: string): Promise<void> {
     await recordAttempt(db, "forgot-password-resend", "", identifier, windowMsFor("forgot-password-resend"));
+}
+
+// H-1 (see RESET_EMAILS_PER_ACCOUNT_MAX above): records one reset email
+// against the account's window and says whether it is still within budget.
+// Record-then-compare in a single statement rather than check-then-record,
+// so two concurrent requests can't both see "4 of 5" and both send. Counts
+// keep rising past the cap inside a window, but the window's expires_at is
+// fixed at its first attempt, so hammering never extends a lockout.
+export async function consumeAccountResetBudget(db: D1Database, userId: number): Promise<boolean> {
+    const count = await recordAttempt(db, ACCOUNT_RESET_ROUTE, "", String(userId), RESET_EMAILS_PER_ACCOUNT_WINDOW_MS);
+    return count <= RESET_EMAILS_PER_ACCOUNT_MAX;
 }
 
 export async function recordFailedAttempt(db: D1Database, route: string, ip: string, identifier: string): Promise<void> {

@@ -242,6 +242,19 @@ reveals whether a match was found), plus:
    `forgot-password` one — both apply; the 60s one is the fast, obvious "why
    is the resend button disabled" UX signal, the 5-per-15-min one is the
    actual abuse backstop.
+0b. **Per-account cap (review H-1, added 2026-09-27 after the phases
+   shipped).** Right after the user lookup, before step 1: record one
+   attempt in `auth_rate_limits` under route `forgot-password-account`,
+   `ip = ""`, identifier = the user id, and stop silently (generic 200, no
+   mail) once it exceeds `RESET_EMAILS_PER_ACCOUNT_MAX = 5` per 24 h. Step 0
+   alone did not bound anything per *account*: its key is the raw
+   identifier, so alternating email and username (plus rotating IPs for the
+   5-per-15-min throttle) yielded ~2 fresh codes a minute forever — 20
+   guesses/min against one account and a matching mail flood. Running before
+   step 1 means an over-cap request never invalidates the owner's
+   last-received code/link. Silent rather than a 429 because this check runs
+   after the lookup — a distinct response here would be the exact
+   enumeration leak step 0 was redesigned to avoid.
 1. Kill outstanding rows (**D6**):
    ```sql
    UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP
