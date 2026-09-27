@@ -8,6 +8,14 @@ namespace LuminaChronica.Client.Tests;
 
 public class LocationDetailPageTests : BunitContext
 {
+    public LocationDetailPageTests()
+    {
+        // The ConfirmDialog now renders on the Dialog primitive, which
+        // imports ./js/dialog.js for scroll-lock in OnAfterRenderAsync --
+        // none of these tests are about that interop itself.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     private const string LocationJson = """
         {"success":true,"data":{
             "id":9,"projectId":1,"name":"Ashen Hollow","description":"A misty valley",

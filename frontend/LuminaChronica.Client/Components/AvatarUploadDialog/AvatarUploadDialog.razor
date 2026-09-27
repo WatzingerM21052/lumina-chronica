@@ -2,41 +2,34 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using LuminaChronica.Client.Models
 
-@if (IsOpen)
-{
-    <div class="avatar-upload-dialog-overlay" @onclick="CancelAsync">
-        <div class="avatar-upload-dialog" role="dialog" aria-modal="true" tabindex="-1"
-             @ref="_dialogElement" @onclick:stopPropagation="true" @onkeydown="HandleKeyDownAsync">
-            <h2>@I18n.T("avatarUploadDialog.title")</h2>
+<Dialog IsOpen="IsOpen" Title="@I18n.T("avatarUploadDialog.title")" ShowCloseButton="false" OnClose="CancelAsync">
+    <ChildContent>
+        @if (_errorMessage is not null)
+        {
+            <p class="form-error">@_errorMessage</p>
+        }
 
-            @if (_errorMessage is not null)
+        <div class="dropzone @(_previewUrl is not null ? "dropzone--filled" : "") @(_isDragging ? "dropzone--active" : "")"
+             @ondragenter="() => _isDragging = true" @ondragleave="() => _isDragging = false"
+             @ondragover:preventDefault @ondrop="() => _isDragging = false">
+            <InputFile id="avatarDialogInput" OnChange="OnFileSelectedAsync" />
+            @if (_previewUrl is { } previewUrl)
             {
-                <p class="form-error">@_errorMessage</p>
+                <img src="@previewUrl" alt="" class="avatar-upload-dialog-preview" />
             }
-
-            <div class="dropzone @(_previewUrl is not null ? "dropzone--filled" : "") @(_isDragging ? "dropzone--active" : "")"
-                 @ondragenter="() => _isDragging = true" @ondragleave="() => _isDragging = false"
-                 @ondragover:preventDefault @ondrop="() => _isDragging = false">
-                <InputFile id="avatarDialogInput" OnChange="OnFileSelectedAsync" />
-                @if (_previewUrl is { } previewUrl)
-                {
-                    <img src="@previewUrl" alt="" class="avatar-upload-dialog-preview" />
-                }
-                else
-                {
-                    <span class="dropzone-label">@I18n.T("avatarUploadDialog.dropzoneLabel")</span>
-                }
-            </div>
-
-            <div class="avatar-upload-dialog-actions">
-                <button type="button" id="avatarDialogUpload" class="btn btn-primary"
-                        disabled="@(_selectedBytes is null || _uploadState != ButtonBusyState.Idle)"
-                        style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("avatarUploadDialog.uploadButton"), null, I18n.T("avatarUploadDialog.uploadSuccess")))ch"
-                        @onclick="UploadAsync">
-                    <AsyncButtonContent State="_uploadState" IdleText="@I18n.T("avatarUploadDialog.uploadButton")" SuccessText="@I18n.T("avatarUploadDialog.uploadSuccess")" />
-                </button>
-                <button type="button" class="btn" @onclick="CancelAsync">@I18n.T("avatarUploadDialog.cancelButton")</button>
-            </div>
+            else
+            {
+                <span class="dropzone-label">@I18n.T("avatarUploadDialog.dropzoneLabel")</span>
+            }
         </div>
-    </div>
-}
+    </ChildContent>
+    <Footer>
+        <button type="button" id="avatarDialogUpload" class="btn btn-primary"
+                disabled="@(_selectedBytes is null || _uploadState != ButtonBusyState.Idle)"
+                style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("avatarUploadDialog.uploadButton"), null, I18n.T("avatarUploadDialog.uploadSuccess")))ch"
+                @onclick="UploadAsync">
+            <AsyncButtonContent State="_uploadState" IdleText="@I18n.T("avatarUploadDialog.uploadButton")" SuccessText="@I18n.T("avatarUploadDialog.uploadSuccess")" />
+        </button>
+        <button type="button" class="btn" @onclick="CancelAsync">@I18n.T("avatarUploadDialog.cancelButton")</button>
+    </Footer>
+</Dialog>

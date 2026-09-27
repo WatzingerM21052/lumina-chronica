@@ -11,6 +11,14 @@ namespace LuminaChronica.Client.Tests;
 
 public class PublicProfilePageTests : BunitContext
 {
+    public PublicProfilePageTests()
+    {
+        // FollowListDialog now renders on the Dialog primitive, which
+        // imports ./js/dialog.js for scroll-lock in OnAfterRenderAsync --
+        // none of these tests are about that interop itself.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     // <AuthorizeView> (Community Phase 2, issue #304) needs bUnit's
     // authorization test-double wiring, not just a plain
     // AuthenticationStateProvider -- AddAuthorization() registers a
@@ -474,13 +482,13 @@ public class PublicProfilePageTests : BunitContext
         SetAuthenticated(false);
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "bob"));
-        Assert.Empty(cut.FindAll(".follow-list-dialog"));
+        Assert.Empty(cut.FindAll(".dialog"));
 
         cut.Find("#showFollowersButton").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Single(cut.FindAll(".follow-list-dialog"));
+            Assert.Single(cut.FindAll(".dialog"));
             Assert.Contains("carol", cut.Markup);
         });
     }
@@ -510,11 +518,11 @@ public class PublicProfilePageTests : BunitContext
         cut.Find("#showFollowingButton").Click();
         cut.WaitForAssertion(() => Assert.Contains("carol", cut.Markup));
 
-        cut.Find(".follow-list-dialog .btn-follow").Click();
+        cut.Find(".dialog .btn-follow").Click();
 
         Assert.Equal(HttpMethod.Post, followRequest?.Method);
         Assert.Equal("/api/users/carol/follow", followRequest?.RequestUri?.AbsolutePath);
-        Assert.Equal("✓ Gefolgt", cut.Find(".follow-list-dialog .btn-follow").TextContent.Trim());
+        Assert.Equal("✓ Gefolgt", cut.Find(".dialog .btn-follow").TextContent.Trim());
     }
 
     [Fact]
