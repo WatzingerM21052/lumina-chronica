@@ -1,7 +1,7 @@
 # Password-Reset Modernization + App-Wide Dialog Convention — Design
 
 **Date:** 2026-09-27
-**Status:** Draft — needs sign-off (see §0). Revised same-day after a live,
+**Status:** Umgesetzt: Phasen 0–5 gemergt (#478–#492, Stand 2026-09-28; der "Buch hinzufügen"-Chooser aus §6.3 wurde in #495 wieder entfernt). Ursprünglich: Draft — needs sign-off (see §0). Revised same-day after a live,
 authenticated recipemaster.at check (§7.1a) overturned the original D12
 recommendation (BookDetail edit: sheet → `Dialog Size="Large"`, §6.3).
 **Supersedes / reverses parts of:** `docs/superpowers/specs/2026-09-26-forgot-password-design.md` (Status: Approved)

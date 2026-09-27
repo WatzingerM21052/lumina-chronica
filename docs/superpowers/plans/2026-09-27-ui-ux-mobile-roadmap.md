@@ -56,6 +56,7 @@ Quellen: [Material 3 Navigation bar](https://m3.material.io/components/navigatio
 | A5 | **Worldbuilding-Formulare** (Charakter, Ort, Lore, Zeitleiste, Dateien): Screenshot-Befund, gleiche Muster (Dialog statt Inline, wo sinnvoll; Dropzones; Abschnitte) | offen |
 | A6 | **Suche vereinheitlichen** (Bibliothek, Entdecken, Metadaten): Löschen-Button im Feld, Debounce, leere Zustände | offen |
 | A7 | **Einstellungen** (Rest aus #358): Theme-Vorschau-Karten, Benachrichtigungen gruppiert | offen |
+| A8 | **Konto-Menü** (Nutzerwunsch 2026-09-27): Klick auf Avatar + Name öffnet ein kompaktes Dropdown mit Profil, Einstellungen, Sicherheit, Abmelden (Vorbild recipemaster.at, nicht 1:1). „Sicherheit“ bündelt Passwort, E-Mail-Änderung (M-6) und OAuth-Verknüpfungen, die heute auf Profil/Einstellungen verteilt sind. Auf dem Handy landen dieselben Einträge unter „Mehr“ (B2). | offen, Aufteilung mit dem Nutzer abstimmen |
 
 ### Block B — Handy (#493)
 
@@ -119,4 +120,5 @@ Aus einer Cloud-Session sind die Live-API und externe Seiten meist gesperrt. Bac
 
 - **M-6:** Bei reinen Google/GitHub-Konten reicht die Sitzung als Nachweis für die Änderung der E-Mail-Adresse, die alte Adresse wird benachrichtigt. Vom Nutzer bestätigt: „reicht“.
 - **H-1 und M-6** sind im Backend deployt (manueller `backend-deploy.yml`-Lauf).
-- **Veraltete Zeile** in `documentation/Roadmap.md`, Abschnitt Password-reset Phase 2: „Not yet started: Phase 3 …“. Die Phasen 3 bis 5 sind inzwischen erledigt; beim nächsten Doku-Update bereinigen.
+- ~~Veraltete Zeile in `documentation/Roadmap.md`, Abschnitt Password-reset Phase 2~~: bereinigt 2026-09-28.
+- **Review 2026-09-27:** Das vollständige Review liegt bewusst nur lokal beim Nutzer (`docs/reviews/`, nicht committet, weil das Repo öffentlich ist und es offene Sicherheitspunkte beschreibt). Umgesetzt sind K-1, K-2, H-1, M-1 bis M-4, M-6 bis M-8, N-1, N-2, N-11. Noch offen, ohne Details: M-5, M-9 (Rest), N-3 bis N-7, `.dev.vars.example`.
