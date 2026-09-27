@@ -16,10 +16,11 @@
 @inject IJSRuntime JsRuntime
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ToastService ToastService
+@inject II18nService I18n
 
-<PageTitle>@(_book?.Title ?? "Buch") — Lumina Chronica</PageTitle>
+<PageTitle>@(_book?.Title ?? I18n.T("bookDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="library">← Zurück zur Bibliothek</a>
+<a href="library">@I18n.T("bookDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -27,7 +28,7 @@
 }
 else if (_book is null)
 {
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="Buch wird geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="@I18n.T("bookDetail.loading")" />
 }
 else
 {
@@ -51,7 +52,7 @@ else
                     @if (_book.IsOwner)
                     {
                         <button type="button" class="book-detail-favorite @(_book.IsFavorite ? "is-favorite" : "")"
-                                title="@(_book.IsFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
+                                title="@(_book.IsFavorite ? I18n.T("bookCard.removeFavorite") : I18n.T("bookCard.addFavorite"))"
                                 @onclick="ToggleFavoriteAsync">
                             @(_book.IsFavorite ? "★" : "☆")
                         </button>
@@ -59,7 +60,7 @@ else
                 </div>
                 @if (!_book.IsOwner && _book.OwnerUsername is not null)
                 {
-                    <p class="book-detail-borrowed-badge">Geliehen von <a href="@($"u/{_book.OwnerUsername}")">@_book.OwnerUsername</a></p>
+                    <p class="book-detail-borrowed-badge">@I18n.T("bookDetail.borrowedFromPrefix") <a href="@($"u/{_book.OwnerUsername}")">@_book.OwnerUsername</a></p>
                 }
                 @if (!string.IsNullOrWhiteSpace(_book.Author))
                 {
@@ -76,17 +77,17 @@ else
                         @if (_book.RatingCount > 0)
                         {
                             var average = _book.AverageRating?.ToString("0.0", CultureInfo.InvariantCulture);
-                            <span aria-label="@($"Durchschnittliche Bewertung: {average} von 5 Sternen, {_book.RatingCount} {(_book.RatingCount == 1 ? "Bewertung" : "Bewertungen")}")">
+                            <span aria-label="@string.Format(I18n.T("bookDetail.averageRatingAriaLabel"), average, _book.RatingCount, _book.RatingCount == 1 ? I18n.T("bookDetail.ratingSingular") : I18n.T("bookDetail.ratingPlural"))">
                                 <span aria-hidden="true">★ @average (@_book.RatingCount)</span>
                             </span>
                         }
                         else
                         {
-                            <span class="text-muted">Noch keine Bewertungen</span>
+                            <span class="text-muted">@I18n.T("bookDetail.noRatingsMessage")</span>
                         }
                         @if (!_book.IsOwner)
                         {
-                            <div class="book-detail-rate-stars" role="group" aria-label="Eigene Bewertung abgeben">
+                            <div class="book-detail-rate-stars" role="group" aria-label="@I18n.T("bookDetail.rateStarsAriaLabel")">
                                 @for (var star = 1; star <= 5; star++)
                                 {
                                     var starValue = star;
@@ -98,7 +99,7 @@ else
                                     <button type="button" class="star-button @(starValue <= (_book.MyRating ?? 0) ? "is-filled" : "")"
                                             disabled="@_isRatingInProgress"
                                             aria-pressed="@(starValue <= (_book.MyRating ?? 0) ? "true" : "false")"
-                                            aria-label="@(isCurrentRating ? $"Eigene Bewertung von {starValue} Sternen entfernen" : $"Mit {starValue} Sternen bewerten")"
+                                            aria-label="@(isCurrentRating ? string.Format(I18n.T("bookDetail.removeRatingAriaLabel"), starValue) : string.Format(I18n.T("bookDetail.setRatingAriaLabel"), starValue))"
                                             @onclick="() => RateBookAsync(starValue)">★</button>
                                 }
                             </div>
@@ -109,11 +110,11 @@ else
                 <dl class="book-detail-meta">
                     @if (!string.IsNullOrWhiteSpace(_book.Genre))
                     {
-                        <dt>Genre</dt><dd>@_book.Genre</dd>
+                        <dt>@I18n.T("bookDetail.genreLabel")</dt><dd>@_book.Genre</dd>
                     }
                     @if (!string.IsNullOrWhiteSpace(_book.Language))
                     {
-                        <dt>Sprache</dt><dd>@_book.Language</dd>
+                        <dt>@I18n.T("bookDetail.languageLabel")</dt><dd>@_book.Language</dd>
                     }
                     @if (!string.IsNullOrWhiteSpace(_book.Isbn))
                     {
@@ -121,19 +122,19 @@ else
                     }
                     @if (!string.IsNullOrWhiteSpace(_book.Publisher))
                     {
-                        <dt>Verlag</dt><dd>@_book.Publisher</dd>
+                        <dt>@I18n.T("bookDetail.publisherLabel")</dt><dd>@_book.Publisher</dd>
                     }
                     @if (!string.IsNullOrWhiteSpace(_book.ReleaseDate))
                     {
-                        <dt>Erscheinungsdatum</dt><dd>@_book.ReleaseDate</dd>
+                        <dt>@I18n.T("bookDetail.releaseDateLabel")</dt><dd>@_book.ReleaseDate</dd>
                     }
                     @if (_book.Pages is { } pages)
                     {
-                        <dt>Seiten</dt><dd>@pages</dd>
+                        <dt>@I18n.T("bookDetail.pagesLabel")</dt><dd>@pages</dd>
                     }
                     @if (_book.Tags.Count > 0)
                     {
-                        <dt>Tags</dt>
+                        <dt>@I18n.T("bookDetail.tagsLabel")</dt>
                         <dd>
                             @for (var i = 0; i < _book.Tags.Count; i++)
                             {
@@ -147,29 +148,29 @@ else
                 <div class="form-actions">
                     @if (_book.File is not null)
                     {
-                        <a class="btn btn-primary" href="@($"library/books/{Id}/read")">Lesen</a>
+                        <a class="btn btn-primary" href="@($"library/books/{Id}/read")">@I18n.T("bookDetail.readButton")</a>
                         @if (_isOfflineSaved)
                         {
                             <button type="button" class="btn" disabled="@_isSavingOffline" @onclick="RemoveOfflineAsync">
-                                Offline entfernen (@FormatSize(_offlineSizeBytes))
+                                @string.Format(I18n.T("bookDetail.removeOfflineButton"), FormatSize(_offlineSizeBytes))
                             </button>
                         }
                         else
                         {
                             <button type="button" class="btn" disabled="@_isSavingOffline" @onclick="SaveOfflineAsync">
-                                @(_isSavingOffline ? "Wird gespeichert..." : "Offline speichern")
+                                @(_isSavingOffline ? I18n.T("bookDetail.savingOffline") : I18n.T("bookDetail.saveOfflineButton"))
                             </button>
                         }
                     }
                     @if (_book.IsOwner)
                     {
-                        <button type="button" id="edit-button" class="btn" @onclick="StartEditingAsync">Bearbeiten</button>
-                        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+                        <button type="button" id="edit-button" class="btn" @onclick="StartEditingAsync">@I18n.T("bookDetail.editButton")</button>
+                        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("bookDetail.deleteButton")</button>
                     }
                 </div>
                 @if (_book.IsOwner)
                 {
-                    <ConfirmDialog IsOpen="_confirmingDelete" Message="Buch wirklich löschen?"
+                    <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("bookDetail.deleteConfirmMessage")"
                                    OnConfirm="DeleteAsync" OnCancel="() => _confirmingDelete = false" />
                 }
                 @if (_deleteErrorMessage is not null)
@@ -184,7 +185,7 @@ else
                 @if (_book.IsOwner && _shelves is { Count: > 0 })
                 {
                     <div class="book-detail-shelves">
-                        <span class="text-muted">Zu Regal hinzufügen</span>
+                        <span class="text-muted">@I18n.T("bookDetail.addToShelfLabel")</span>
                         @foreach (var shelf in _shelves)
                         {
                             <label class="book-detail-shelf-option">
@@ -205,7 +206,7 @@ else
                     }
 
                     <div class="form-group">
-                        <label for="edit-cover">Cover ersetzen</label>
+                        <label for="edit-cover">@I18n.T("bookDetail.replaceCoverLabel")</label>
                         <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "") @(_selectedEditCover is not null ? "dropzone--filled" : "")"
                              @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
                              @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
@@ -217,7 +218,7 @@ else
                                 }
                                 else
                                 {
-                                    <text>Cover hierher ziehen oder klicken zum Auswählen</text>
+                                    <text>@I18n.T("bookDetail.coverDropzoneLabel")</text>
                                 }
                             </span>
                         </div>
@@ -227,27 +228,27 @@ else
                         }
                     </div>
                     <div class="form-group">
-                        <label for="edit-title">Titel</label>
+                        <label for="edit-title">@I18n.T("bookDetail.titleLabel")</label>
                         <InputText id="edit-title" @bind-Value="_editForm.Title" />
                     </div>
                     <div class="form-group">
-                        <label for="edit-author">Autor</label>
+                        <label for="edit-author">@I18n.T("bookDetail.authorLabel")</label>
                         <InputText id="edit-author" @bind-Value="_editForm.Author" />
                     </div>
                     <div class="form-group">
-                        <label for="edit-description">Beschreibung</label>
+                        <label for="edit-description">@I18n.T("bookDetail.descriptionLabel")</label>
                         <InputTextArea id="edit-description" @bind-Value="_editForm.Description" />
                     </div>
                     <div class="form-group">
-                        <label for="edit-genre">Genre</label>
+                        <label for="edit-genre">@I18n.T("bookDetail.genreLabel")</label>
                         <InputText id="edit-genre" @bind-Value="_editForm.Genre" />
                     </div>
                     <div class="form-group">
-                        <label for="edit-language">Sprache</label>
+                        <label for="edit-language">@I18n.T("bookDetail.languageLabel")</label>
                         <InputText id="edit-language" @bind-Value="_editForm.Language" />
                     </div>
                     <div class="form-group">
-                        <label for="edit-tags">Tags (durch Komma getrennt)</label>
+                        <label for="edit-tags">@I18n.T("bookDetail.tagsInputLabel")</label>
                         <InputText id="edit-tags" @bind-Value="_editForm.Tags" />
                     </div>
                     <div class="form-group">
@@ -255,14 +256,14 @@ else
                         <div class="isbn-enrichment-row">
                             <InputText id="edit-isbn" @bind-Value="_editForm.Isbn" />
                             <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_editForm.Isbn) || _isLookingUpEnrichment)" @onclick="LookupEnrichmentAsync">
-                                Info abrufen
+                                @I18n.T("bookDetail.lookupButton")
                             </button>
                         </div>
 
                         <div class="isbn-enrichment-row enrichment-search-row">
-                            <input id="edit-enrichment-search" placeholder="oder nach Titel/Autor suchen" @bind="_searchQuery" />
+                            <input id="edit-enrichment-search" placeholder="@I18n.T("bookDetail.searchPlaceholder")" @bind="_searchQuery" />
                             <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_searchQuery) || _isLookingUpEnrichment)" @onclick="SearchEnrichmentAsync">
-                                Suchen
+                                @I18n.T("bookDetail.searchButton")
                             </button>
                         </div>
 
@@ -302,66 +303,66 @@ else
                         @if (_pendingEnrichment is not null)
                         {
                             <div class="enrichment-preview">
-                                <p><strong>Gefundene Daten:</strong></p>
+                                <p><strong>@I18n.T("bookUpload.foundDataTitle")</strong></p>
                                 <ul>
-                                    <li>Beschreibung: @DescribeField(_editForm.Description, _pendingEnrichment.Description)</li>
-                                    <li>Genre: @DescribeField(_editForm.Genre, _pendingEnrichment.Genre)</li>
-                                    <li>Verlag: @DescribeField(_editForm.Publisher, _pendingEnrichment.Publisher)</li>
-                                    <li>Seiten: @DescribePages(_editForm.Pages, _pendingEnrichment.Pages)</li>
-                                    <li>Erscheinungsdatum: @DescribeReleaseDate(_editForm.ReleaseDate, _pendingEnrichment.ReleaseDate)</li>
-                                    <li>Cover: @DescribeCover()</li>
+                                    <li>@I18n.T("bookDetail.descriptionLabel"): @DescribeField(_editForm.Description, _pendingEnrichment.Description)</li>
+                                    <li>@I18n.T("bookDetail.genreLabel"): @DescribeField(_editForm.Genre, _pendingEnrichment.Genre)</li>
+                                    <li>@I18n.T("bookDetail.publisherLabel"): @DescribeField(_editForm.Publisher, _pendingEnrichment.Publisher)</li>
+                                    <li>@I18n.T("bookDetail.pagesLabel"): @DescribePages(_editForm.Pages, _pendingEnrichment.Pages)</li>
+                                    <li>@I18n.T("bookDetail.releaseDateLabel"): @DescribeReleaseDate(_editForm.ReleaseDate, _pendingEnrichment.ReleaseDate)</li>
+                                    <li>@I18n.T("bookUpload.coverLabel"): @DescribeCover()</li>
                                 </ul>
                                 <div class="form-actions">
-                                    <button type="button" class="btn btn-primary" @onclick="ApplyPendingEnrichmentAsync">Übernehmen</button>
-                                    <button type="button" class="btn" @onclick="DiscardPendingEnrichment">Verwerfen</button>
+                                    <button type="button" class="btn btn-primary" @onclick="ApplyPendingEnrichmentAsync">@I18n.T("bookUpload.applyButton")</button>
+                                    <button type="button" class="btn" @onclick="DiscardPendingEnrichment">@I18n.T("bookUpload.discardButton")</button>
                                 </div>
                             </div>
                         }
                     </div>
                     <div class="form-group">
-                        <label for="edit-publisher">Verlag</label>
+                        <label for="edit-publisher">@I18n.T("bookDetail.publisherLabel")</label>
                         <InputText id="edit-publisher" @bind-Value="_editForm.Publisher" />
                     </div>
                     <div class="form-group">
-                        <label for="edit-releaseDate">Erscheinungsdatum</label>
+                        <label for="edit-releaseDate">@I18n.T("bookDetail.releaseDateLabel")</label>
                         <InputDate id="edit-releaseDate" @bind-Value="_editForm.ReleaseDateValue" />
                     </div>
                     <div class="form-group">
-                        <label for="edit-pages">Seiten</label>
+                        <label for="edit-pages">@I18n.T("bookDetail.pagesLabel")</label>
                         <InputNumber id="edit-pages" @bind-Value="_editForm.Pages" />
                     </div>
                     <div class="form-group">
-                        <label for="edit-visibility">Sichtbarkeit</label>
+                        <label for="edit-visibility">@I18n.T("bookDetail.visibilityLabel")</label>
                         <InputSelect id="edit-visibility" @bind-Value="_editForm.Visibility" @bind-Value:after="OnVisibilityChangedAsync">
                             @foreach (var option in BookVisibilityOption.Options)
                             {
-                                <option value="@option">@BookVisibilityOption.For(option)</option>
+                                <option value="@option">@BookVisibilityOption.For(option, I18n)</option>
                             }
                         </InputSelect>
                         @if (_editForm.Visibility == "SHARED")
                         {
-                            <p class="text-muted">Geteilte Bücher können nur von den unten ausgewählten Personen vollständig gelesen werden (eigener Lesefortschritt und eigene Lesezeichen) — spart Speicherplatz, da diese Personen keine eigene Kopie hochladen müssen.</p>
+                            <p class="text-muted">@I18n.T("bookDetail.sharedVisibilityHint")</p>
                             <label class="checkbox-label">
                                 <InputCheckbox @bind-Value="_editForm.SharedTeaserVisible" />
-                                Cover und Beschreibung auch für alle anderen sichtbar (auf deinem öffentlichen Profil)
+                                @I18n.T("bookDetail.sharedTeaserVisibleLabel")
                             </label>
                         }
                         else if (_editForm.Visibility == "PUBLIC")
                         {
-                            <p class="text-muted">Öffentliche Bücher sind mit Cover und Beschreibung für jeden sichtbar (auch nicht angemeldete Besucher) und für jeden angemeldeten Nutzer vollständig lesbar.</p>
+                            <p class="text-muted">@I18n.T("bookDetail.publicVisibilityHint")</p>
                         }
                     </div>
 
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" disabled="@_isSaving">Speichern</button>
-                        <button type="button" class="btn" @onclick="CancelEditing">Abbrechen</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_isSaving">@I18n.T("bookDetail.saveButton")</button>
+                        <button type="button" class="btn" @onclick="CancelEditing">@I18n.T("bookDetail.cancelButton")</button>
                     </div>
                 </EditForm>
 
                 @if (_editForm.Visibility == "SHARED")
                 {
                     <div class="book-share-manager">
-                        <h3>Geteilt mit</h3>
+                        <h3>@I18n.T("bookDetail.sharedWithTitle")</h3>
                         @if (_shareUsers is { Count: > 0 })
                         {
                             <ul class="book-share-list">
@@ -369,17 +370,17 @@ else
                                 {
                                     <li>
                                         <span>@user.Username</span>
-                                        <button type="button" class="btn" disabled="@_shareActionInProgress.Contains(user.Username)" @onclick="() => RemoveShareAsync(user.Username)">Entfernen</button>
+                                        <button type="button" class="btn" disabled="@_shareActionInProgress.Contains(user.Username)" @onclick="() => RemoveShareAsync(user.Username)">@I18n.T("bookDetail.removeShareButton")</button>
                                     </li>
                                 }
                             </ul>
                         }
                         else
                         {
-                            <p class="text-muted">Noch mit niemandem geteilt.</p>
+                            <p class="text-muted">@I18n.T("bookDetail.notSharedMessage")</p>
                         }
 
-                        <input placeholder="Benutzername suchen..." @oninput="OnShareSearchInput" value="@_shareSearchTerm" />
+                        <input placeholder="@I18n.T("bookDetail.shareSearchPlaceholder")" @oninput="OnShareSearchInput" value="@_shareSearchTerm" />
                         @if (_shareSearchResults is { Count: > 0 })
                         {
                             <ul class="book-share-search-results">
@@ -387,14 +388,14 @@ else
                                 {
                                     <li>
                                         <span>@candidate.Username</span>
-                                        <button type="button" class="btn" disabled="@_shareActionInProgress.Contains(candidate.Username)" @onclick="() => AddShareAsync(candidate.Username)">Hinzufügen</button>
+                                        <button type="button" class="btn" disabled="@_shareActionInProgress.Contains(candidate.Username)" @onclick="() => AddShareAsync(candidate.Username)">@I18n.T("bookDetail.addShareButton")</button>
                                     </li>
                                 }
                             </ul>
                         }
                         else if (!string.IsNullOrWhiteSpace(_shareSearchTerm))
                         {
-                            <p class="text-muted">Keine Nutzer gefunden.</p>
+                            <p class="text-muted">@I18n.T("bookDetail.noUsersFoundMessage")</p>
                         }
                     </div>
                 }
@@ -403,16 +404,16 @@ else
     </div>
 
     <section class="book-comments">
-        <h2>Kommentare</h2>
+        <h2>@I18n.T("bookDetail.commentsTitle")</h2>
         @if (_comments is null)
         {
-            <p class="text-muted">Kommentare werden geladen...</p>
+            <p class="text-muted">@I18n.T("bookDetail.commentsLoading")</p>
         }
         else
         {
             @if (_comments.Count == 0)
             {
-                <p class="text-muted">Noch keine Kommentare.</p>
+                <p class="text-muted">@I18n.T("bookDetail.noCommentsMessage")</p>
             }
             else
             {
@@ -427,7 +428,7 @@ else
                             <p>@comment.Content</p>
                             @if (comment.UserId == _currentUserId)
                             {
-                                <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">Löschen</button>
+                                <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">@I18n.T("bookDetail.deleteButton")</button>
                             }
                         </li>
                     }
@@ -439,8 +440,8 @@ else
                 {
                     <p class="form-error">@_commentErrorMessage</p>
                 }
-                <InputTextArea @bind-Value="_commentForm.Content" placeholder="Kommentar schreiben..." />
-                <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">Kommentieren</button>
+                <InputTextArea @bind-Value="_commentForm.Content" placeholder="@I18n.T("bookDetail.commentPlaceholder")" />
+                <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">@I18n.T("bookDetail.commentSubmitButton")</button>
             </EditForm>
         }
     </section>
@@ -554,7 +555,7 @@ else
         }
         else
         {
-            _commentErrorMessage = "Kommentar konnte nicht gespeichert werden.";
+            _commentErrorMessage = I18n.T("bookDetail.commentSaveError");
         }
 
         _isSubmittingComment = false;
@@ -598,7 +599,7 @@ else
         var fileResult = await ApiClient.GetBytesAsync($"/api/books/{Id}/file");
         if (fileResult is null)
         {
-            _offlineErrorMessage = "Buchdatei konnte nicht heruntergeladen werden.";
+            _offlineErrorMessage = I18n.T("bookDetail.fileDownloadError");
             _isSavingOffline = false;
             return;
         }
@@ -610,7 +611,7 @@ else
         }
         catch (Exception)
         {
-            _offlineErrorMessage = "Offline-Speicherung fehlgeschlagen (evtl. ist der Speicherplatz voll).";
+            _offlineErrorMessage = I18n.T("bookDetail.offlineSaveError");
         }
         finally
         {
@@ -650,7 +651,7 @@ else
         }
         else
         {
-            _loadErrorMessage = response?.Error?.Message ?? "Buch konnte nicht geladen werden.";
+            _loadErrorMessage = response?.Error?.Message ?? I18n.T("bookDetail.loadError");
         }
     }
 
@@ -874,12 +875,12 @@ else
             _searchResults = results;
             if (results.Count == 0)
             {
-                _enrichmentStatus = "Keine Treffer gefunden.";
+                _enrichmentStatus = I18n.T("bookUpload.noSearchResults");
             }
         }
         catch (Exception)
         {
-            _enrichmentStatus = "Keine Treffer gefunden.";
+            _enrichmentStatus = I18n.T("bookUpload.noSearchResults");
         }
         finally
         {
@@ -943,7 +944,7 @@ else
             var metadata = await lookup();
             if (!metadata.Found)
             {
-                _enrichmentStatus = "Keine Daten gefunden.";
+                _enrichmentStatus = I18n.T("bookUpload.noDataFound");
                 _pendingEnrichment = null;
                 return;
             }
@@ -963,7 +964,7 @@ else
         }
         catch (Exception)
         {
-            _enrichmentStatus = "Keine Daten gefunden.";
+            _enrichmentStatus = I18n.T("bookUpload.noDataFound");
             _pendingEnrichment = null;
         }
         finally
@@ -1024,29 +1025,29 @@ else
 
     private static string Truncate(string value, int maxLength = 80) => value.Length <= maxLength ? value : value[..maxLength] + "…";
 
-    private static string DescribeField(string? currentValue, string? fetchedValue)
+    private string DescribeField(string? currentValue, string? fetchedValue)
     {
-        if (!string.IsNullOrWhiteSpace(currentValue)) return "bleibt unverändert";
-        if (!string.IsNullOrWhiteSpace(fetchedValue)) return $"wird gesetzt: {Truncate(fetchedValue)}";
-        return "keine Daten gefunden";
+        if (!string.IsNullOrWhiteSpace(currentValue)) return I18n.T("bookUpload.staysUnchanged");
+        if (!string.IsNullOrWhiteSpace(fetchedValue)) return string.Format(I18n.T("bookUpload.willBeSet"), Truncate(fetchedValue));
+        return I18n.T("bookUpload.noDataFoundShort");
     }
 
-    private static string DescribePages(int? currentValue, int? fetchedValue)
+    private string DescribePages(int? currentValue, int? fetchedValue)
     {
-        if (currentValue is not null) return "bleibt unverändert";
-        return fetchedValue is { } pages ? $"wird gesetzt: {pages}" : "keine Daten gefunden";
+        if (currentValue is not null) return I18n.T("bookUpload.staysUnchanged");
+        return fetchedValue is { } pages ? string.Format(I18n.T("bookUpload.willBeSet"), pages) : I18n.T("bookUpload.noDataFoundShort");
     }
 
-    private static string DescribeReleaseDate(string? currentValue, string? fetchedValue)
+    private string DescribeReleaseDate(string? currentValue, string? fetchedValue)
     {
-        if (!string.IsNullOrWhiteSpace(currentValue)) return "bleibt unverändert";
-        return IsValidReleaseDate(fetchedValue) ? $"wird gesetzt: {fetchedValue}" : "keine Daten gefunden";
+        if (!string.IsNullOrWhiteSpace(currentValue)) return I18n.T("bookUpload.staysUnchanged");
+        return IsValidReleaseDate(fetchedValue) ? string.Format(I18n.T("bookUpload.willBeSet"), fetchedValue) : I18n.T("bookUpload.noDataFoundShort");
     }
 
     private string DescribeCover()
     {
-        if (_selectedEditCover is not null || !string.IsNullOrWhiteSpace(_book?.CoverUrl)) return "bleibt unverändert";
-        return _pendingCoverBytes is not null ? "wird gesetzt" : "keine Daten gefunden";
+        if (_selectedEditCover is not null || !string.IsNullOrWhiteSpace(_book?.CoverUrl)) return I18n.T("bookUpload.staysUnchanged");
+        return _pendingCoverBytes is not null ? I18n.T("bookUpload.willBeSetPlain") : I18n.T("bookUpload.noDataFoundShort");
     }
 
     private async Task SaveAsync()
@@ -1074,7 +1075,7 @@ else
         var response = await ApiClient.PutAsync<UpdateBookRequest, Book>($"/api/books/{Id}", request);
         if (response is not { Success: true, Data: not null })
         {
-            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen. Bitte versuche es erneut.";
+            _saveErrorMessage = response?.Error?.Message ?? I18n.T("bookDetail.saveError");
             _isSaving = false;
             return;
         }
@@ -1097,7 +1098,7 @@ else
             }
             else
             {
-                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? "Cover konnte nicht ersetzt werden.";
+                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? I18n.T("bookDetail.coverSaveError");
                 _isSaving = false;
                 return;
             }
@@ -1116,7 +1117,7 @@ else
             // section 22): this page is about to navigate away, so a
             // message shown here would never be seen. ToastHost lives in
             // MainLayout, which persists across the navigation below.
-            ToastService.Show($"„{_book?.Title}“ wurde gelöscht.", ToastKind.Success);
+            ToastService.Show(string.Format(I18n.T("bookDetail.deletedToast"), _book?.Title), ToastKind.Success);
             // Task.Yield, not a straight NavigateTo -- lets ToastHost's
             // StateHasChanged (triggered synchronously inside Show above)
             // actually flush a render before the navigation's own render
@@ -1137,7 +1138,7 @@ else
             // Reusing it here meant a failed delete would blank out the
             // whole page, including the book the user was just looking at,
             // instead of showing a small inline error next to the button.
-            _deleteErrorMessage = "Löschen fehlgeschlagen. Bitte versuche es erneut.";
+            _deleteErrorMessage = I18n.T("bookDetail.deleteError");
         }
     }
 

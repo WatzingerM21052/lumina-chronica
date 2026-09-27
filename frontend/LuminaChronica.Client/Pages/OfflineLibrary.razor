@@ -6,25 +6,25 @@
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject OfflineStorageService OfflineStorage
+@inject II18nService I18n
 
-<PageTitle>Offline Bücher — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("offlineLibrary.title") — Lumina Chronica</PageTitle>
 
 <div class="offline-hero">
     <img src="images/offline-hero.webp" alt="" class="offline-hero-image" loading="eager" decoding="async" />
     <div class="offline-hero-scrim"></div>
     <div class="offline-hero-content">
-        <h1>Offline Bücher</h1>
+        <h1>@I18n.T("offlineLibrary.title")</h1>
     </div>
 </div>
 
 <p class="text-muted offline-intro">
-    Bücher, die du auf diesem Gerät für das Lesen ohne Internetverbindung gespeichert hast. Speichere ein
-    Buch über "Offline speichern" auf seiner Detailseite.
+    @I18n.T("offlineLibrary.intro")
 </p>
 
 @if (_isLoading)
 {
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="Offline-Bücher werden geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="@I18n.T("offlineLibrary.loading")" />
 }
 else if (_books.Count == 0)
 {
@@ -38,12 +38,12 @@ else if (_books.Count == 0)
             </svg>
         </div>
         <span class="empty-state-ornament" aria-hidden="true">❦</span>
-        <p>Noch keine Bücher für unterwegs gepackt.</p>
+        <p>@I18n.T("offlineLibrary.emptyMessage")</p>
     </div>
 }
 else
 {
-    <p class="text-muted">Insgesamt @FormatSize(_totalSizeBytes) belegt.</p>
+    <p class="text-muted">@string.Format(I18n.T("offlineLibrary.totalSize"), FormatSize(_totalSizeBytes))</p>
     <div class="offline-book-grid">
         @foreach (var book in _books)
         {
@@ -63,8 +63,8 @@ else
                     <div class="text-muted">@book.Format · @FormatSize(book.SizeBytes)</div>
                 </div>
                 <div class="form-actions">
-                    <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">Lesen</a>
-                    <button type="button" class="btn" @onclick="() => RemoveAsync(book.Id)">Entfernen</button>
+                    <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">@I18n.T("offlineLibrary.readButton")</a>
+                    <button type="button" class="btn" @onclick="() => RemoveAsync(book.Id)">@I18n.T("offlineLibrary.removeButton")</button>
                 </div>
             </div>
         }

@@ -4,19 +4,20 @@
 @inject ApiClient ApiClient
 @inject LuminaAuthStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject II18nService I18n
 
-<PageTitle>Anmelden — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("oauthCallback.pageTitle") — Lumina Chronica</PageTitle>
 
 @if (_errorMessage is not null)
 {
     <div class="auth-form">
         <p class="form-error">@_errorMessage</p>
-        <p class="text-muted"><a href="login">Zurück zur Anmeldung</a></p>
+        <p class="text-muted"><a href="login">@I18n.T("oauthCallback.backToLoginLink")</a></p>
     </div>
 }
 else
 {
-    <LoadingIndicator Text="Anmelden..." />
+    <LoadingIndicator Text="@I18n.T("oauthCallback.loggingIn")" />
 }
 
 @code {
@@ -51,7 +52,7 @@ else
 
         if (code is null)
         {
-            _errorMessage = "Diese Seite wird nur nach einer Google-/GitHub-Anmeldung aufgerufen.";
+            _errorMessage = I18n.T("oauthCallback.noCodeError");
             return;
         }
 
@@ -65,13 +66,13 @@ else
             return;
         }
 
-        _errorMessage = "Der Anmeldelink ist abgelaufen oder wurde bereits verwendet. Bitte versuche es erneut.";
+        _errorMessage = I18n.T("oauthCallback.expiredLinkError");
     }
 
-    private static string DescribeError(string error) => error switch
+    private string DescribeError(string error) => error switch
     {
-        "invalid_state" => "Die Anmeldeanfrage ist abgelaufen. Bitte versuche es erneut.",
-        "exchange_failed" => "Die Anmeldung beim Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
-        _ => "Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.",
+        "invalid_state" => I18n.T("oauthCallback.invalidStateError"),
+        "exchange_failed" => I18n.T("oauthCallback.exchangeFailedError"),
+        _ => I18n.T("oauthCallback.genericError"),
     };
 }

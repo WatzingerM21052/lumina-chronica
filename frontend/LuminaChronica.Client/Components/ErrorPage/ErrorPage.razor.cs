@@ -14,7 +14,7 @@ public partial class ErrorPage : ComponentBase
     public RenderFragment? ChildContent { get; set; }
 
     [Parameter]
-    public string Message { get; set; } = "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
+    public string? Message { get; set; }
 
     private void Reset() => _errorBoundary?.Recover();
 }

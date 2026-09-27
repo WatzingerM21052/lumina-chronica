@@ -31,6 +31,9 @@ public partial class AvatarUploadDialog : ComponentBase, IDisposable
     [Inject]
     private BlobUrlService BlobUrlService { get; set; } = null!;
 
+    [Inject]
+    private II18nService I18n { get; set; } = null!;
+
     private const long MaxAvatarBytes = 5 * 1024 * 1024;
     private static readonly string[] AllowedAvatarExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
@@ -60,12 +63,12 @@ public partial class AvatarUploadDialog : ComponentBase, IDisposable
         var extension = Path.GetExtension(e.File.Name).ToLowerInvariant();
         if (!AllowedAvatarExtensions.Contains(extension))
         {
-            _errorMessage = $"Dateityp muss eines von {string.Join(", ", AllowedAvatarExtensions)} sein.";
+            _errorMessage = string.Format(I18n.T("avatarUploadDialog.invalidType"), string.Join(", ", AllowedAvatarExtensions));
             return;
         }
         if (e.File.Size > MaxAvatarBytes)
         {
-            _errorMessage = $"Datei überschreitet das {MaxAvatarBytes / (1024 * 1024)}MB-Limit.";
+            _errorMessage = string.Format(I18n.T("avatarUploadDialog.tooLarge"), MaxAvatarBytes / (1024 * 1024));
             return;
         }
 
@@ -108,7 +111,7 @@ public partial class AvatarUploadDialog : ComponentBase, IDisposable
             return true;
         }
 
-        _errorMessage = response?.Error?.Message ?? "Profilbild konnte nicht hochgeladen werden.";
+        _errorMessage = response?.Error?.Message ?? I18n.T("avatarUploadDialog.uploadFailed");
         return false;
     }
 

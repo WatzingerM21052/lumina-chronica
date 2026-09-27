@@ -7,10 +7,11 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
+@inject II18nService I18n
 
-<PageTitle>@(_entry?.Title ?? "Lore") — Lumina Chronica</PageTitle>
+<PageTitle>@(_entry?.Title ?? I18n.T("loreEntryDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="@($"projects/{ProjectId}")">← Zurück zum Projekt</a>
+<a href="@($"projects/{ProjectId}")">@I18n.T("loreEntryDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -18,7 +19,7 @@
 }
 else if (_entry is null)
 {
-    <LoadingIndicator Text="Lore wird geladen..." />
+    <LoadingIndicator Text="@I18n.T("loreEntryDetail.loading")" />
 }
 else
 {
@@ -30,10 +31,10 @@ else
             <div class="lore-content">@((MarkupString)Markdown.ToHtml(_entry.Content, MarkdownPipeline))</div>
         }
         <div class="form-actions">
-            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+            <button type="button" class="btn" @onclick="StartEditing">@I18n.T("loreEntryDetail.editButton")</button>
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("loreEntryDetail.deleteButton")</button>
         </div>
-        <ConfirmDialog IsOpen="_confirmingDelete" Message="Lore-Eintrag wirklich löschen?"
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("loreEntryDetail.deleteConfirmMessage")"
                        OnConfirm="DeleteEntryAsync" OnCancel="() => _confirmingDelete = false" />
     }
     else
@@ -44,16 +45,16 @@ else
                 <p class="form-error">@_saveErrorMessage</p>
             }
             <div class="form-group">
-                <label for="lore-edit-title">Titel</label>
+                <label for="lore-edit-title">@I18n.T("loreEntryDetail.titleLabel")</label>
                 <InputText id="lore-edit-title" @bind-Value="_editForm.Title" />
             </div>
             <div class="form-group">
-                <label for="lore-edit-content">Inhalt (Markdown)</label>
+                <label for="lore-edit-content">@I18n.T("loreEntryDetail.contentLabel")</label>
                 <InputTextArea id="lore-edit-content" @bind-Value="_editForm.Content" rows="16" />
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">@I18n.T("loreEntryDetail.saveButton")</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("loreEntryDetail.cancelButton")</button>
             </div>
         </EditForm>
     }
@@ -91,7 +92,7 @@ else
         }
         else
         {
-            _loadErrorMessage = response?.Error?.Message ?? "Lore-Eintrag konnte nicht geladen werden.";
+            _loadErrorMessage = response?.Error?.Message ?? I18n.T("loreEntryDetail.loadError");
         }
     }
 
@@ -115,7 +116,7 @@ else
         }
         else
         {
-            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            _saveErrorMessage = response?.Error?.Message ?? I18n.T("loreEntryDetail.saveError");
         }
     }
 
@@ -129,7 +130,7 @@ else
         else
         {
             _confirmingDelete = false;
-            _loadErrorMessage = "Löschen fehlgeschlagen.";
+            _loadErrorMessage = I18n.T("loreEntryDetail.deleteError");
         }
     }
 }

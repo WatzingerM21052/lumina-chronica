@@ -1,12 +1,19 @@
 using Bunit;
 using LuminaChronica.Client.Pages;
+using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
 
 public class ImpressumPageTests : BunitContext
 {
+    public ImpressumPageTests()
+    {
+        Services.AddSingleton<II18nService, FakeI18nService>();
+    }
+
     [Fact]
     public void Impressum_RendersWithoutThrowing_AndShowsHeading()
     {

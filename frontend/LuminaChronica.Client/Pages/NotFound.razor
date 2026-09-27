@@ -1,10 +1,12 @@
 @page "/not-found"
 @layout MainLayout
 @using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
 
-<PageTitle>Nicht gefunden — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("notFound.title") — Lumina Chronica</PageTitle>
 
-<EmptyState Message="Diese Seite konnte nicht gefunden werden." ActionText="Zur Startseite" OnAction="GoHome" />
+<EmptyState Message="@I18n.T("notFound.message")" ActionText="@I18n.T("notFound.actionText")" OnAction="GoHome" />
 
 @code {
     [Inject]

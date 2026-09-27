@@ -1,11 +1,18 @@
 using Bunit;
 using LuminaChronica.Client.Components;
+using LuminaChronica.Client.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
 
 public class MultiSelectDropdownTests : BunitContext
 {
+    public MultiSelectDropdownTests()
+    {
+        Services.AddSingleton<II18nService, FakeI18nService>();
+    }
+
     [Fact]
     public void MultiSelectDropdown_ClosedByDefault_ShowsNoOptions()
     {

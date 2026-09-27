@@ -12,6 +12,7 @@ public class OfflineLibraryPageTests : BunitContext
     public OfflineLibraryPageTests()
     {
         Services.AddSingleton<OfflineStorageService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
     }
 
     [Fact]

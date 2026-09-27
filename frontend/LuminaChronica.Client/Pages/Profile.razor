@@ -164,7 +164,7 @@ else
             <p class="form-error">@I18n.T("profile.deleteConfirmWarning")</p>
             <div class="form-actions">
                 <button type="button" class="btn" @onclick="() => _isConfirmingDelete = false">@I18n.T("profile.deleteCancelButton")</button>
-                <button type="button" id="deleteAccountButton" class="btn btn-danger" disabled="@(_hasRealPassword && string.IsNullOrEmpty(_deleteAccountPassword))" @onclick="DeleteAccountAsync">
+                <button type="button" id="deleteAccountButton" class="btn btn-danger" disabled="@(_isDeletingAccount || (_hasRealPassword && string.IsNullOrEmpty(_deleteAccountPassword)))" @onclick="DeleteAccountAsync">
                     @I18n.T("profile.deleteConfirmButton")
                 </button>
             </div>
@@ -186,12 +186,13 @@ else
 
     private bool _isAvatarDialogOpen;
 
-    // TODO: hardcoded true until UserProfile exposes whether the account has a
-    // real password (vs. OAuth-only) -- password_hash is intentionally never
-    // serialized today. Wiring this up for real is a follow-up once that gap
-    // is closed; out of scope for this task per the design doc.
+    // Set from UserProfile.HasPassword once loaded -- defaults true so the
+    // password field/requirement doesn't flash away then back during the
+    // initial load, matching how a real-password account (the common case)
+    // actually behaves.
     private bool _hasRealPassword = true;
     private bool _isConfirmingDelete;
+    private bool _isDeletingAccount;
     private string _deleteAccountPassword = string.Empty;
     private string? _deleteAccountErrorMessage;
 
@@ -212,6 +213,7 @@ else
         {
             _profile = response.Data;
             _profileForm = new ProfileFormModel { Username = _profile.Username, Email = _profile.Email };
+            _hasRealPassword = _profile.HasPassword;
         }
 
         var linkedResponse = await ApiClient.GetAsync<List<LinkedOAuthProvider>>("/api/auth/oauth/linked");
@@ -361,20 +363,29 @@ else
 
     private async Task DeleteAccountAsync()
     {
+        if (_isDeletingAccount) return;
+        _isDeletingAccount = true;
         _deleteAccountErrorMessage = null;
 
-        var request = new DeleteAccountRequest { CurrentPassword = _hasRealPassword ? _deleteAccountPassword : null };
-        var response = await ApiClient.DeleteAsync<DeleteAccountRequest, object>("/api/users/me", request);
-
-        if (response is { Success: true })
+        try
         {
-            await AuthStateProvider.MarkUserAsLoggedOutAsync();
-            NavigationManager.NavigateTo("");
-            return;
-        }
+            var request = new DeleteAccountRequest { CurrentPassword = _hasRealPassword ? _deleteAccountPassword : null };
+            var response = await ApiClient.DeleteAsync<DeleteAccountRequest, object>("/api/users/me", request);
 
-        _deleteAccountErrorMessage = response?.Error?.Message ?? I18n.T("profile.deleteAccountError");
-        _isConfirmingDelete = false;
+            if (response is { Success: true })
+            {
+                await AuthStateProvider.MarkUserAsLoggedOutAsync();
+                NavigationManager.NavigateTo("");
+                return;
+            }
+
+            _deleteAccountErrorMessage = response?.Error?.Message ?? I18n.T("profile.deleteAccountError");
+            _isConfirmingDelete = false;
+        }
+        finally
+        {
+            _isDeletingAccount = false;
+        }
     }
 
     private void OnAvatarUploaded(UserProfile profile)

@@ -1,4 +1,6 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
 
 <div class="multiselect-dropdown">
     <button type="button" class="btn @(SelectedValues.Count > 0 ? "btn-primary" : "")" @onclick="ToggleOpen">
@@ -9,7 +11,7 @@
         <div class="multiselect-popover">
             @if (Options.Count == 0)
             {
-                <p class="text-muted">Keine Optionen vorhanden.</p>
+                <p class="text-muted">@I18n.T("multiSelectDropdown.noOptions")</p>
             }
             else
             {
@@ -23,7 +25,7 @@
                     }
                 </div>
             }
-            <button type="button" class="btn multiselect-done" @onclick="ToggleOpen">Fertig</button>
+            <button type="button" class="btn multiselect-done" @onclick="ToggleOpen">@I18n.T("multiSelectDropdown.doneButton")</button>
         </div>
     }
 </div>

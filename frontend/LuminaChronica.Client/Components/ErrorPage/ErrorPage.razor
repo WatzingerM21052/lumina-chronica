@@ -1,4 +1,6 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
 
 <ErrorBoundary @ref="_errorBoundary">
     <ChildContent>
@@ -6,8 +8,8 @@
     </ChildContent>
     <ErrorContent>
         <div class="error-state">
-            <p class="error-state-message">@Message</p>
-            <button class="btn btn-primary" @onclick="Reset">Erneut versuchen</button>
+            <p class="error-state-message">@(Message ?? I18n.T("errorPage.defaultMessage"))</p>
+            <button class="btn btn-primary" @onclick="Reset">@I18n.T("errorMessage.retryButton")</button>
         </div>
     </ErrorContent>
 </ErrorBoundary>

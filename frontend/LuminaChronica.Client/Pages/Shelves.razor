@@ -8,13 +8,14 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
+@inject II18nService I18n
 
-<PageTitle>Regale — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("shelves.title") — Lumina Chronica</PageTitle>
 
 <div class="library-header">
-    <h1>Regale</h1>
+    <h1>@I18n.T("shelves.title")</h1>
     <button type="button" class="btn btn-primary" @onclick="() => _showCreateForm = !_showCreateForm">
-        @(_showCreateForm ? "Abbrechen" : "Regal anlegen")
+        @(_showCreateForm ? I18n.T("shelves.cancelButton") : I18n.T("shelves.createButton"))
     </button>
 </div>
 
@@ -26,19 +27,19 @@
             <p class="form-error">@_createErrorMessage</p>
         }
         <div class="form-group">
-            <label for="shelf-name">Name</label>
+            <label for="shelf-name">@I18n.T("shelves.nameLabel")</label>
             <InputText id="shelf-name" @bind-Value="_createForm.Name" />
         </div>
         <div class="form-group">
-            <label for="shelf-description">Beschreibung</label>
+            <label for="shelf-description">@I18n.T("shelves.descriptionLabel")</label>
             <InputTextArea id="shelf-description" @bind-Value="_createForm.Description" />
         </div>
         <div class="form-group">
-            <label for="shelf-cover">Regalbild (optional)</label>
+            <label for="shelf-cover">@I18n.T("shelves.coverLabel")</label>
             <InputFile id="shelf-cover" OnChange="OnCoverSelected" />
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Anlegen</button>
+            <button type="submit" class="btn btn-primary">@I18n.T("shelves.createSubmitButton")</button>
         </div>
     </EditForm>
 }
@@ -49,12 +50,12 @@
 }
 else if (_shelves is null)
 {
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="Regale werden geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="@I18n.T("shelves.loading")" />
 }
 else if (_shelves.Count == 0)
 {
-    <EmptyState Message="Du hast noch keine Regale angelegt. Erstelle dein erstes Regal, um Bücher zu gruppieren."
-                ActionText="Regal anlegen"
+    <EmptyState Message="@I18n.T("shelves.emptyMessage")"
+                ActionText="@I18n.T("shelves.createButton")"
                 OnAction="() => _showCreateForm = true" />
 }
 else
@@ -87,7 +88,7 @@ else
         }
         else
         {
-            _errorMessage = response?.Error?.Message ?? "Regale konnten nicht geladen werden.";
+            _errorMessage = response?.Error?.Message ?? I18n.T("shelves.loadError");
         }
     }
 
@@ -99,7 +100,7 @@ else
 
         if (string.IsNullOrWhiteSpace(_createForm.Name))
         {
-            _createErrorMessage = "Bitte gib einen Namen ein.";
+            _createErrorMessage = I18n.T("shelves.nameRequiredError");
             return;
         }
 
@@ -130,7 +131,7 @@ else
         }
         else
         {
-            _createErrorMessage = response?.Error?.Message ?? "Regal konnte nicht angelegt werden.";
+            _createErrorMessage = response?.Error?.Message ?? I18n.T("shelves.createError");
         }
     }
 

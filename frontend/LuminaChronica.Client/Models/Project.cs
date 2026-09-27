@@ -52,10 +52,12 @@ public static class VisibilityOption
 {
     public static readonly IReadOnlyList<string> Options = ["PRIVATE", "PUBLIC"];
 
-    public static string For(string visibility) => visibility switch
+    // i18n optional (defaults to the original hardcoded German), same
+    // reasoning as ProjectTypeLabel.For above.
+    public static string For(string visibility, Services.II18nService? i18n = null) => visibility switch
     {
-        "PRIVATE" => "Privat",
-        "PUBLIC" => "Öffentlich",
+        "PRIVATE" => i18n?.T("visibility.private") ?? "Privat",
+        "PUBLIC" => i18n?.T("visibility.public") ?? "Öffentlich",
         _ => visibility,
     };
 }
@@ -67,12 +69,15 @@ public static class ProjectTypeLabel
 {
     public static readonly IReadOnlyList<string> Options = ["WORLD", "NOVEL", "RPG", "CUSTOM"];
 
-    public static string For(string type) => type switch
+    // i18n optional (defaults to the original hardcoded German) so callers
+    // across different pages/batches can be migrated to I18n.T() one at a
+    // time without this helper's other, not-yet-migrated call sites breaking.
+    public static string For(string type, Services.II18nService? i18n = null) => type switch
     {
-        "WORLD" => "Welt",
-        "NOVEL" => "Roman",
-        "RPG" => "Pen & Paper",
-        "CUSTOM" => "Individuell",
+        "WORLD" => i18n?.T("projectType.world") ?? "Welt",
+        "NOVEL" => i18n?.T("projectType.novel") ?? "Roman",
+        "RPG" => i18n?.T("projectType.rpg") ?? "Pen & Paper",
+        "CUSTOM" => i18n?.T("projectType.custom") ?? "Individuell",
         _ => type,
     };
 }

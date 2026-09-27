@@ -1,10 +1,12 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
 
 <div class="error-message" role="alert">
     <Icon Name="alert" Class="error-message-icon" />
     <p class="error-message-text">@Message</p>
     @if (OnRetry.HasDelegate)
     {
-        <button type="button" class="btn btn-primary" @onclick="OnRetry">@RetryText</button>
+        <button type="button" class="btn btn-primary" @onclick="OnRetry">@(RetryText ?? I18n.T("errorMessage.retryButton"))</button>
     }
 </div>

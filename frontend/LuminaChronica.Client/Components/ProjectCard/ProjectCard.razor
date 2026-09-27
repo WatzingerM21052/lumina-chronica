@@ -1,7 +1,9 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject II18nService I18n
 
 <a class="project-card" href="@($"projects/{Project.Id}")">
     <div class="project-card-cover">
@@ -22,6 +24,6 @@
     </div>
     <div class="project-card-info">
         <div class="project-card-title">@Project.Title</div>
-        <div class="project-card-type">@ProjectTypeLabel.For(Project.Type)</div>
+        <div class="project-card-type">@ProjectTypeLabel.For(Project.Type, I18n)</div>
     </div>
 </a>

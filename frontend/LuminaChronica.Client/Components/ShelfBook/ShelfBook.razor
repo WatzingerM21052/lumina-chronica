@@ -1,8 +1,10 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
 @implements IDisposable
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 @inject CoverColorService CoverColorService
+@inject II18nService I18n
 
 <a class="shelf-book shelf-book-palette-@(Book.Id % 5)"
    style="--shelf-book-rest: @(RestRotation.ToString(System.Globalization.CultureInfo.InvariantCulture))deg"
@@ -33,14 +35,14 @@
             @if (ShowFavorite)
             {
                 <button type="button" class="shelf-book-favorite @(_isFavorite ? "is-favorite" : "")"
-                        title="@(_isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")"
+                        title="@(_isFavorite ? I18n.T("bookCard.removeFavorite") : I18n.T("bookCard.addFavorite"))"
                         @onclick="ToggleFavoriteAsync" @onclick:stopPropagation="true" @onclick:preventDefault="true">
                     @(_isFavorite ? "★" : "☆")
                 </button>
             }
             @if (OwnerUsername is { } ownerUsername)
             {
-                <span class="shelf-book-borrowed-badge" title="@($"Geteiltes Buch von {ownerUsername}")">Geliehen von @ownerUsername</span>
+                <span class="shelf-book-borrowed-badge" title="@string.Format(I18n.T("bookCard.sharedByTitle"), ownerUsername)">@string.Format(I18n.T("bookCard.borrowedFrom"), ownerUsername)</span>
             }
             @if (ProgressPercentage is { } progress)
             {

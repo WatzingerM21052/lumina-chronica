@@ -11,7 +11,7 @@ namespace LuminaChronica.Client.Tests;
 
 public class ProfilePageTests : BunitContext
 {
-    private const string ProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01"}}""";
+    private const string ProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01","hasPassword":true}}""";
 
     // Profile now also fires GET /api/auth/oauth/linked from OnInitializedAsync,
     // so every test needs a route for it -- under the single-fixed-response
@@ -219,6 +219,36 @@ public class ProfilePageTests : BunitContext
     }
 
     [Fact]
+    public void Profile_DeleteAccount_OAuthOnlyAccount_HidesPasswordField_AndEnablesButtonWithoutOne()
+    {
+        // Regression coverage: HasPassword used to not exist on UserProfile at
+        // all, so this page hardcoded _hasRealPassword = true regardless of
+        // the actual account -- an OAuth-only user (no password to type) saw
+        // a required password field and a permanently-disabled delete button,
+        // even though deleteUser on the backend never required one for such
+        // an account in the first place. Found live: a real OAuth-only user
+        // asked how they were supposed to delete an account they have no
+        // password for.
+        const string oauthOnlyProfileJson = """{"success":true,"data":{"id":1,"username":"alice","email":"alice@example.com","avatarUrl":null,"roleName":"USER","createdAt":"2026-01-01","hasPassword":false}}""";
+        var handler = NoLinkedProvidersHandler(oauthOnlyProfileJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
+
+        var cut = Render<Profile>();
+
+        Assert.Empty(cut.FindAll("#deleteAccountPassword"));
+
+        cut.Find("#confirmDeleteAccount").Click();
+
+        Assert.False(cut.Find("#deleteAccountButton").HasAttribute("disabled"));
+    }
+
+    [Fact]
     public void Profile_DeleteAccount_WrongPassword_ShowsErrorWithoutNavigating()
     {
         // FakeHttpMessageHandler (used by the other tests in this file) returns
@@ -249,6 +279,64 @@ public class ProfilePageTests : BunitContext
         cut.Find("#deleteAccountButton").Click();
 
         Assert.Contains("Current password is incorrect.", cut.Markup);
+    }
+
+    [Fact]
+    public void Profile_DeleteAccount_DisablesButtonWhileInFlight_PreventingDoubleSubmit()
+    {
+        // Regression coverage: a live test found the DELETE request could fire
+        // twice from a single confirm click (no guard against a second click
+        // landing while the first request was still in flight) -- one request
+        // soft-deleted the account, the concurrent one then hit "user
+        // disappeared" and surfaced as a confusing failure despite the
+        // deletion having actually succeeded. Counts requests reaching the
+        // handler directly rather than trusting the UI alone.
+        var handler = new HangingDeleteHttpMessageHandler(ProfileJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
+
+        var cut = Render<Profile>();
+        cut.Find("#deleteAccountPassword").Input("correct password");
+        cut.Find("#confirmDeleteAccount").Click();
+        cut.Find("#deleteAccountButton").Click();
+
+        Assert.Equal(1, handler.DeleteRequestCount);
+        Assert.True(cut.Find("#deleteAccountButton").HasAttribute("disabled"));
+
+        // The button is disabled, so this is what a real second click hits --
+        // nothing should reach the handler while the first request is pending.
+        cut.Find("#deleteAccountButton").Click();
+        Assert.Equal(1, handler.DeleteRequestCount);
+    }
+
+    // Routes GET /linked and GET /me normally, but every DELETE request hangs
+    // forever (after being counted) -- lets a test observe the button's
+    // disabled state and request count while the delete is still in flight.
+    private sealed class HangingDeleteHttpMessageHandler(string profileJson) : HttpMessageHandler
+    {
+        private int _deleteRequestCount;
+        public int DeleteRequestCount => _deleteRequestCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.Method == HttpMethod.Delete)
+            {
+                Interlocked.Increment(ref _deleteRequestCount);
+                return new TaskCompletionSource<HttpResponseMessage>().Task;
+            }
+
+            if (request.RequestUri!.AbsolutePath.EndsWith("/linked"))
+            {
+                return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":[]}"""));
+            }
+
+            return Task.FromResult(RoutedFakeHttpMessageHandler.JsonResponse(profileJson));
+        }
     }
 
     [Fact]

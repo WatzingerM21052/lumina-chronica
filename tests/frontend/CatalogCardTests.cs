@@ -1,6 +1,8 @@
 using Bunit;
 using LuminaChronica.Client.Components;
+using LuminaChronica.Client.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace LuminaChronica.Client.Tests;
@@ -11,6 +13,11 @@ namespace LuminaChronica.Client.Tests;
 // picker), unlike BookCard/ProjectCard which stay private-library-only.
 public class CatalogCardTests : BunitContext
 {
+    public CatalogCardTests()
+    {
+        Services.AddSingleton<II18nService, FakeI18nService>();
+    }
+
     [Fact]
     public void CatalogCard_RendersTitleAndSubtitle()
     {

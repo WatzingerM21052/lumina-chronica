@@ -8,6 +8,7 @@
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
+@inject II18nService I18n
 
 <PageTitle>Lumina Chronica</PageTitle>
 
@@ -18,7 +19,7 @@
     <img src="images/dashboard-hero-layer3-foreground.webp" alt="" class="home-hero-layer home-hero-layer-3" fetchpriority="low" decoding="async" />
     <div class="home-hero-scrim"></div>
     <div class="home-hero-content">
-        <h1>Willkommen zurück</h1>
+        <h1>@I18n.T("home.welcomeBack")</h1>
     </div>
 </div>
 
@@ -26,7 +27,7 @@
 
 @if (_dashboard is { ContinueReading.Count: > 0 })
 {
-    <h2>Weiterlesen</h2>
+    <h2>@I18n.T("home.continueReadingTitle")</h2>
     <div class="library-grid">
         @for (var i = 0; i < _dashboard.ContinueReading.Count; i++)
         {
@@ -38,24 +39,24 @@
     </div>
 }
 
-<h2>Deine Bibliothek</h2>
+<h2>@I18n.T("home.libraryTitle")</h2>
 @if (_dashboard is not null)
 {
     <div class="dashboard-overview">
-        <StatCard Value="@_dashboard.Overview.TotalBooks.ToString()" Label="Bücher" />
-        <StatCard Value="@_dashboard.Overview.TotalShelves.ToString()" Label="Regale" />
-        <StatCard Value="@_dashboard.Overview.TotalFavorites.ToString()" Label="Favoriten" />
-        <StatCard Value="@_dashboard.Overview.FinishedBooks.ToString()" Label="Gelesen" />
+        <StatCard Value="@_dashboard.Overview.TotalBooks.ToString()" Label="@I18n.T("home.statBooks")" />
+        <StatCard Value="@_dashboard.Overview.TotalShelves.ToString()" Label="@I18n.T("home.statShelves")" />
+        <StatCard Value="@_dashboard.Overview.TotalFavorites.ToString()" Label="@I18n.T("home.statFavorites")" />
+        <StatCard Value="@_dashboard.Overview.FinishedBooks.ToString()" Label="@I18n.T("home.statFinished")" />
     </div>
 }
 @if (_books is null)
 {
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="Bibliothek wird geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="@I18n.T("home.libraryLoading")" />
 }
 else if (_books.Count == 0)
 {
-    <EmptyState Message="Deine Bibliothek ist noch leer. Füge dein erstes Buch hinzu und beginne deine Sammlung."
-                ActionText="Buch hinzufügen"
+    <EmptyState Message="@I18n.T("home.emptyLibraryMessage")"
+                ActionText="@I18n.T("home.addBookAction")"
                 OnAction="GoToUpload" />
 }
 else
@@ -68,13 +69,13 @@ else
     </div>
     @if (_totalBooks > _books.Count)
     {
-        <p><a href="library">Ganze Bibliothek ansehen (@_totalBooks)</a></p>
+        <p><a href="library">@string.Format(I18n.T("home.viewFullLibraryLink"), _totalBooks)</a></p>
     }
 }
 
 @if (_dashboard is { Recommendations.Count: > 0 })
 {
-    <h2>Empfehlungen</h2>
+    <h2>@I18n.T("home.recommendationsTitle")</h2>
     <div class="library-grid">
         @foreach (var book in _dashboard.Recommendations)
         {
@@ -83,15 +84,15 @@ else
     </div>
 }
 
-<h2>Aktuelle Projekte</h2>
+<h2>@I18n.T("home.recentProjectsTitle")</h2>
 @if (_projects is null)
 {
-    <LoadingIndicator Text="Projekte werden geladen..." />
+    <LoadingIndicator Text="@I18n.T("home.projectsLoading")" />
 }
 else if (_projects.Count == 0)
 {
-    <EmptyState Message="Du hast noch keine Projekte erstellt. Beginne mit deiner ersten Welt, Geschichte oder Kampagne."
-                ActionText="Projekt erstellen"
+    <EmptyState Message="@I18n.T("home.emptyProjectsMessage")"
+                ActionText="@I18n.T("home.createProjectAction")"
                 ActionHref="projects" />
 }
 else
@@ -105,7 +106,7 @@ else
     </div>
     @if (_projects.Count > RecentProjectsLimit)
     {
-        <p><a href="projects">Alle Projekte ansehen (@_projects.Count)</a></p>
+        <p><a href="projects">@string.Format(I18n.T("home.viewAllProjectsLink"), _projects.Count)</a></p>
     }
 }
 

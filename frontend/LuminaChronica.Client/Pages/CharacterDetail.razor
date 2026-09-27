@@ -9,10 +9,11 @@
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 @inject NavigationManager NavigationManager
+@inject II18nService I18n
 
-<PageTitle>@(_character?.Name ?? "Charakter") — Lumina Chronica</PageTitle>
+<PageTitle>@(_character?.Name ?? I18n.T("characterDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="@($"projects/{ProjectId}")">← Zurück zum Projekt</a>
+<a href="@($"projects/{ProjectId}")">@I18n.T("characterDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -20,7 +21,7 @@
 }
 else if (_character is null)
 {
-    <LoadingIndicator Text="Charakter wird geladen..." />
+    <LoadingIndicator Text="@I18n.T("characterDetail.loading")" />
 }
 else
 {
@@ -44,7 +45,7 @@ else
         }
         @if (!string.IsNullOrWhiteSpace(_character.Age))
         {
-            <p><strong>Alter:</strong> @_character.Age</p>
+            <p><strong>@I18n.T("characterDetail.ageLabel"):</strong> @_character.Age</p>
         }
         @if (!string.IsNullOrWhiteSpace(_character.Description))
         {
@@ -52,17 +53,17 @@ else
         }
         @if (!string.IsNullOrWhiteSpace(_character.Personality))
         {
-            <p><strong>Persönlichkeit:</strong> @_character.Personality</p>
+            <p><strong>@I18n.T("characterDetail.personalityLabel"):</strong> @_character.Personality</p>
         }
         @if (!string.IsNullOrWhiteSpace(_character.Biography))
         {
-            <p><strong>Geschichte:</strong> @_character.Biography</p>
+            <p><strong>@I18n.T("characterDetail.biographyLabel"):</strong> @_character.Biography</p>
         }
         <div class="form-actions">
-            <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+            <button type="button" class="btn" @onclick="StartEditing">@I18n.T("characterDetail.editButton")</button>
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("characterDetail.deleteButton")</button>
         </div>
-        <ConfirmDialog IsOpen="_confirmingDelete" Message="Charakter wirklich löschen?"
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("characterDetail.deleteConfirmMessage")"
                        OnConfirm="DeleteCharacterAsync" OnCancel="() => _confirmingDelete = false" />
     }
     else
@@ -73,12 +74,12 @@ else
                 <p class="form-error">@_saveErrorMessage</p>
             }
             <div class="form-group">
-                <label for="character-edit-image">Bild ersetzen</label>
+                <label for="character-edit-image">@I18n.T("characterDetail.replaceImageLabel")</label>
                 <div class="dropzone @(_isDraggingImage ? "dropzone--active" : "")"
                      @ondragenter="() => _isDraggingImage = true" @ondragleave="() => _isDraggingImage = false"
                      @ondragover:preventDefault @ondrop="() => _isDraggingImage = false">
                     <InputFile id="character-edit-image" OnChange="OnEditImageSelected" />
-                    <span class="dropzone-label">Bild hierher ziehen oder klicken zum Auswählen</span>
+                    <span class="dropzone-label">@I18n.T("characterDetail.dropzoneLabel")</span>
                 </div>
                 @if (_imageSaveErrorMessage is not null)
                 {
@@ -86,40 +87,40 @@ else
                 }
             </div>
             <div class="form-group">
-                <label for="character-edit-name">Name</label>
+                <label for="character-edit-name">@I18n.T("characterDetail.nameLabel")</label>
                 <InputText id="character-edit-name" @bind-Value="_editForm.Name" />
             </div>
             <div class="form-group">
-                <label for="character-edit-age">Alter</label>
+                <label for="character-edit-age">@I18n.T("characterDetail.ageLabel")</label>
                 <InputText id="character-edit-age" @bind-Value="_editForm.Age" />
             </div>
             <div class="form-group">
-                <label for="character-edit-origin">Herkunft</label>
+                <label for="character-edit-origin">@I18n.T("characterDetail.originLabel")</label>
                 <InputText id="character-edit-origin" @bind-Value="_editForm.Origin" />
             </div>
             <div class="form-group">
-                <label for="character-edit-description">Beschreibung</label>
+                <label for="character-edit-description">@I18n.T("characterDetail.descriptionLabel")</label>
                 <InputTextArea id="character-edit-description" @bind-Value="_editForm.Description" />
             </div>
             <div class="form-group">
-                <label for="character-edit-personality">Persönlichkeit</label>
+                <label for="character-edit-personality">@I18n.T("characterDetail.personalityLabel")</label>
                 <InputTextArea id="character-edit-personality" @bind-Value="_editForm.Personality" />
             </div>
             <div class="form-group">
-                <label for="character-edit-biography">Geschichte</label>
+                <label for="character-edit-biography">@I18n.T("characterDetail.biographyLabel")</label>
                 <InputTextArea id="character-edit-biography" @bind-Value="_editForm.Biography" />
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">@I18n.T("characterDetail.saveButton")</button>
+                <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("characterDetail.cancelButton")</button>
             </div>
         </EditForm>
     }
 
     <div class="library-header">
-        <h2>Beziehungen</h2>
+        <h2>@I18n.T("characterDetail.relationshipsTitle")</h2>
         <button type="button" class="btn btn-primary" @onclick="() => _showCreateRelationshipForm = !_showCreateRelationshipForm">
-            @(_showCreateRelationshipForm ? "Abbrechen" : "Beziehung hinzufügen")
+            @(_showCreateRelationshipForm ? I18n.T("characterDetail.cancelButton") : I18n.T("characterDetail.addRelationshipButton"))
         </button>
     </div>
 
@@ -131,9 +132,9 @@ else
                 <p class="form-error">@_createRelationshipErrorMessage</p>
             }
             <div class="form-group">
-                <label for="relationship-other-character">Anderer Charakter</label>
+                <label for="relationship-other-character">@I18n.T("characterDetail.otherCharacterLabel")</label>
                 <InputSelect id="relationship-other-character" @bind-Value="_createRelationshipForm.OtherCharacterId">
-                    <option value="0">-- auswählen --</option>
+                    <option value="0">@I18n.T("characterDetail.selectPlaceholder")</option>
                     @if (_otherCharacters is not null)
                     {
                         @foreach (var other in _otherCharacters)
@@ -144,15 +145,15 @@ else
                 </InputSelect>
             </div>
             <div class="form-group">
-                <label for="relationship-type">Beziehung (z.B. "Mentor von")</label>
+                <label for="relationship-type">@I18n.T("characterDetail.relationshipTypeLabel")</label>
                 <InputText id="relationship-type" @bind-Value="_createRelationshipForm.RelationshipType" />
             </div>
             <div class="form-group">
-                <label for="relationship-description">Beschreibung (optional)</label>
+                <label for="relationship-description">@I18n.T("characterDetail.relationshipDescriptionLabel")</label>
                 <InputTextArea id="relationship-description" @bind-Value="_createRelationshipForm.Description" />
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                <button type="submit" class="btn btn-primary">@I18n.T("characterDetail.addRelationshipSubmitButton")</button>
             </div>
         </EditForm>
     }
@@ -163,11 +164,11 @@ else
     }
     else if (_relationships is null)
     {
-        <LoadingIndicator Text="Beziehungen werden geladen..." />
+        <LoadingIndicator Text="@I18n.T("characterDetail.relationshipsLoading")" />
     }
     else if (_relationships.Count == 0)
     {
-        <p class="text-muted">Dieser Charakter hat noch keine Beziehungen.</p>
+        <p class="text-muted">@I18n.T("characterDetail.noRelationshipsMessage")</p>
     }
     else
     {
@@ -182,16 +183,16 @@ else
                             <p class="form-error">@_editRelationshipErrorMessage</p>
                         }
                         <div class="form-group">
-                            <label for="@($"relationship-edit-type-{relationship.Id}")">Beziehung</label>
+                            <label for="@($"relationship-edit-type-{relationship.Id}")">@I18n.T("characterDetail.relationshipLabel")</label>
                             <InputText id="@($"relationship-edit-type-{relationship.Id}")" @bind-Value="_editRelationshipForm.RelationshipType" />
                         </div>
                         <div class="form-group">
-                            <label for="@($"relationship-edit-description-{relationship.Id}")">Beschreibung</label>
+                            <label for="@($"relationship-edit-description-{relationship.Id}")">@I18n.T("characterDetail.descriptionLabel")</label>
                             <InputTextArea id="@($"relationship-edit-description-{relationship.Id}")" @bind-Value="_editRelationshipForm.Description" />
                         </div>
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Speichern</button>
-                            <button type="button" class="btn" @onclick="() => _editingRelationshipId = null">Abbrechen</button>
+                            <button type="submit" class="btn btn-primary">@I18n.T("characterDetail.saveButton")</button>
+                            <button type="button" class="btn" @onclick="() => _editingRelationshipId = null">@I18n.T("characterDetail.cancelButton")</button>
                         </div>
                     </EditForm>
                 }
@@ -203,8 +204,8 @@ else
                         <p>@relationship.Description</p>
                     }
                     <div class="form-actions">
-                        <button type="button" class="btn" @onclick="() => StartEditingRelationship(relationship)">Bearbeiten</button>
-                        <button type="button" class="btn" @onclick="() => DeleteRelationshipAsync(relationship.Id)">Löschen</button>
+                        <button type="button" class="btn" @onclick="() => StartEditingRelationship(relationship)">@I18n.T("characterDetail.editButton")</button>
+                        <button type="button" class="btn" @onclick="() => DeleteRelationshipAsync(relationship.Id)">@I18n.T("characterDetail.deleteButton")</button>
                     </div>
                 }
             </div>
@@ -255,7 +256,7 @@ else
         }
         else
         {
-            _loadErrorMessage = response?.Error?.Message ?? "Charakter konnte nicht geladen werden.";
+            _loadErrorMessage = response?.Error?.Message ?? I18n.T("characterDetail.loadError");
         }
     }
 
@@ -313,7 +314,7 @@ else
 
         if (response is not { Success: true, Data: not null })
         {
-            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            _saveErrorMessage = response?.Error?.Message ?? I18n.T("characterDetail.saveError");
             return;
         }
 
@@ -335,7 +336,7 @@ else
             }
             else
             {
-                _imageSaveErrorMessage = imageResponse?.Error?.Message ?? "Bild konnte nicht ersetzt werden.";
+                _imageSaveErrorMessage = imageResponse?.Error?.Message ?? I18n.T("characterDetail.imageSaveError");
                 return;
             }
         }
@@ -353,7 +354,7 @@ else
         else
         {
             _confirmingDelete = false;
-            _loadErrorMessage = "Löschen fehlgeschlagen.";
+            _loadErrorMessage = I18n.T("characterDetail.deleteError");
         }
     }
 
@@ -367,7 +368,7 @@ else
         }
         else
         {
-            _relationshipsErrorMessage = response?.Error?.Message ?? "Beziehungen konnten nicht geladen werden.";
+            _relationshipsErrorMessage = response?.Error?.Message ?? I18n.T("characterDetail.relationshipsLoadError");
         }
     }
 
@@ -386,12 +387,12 @@ else
 
         if (_createRelationshipForm.OtherCharacterId == 0)
         {
-            _createRelationshipErrorMessage = "Bitte wähle einen Charakter aus.";
+            _createRelationshipErrorMessage = I18n.T("characterDetail.characterRequiredError");
             return;
         }
         if (string.IsNullOrWhiteSpace(_createRelationshipForm.RelationshipType))
         {
-            _createRelationshipErrorMessage = "Bitte gib eine Beziehung ein.";
+            _createRelationshipErrorMessage = I18n.T("characterDetail.relationshipRequiredError");
             return;
         }
 
@@ -411,7 +412,7 @@ else
         }
         else
         {
-            _createRelationshipErrorMessage = response?.Error?.Message ?? "Beziehung konnte nicht erstellt werden.";
+            _createRelationshipErrorMessage = response?.Error?.Message ?? I18n.T("characterDetail.createRelationshipError");
         }
     }
 
@@ -435,7 +436,7 @@ else
         }
         else
         {
-            _editRelationshipErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            _editRelationshipErrorMessage = response?.Error?.Message ?? I18n.T("characterDetail.saveError");
         }
     }
 

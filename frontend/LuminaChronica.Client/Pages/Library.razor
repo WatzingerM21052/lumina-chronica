@@ -8,20 +8,21 @@
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
+@inject II18nService I18n
 
-<PageTitle>Bibliothek — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("library.title") — Lumina Chronica</PageTitle>
 
 <div class="library-header library-header-shelf">
-    <h1>Bibliothek</h1>
+    <h1>@I18n.T("library.title")</h1>
     <div class="form-actions">
-        <a class="btn" href="library/shelves">Regale</a>
-        <a class="btn btn-primary" href="library/upload">Buch hinzufügen</a>
+        <a class="btn" href="library/shelves">@I18n.T("library.shelvesLink")</a>
+        <a class="btn btn-primary" href="library/upload">@I18n.T("library.addBookLink")</a>
     </div>
 </div>
 
 <div class="library-toolbar">
     <div class="library-search-wrapper">
-        <input type="search" placeholder="Titel oder Autor suchen..." value="@_searchTerm" @oninput="OnSearchInput" />
+        <input type="search" placeholder="@I18n.T("library.searchPlaceholder")" value="@_searchTerm" @oninput="OnSearchInput" />
         @if (_suggestions is { Count: > 0 })
         {
             <ul class="library-search-suggestions">
@@ -41,30 +42,30 @@
         }
     </div>
 
-    <MultiSelectDropdown Label="Genre" Options="@(_facets?.Genres ?? [])" SelectedValues="_genreFilters" SelectedValuesChanged="OnGenreFiltersChanged" />
-    <MultiSelectDropdown Label="Tag" Options="@(_facets?.Tags ?? [])" SelectedValues="_tagFilters" SelectedValuesChanged="OnTagFiltersChanged" />
+    <MultiSelectDropdown Label="@I18n.T("library.genreLabel")" Options="@(_facets?.Genres ?? [])" SelectedValues="_genreFilters" SelectedValuesChanged="OnGenreFiltersChanged" />
+    <MultiSelectDropdown Label="@I18n.T("library.tagLabel")" Options="@(_facets?.Tags ?? [])" SelectedValues="_tagFilters" SelectedValuesChanged="OnTagFiltersChanged" />
 
     <select @bind="_sort" @bind:after="ApplyFiltersAsync">
-        <option value="createdAt">Hinzugefügt</option>
-        <option value="title">Titel</option>
-        <option value="author">Autor</option>
-        <option value="genre">Genre</option>
+        <option value="createdAt">@I18n.T("library.sortCreatedAt")</option>
+        <option value="title">@I18n.T("library.sortTitle")</option>
+        <option value="author">@I18n.T("library.sortAuthor")</option>
+        <option value="genre">@I18n.T("library.sortGenre")</option>
     </select>
     <select @bind="_order" @bind:after="ApplyFiltersAsync">
-        <option value="desc">Absteigend</option>
-        <option value="asc">Aufsteigend</option>
+        <option value="desc">@I18n.T("library.orderDesc")</option>
+        <option value="asc">@I18n.T("library.orderAsc")</option>
     </select>
 
     <label class="library-favorite-filter">
         <input type="checkbox" @bind="_favoritesOnly" @bind:after="ApplyFiltersAsync" />
-        Nur Favoriten
+        @I18n.T("library.favoritesOnlyLabel")
     </label>
 
-    <button type="button" class="btn" @onclick="ClearFiltersAsync">Filter zurücksetzen</button>
+    <button type="button" class="btn" @onclick="ClearFiltersAsync">@I18n.T("library.clearFiltersButton")</button>
 
     <div class="library-view-toggle">
-        <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>Regal</button>
-        <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>Raster</button>
+        <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>@I18n.T("library.viewModeShelf")</button>
+        <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>@I18n.T("library.viewModeRaster")</button>
     </div>
     @if (_viewMode == LibraryViewMode.Grid)
     {
@@ -80,7 +81,7 @@
         <select class="library-raster-page-size" @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
             @foreach (var size in RasterPageSizeOptions)
             {
-                <option value="@size">@size pro Seite</option>
+                <option value="@size">@string.Format(I18n.T("library.perPageSuffix"), size)</option>
             }
         </select>
     }
@@ -92,23 +93,28 @@
 }
 else if (_allItems is null)
 {
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Text="Bibliothek wird geladen..." />
+    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Text="@I18n.T("library.loading")" />
 }
 else if (_allItems.Count == 0 && !HasActiveFilters)
 {
-    <EmptyState Message="Deine Bibliothek ist noch leer. Füge dein erstes Buch hinzu und beginne deine Sammlung."
-                ActionText="Buch hinzufügen"
+    <EmptyState Message="@I18n.T("library.emptyMessage")"
+                ActionText="@I18n.T("library.addBookLink")"
                 OnAction="GoToUpload" />
 }
 else if (_allItems.Count == 0)
 {
-    <p class="text-muted">Keine Bücher gefunden.</p>
+    <p class="text-muted">@I18n.T("library.noResultsMessage")</p>
 }
 else
 {
     @if (_viewMode == LibraryViewMode.Grid)
     {
-        var allGroups = LibraryShelfGrouping.Group(_allItems ?? [], _sort, _genreFilters, _tagFilters);
+        var allGroups = LibraryShelfGrouping.Group(_allItems ?? [], _sort, _genreFilters, _tagFilters, new LibraryGroupLabels(
+            NoGenre: I18n.T("library.noGenreLabel"),
+            ThisWeek: I18n.T("library.thisWeekLabel"),
+            ThisMonth: I18n.T("library.thisMonthLabel"),
+            ThisYear: I18n.T("library.thisYearLabel"),
+            Older: I18n.T("library.olderLabel")));
         var totalBookCount = _allItems?.Count ?? 0;
 
         <div class="library-shelf" @ref="_shelfRef">
@@ -136,9 +142,9 @@ else
         @if ((_allItems?.Count ?? 0) > _rasterPageSize)
         {
             <div class="library-pager">
-                <button type="button" class="btn" disabled="@(_rasterPage <= 1)" @onclick="() => GoToRasterPage(_rasterPage - 1)">← Zurück</button>
-                <span>Seite @_rasterPage von @RasterPageCount</span>
-                <button type="button" class="btn" disabled="@(_rasterPage >= RasterPageCount)" @onclick="() => GoToRasterPage(_rasterPage + 1)">Weiter →</button>
+                <button type="button" class="btn" disabled="@(_rasterPage <= 1)" @onclick="() => GoToRasterPage(_rasterPage - 1)">@I18n.T("library.prevPage")</button>
+                <span>@string.Format(I18n.T("library.pageOf"), _rasterPage, RasterPageCount)</span>
+                <button type="button" class="btn" disabled="@(_rasterPage >= RasterPageCount)" @onclick="() => GoToRasterPage(_rasterPage + 1)">@I18n.T("library.nextPage")</button>
             </div>
         }
     }
@@ -280,11 +286,11 @@ else
 
     private async Task OnShelfBookZoomChangedAsync() => await SavePreferredShelfBookZoomAsync(_shelfBookZoom);
 
-    private static string ShelfBookZoomLabel(string zoom) => zoom switch
+    private string ShelfBookZoomLabel(string zoom) => zoom switch
     {
-        "1.5" => "Sehr groß",
-        "1.25" => "Groß",
-        _ => "Normal",
+        "1.5" => I18n.T("library.zoomVeryLarge"),
+        "1.25" => I18n.T("library.zoomLarge"),
+        _ => I18n.T("library.zoomNormal"),
     };
 
     // Walks the already-grouped shelf in order, including whole groups until
@@ -465,7 +471,7 @@ else
             var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?{string.Join('&', query)}&page={page}");
             if (response is not { Success: true, Data: not null })
             {
-                _errorMessage = response?.Error?.Message ?? "Bibliothek konnte nicht geladen werden.";
+                _errorMessage = response?.Error?.Message ?? I18n.T("library.loadError");
                 return;
             }
 

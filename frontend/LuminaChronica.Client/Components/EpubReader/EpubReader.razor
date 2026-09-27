@@ -1,6 +1,8 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
 @implements IAsyncDisposable
 @inject IJSRuntime JsRuntime
+@inject II18nService I18n
 
 <div class="@ViewportClass">
     <div id="@_elementId" class="@FrameClass" tabindex="0" @ref="_frameElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true"></div>
@@ -18,12 +20,12 @@
 <div class="@NavClass">
     @if (ReaderMode != "scroll")
     {
-        <button type="button" class="btn" @onclick="PrevAsync">◀ Zurück</button>
+        <button type="button" class="btn" @onclick="PrevAsync">@I18n.T("epubReader.previous")</button>
     }
     @if (_toc.Count > 0)
     {
         <div class="epub-toc-menu">
-            <button type="button" class="btn" @onclick="ToggleTocMenu"><Icon Name="toc-list" /> Inhaltsverzeichnis</button>
+            <button type="button" class="btn" @onclick="ToggleTocMenu"><Icon Name="toc-list" /> @I18n.T("epubReader.tableOfContents")</button>
             @if (_tocMenuOpen)
             {
                 <div class="epub-toc-popover">
@@ -38,6 +40,6 @@
     <span class="epub-reader-progress">@_lastPercentage.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%</span>
     @if (ReaderMode != "scroll")
     {
-        <button type="button" class="btn" @onclick="NextAsync">Weiter ▶</button>
+        <button type="button" class="btn" @onclick="NextAsync">@I18n.T("epubReader.next")</button>
     }
 </div>

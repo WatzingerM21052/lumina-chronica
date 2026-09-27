@@ -14,10 +14,11 @@
 @inject ElementMetricsService ElementMetricsService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
+@inject II18nService I18n
 
-<PageTitle>@(_project?.Title ?? "Projekt") — Lumina Chronica</PageTitle>
+<PageTitle>@(_project?.Title ?? I18n.T("projectDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="projects">← Zurück zu den Projekten</a>
+<a href="projects">@I18n.T("projectDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -25,18 +26,18 @@
 }
 else if (_project is null)
 {
-    <LoadingIndicator Text="Projekt wird geladen..." />
+    <LoadingIndicator Text="@I18n.T("projectDetail.loading")" />
 }
 else
 {
     <div class="form-actions">
-        <button type="button" class="btn @(_activeTab == "overview" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "overview")">Übersicht</button>
-        <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "characters")">Charaktere</button>
-        <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "map")">Karte</button>
-        <button type="button" class="btn @(_activeTab == "timeline" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "timeline")">Zeitleiste</button>
-        <button type="button" class="btn @(_activeTab == "lore" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "lore")">Lore</button>
-        <button type="button" class="btn @(_activeTab == "books" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "books")">Bücher</button>
-        <button type="button" class="btn @(_activeTab == "files" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "files")">Dateien</button>
+        <button type="button" class="btn @(_activeTab == "overview" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "overview")">@I18n.T("projectDetail.tabOverview")</button>
+        <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "characters")">@I18n.T("projectDetail.tabCharacters")</button>
+        <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "map")">@I18n.T("projectDetail.tabMap")</button>
+        <button type="button" class="btn @(_activeTab == "timeline" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "timeline")">@I18n.T("projectDetail.tabTimeline")</button>
+        <button type="button" class="btn @(_activeTab == "lore" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "lore")">@I18n.T("projectDetail.tabLore")</button>
+        <button type="button" class="btn @(_activeTab == "books" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "books")">@I18n.T("projectDetail.tabBooks")</button>
+        <button type="button" class="btn @(_activeTab == "files" ? "btn-primary" : "")" @onclick="@(() => _activeTab = "files")">@I18n.T("projectDetail.tabFiles")</button>
     </div>
 
     @if (_activeTab == "overview")
@@ -55,29 +56,29 @@ else
         @if (!_isEditing)
         {
             <h1>@_project.Title</h1>
-            <p class="text-muted">@ProjectTypeLabel.For(_project.Type)</p>
+            <p class="text-muted">@ProjectTypeLabel.For(_project.Type, I18n)</p>
             @if (!string.IsNullOrWhiteSpace(_project.Description))
             {
                 <p>@_project.Description</p>
             }
             <div class="form-actions">
-                <button type="button" class="btn" @onclick="StartEditing">Bearbeiten</button>
-                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">Löschen</button>
+                <button type="button" class="btn" @onclick="StartEditing">@I18n.T("projectDetail.editButton")</button>
+                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("projectDetail.deleteButton")</button>
             </div>
-            <ConfirmDialog IsOpen="_confirmingDelete" Message="Projekt wirklich löschen?"
+            <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("projectDetail.deleteConfirmMessage")"
                            OnConfirm="DeleteProjectAsync" OnCancel="() => _confirmingDelete = false" />
 
             <section class="book-comments">
-                <h2>Kommentare</h2>
+                <h2>@I18n.T("projectDetail.commentsTitle")</h2>
                 @if (_comments is null)
                 {
-                    <p class="text-muted">Kommentare werden geladen...</p>
+                    <p class="text-muted">@I18n.T("projectDetail.commentsLoading")</p>
                 }
                 else
                 {
                     @if (_comments.Count == 0)
                     {
-                        <p class="text-muted">Noch keine Kommentare.</p>
+                        <p class="text-muted">@I18n.T("projectDetail.noCommentsMessage")</p>
                     }
                     else
                     {
@@ -92,7 +93,7 @@ else
                                     <p>@comment.Content</p>
                                     @if (comment.UserId == _currentUserId)
                                     {
-                                        <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">Löschen</button>
+                                        <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">@I18n.T("projectDetail.deleteButton")</button>
                                     }
                                 </li>
                             }
@@ -104,8 +105,8 @@ else
                         {
                             <p class="form-error">@_commentErrorMessage</p>
                         }
-                        <InputTextArea @bind-Value="_commentForm.Content" placeholder="Kommentar schreiben..." />
-                        <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">Kommentieren</button>
+                        <InputTextArea @bind-Value="_commentForm.Content" placeholder="@I18n.T("projectDetail.commentPlaceholder")" />
+                        <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">@I18n.T("projectDetail.commentSubmitButton")</button>
                     </EditForm>
                 }
             </section>
@@ -118,12 +119,12 @@ else
                     <p class="form-error">@_saveErrorMessage</p>
                 }
                 <div class="form-group">
-                    <label for="project-edit-cover">Cover ersetzen</label>
+                    <label for="project-edit-cover">@I18n.T("projectDetail.replaceCoverLabel")</label>
                     <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
                          @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
                          @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
                         <InputFile id="project-edit-cover" OnChange="OnEditCoverSelected" />
-                        <span class="dropzone-label">Cover hierher ziehen oder klicken zum Auswählen</span>
+                        <span class="dropzone-label">@I18n.T("projectDetail.coverDropzoneLabel")</span>
                     </div>
                     @if (_coverSaveErrorMessage is not null)
                     {
@@ -131,35 +132,35 @@ else
                     }
                 </div>
                 <div class="form-group">
-                    <label for="project-edit-title">Titel</label>
+                    <label for="project-edit-title">@I18n.T("projectDetail.titleLabel")</label>
                     <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
                 </div>
                 <div class="form-group">
-                    <label for="project-edit-type">Art</label>
+                    <label for="project-edit-type">@I18n.T("projectDetail.typeLabel")</label>
                     <InputSelect id="project-edit-type" @bind-Value="_editForm.Type">
                         @foreach (var type in ProjectTypeLabel.Options)
                         {
-                            <option value="@type">@ProjectTypeLabel.For(type)</option>
+                            <option value="@type">@ProjectTypeLabel.For(type, I18n)</option>
                         }
                     </InputSelect>
                 </div>
                 <div class="form-group">
-                    <label for="project-edit-description">Beschreibung</label>
+                    <label for="project-edit-description">@I18n.T("projectDetail.descriptionLabel")</label>
                     <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
                 </div>
                 <div class="form-group">
-                    <label for="project-edit-visibility">Sichtbarkeit</label>
+                    <label for="project-edit-visibility">@I18n.T("projectDetail.visibilityLabel")</label>
                     <InputSelect id="project-edit-visibility" @bind-Value="_editForm.Visibility">
                         @foreach (var option in VisibilityOption.Options)
                         {
-                            <option value="@option">@VisibilityOption.For(option)</option>
+                            <option value="@option">@VisibilityOption.For(option, I18n)</option>
                         }
                     </InputSelect>
-                    <p class="text-muted">Öffentliche Projekte sind mit Cover und Beschreibung auf deinem öffentlichen Profil sichtbar.</p>
+                    <p class="text-muted">@I18n.T("projectDetail.visibilityHint")</p>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Speichern</button>
-                    <button type="button" class="btn" @onclick="() => _isEditing = false">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.saveButton")</button>
+                    <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("projectDetail.cancelButton")</button>
                 </div>
             </EditForm>
         }
@@ -167,9 +168,9 @@ else
     else if (_activeTab == "characters")
     {
         <div class="library-header">
-            <h2>Charaktere</h2>
+            <h2>@I18n.T("projectDetail.charactersTitle")</h2>
             <button type="button" class="btn btn-primary" @onclick="() => _showCreateCharacterForm = !_showCreateCharacterForm">
-                @(_showCreateCharacterForm ? "Abbrechen" : "Charakter hinzufügen")
+                @(_showCreateCharacterForm ? I18n.T("projectDetail.cancelButton") : I18n.T("projectDetail.addCharacterButton"))
             </button>
         </div>
 
@@ -181,15 +182,15 @@ else
                     <p class="form-error">@_createCharacterErrorMessage</p>
                 }
                 <div class="form-group">
-                    <label for="character-name">Name</label>
+                    <label for="character-name">@I18n.T("projectDetail.nameLabel")</label>
                     <InputText id="character-name" @bind-Value="_createCharacterForm.Name" />
                 </div>
                 <div class="form-group">
-                    <label for="character-image">Bild (optional)</label>
+                    <label for="character-image">@I18n.T("projectDetail.imageOptionalLabel")</label>
                     <InputFile id="character-image" OnChange="OnCharacterImageSelected" />
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.addButton")</button>
                 </div>
             </EditForm>
         }
@@ -200,11 +201,11 @@ else
         }
         else if (_characters is null)
         {
-            <LoadingIndicator Text="Charaktere werden geladen..." />
+            <LoadingIndicator Text="@I18n.T("projectDetail.charactersLoading")" />
         }
         else if (_characters.Count == 0)
         {
-            <p class="text-muted">Dieses Projekt hat noch keine Charaktere.</p>
+            <p class="text-muted">@I18n.T("projectDetail.noCharactersMessage")</p>
         }
         else
         {
@@ -218,12 +219,12 @@ else
     }
     else if (_activeTab == "map")
     {
-        <h2>Karte</h2>
+        <h2>@I18n.T("projectDetail.mapTitle")</h2>
 
         @if (_mapObjectUrl is not null)
         {
             <div class="map-wrapper">
-                <img @ref="_mapImageRef" src="@_mapObjectUrl" alt="Karte von @_project.Title" class="map-image"
+                <img @ref="_mapImageRef" src="@_mapObjectUrl" alt="@string.Format(I18n.T("projectDetail.mapAlt"), _project.Title)" class="map-image"
                      @onclick="OnMapClickAsync" style="@(_placingLocationId is not null ? "cursor: crosshair;" : "")" />
                 @if (_locations is not null)
                 {
@@ -235,26 +236,26 @@ else
             </div>
             @if (_placingLocationId is not null)
             {
-                <p class="text-muted">Klicke auf die Karte, um "@_locations?.FirstOrDefault(l => l.Id == _placingLocationId)?.Name" zu platzieren. <button type="button" class="btn" @onclick="() => _placingLocationId = null">Abbrechen</button></p>
+                <p class="text-muted">@string.Format(I18n.T("projectDetail.placeOnMapHint"), _locations?.FirstOrDefault(l => l.Id == _placingLocationId)?.Name) <button type="button" class="btn" @onclick="() => _placingLocationId = null">@I18n.T("projectDetail.cancelButton")</button></p>
             }
             @if (_positionErrorMessage is not null)
             {
                 <p class="form-error">@_positionErrorMessage</p>
             }
             <div class="form-group">
-                <label for="map-replace">Karte ersetzen</label>
+                <label for="map-replace">@I18n.T("projectDetail.replaceMapLabel")</label>
                 <InputFile id="map-replace" OnChange="OnMapSelected" />
             </div>
         }
         else
         {
             <div class="form-group">
-                <label for="map-upload">Kartenbild hochladen</label>
+                <label for="map-upload">@I18n.T("projectDetail.uploadMapLabel")</label>
                 <div class="dropzone @(_isDraggingMap ? "dropzone--active" : "")"
                      @ondragenter="() => _isDraggingMap = true" @ondragleave="() => _isDraggingMap = false"
                      @ondragover:preventDefault @ondrop="() => _isDraggingMap = false">
                     <InputFile id="map-upload" OnChange="OnMapSelected" />
-                    <span class="dropzone-label">Kartenbild hierher ziehen oder klicken zum Auswählen</span>
+                    <span class="dropzone-label">@I18n.T("projectDetail.mapDropzoneLabel")</span>
                 </div>
             </div>
         }
@@ -264,9 +265,9 @@ else
         }
 
         <div class="library-header">
-            <h2>Orte</h2>
+            <h2>@I18n.T("projectDetail.locationsTitle")</h2>
             <button type="button" class="btn btn-primary" @onclick="() => _showCreateLocationForm = !_showCreateLocationForm">
-                @(_showCreateLocationForm ? "Abbrechen" : "Ort hinzufügen")
+                @(_showCreateLocationForm ? I18n.T("projectDetail.cancelButton") : I18n.T("projectDetail.addLocationButton"))
             </button>
         </div>
 
@@ -278,15 +279,15 @@ else
                     <p class="form-error">@_createLocationErrorMessage</p>
                 }
                 <div class="form-group">
-                    <label for="location-name">Name</label>
+                    <label for="location-name">@I18n.T("projectDetail.nameLabel")</label>
                     <InputText id="location-name" @bind-Value="_createLocationForm.Name" />
                 </div>
                 <div class="form-group">
-                    <label for="location-image">Bild (optional)</label>
+                    <label for="location-image">@I18n.T("projectDetail.imageOptionalLabel")</label>
                     <InputFile id="location-image" OnChange="OnLocationImageSelected" />
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.addButton")</button>
                 </div>
             </EditForm>
         }
@@ -297,11 +298,11 @@ else
         }
         else if (_locations is null)
         {
-            <LoadingIndicator Text="Orte werden geladen..." />
+            <LoadingIndicator Text="@I18n.T("projectDetail.locationsLoading")" />
         }
         else if (_locations.Count == 0)
         {
-            <p class="text-muted">Dieses Projekt hat noch keine Orte.</p>
+            <p class="text-muted">@I18n.T("projectDetail.noLocationsMessage")</p>
         }
         else
         {
@@ -312,7 +313,7 @@ else
                         <LocationCard Location="location" />
                         @if (location.X is null && _mapObjectUrl is not null)
                         {
-                            <button type="button" class="btn shelf-book-remove" @onclick="() => _placingLocationId = location.Id">Auf Karte platzieren</button>
+                            <button type="button" class="btn shelf-book-remove" @onclick="() => _placingLocationId = location.Id">@I18n.T("projectDetail.placeOnMapButton")</button>
                         }
                     </div>
                 }
@@ -322,9 +323,9 @@ else
     else if (_activeTab == "timeline")
     {
         <div class="library-header">
-            <h2>Zeitleiste</h2>
+            <h2>@I18n.T("projectDetail.timelineTitle")</h2>
             <button type="button" class="btn btn-primary" @onclick="() => _showCreateEventForm = !_showCreateEventForm">
-                @(_showCreateEventForm ? "Abbrechen" : "Ereignis hinzufügen")
+                @(_showCreateEventForm ? I18n.T("projectDetail.cancelButton") : I18n.T("projectDetail.addEventButton"))
             </button>
         </div>
 
@@ -336,19 +337,19 @@ else
                     <p class="form-error">@_createEventErrorMessage</p>
                 }
                 <div class="form-group">
-                    <label for="event-title">Titel</label>
+                    <label for="event-title">@I18n.T("projectDetail.titleLabel")</label>
                     <InputText id="event-title" @bind-Value="_createEventForm.Title" />
                 </div>
                 <div class="form-group">
-                    <label for="event-date">Datum (frei, z.B. "Jahr 1247 der Dritten Ära")</label>
+                    <label for="event-date">@I18n.T("projectDetail.eventDateLabel")</label>
                     <InputText id="event-date" @bind-Value="_createEventForm.Date" />
                 </div>
                 <div class="form-group">
-                    <label for="event-description">Beschreibung</label>
+                    <label for="event-description">@I18n.T("projectDetail.descriptionLabel")</label>
                     <InputTextArea id="event-description" @bind-Value="_createEventForm.Description" />
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.addButton")</button>
                 </div>
             </EditForm>
         }
@@ -359,11 +360,11 @@ else
         }
         else if (_events is null)
         {
-            <LoadingIndicator Text="Zeitleiste wird geladen..." />
+            <LoadingIndicator Text="@I18n.T("projectDetail.timelineLoading")" />
         }
         else if (_events.Count == 0)
         {
-            <p class="text-muted">Dieses Projekt hat noch keine Ereignisse auf der Zeitleiste.</p>
+            <p class="text-muted">@I18n.T("projectDetail.noEventsMessage")</p>
         }
         else
         {
@@ -379,20 +380,20 @@ else
                                     <p class="form-error">@_editEventErrorMessage</p>
                                 }
                                 <div class="form-group">
-                                    <label for="@($"event-edit-title-{timelineEvent.Id}")">Titel</label>
+                                    <label for="@($"event-edit-title-{timelineEvent.Id}")">@I18n.T("projectDetail.titleLabel")</label>
                                     <InputText id="@($"event-edit-title-{timelineEvent.Id}")" @bind-Value="_editEventForm.Title" />
                                 </div>
                                 <div class="form-group">
-                                    <label for="@($"event-edit-date-{timelineEvent.Id}")">Datum</label>
+                                    <label for="@($"event-edit-date-{timelineEvent.Id}")">@I18n.T("projectDetail.dateLabel")</label>
                                     <InputText id="@($"event-edit-date-{timelineEvent.Id}")" @bind-Value="_editEventForm.Date" />
                                 </div>
                                 <div class="form-group">
-                                    <label for="@($"event-edit-description-{timelineEvent.Id}")">Beschreibung</label>
+                                    <label for="@($"event-edit-description-{timelineEvent.Id}")">@I18n.T("projectDetail.descriptionLabel")</label>
                                     <InputTextArea id="@($"event-edit-description-{timelineEvent.Id}")" @bind-Value="_editEventForm.Description" />
                                 </div>
                                 <div class="form-actions">
-                                    <button type="submit" class="btn btn-primary">Speichern</button>
-                                    <button type="button" class="btn" @onclick="() => _editingEventId = null">Abbrechen</button>
+                                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.saveButton")</button>
+                                    <button type="button" class="btn" @onclick="() => _editingEventId = null">@I18n.T("projectDetail.cancelButton")</button>
                                 </div>
                             </EditForm>
                         }
@@ -410,11 +411,11 @@ else
                                 }
                                 <div class="timeline-event-controls">
                                     <div class="timeline-move-buttons">
-                                        <button type="button" class="btn" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="Nach oben">▲</button>
-                                        <button type="button" class="btn" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="Nach unten">▼</button>
+                                        <button type="button" class="btn" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="@I18n.T("projectDetail.moveUpTitle")">▲</button>
+                                        <button type="button" class="btn" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="@I18n.T("projectDetail.moveDownTitle")">▼</button>
                                     </div>
-                                    <button type="button" class="btn" @onclick="() => StartEditingEvent(timelineEvent)">Bearbeiten</button>
-                                    <button type="button" class="btn" @onclick="() => DeleteTimelineEventAsync(timelineEvent.Id)">Löschen</button>
+                                    <button type="button" class="btn" @onclick="() => StartEditingEvent(timelineEvent)">@I18n.T("projectDetail.editButton")</button>
+                                    <button type="button" class="btn" @onclick="() => DeleteTimelineEventAsync(timelineEvent.Id)">@I18n.T("projectDetail.deleteButton")</button>
                                 </div>
                             </div>
                         }
@@ -426,9 +427,9 @@ else
     else if (_activeTab == "lore")
     {
         <div class="library-header">
-            <h2>Lore</h2>
+            <h2>@I18n.T("projectDetail.loreTitle")</h2>
             <button type="button" class="btn btn-primary" @onclick="() => _showCreateLoreForm = !_showCreateLoreForm">
-                @(_showCreateLoreForm ? "Abbrechen" : "Lore-Eintrag hinzufügen")
+                @(_showCreateLoreForm ? I18n.T("projectDetail.cancelButton") : I18n.T("projectDetail.addLoreButton"))
             </button>
         </div>
 
@@ -440,15 +441,15 @@ else
                     <p class="form-error">@_createLoreErrorMessage</p>
                 }
                 <div class="form-group">
-                    <label for="lore-title">Titel</label>
+                    <label for="lore-title">@I18n.T("projectDetail.titleLabel")</label>
                     <InputText id="lore-title" @bind-Value="_createLoreForm.Title" />
                 </div>
                 <div class="form-group">
-                    <label for="lore-content">Inhalt (Markdown)</label>
+                    <label for="lore-content">@I18n.T("projectDetail.loreContentLabel")</label>
                     <InputTextArea id="lore-content" @bind-Value="_createLoreForm.Content" rows="8" />
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.addButton")</button>
                 </div>
             </EditForm>
         }
@@ -459,11 +460,11 @@ else
         }
         else if (_loreEntries is null)
         {
-            <LoadingIndicator Text="Lore wird geladen..." />
+            <LoadingIndicator Text="@I18n.T("projectDetail.loreLoading")" />
         }
         else if (_loreEntries.Count == 0)
         {
-            <p class="text-muted">Dieses Projekt hat noch keine Lore-Einträge.</p>
+            <p class="text-muted">@I18n.T("projectDetail.noLoreMessage")</p>
         }
         else
         {
@@ -478,11 +479,11 @@ else
     else if (_activeTab == "books")
     {
         <div class="library-header">
-            <h2>Verknüpfte Bücher</h2>
+            <h2>@I18n.T("projectDetail.linkedBooksTitle")</h2>
         </div>
 
         <div class="library-search-wrapper">
-            <input type="search" placeholder="Buch aus deiner Bibliothek suchen..." value="@_bookSearchTerm" @oninput="OnBookSearchInput" />
+            <input type="search" placeholder="@I18n.T("projectDetail.bookSearchPlaceholder")" value="@_bookSearchTerm" @oninput="OnBookSearchInput" />
             @if (_bookSuggestions is { Count: > 0 })
             {
                 <ul class="library-search-suggestions">
@@ -512,11 +513,11 @@ else
         }
         else if (_linkedBooks is null)
         {
-            <LoadingIndicator Text="Bücher werden geladen..." />
+            <LoadingIndicator Text="@I18n.T("projectDetail.linkedBooksLoading")" />
         }
         else if (_linkedBooks.Count == 0)
         {
-            <p class="text-muted">Diesem Projekt sind noch keine Bücher zugeordnet.</p>
+            <p class="text-muted">@I18n.T("projectDetail.noLinkedBooksMessage")</p>
         }
         else
         {
@@ -525,7 +526,7 @@ else
                 {
                     <div class="shelf-book-entry">
                         <BookCard Book="book" />
-                        <button type="button" class="btn shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)">Vom Projekt entfernen</button>
+                        <button type="button" class="btn shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)">@I18n.T("projectDetail.removeBookButton")</button>
                     </div>
                 }
             </div>
@@ -534,7 +535,7 @@ else
     else
     {
         <div class="library-header">
-            <h2>Dateien</h2>
+            <h2>@I18n.T("projectDetail.filesTitle")</h2>
         </div>
 
         <EditForm Model="_createFileForm" OnValidSubmit="CreateProjectFileAsync" class="book-form-card">
@@ -543,18 +544,18 @@ else
                 <p class="form-error">@_createFileErrorMessage</p>
             }
             <div class="form-group">
-                <label for="file-category">Art</label>
+                <label for="file-category">@I18n.T("projectDetail.typeLabel")</label>
                 <InputSelect id="file-category" @bind-Value="_createFileForm.Category">
-                    <option value="IMAGE">Bild</option>
-                    <option value="DOCUMENT">Dokument</option>
+                    <option value="IMAGE">@I18n.T("projectDetail.categoryImage")</option>
+                    <option value="DOCUMENT">@I18n.T("projectDetail.categoryDocument")</option>
                 </InputSelect>
             </div>
             <div class="form-group">
-                <label for="file-upload">Datei</label>
+                <label for="file-upload">@I18n.T("projectDetail.fileLabel")</label>
                 <InputFile id="file-upload" OnChange="OnProjectFileSelected" />
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Hochladen</button>
+                <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.uploadButton")</button>
             </div>
         </EditForm>
 
@@ -564,11 +565,11 @@ else
         }
         else if (_files is null)
         {
-            <LoadingIndicator Text="Dateien werden geladen..." />
+            <LoadingIndicator Text="@I18n.T("projectDetail.filesLoading")" />
         }
         else if (_files.Count == 0)
         {
-            <p class="text-muted">Dieses Projekt hat noch keine Dateien.</p>
+            <p class="text-muted">@I18n.T("projectDetail.noFilesMessage")</p>
         }
         else
         {
@@ -591,8 +592,8 @@ else
                             <div class="project-card-type">@FormatFileSize(file.Size)</div>
                         </div>
                         <div class="form-actions">
-                            <button type="button" class="btn" @onclick="() => DownloadProjectFileAsync(file)">Herunterladen</button>
-                            <button type="button" class="btn" @onclick="() => DeleteProjectFileAsync(file.Id)">Löschen</button>
+                            <button type="button" class="btn" @onclick="() => DownloadProjectFileAsync(file)">@I18n.T("projectDetail.downloadButton")</button>
+                            <button type="button" class="btn" @onclick="() => DeleteProjectFileAsync(file.Id)">@I18n.T("projectDetail.deleteButton")</button>
                         </div>
                     </div>
                 }
@@ -724,7 +725,7 @@ else
         }
         else
         {
-            _commentErrorMessage = "Kommentar konnte nicht gespeichert werden.";
+            _commentErrorMessage = I18n.T("projectDetail.commentSaveError");
         }
 
         _isSubmittingComment = false;
@@ -752,7 +753,7 @@ else
         }
         else
         {
-            _loadErrorMessage = response?.Error?.Message ?? "Projekt konnte nicht geladen werden.";
+            _loadErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.loadError");
         }
     }
 
@@ -800,7 +801,7 @@ else
 
         if (response is not { Success: true, Data: not null })
         {
-            _saveErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            _saveErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.saveError");
             return;
         }
 
@@ -822,7 +823,7 @@ else
             }
             else
             {
-                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? "Cover konnte nicht ersetzt werden.";
+                _coverSaveErrorMessage = coverResponse?.Error?.Message ?? I18n.T("projectDetail.coverSaveError");
                 return;
             }
         }
@@ -840,7 +841,7 @@ else
         else
         {
             _confirmingDelete = false;
-            _loadErrorMessage = "Löschen fehlgeschlagen.";
+            _loadErrorMessage = I18n.T("projectDetail.deleteError");
         }
     }
 
@@ -854,7 +855,7 @@ else
         }
         else
         {
-            _charactersErrorMessage = response?.Error?.Message ?? "Charaktere konnten nicht geladen werden.";
+            _charactersErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.charactersLoadError");
         }
     }
 
@@ -866,7 +867,7 @@ else
 
         if (string.IsNullOrWhiteSpace(_createCharacterForm.Name))
         {
-            _createCharacterErrorMessage = "Bitte gib einen Namen ein.";
+            _createCharacterErrorMessage = I18n.T("projectDetail.nameRequiredError");
             return;
         }
 
@@ -892,7 +893,7 @@ else
         }
         else
         {
-            _createCharacterErrorMessage = response?.Error?.Message ?? "Charakter konnte nicht erstellt werden.";
+            _createCharacterErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.createCharacterError");
         }
     }
 
@@ -931,7 +932,7 @@ else
         }
         else
         {
-            _mapSaveErrorMessage = response?.Error?.Message ?? "Karte konnte nicht hochgeladen werden.";
+            _mapSaveErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.mapUploadError");
         }
     }
 
@@ -959,7 +960,7 @@ else
         }
         else
         {
-            _positionErrorMessage = response?.Error?.Message ?? "Position konnte nicht gespeichert werden.";
+            _positionErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.positionSaveError");
         }
     }
 
@@ -982,7 +983,7 @@ else
         }
         else
         {
-            _locationsErrorMessage = response?.Error?.Message ?? "Orte konnten nicht geladen werden.";
+            _locationsErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.locationsLoadError");
         }
     }
 
@@ -994,7 +995,7 @@ else
 
         if (string.IsNullOrWhiteSpace(_createLocationForm.Name))
         {
-            _createLocationErrorMessage = "Bitte gib einen Namen ein.";
+            _createLocationErrorMessage = I18n.T("projectDetail.nameRequiredError");
             return;
         }
 
@@ -1020,7 +1021,7 @@ else
         }
         else
         {
-            _createLocationErrorMessage = response?.Error?.Message ?? "Ort konnte nicht erstellt werden.";
+            _createLocationErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.createLocationError");
         }
     }
 
@@ -1034,7 +1035,7 @@ else
         }
         else
         {
-            _eventsErrorMessage = response?.Error?.Message ?? "Zeitleiste konnte nicht geladen werden.";
+            _eventsErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.timelineLoadError");
         }
     }
 
@@ -1044,7 +1045,7 @@ else
 
         if (string.IsNullOrWhiteSpace(_createEventForm.Title))
         {
-            _createEventErrorMessage = "Bitte gib einen Titel ein.";
+            _createEventErrorMessage = I18n.T("projectDetail.titleRequiredError");
             return;
         }
 
@@ -1057,7 +1058,7 @@ else
         }
         else
         {
-            _createEventErrorMessage = response?.Error?.Message ?? "Ereignis konnte nicht erstellt werden.";
+            _createEventErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.createEventError");
         }
     }
 
@@ -1081,7 +1082,7 @@ else
         }
         else
         {
-            _editEventErrorMessage = response?.Error?.Message ?? "Speichern fehlgeschlagen.";
+            _editEventErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.saveError");
         }
     }
 
@@ -1113,7 +1114,7 @@ else
         }
         else
         {
-            _loreErrorMessage = response?.Error?.Message ?? "Lore konnte nicht geladen werden.";
+            _loreErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.loreLoadError");
         }
     }
 
@@ -1123,7 +1124,7 @@ else
 
         if (string.IsNullOrWhiteSpace(_createLoreForm.Title))
         {
-            _createLoreErrorMessage = "Bitte gib einen Titel ein.";
+            _createLoreErrorMessage = I18n.T("projectDetail.titleRequiredError");
             return;
         }
 
@@ -1136,7 +1137,7 @@ else
         }
         else
         {
-            _createLoreErrorMessage = response?.Error?.Message ?? "Lore-Eintrag konnte nicht erstellt werden.";
+            _createLoreErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.createLoreError");
         }
     }
 
@@ -1150,7 +1151,7 @@ else
         }
         else
         {
-            _linkedBooksErrorMessage = response?.Error?.Message ?? "Bücher konnten nicht geladen werden.";
+            _linkedBooksErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.linkedBooksLoadError");
         }
     }
 
@@ -1197,7 +1198,7 @@ else
         }
         else
         {
-            _addBookErrorMessage = "Buch konnte nicht hinzugefügt werden.";
+            _addBookErrorMessage = I18n.T("projectDetail.addBookError");
         }
     }
 
@@ -1221,7 +1222,7 @@ else
         }
         else
         {
-            _filesErrorMessage = response?.Error?.Message ?? "Dateien konnten nicht geladen werden.";
+            _filesErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.filesLoadError");
         }
     }
 
@@ -1253,7 +1254,7 @@ else
 
         if (_selectedProjectFile is null)
         {
-            _createFileErrorMessage = "Bitte wähle eine Datei aus.";
+            _createFileErrorMessage = I18n.T("projectDetail.fileRequiredError");
             return;
         }
 
@@ -1275,7 +1276,7 @@ else
         }
         else
         {
-            _createFileErrorMessage = response?.Error?.Message ?? "Datei konnte nicht hochgeladen werden.";
+            _createFileErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.fileUploadError");
         }
     }
 

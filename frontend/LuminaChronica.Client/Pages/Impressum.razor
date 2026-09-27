@@ -1,55 +1,50 @@
 @page "/impressum"
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
 
-<PageTitle>Impressum — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("impressum.title") — Lumina Chronica</PageTitle>
 
-<h1>Impressum</h1>
+<h1>@I18n.T("impressum.title")</h1>
 
 <section class="impressum-section">
-    <h2>Angaben gemäß § 5 TMG / § 25 Mediengesetz</h2>
+    <h2>@I18n.T("impressum.section1Title")</h2>
     <p>
         Matthias Watzinger<br />
         Aigen 27<br />
         4710 Hofkirchen an der Trattnach<br />
-        Österreich
+        @I18n.T("impressum.country")
     </p>
 </section>
 
 <section class="impressum-section">
-    <h2>Kontakt</h2>
-    <p>E-Mail: matthias.watzinger1@gmail.com</p>
+    <h2>@I18n.T("impressum.contactTitle")</h2>
+    <p>@I18n.T("impressum.emailLabel"): matthias.watzinger1@gmail.com</p>
 </section>
 
 <section class="impressum-section">
-    <h2>Verantwortlich für den Inhalt</h2>
+    <h2>@I18n.T("impressum.responsibleTitle")</h2>
     <p>
         <a href="bible" class="impressum-name">Matthias Watzinger</a><br />
-        Aigen 27, 4710 Hofkirchen an der Trattnach, Österreich
+        @I18n.T("impressum.addressLine")
     </p>
 </section>
 
 <section class="impressum-section">
-    <h2>Haftungsausschluss</h2>
+    <h2>@I18n.T("impressum.disclaimerTitle")</h2>
     <p>
-        Die Inhalte dieser privaten, nicht-kommerziellen Portfolio-Website wurden mit größtmöglicher
-        Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte kann jedoch
-        keine Gewähr übernommen werden.
+        @I18n.T("impressum.disclaimerParagraph1")
     </p>
     <p>
-        Für Inhalte externer, verlinkter Seiten (z. B. OpenLibrary, Google Books) ist stets der jeweilige
-        Anbieter verantwortlich. Zum Zeitpunkt der Verlinkung waren keine Rechtsverstöße erkennbar.
+        @I18n.T("impressum.disclaimerParagraph2")
     </p>
 </section>
 
 <section class="impressum-section">
-    <h2>Urheberrecht</h2>
+    <h2>@I18n.T("impressum.copyrightTitle")</h2>
     <p>
-        Die durch den Betreiber erstellten Inhalte und Werke auf dieser Website unterliegen dem
-        österreichischen Urheberrecht. Von Nutzern hochgeladene Bücher verbleiben im Eigentum ihrer jeweiligen
-        Rechteinhaber und werden ausschließlich privat gespeichert.
+        @I18n.T("impressum.copyrightParagraph1")
     </p>
     <p>
-        Bibeltexte und Audio-Aufnahmen werden über die API.Bible zur Verfügung gestellt.
-        Alle Rechte an den jeweiligen Bibelübersetzungen und Marken liegen bei den entsprechenden
-        Rechteinhabern (z. B. American Bible Society, Biblica, Inc. u. a.).
+        @I18n.T("impressum.copyrightParagraph2")
     </p>
 </section>

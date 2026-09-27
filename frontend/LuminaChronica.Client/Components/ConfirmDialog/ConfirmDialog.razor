@@ -1,4 +1,6 @@
 @namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
 
 @if (IsOpen)
 {
@@ -7,8 +9,8 @@
              @ref="_dialogElement" @onclick:stopPropagation="true" @onkeydown="HandleKeyDownAsync">
             <p class="confirm-dialog-message">@Message</p>
             <div class="confirm-dialog-actions">
-                <button type="button" class="btn btn-primary" @onclick="ConfirmAsync">@ConfirmText</button>
-                <button type="button" class="btn" @onclick="CancelAsync">@CancelText</button>
+                <button type="button" class="btn btn-primary" @onclick="ConfirmAsync">@(ConfirmText ?? I18n.T("confirmDialog.confirmButton"))</button>
+                <button type="button" class="btn" @onclick="CancelAsync">@(CancelText ?? I18n.T("confirmDialog.cancelButton"))</button>
             </div>
         </div>
     </div>

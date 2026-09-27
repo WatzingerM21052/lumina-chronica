@@ -19,10 +19,10 @@ public partial class ConfirmDialog : ComponentBase
     public string Message { get; set; } = string.Empty;
 
     [Parameter]
-    public string ConfirmText { get; set; } = "Ja, löschen";
+    public string? ConfirmText { get; set; }
 
     [Parameter]
-    public string CancelText { get; set; } = "Abbrechen";
+    public string? CancelText { get; set; }
 
     [Parameter]
     public EventCallback OnConfirm { get; set; }

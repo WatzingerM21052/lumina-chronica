@@ -10,11 +10,12 @@
 @inject NavigationManager NavigationManager
 @inject BlobUrlService BlobUrlService
 @inject IJSRuntime JsRuntime
+@inject II18nService I18n
 @implements IDisposable
 
-<PageTitle>Buch hinzufügen — Lumina Chronica</PageTitle>
+<PageTitle>@I18n.T("bookUpload.title") — Lumina Chronica</PageTitle>
 
-<h1>Buch hinzufügen</h1>
+<h1>@I18n.T("bookUpload.title")</h1>
 
 <EditForm Model="_form" OnValidSubmit="SubmitAsync" class="book-form-card">
     @if (_errorMessage is not null)
@@ -25,58 +26,58 @@
     <div class="book-form-cover-preview">
         @if (_coverPreviewUrl is not null)
         {
-            <img src="@_coverPreviewUrl" alt="Cover-Vorschau" />
+            <img src="@_coverPreviewUrl" alt="@I18n.T("bookUpload.coverPreviewAlt")" />
         }
         else
         {
             <div class="cover-placeholder"></div>
         }
-        <span class="text-muted">Cover-Vorschau</span>
+        <span class="text-muted">@I18n.T("bookUpload.coverPreviewAlt")</span>
     </div>
 
     <div class="form-group">
-        <label for="title">Titel</label>
+        <label for="title">@I18n.T("bookUpload.titleLabel")</label>
         <InputText id="title" @bind-Value="_form.Title" />
     </div>
 
     <div class="form-group">
-        <label for="author">Autor</label>
+        <label for="author">@I18n.T("bookUpload.authorLabel")</label>
         <InputText id="author" @bind-Value="_form.Author" />
     </div>
 
     <div class="form-group">
-        <label for="description">Beschreibung</label>
+        <label for="description">@I18n.T("bookUpload.descriptionLabel")</label>
         <InputTextArea id="description" @bind-Value="_form.Description" />
     </div>
 
     <div class="form-group">
-        <label for="genre">Genre</label>
+        <label for="genre">@I18n.T("bookUpload.genreLabel")</label>
         <InputText id="genre" @bind-Value="_form.Genre" />
     </div>
 
     <div class="form-group">
-        <label for="language">Sprache</label>
+        <label for="language">@I18n.T("bookUpload.languageLabel")</label>
         <InputText id="language" @bind-Value="_form.Language" />
     </div>
 
     <div class="form-group">
-        <label for="tags">Tags (durch Komma getrennt)</label>
+        <label for="tags">@I18n.T("bookUpload.tagsLabel")</label>
         <InputText id="tags" @bind-Value="_form.Tags" />
     </div>
 
     <div class="form-group">
-        <label for="isbn">ISBN</label>
+        <label for="isbn">@I18n.T("bookUpload.isbnLabel")</label>
         <div class="isbn-enrichment-row">
             <InputText id="isbn" @bind-Value="_form.Isbn" />
             <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_form.Isbn) || _isLookingUpEnrichment)" @onclick="LookupEnrichmentAsync">
-                Info abrufen
+                @I18n.T("bookUpload.lookupButton")
             </button>
         </div>
 
         <div class="isbn-enrichment-row enrichment-search-row">
-            <input id="enrichment-search" placeholder="oder nach Titel/Autor suchen" @bind="_searchQuery" />
+            <input id="enrichment-search" placeholder="@I18n.T("bookUpload.searchPlaceholder")" @bind="_searchQuery" />
             <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_searchQuery) || _isLookingUpEnrichment)" @onclick="SearchEnrichmentAsync">
-                Suchen
+                @I18n.T("bookUpload.searchButton")
             </button>
         </div>
 
@@ -116,40 +117,40 @@
         @if (_pendingEnrichment is not null)
         {
             <div class="enrichment-preview">
-                <p><strong>Gefundene Daten:</strong></p>
+                <p><strong>@I18n.T("bookUpload.foundDataTitle")</strong></p>
                 <ul>
-                    <li>Beschreibung: @DescribeField(_form.Description, _pendingEnrichment.Description)</li>
-                    <li>Genre: @DescribeField(_form.Genre, _pendingEnrichment.Genre)</li>
-                    <li>Verlag: @DescribeField(_form.Publisher, _pendingEnrichment.Publisher)</li>
-                    <li>Seiten: @DescribePages(_form.Pages, _pendingEnrichment.Pages)</li>
-                    <li>Erscheinungsdatum: @DescribeReleaseDate(_form.ReleaseDate, _pendingEnrichment.ReleaseDate)</li>
-                    <li>Cover: @DescribeCover()</li>
+                    <li>@I18n.T("bookUpload.descriptionLabel"): @DescribeField(_form.Description, _pendingEnrichment.Description)</li>
+                    <li>@I18n.T("bookUpload.genreLabel"): @DescribeField(_form.Genre, _pendingEnrichment.Genre)</li>
+                    <li>@I18n.T("bookUpload.publisherLabel"): @DescribeField(_form.Publisher, _pendingEnrichment.Publisher)</li>
+                    <li>@I18n.T("bookUpload.pagesLabel"): @DescribePages(_form.Pages, _pendingEnrichment.Pages)</li>
+                    <li>@I18n.T("bookUpload.releaseDateLabel"): @DescribeReleaseDate(_form.ReleaseDate, _pendingEnrichment.ReleaseDate)</li>
+                    <li>@I18n.T("bookUpload.coverLabel"): @DescribeCover()</li>
                 </ul>
                 <div class="form-actions">
-                    <button type="button" class="btn btn-primary" @onclick="ApplyPendingEnrichmentAsync">Übernehmen</button>
-                    <button type="button" class="btn" @onclick="DiscardPendingEnrichment">Verwerfen</button>
+                    <button type="button" class="btn btn-primary" @onclick="ApplyPendingEnrichmentAsync">@I18n.T("bookUpload.applyButton")</button>
+                    <button type="button" class="btn" @onclick="DiscardPendingEnrichment">@I18n.T("bookUpload.discardButton")</button>
                 </div>
             </div>
         }
     </div>
 
     <div class="form-group">
-        <label for="publisher">Verlag</label>
+        <label for="publisher">@I18n.T("bookUpload.publisherLabel")</label>
         <InputText id="publisher" @bind-Value="_form.Publisher" />
     </div>
 
     <div class="form-group">
-        <label for="releaseDate">Erscheinungsdatum</label>
+        <label for="releaseDate">@I18n.T("bookUpload.releaseDateLabel")</label>
         <InputDate id="releaseDate" @bind-Value="_form.ReleaseDateValue" />
     </div>
 
     <div class="form-group">
-        <label for="pages">Seitenzahl</label>
+        <label for="pages">@I18n.T("bookUpload.pageCountLabel")</label>
         <InputNumber id="pages" @bind-Value="_form.Pages" />
     </div>
 
     <div class="form-group">
-        <label for="file">Buchdatei (.epub, .pdf, .txt, .md — max. 50MB)</label>
+        <label for="file">@I18n.T("bookUpload.fileLabel")</label>
         <div class="dropzone @(_isDraggingFile ? "dropzone--active" : "") @(_selectedFile is not null ? "dropzone--filled" : "")"
              @ondragenter="() => _isDraggingFile = true" @ondragleave="() => _isDraggingFile = false"
              @ondragover:preventDefault @ondrop="() => _isDraggingFile = false">
@@ -161,7 +162,7 @@
                 }
                 else
                 {
-                    <text>Datei hierher ziehen oder klicken zum Auswählen</text>
+                    <text>@I18n.T("bookUpload.fileDropzoneLabel")</text>
                 }
             </span>
         </div>
@@ -172,7 +173,7 @@
     </div>
 
     <div class="form-group">
-        <label for="cover">Cover (optional, .jpg/.png/.webp — max. 5MB)</label>
+        <label for="cover">@I18n.T("bookUpload.coverFieldLabel")</label>
         <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "") @(_selectedCover is not null ? "dropzone--filled" : "")"
              @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
              @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
@@ -184,7 +185,7 @@
                 }
                 else
                 {
-                    <text>Cover hierher ziehen oder klicken zum Auswählen</text>
+                    <text>@I18n.T("bookUpload.coverDropzoneLabel")</text>
                 }
             </span>
         </div>
@@ -196,12 +197,12 @@
 
     @if (_isSubmitting)
     {
-        <LoadingIndicator Mode="LoadingIndicatorMode.Fullscreen" Type="LoadingIndicatorType.Upload" Text="Wird hochgeladen..." />
+        <LoadingIndicator Mode="LoadingIndicatorMode.Fullscreen" Type="LoadingIndicatorType.Upload" Text="@I18n.T("bookUpload.uploading")" />
     }
     else
     {
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Hochladen</button>
+            <button type="submit" class="btn btn-primary">@I18n.T("bookUpload.uploadButton")</button>
         </div>
     }
 </EditForm>
@@ -327,12 +328,12 @@
             _searchResults = results;
             if (results.Count == 0)
             {
-                _enrichmentStatus = "Keine Treffer gefunden.";
+                _enrichmentStatus = I18n.T("bookUpload.noSearchResults");
             }
         }
         catch (Exception)
         {
-            _enrichmentStatus = "Keine Treffer gefunden.";
+            _enrichmentStatus = I18n.T("bookUpload.noSearchResults");
         }
         finally
         {
@@ -396,7 +397,7 @@
             var metadata = await lookup();
             if (!metadata.Found)
             {
-                _enrichmentStatus = "Keine Daten gefunden.";
+                _enrichmentStatus = I18n.T("bookUpload.noDataFound");
                 _pendingEnrichment = null;
                 return;
             }
@@ -417,7 +418,7 @@
         }
         catch (Exception)
         {
-            _enrichmentStatus = "Keine Daten gefunden.";
+            _enrichmentStatus = I18n.T("bookUpload.noDataFound");
             _pendingEnrichment = null;
         }
         finally
@@ -479,29 +480,29 @@
 
     private static string Truncate(string value, int maxLength = 80) => value.Length <= maxLength ? value : value[..maxLength] + "…";
 
-    private static string DescribeField(string? currentValue, string? fetchedValue)
+    private string DescribeField(string? currentValue, string? fetchedValue)
     {
-        if (!string.IsNullOrWhiteSpace(currentValue)) return "bleibt unverändert";
-        if (!string.IsNullOrWhiteSpace(fetchedValue)) return $"wird gesetzt: {Truncate(fetchedValue)}";
-        return "keine Daten gefunden";
+        if (!string.IsNullOrWhiteSpace(currentValue)) return I18n.T("bookUpload.staysUnchanged");
+        if (!string.IsNullOrWhiteSpace(fetchedValue)) return string.Format(I18n.T("bookUpload.willBeSet"), Truncate(fetchedValue));
+        return I18n.T("bookUpload.noDataFoundShort");
     }
 
-    private static string DescribePages(int? currentValue, int? fetchedValue)
+    private string DescribePages(int? currentValue, int? fetchedValue)
     {
-        if (currentValue is not null) return "bleibt unverändert";
-        return fetchedValue is { } pages ? $"wird gesetzt: {pages}" : "keine Daten gefunden";
+        if (currentValue is not null) return I18n.T("bookUpload.staysUnchanged");
+        return fetchedValue is { } pages ? string.Format(I18n.T("bookUpload.willBeSet"), pages) : I18n.T("bookUpload.noDataFoundShort");
     }
 
-    private static string DescribeReleaseDate(string? currentValue, string? fetchedValue)
+    private string DescribeReleaseDate(string? currentValue, string? fetchedValue)
     {
-        if (!string.IsNullOrWhiteSpace(currentValue)) return "bleibt unverändert";
-        return IsValidReleaseDate(fetchedValue) ? $"wird gesetzt: {fetchedValue}" : "keine Daten gefunden";
+        if (!string.IsNullOrWhiteSpace(currentValue)) return I18n.T("bookUpload.staysUnchanged");
+        return IsValidReleaseDate(fetchedValue) ? string.Format(I18n.T("bookUpload.willBeSet"), fetchedValue) : I18n.T("bookUpload.noDataFoundShort");
     }
 
     private string DescribeCover()
     {
-        if (_selectedCover is not null || _extractedCoverBytes is not null) return "bleibt unverändert";
-        return _pendingCoverBytes is not null ? "wird gesetzt" : "keine Daten gefunden";
+        if (_selectedCover is not null || _extractedCoverBytes is not null) return I18n.T("bookUpload.staysUnchanged");
+        return _pendingCoverBytes is not null ? I18n.T("bookUpload.willBeSetPlain") : I18n.T("bookUpload.noDataFoundShort");
     }
 
     private async Task OnCoverSelectedAsync(InputFileChangeEventArgs e)
@@ -550,16 +551,16 @@
         }
     }
 
-    private static string? ValidateFile(IBrowserFile file, string[] allowedExtensions, long maxBytes)
+    private string? ValidateFile(IBrowserFile file, string[] allowedExtensions, long maxBytes)
     {
         var extension = Path.GetExtension(file.Name).ToLowerInvariant();
         if (!allowedExtensions.Contains(extension))
         {
-            return $"Dateityp muss eines von {string.Join(", ", allowedExtensions)} sein.";
+            return string.Format(I18n.T("bookUpload.invalidFileType"), string.Join(", ", allowedExtensions));
         }
         if (file.Size > maxBytes)
         {
-            return $"Datei überschreitet das {maxBytes / (1024 * 1024)}MB-Limit.";
+            return string.Format(I18n.T("bookUpload.fileTooLarge"), maxBytes / (1024 * 1024));
         }
         return null;
     }
@@ -570,7 +571,7 @@
 
         if (_selectedFile is null)
         {
-            _errorMessage = "Bitte wähle eine Buchdatei aus.";
+            _errorMessage = I18n.T("bookUpload.fileRequiredError");
             return;
         }
         if (_fileError is not null || _coverError is not null)
@@ -615,7 +616,7 @@
             return;
         }
 
-        _errorMessage = response?.Error?.Message ?? "Hochladen fehlgeschlagen. Bitte versuche es erneut.";
+        _errorMessage = response?.Error?.Message ?? I18n.T("bookUpload.uploadError");
         _isSubmitting = false;
     }
 
