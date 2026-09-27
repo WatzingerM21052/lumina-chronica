@@ -31,6 +31,55 @@ public class LibraryPageTests : BunitContext
         Assert.Contains("Deine Bibliothek ist noch leer", cut.Markup);
     }
 
+    // Phase 4 item 19 (dialog rollout, design doc §6.3/D13) -- "Buch
+    // hinzufügen" now opens a small labeled-entry dialog instead of
+    // navigating straight to /library/upload. The header button and (when
+    // the library is empty) EmptyState's own action button both carry the
+    // same "Buch hinzufügen" text, so these tests select by the header's
+    // own wrapper rather than by button text.
+    [Fact]
+    public void Library_AddBookButton_OpensChooserDialog()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Library>();
+        Assert.Empty(cut.FindAll(".dialog"));
+
+        cut.Find(".library-header .btn-primary").Click();
+
+        Assert.Single(cut.FindAll(".dialog"));
+        Assert.Contains("Datei hochladen", cut.Markup);
+        Assert.Contains("ISBN suchen", cut.Markup);
+        Assert.Contains("Manuell anlegen", cut.Markup);
+    }
+
+    [Fact]
+    public void Library_AddBookChooser_ClickingAnOption_NavigatesToUploadPage()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Library>();
+        cut.Find(".library-header .btn-primary").Click();
+        cut.Find(".add-book-chooser-option").Click();
+
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        Assert.EndsWith("library/upload", navigation.Uri);
+    }
+
+    [Fact]
+    public void Library_EmptyStateAddBookAction_OpensChooserDialog()
+    {
+        UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Library>();
+        cut.Find(".empty-state .btn-primary").Click();
+
+        Assert.Single(cut.FindAll(".dialog"));
+    }
+
     [Fact]
     public void Library_RendersBookCardsFromApiResponse()
     {
