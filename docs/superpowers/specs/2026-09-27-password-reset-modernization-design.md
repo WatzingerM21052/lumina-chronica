@@ -16,13 +16,13 @@ recommendation I'm prepared to defend; these are genuine forks.
 | # | Decision | My recommendation | Why it needs you |
 |---|---|---|---|
 | **D1** | Code format | **6 digits** (`482 913`) | 8 alphanumeric chars is more brute-force-resistant but much worse to type/read and kills `autocomplete="one-time-code"`. 6 digits + a hard per-code attempt cap is what Stripe/GitHub/Google do. |
-| **D2** | TTL | **20 minutes** for code *and* link (one `expires_at`) **+ a 60-second resend cooldown** | **DECIDED 2026-09-27** by the user, explicitly matching recipemaster.at's own behavior ("20 min und man kann alle 60 sec die email neu senden - wie in recipemaster"). Today the link is 60 min with no resend cooldown at all — this is a real behavior change, not just a number tweak: `requestPasswordReset()` needs a "was a code issued for this identifier in the last 60s" check before issuing a new one (see §3.4 update below). |
+| **D2** | TTL | **20 minutes** for code *and* link (one `expires_at`) **+ a 60-second resend cooldown, keyed on the raw identifier via `auth_rate_limits`** | **DECIDED 2026-09-27** by the user, explicitly matching recipemaster.at's own behavior ("20 min und man kann alle 60 sec die email neu senden - wie in recipemaster"). Today the link is 60 min with no resend cooldown at all — this is a real behavior change, not just a number tweak. **Corrected same day**: the first design (checking `password_reset_tokens.created_at` by `user_id`) was an account-enumeration bug — see §3.4 step 0's full writeup. Fixed by keying the cooldown check on the identifier string itself, via the existing rate-limit table, checked before any user lookup. |
 | **D3** | Keep the emailed link at all? | **Yes — hybrid.** Email carries the code *and* a fallback link | Pure-code means the existing `/reset-password?token=` route, its email, and its tests all die, and links already in flight break. Hybrid costs one extra column. |
 | **D4** | Attempt budget per code | **10 wrong attempts, then the code is dead** | Directly controls how forgiving the live check feels. 5 feels tight when validation fires while typing; 10 is still 1-in-100 000 odds per code. |
 | **D5** | Does a *live* check burn an attempt? | **Yes — it must** | A "free" check is a brute-force oracle. Consequence: the live check must be debounced + de-duplicated (§4.3), and D4 must be generous. There is no third option here. |
 | **D6** | Requesting a new code kills outstanding ones? | **Yes** | Otherwise an attacker farms N concurrent codes and multiplies the guess budget by N. Cost: an old email's link stops working. |
 | **D7** | Auto-login after reset (current behavior returns a JWT) | **Keep it** | Some products force a fresh login instead. Keeping it matches "modern and smooth", and it's what ships today. |
-| **D8** | "This wasn't me →" route in the confirmation email | **DECIDED 2026-09-27**: a `mailto:luminachronica@gmx.at` link/line in the email | The user already owns this mailbox — it's an existing external address, not a new `@luminachronica.com` address, so **no DNS/domain email setup needed** before shipping. Simpler than my original two options (link to Impressum, or stand up a new `support@luminachronica.com`). **Scope, confirmed by the user 2026-09-27**: this address is for *contact/support display purposes only* — the `From:` header on every transactional email (password-reset code, confirmation, OAuth-no-password) **stays `noreply@luminachronica.com`** (`emailService.ts`, unchanged). Also **already applied outside this feature**: `Impressum.razor`'s Kontakt section now lists `luminachronica@gmx.at` as "Support / Allgemeine Anfragen" alongside the pre-existing personal/legal email (TMG-required, kept as-is) — done, committed, not part of the phase plan below. |
+| **D8** | "This wasn't me →" route in the confirmation email | **DECIDED 2026-09-27**: a `mailto:luminachronica@gmx.at` link/line in the email | The user already owns this mailbox — it's an existing external address, not a new `@luminachronica.com` address, so **no DNS/domain email setup needed** before shipping. Simpler than my original two options (link to Impressum, or stand up a new `support@luminachronica.com`). **Scope, confirmed by the user 2026-09-27**: this address is for *contact/support display purposes only* — the `From:` header on every transactional email (password-reset code, confirmation, OAuth-no-password) **stays `noreply@luminachronica.com`** (`emailService.ts`, unchanged). Also **already applied outside this feature**: `Impressum.razor`'s Kontakt section now lists `luminachronica@gmx.at` as "Support / Allgemeine Anfragen" alongside the pre-existing personal/legal email (TMG-required, kept as-is) — done, committed, not part of the phase plan below. **Future idea, deliberately deferred (2026-09-27)**: `contact@` / `support@` / `feedback@luminachronica.com` as free-form aliases via **Cloudflare Email Routing** (the user already runs the Workers backend on Cloudflare), all forwarding to the same real `luminachronica@gmx.at` inbox — the `To:` header on the forwarded mail tells them which alias was used, no real per-alias mailbox needed. Independent of sending (Resend's SPF/DKIM for `noreply@`) — receiving via Cloudflare MX records doesn't conflict with it. Not blocking anything here; revisit only if/when the user sets it up. |
 | **D9** | Email language | **Read `user_settings.language`** (exists: `de`/`en`, default `de`) | Today both emails are hardcoded German. Fallback for a user with no settings row = `de`. |
 | **D10** | Code hashing | **HMAC-SHA256 keyed with a Worker secret** | Plain `sha256Hex` over a 10⁶ keyspace is a rainbow table. Sub-question: new secret (`PASSWORD_CODE_SECRET`) or reuse `JWT_SECRET`? I'd add a new one. |
 | **D11** | Dialog primitive: native `<dialog>` + `showModal()` vs. CSS overlay | **CSS overlay now** (extend today's pattern), evaluate native `<dialog>` later | Native gives focus-trap/`inert`/Escape for free, but needs JS interop, changes the overlay-click semantics `ConfirmDialog` documents, and bUnit executes no JS (so every test would need the call guarded). |
@@ -200,23 +200,48 @@ const MAX_CODE_ATTEMPTS = 10;              // D4
 reveals whether a match was found), plus:
 
 0. **60-second resend cooldown (D2, decided 2026-09-27, matches
-   recipemaster.at's own behavior)**. Before doing anything else, check the
-   `created_at` of the **most recent** `password_reset_tokens` row for this
-   `user_id` (regardless of its `consumed_at` state — a dead/consumed row
-   still counts for cooldown purposes, only its *age* matters):
-   ```sql
-   SELECT created_at FROM password_reset_tokens
-    WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1
+   recipemaster.at's own behavior) — CORRECTED 2026-09-27, see below for why
+   the first version of this step was a real bug.**
+
+   Before doing anything else — before even looking up whether `identifier`
+   matches a user — check the cooldown, **keyed purely on the submitted
+   `identifier` string**, reusing the existing `auth_rate_limits` table
+   (`0014_auth_rate_limit.sql`, already used for the 15-min/5-attempt
+   `forgot-password` throttle) rather than querying `password_reset_tokens`
+   by `user_id`:
+   ```ts
+   // New route key, ip = "" (identifier-only — see why below), 60s window, 1 attempt.
+   await assertNotRateLimited(c, "forgot-password-resend", identifier); // throws RateLimitedError
+   // ... only on success, i.e. once we're actually about to send:
+   await recordFailedAttempt(db, "forgot-password-resend", "", identifier);
    ```
-   If `julianday('now') - julianday(created_at) < 60/86400.0`, return early
-   with a **distinct** "please wait" response — this is the one place in this
-   flow where the generic "if an account exists, an email was sent" response
-   is deliberately *not* what fires, because the cooldown itself is a UX
-   signal for the *live* popup ("Code erneut senden" button, disabled with a
-   visible countdown) rather than a security-sensitive branch — knowing "a
-   code was just requested for this identifier within the last minute" leaks
-   materially less than a code or token ever would. Same `julianday(...)`
-   caveat as §3.4's other queries — no text-timestamp comparisons.
+   If it throws, return the **same distinct "please wait ~N s" response for
+   every identifier — existing account, non-existing account, or OAuth-only
+   account alike** — before running the `findUserByIdentifier` lookup at all.
+
+   **Why this had to change from the original draft**: the original version
+   queried `password_reset_tokens` by `user_id`, which means it could only
+   run *after* the user was already found — so an unknown identifier always
+   fell through to the generic "if an account exists, an email was sent"
+   response, while a known identifier hit twice inside 60s got the distinct
+   "please wait" response instead. Submitting the same identifier twice and
+   comparing the two responses would have **confirmed account existence** —
+   exactly the enumeration attack §3.5/§9 claim this feature doesn't reopen.
+   Keying on the raw identifier, checked first, closes that: the cooldown
+   response is now identical regardless of whether an account is behind the
+   identifier at all, so it carries no more signal than "you're submitting
+   this form quickly," which is true of the form itself, not of any
+   particular account.
+
+   `ip = ""` (not the caller's real IP) is deliberate, matching `register`'s
+   existing IP-independent bucket in the same table — this cooldown is about
+   "was *this identifier* just requested," not "is this IP attacking,"
+   and keying by IP as well would let an attacker bypass it by rotating
+   IPs while probing, undermining the very symmetry this fix exists for.
+   This is a **separate, additional** throttle from the existing 5-per-15-min
+   `forgot-password` one — both apply; the 60s one is the fast, obvious "why
+   is the resend button disabled" UX signal, the 5-per-15-min one is the
+   actual abuse backstop.
 1. Kill outstanding rows (**D6**):
    ```sql
    UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP
@@ -228,9 +253,14 @@ reveals whether a match was found), plus:
 3. Look up `user_settings.language` (default `de`) and render the localized
    template (§5).
 4. OAuth-only branch: unchanged behavior, but now rendered through the same
-   template layout and localized. **The OAuth-only branch is exempt from the
-   cooldown** — that email never issues a code/token, so there's nothing to
-   rate-limit; re-sending it on every click is harmless.
+   template layout and localized. **Not exempt from the cooldown** — step 0
+   already ran and recorded the attempt before this branch is reached, same
+   as every other path; carving out an exception here would itself be a
+   timing/response-shape signal that this identifier resolves to an
+   OAuth-only account, which is exactly the kind of leak step 0 was just
+   fixed to avoid. Re-sending this email quickly is harmless in isolation,
+   but "harmless to re-send" and "safe to treat differently from the other
+   branches" are not the same property.
 
 **`verifyResetCode(db, env, identifier, code) → { valid, attemptsLeft }`** — new,
 **non-consuming**. One statement, one round trip, always burns an attempt:
@@ -1065,20 +1095,42 @@ something later.
 1. Sign off §0.
 2. Export `wwwroot/images/email-logo.png` (~200 px wide, ~15 KB) from
    `branding/logo-mark.svg`.
-3. If **D10** picks a new secret: `wrangler secret put PASSWORD_CODE_SECRET`
-   (+ `wrangler.toml` / `models/env.ts` typing, same pattern as `JWT_SECRET`).
+3. **D10 confirmed: new secret.** Add `PASSWORD_CODE_SECRET` to
+   `models/env.ts`'s `Bindings` type, and to `backend/.dev.vars` with a
+   clearly-local placeholder value (exact same pattern as the existing
+   `JWT_SECRET` line there — see `.dev.vars`'s current
+   `"local-dev-secret-not-for-production-use"`). Production value via
+   `wrangler secret put PASSWORD_CODE_SECRET` — **the user runs this
+   themselves**, same as `RESEND_API_KEY` earlier this session; never enter a
+   secret value on their behalf. `hmacSha256Hex()` (item 5) must throw loudly
+   if the secret it's given is empty/undefined rather than silently hashing
+   against `""` — an unset `.dev.vars` line (blank, like `RESEND_API_KEY=`
+   currently is) must fail fast and obviously, not produce stable-looking,
+   worthless hashes that pass tests which never actually check the secret
+   was real.
 
 **Phase 1 — backend** *(blocks the frontend; ship and merge on its own)*
-4. `database/migrations/0026_password_reset_code.sql` (§3.2). Remember the
-   deploy is **two manual steps** — code deploy *and* D1 migration.
+4. `database/migrations/0026_password_reset_code.sql` (§3.2). **Apply it
+   locally immediately** (`npx wrangler d1 migrations apply lumina-chronica-db --local`)
+   before writing or running any test against it — this exact codebase hit
+   "no such table" / "no such column" earlier this session (0025 was in the
+   repo but never applied locally) purely from forgetting this step, and
+   0026 is an `ALTER TABLE` on the same table, same failure mode. Production
+   deploy later is still the usual **two manual steps** — code deploy *and*
+   D1 migration, separately.
 5. `utils/crypto.ts`: `randomNumericCode(6)` (rejection sampling, not `% 10`),
    `hmacSha256Hex()`.
 6. `services/emailService.ts`: optional `text` parameter.
 7. `backend/src/emails/` — `layout.ts`, `strings.ts` (de+en), `escapeHtml.ts`,
    `passwordResetCode.ts`, `passwordChanged.ts`, `oauthNoPassword.ts`.
-8. `services/passwordResetService.ts`: invalidate-previous, issue code+token,
+8. `services/passwordResetService.ts`: **60s resend-cooldown check keyed on
+   the raw identifier via `auth_rate_limits` (§3.4 step 0) — must run before
+   the user lookup, not after**, invalidate-previous, issue code+token,
    locale lookup, `verifyResetCode()`, `resetPassword()` accepting either
    credential, confirmation email after the write.
+8b. `services/rateLimitService.ts`: add a `"forgot-password-resend"` route
+   key (60s window, 1 attempt, `ip = ""`) alongside the existing
+   `forgot-password`/`login`/`register` ones — same table, no schema change.
 9. `routes/auth.ts`: `POST /verify-reset-code`, extended `/reset-password` body,
    new throttle keys.
 10. `tests/backend/passwordReset.test.ts`: code issuance, correct/wrong code,
@@ -1086,7 +1138,10 @@ something later.
     same row**, previous-code invalidation, identical response for
     existing/non-existing identifier, OAuth-only path, confirmation email fires
     *after* the password write, reset still succeeds when the confirmation send
-    throws. Email sending mocked throughout.
+    throws, **resend cooldown fires identically for an existing identifier, a
+    non-existing identifier, and an OAuth-only identifier (the enumeration
+    regression test for D2's fix)**, cooldown does not block a *different*
+    identifier, cooldown expires after 60s. Email sending mocked throughout.
 
 **Phase 2 — the Dialog primitive** *(frontend, no backend dependency — can run in
 parallel with Phase 1)*
@@ -1141,5 +1196,11 @@ parallel with Phase 1)*
   rules.
 - **No PBKDF2 on the code.** 8000 iterations already costs ~33 ms on the Workers
   Free plan's 10 ms CPU budget; HMAC-SHA256 is the right tool and is microseconds.
-- **The anti-enumeration contract of `/forgot-password`.** Untouched, and the new
-  `/verify-reset-code` is designed to preserve it (§3.5).
+- **The anti-enumeration contract of `/forgot-password`.** Preserved, but not
+  "untouched" — the D2 resend cooldown's *first draft* (§3.4 step 0) actually
+  broke it (querying by `user_id` meant the cooldown could only ever fire for
+  identifiers that resolve to a real account, which is itself a signal).
+  Fixed by keying the cooldown on the raw submitted identifier via
+  `auth_rate_limits` instead, checked before any user lookup — see §3.4 step
+  0's full writeup for why. `/verify-reset-code` was designed correctly from
+  the start (§3.5) and needed no such fix.
