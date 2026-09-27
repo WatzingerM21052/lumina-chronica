@@ -14,44 +14,46 @@
 
 <div class="library-header">
     <h1>@I18n.T("projects.title")</h1>
-    <button type="button" class="btn btn-primary" @onclick="() => _showCreateForm = !_showCreateForm">
-        @(_showCreateForm ? I18n.T("projects.cancelButton") : I18n.T("projects.createButton"))
+    <button type="button" class="btn btn-primary" @onclick="() => _showCreateForm = true">
+        @I18n.T("projects.createButton")
     </button>
 </div>
 
-@if (_showCreateForm)
-{
-    <EditForm Model="_createForm" OnValidSubmit="CreateProjectAsync" class="book-form-card">
-        @if (_createErrorMessage is not null)
-        {
-            <p class="form-error">@_createErrorMessage</p>
-        }
-        <div class="form-group">
-            <label for="project-title">@I18n.T("projects.titleLabel")</label>
-            <InputText id="project-title" @bind-Value="_createForm.Title" />
-        </div>
-        <div class="form-group">
-            <label for="project-type">@I18n.T("projects.typeLabel")</label>
-            <InputSelect id="project-type" @bind-Value="_createForm.Type">
-                @foreach (var type in ProjectTypeLabel.Options)
-                {
-                    <option value="@type">@ProjectTypeLabel.For(type, I18n)</option>
-                }
-            </InputSelect>
-        </div>
-        <div class="form-group">
-            <label for="project-description">@I18n.T("projects.descriptionLabel")</label>
-            <InputTextArea id="project-description" @bind-Value="_createForm.Description" />
-        </div>
-        <div class="form-group">
-            <label for="project-cover">@I18n.T("projects.coverLabel")</label>
-            <InputFile id="project-cover" OnChange="OnCoverSelected" />
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">@I18n.T("projects.createSubmitButton")</button>
-        </div>
-    </EditForm>
-}
+<Dialog IsOpen="_showCreateForm" Title="@I18n.T("projects.createButton")" OnClose="() => _showCreateForm = false">
+    <ChildContent>
+        <EditForm id="project-create-form" Model="_createForm" OnValidSubmit="CreateProjectAsync" class="auth-form">
+            @if (_createErrorMessage is not null)
+            {
+                <p class="form-error">@_createErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="project-title">@I18n.T("projects.titleLabel")</label>
+                <InputText id="project-title" @bind-Value="_createForm.Title" />
+            </div>
+            <div class="form-group">
+                <label for="project-type">@I18n.T("projects.typeLabel")</label>
+                <InputSelect id="project-type" @bind-Value="_createForm.Type">
+                    @foreach (var type in ProjectTypeLabel.Options)
+                    {
+                        <option value="@type">@ProjectTypeLabel.For(type, I18n)</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="form-group">
+                <label for="project-description">@I18n.T("projects.descriptionLabel")</label>
+                <InputTextArea id="project-description" @bind-Value="_createForm.Description" />
+            </div>
+            <div class="form-group">
+                <label for="project-cover">@I18n.T("projects.coverLabel")</label>
+                <InputFile id="project-cover" OnChange="OnCoverSelected" />
+            </div>
+        </EditForm>
+    </ChildContent>
+    <Footer>
+        <button type="submit" form="project-create-form" class="btn btn-primary">@I18n.T("projects.createSubmitButton")</button>
+        <button type="button" class="btn" @onclick="() => _showCreateForm = false">@I18n.T("projects.cancelButton")</button>
+    </Footer>
+</Dialog>
 
 @if (_errorMessage is not null)
 {

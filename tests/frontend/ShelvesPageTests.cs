@@ -8,6 +8,14 @@ namespace LuminaChronica.Client.Tests;
 
 public class ShelvesPageTests : BunitContext
 {
+    public ShelvesPageTests()
+    {
+        // The create form now renders inside the Dialog primitive, which
+        // imports ./js/dialog.js for scroll-lock in OnAfterRenderAsync --
+        // none of these tests are about that interop itself.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     private void UseApiResponse(string responseJson)
     {
         var handler = new FakeHttpMessageHandler(responseJson);

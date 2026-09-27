@@ -14,35 +14,37 @@
 
 <div class="library-header">
     <h1>@I18n.T("shelves.title")</h1>
-    <button type="button" class="btn btn-primary" @onclick="() => _showCreateForm = !_showCreateForm">
-        @(_showCreateForm ? I18n.T("shelves.cancelButton") : I18n.T("shelves.createButton"))
+    <button type="button" class="btn btn-primary" @onclick="() => _showCreateForm = true">
+        @I18n.T("shelves.createButton")
     </button>
 </div>
 
-@if (_showCreateForm)
-{
-    <EditForm Model="_createForm" OnValidSubmit="CreateShelfAsync" class="book-form-card">
-        @if (_createErrorMessage is not null)
-        {
-            <p class="form-error">@_createErrorMessage</p>
-        }
-        <div class="form-group">
-            <label for="shelf-name">@I18n.T("shelves.nameLabel")</label>
-            <InputText id="shelf-name" @bind-Value="_createForm.Name" />
-        </div>
-        <div class="form-group">
-            <label for="shelf-description">@I18n.T("shelves.descriptionLabel")</label>
-            <InputTextArea id="shelf-description" @bind-Value="_createForm.Description" />
-        </div>
-        <div class="form-group">
-            <label for="shelf-cover">@I18n.T("shelves.coverLabel")</label>
-            <InputFile id="shelf-cover" OnChange="OnCoverSelected" />
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">@I18n.T("shelves.createSubmitButton")</button>
-        </div>
-    </EditForm>
-}
+<Dialog IsOpen="_showCreateForm" Title="@I18n.T("shelves.createButton")" OnClose="() => _showCreateForm = false">
+    <ChildContent>
+        <EditForm id="shelf-create-form" Model="_createForm" OnValidSubmit="CreateShelfAsync" class="auth-form">
+            @if (_createErrorMessage is not null)
+            {
+                <p class="form-error">@_createErrorMessage</p>
+            }
+            <div class="form-group">
+                <label for="shelf-name">@I18n.T("shelves.nameLabel")</label>
+                <InputText id="shelf-name" @bind-Value="_createForm.Name" />
+            </div>
+            <div class="form-group">
+                <label for="shelf-description">@I18n.T("shelves.descriptionLabel")</label>
+                <InputTextArea id="shelf-description" @bind-Value="_createForm.Description" />
+            </div>
+            <div class="form-group">
+                <label for="shelf-cover">@I18n.T("shelves.coverLabel")</label>
+                <InputFile id="shelf-cover" OnChange="OnCoverSelected" />
+            </div>
+        </EditForm>
+    </ChildContent>
+    <Footer>
+        <button type="submit" form="shelf-create-form" class="btn btn-primary">@I18n.T("shelves.createSubmitButton")</button>
+        <button type="button" class="btn" @onclick="() => _showCreateForm = false">@I18n.T("shelves.cancelButton")</button>
+    </Footer>
+</Dialog>
 
 @if (_errorMessage is not null)
 {

@@ -86,6 +86,51 @@ public class ShelfDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void ShelfDetail_EditButton_OpensDialogWithoutHidingShelfContent()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ShelfDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
+
+        // The old behaviour replaced the whole page with the edit form; the
+        // Dialog fix (Phase 4 item 20) keeps the shelf's own heading and
+        // description on screen behind the dialog instead of swapping them out.
+        Assert.Contains("Fantasy Sammlung", cut.Markup);
+        Assert.Contains("Meine liebsten Bücher", cut.Markup);
+        Assert.NotNull(cut.Find("#shelf-edit-name"));
+    }
+
+    [Fact]
+    public void ShelfDetail_EditDialog_SaveAsync_SendsUpdateAndClosesDialog()
+    {
+        HttpRequestMessage? putRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Put, r =>
+            {
+                putRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(
+                    """{"success":true,"data":{"id":1,"name":"Umbenanntes Regal","description":"Meine liebsten Bücher","coverUrl":null,"visibility":"PRIVATE","bookCount":1,"createdAt":"2026-01-01"}}""");
+            })
+            .WhenPathEndsWith("/books", ShelfBooksJson)
+            .WhenPathEndsWith("/shelves/1", ShelfJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<ShelfDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
+        cut.Find("#shelf-edit-name").Change("Umbenanntes Regal");
+        cut.Find("form").Submit();
+
+        Assert.Equal(HttpMethod.Put, putRequest?.Method);
+        Assert.Equal("/api/shelves/1", putRequest?.RequestUri?.AbsolutePath);
+        Assert.Contains("Umbenanntes Regal", cut.Markup);
+    }
+
+    [Fact]
     public void ShelfDetail_ConfirmDialog_Confirm_DeletesTheShelfItself()
     {
         HttpRequestMessage? deleteRequest = null;
