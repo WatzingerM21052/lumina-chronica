@@ -94,6 +94,7 @@ public class DialogTests : BunitContext
             .Add(p => p.IsOpen, true)
             .Add(p => p.OnClose, () => closed = true));
 
+        cut.Find(".dialog-overlay").MouseDown();
         cut.Find(".dialog-overlay").Click();
 
         Assert.True(closed);
@@ -108,6 +109,7 @@ public class DialogTests : BunitContext
             .Add(p => p.CloseOnOverlayClick, false)
             .Add(p => p.OnClose, () => closed = true));
 
+        cut.Find(".dialog-overlay").MouseDown();
         cut.Find(".dialog-overlay").Click();
 
         Assert.False(closed);
@@ -126,6 +128,7 @@ public class DialogTests : BunitContext
         // reuses that same instance so the throw below can only mean
         // stopPropagation blocked a real, reachable handler, not that the
         // handler was missing/renamed for some unrelated reason.
+        cut.Find(".dialog-overlay").MouseDown();
         cut.Find(".dialog-overlay").Click();
         Assert.True(closed);
         closed = false;
@@ -175,5 +178,92 @@ public class DialogTests : BunitContext
         var cut = Render<Dialog>(parameters => parameters.Add(p => p.IsOpen, true));
 
         Assert.Empty(cut.FindAll(".dialog-actions"));
+    }
+
+    [Fact]
+    public void Dialog_DragFromInsideTheCardReleasedOnTheScrim_DoesNotClose()
+    {
+        // Review M-4: selecting text in an input and releasing the mouse over
+        // the scrim fires a click on the overlay (the common ancestor of the
+        // mousedown and mouseup targets) -- that used to close form dialogs
+        // and drop what was typed.
+        var closed = false;
+        var cut = Render<Dialog>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.OnClose, () => closed = true));
+
+        cut.Find(".dialog").MouseDown();
+        cut.Find(".dialog-overlay").Click();
+
+        Assert.False(closed);
+    }
+
+    [Fact]
+    public void Dialog_OnOpen_ActivatesFocusManagement_AndOnClose_ReleasesIt()
+    {
+        // activate: remember the opener, move focus into the dialog, trap
+        // Tab and catch Escape even after the focused element was removed
+        // (review M-3). deactivate: hand focus back to the opener.
+        var cut = Render<Dialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        Assert.Single(JSInterop.Invocations["activate"]);
+
+        cut.Render(parameters => parameters.Add(p => p.IsOpen, false));
+        Assert.Single(JSInterop.Invocations["deactivate"]);
+    }
+
+    [Fact]
+    public void Dialog_PassesTheInitialFocusSelectorToActivate()
+    {
+        Render<Dialog>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.InitialFocusSelector, ".my-cancel"));
+
+        var invocation = Assert.Single(JSInterop.Invocations["activate"]);
+        Assert.Contains(".my-cancel", invocation.Arguments);
+    }
+
+    [Fact]
+    public void Dialog_WithoutTitle_UsesAriaLabelledByWhenGiven()
+    {
+        var cut = Render<Dialog>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.AriaLabelledBy, "some-message-id"));
+
+        Assert.Equal("some-message-id", cut.Find(".dialog").GetAttribute("aria-labelledby"));
+    }
+
+    [Fact]
+    public async Task Dialog_EscapeReportedFromJs_ClosesLikeAKeyDown()
+    {
+        // dialog.js calls this when Escape is pressed while focus has fallen
+        // out of the card (e.g. to <body> after the focused button was
+        // removed by a step change) -- @onkeydown on the card never sees it.
+        var closed = false;
+        var cut = Render<Dialog>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.OnClose, () => closed = true));
+
+        await cut.InvokeAsync(() => cut.Instance.OnEscapeFromOutside());
+
+        Assert.True(closed);
+    }
+
+    [Fact]
+    public void ConfirmDialog_IsNamedByItsMessage_AndFocusesCancelFirst()
+    {
+        // Review N-1: role=alertdialog without a name was announced only as
+        // "alert dialog". The message itself is the name; initial focus on
+        // the non-destructive button per WAI-APG.
+        var cut = Render<ConfirmDialog>(parameters => parameters
+            .Add(p => p.IsOpen, true)
+            .Add(p => p.Message, "Regal wirklich löschen?"));
+
+        var labelledBy = cut.Find(".dialog").GetAttribute("aria-labelledby");
+        Assert.False(string.IsNullOrEmpty(labelledBy));
+        Assert.Equal("Regal wirklich löschen?", cut.Find($"#{labelledBy}").TextContent);
+
+        var invocation = Assert.Single(JSInterop.Invocations["activate"]);
+        Assert.Contains(".confirm-dialog-cancel", invocation.Arguments);
+        Assert.NotNull(cut.Find("button.confirm-dialog-cancel"));
     }
 }
