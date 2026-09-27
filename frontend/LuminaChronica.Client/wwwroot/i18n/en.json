@@ -104,6 +104,9 @@
 
   "settings.title": "Settings",
   "settings.themeTitle": "Theme",
+  "settings.languageTitle": "Language",
+  "settings.languageGerman": "German",
+  "settings.languageEnglish": "English",
   "settings.libraryTitle": "Library",
   "settings.showCoverTextLabel": "Show title/author on shelf covers",
   "settings.showCoverTextDescription": "most real cover images already carry the title/author themselves",

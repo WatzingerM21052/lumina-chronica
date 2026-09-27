@@ -155,9 +155,9 @@ public class SettingsPageTests : BunitContext
         var cut = Render<Settings>();
 
         var buttons = cut.FindAll(".settings-card .theme-picker button").ToList();
-        var languageButtons = buttons.Where(b => b.TextContent is "Deutsch" or "English").ToList();
+        var languageButtons = buttons.Where(b => b.TextContent is "German" or "English").ToList();
         Assert.Equal(2, languageButtons.Count);
         Assert.Contains(languageButtons, b => b.TextContent == "English" && b.GetAttribute("class")!.Contains("btn-primary"));
-        Assert.Contains(languageButtons, b => b.TextContent == "Deutsch" && !b.GetAttribute("class")!.Contains("btn-primary"));
+        Assert.Contains(languageButtons, b => b.TextContent == "German" && !b.GetAttribute("class")!.Contains("btn-primary"));
     }
 }

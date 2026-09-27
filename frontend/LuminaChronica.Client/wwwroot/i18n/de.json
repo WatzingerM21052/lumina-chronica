@@ -104,6 +104,9 @@
 
   "settings.title": "Einstellungen",
   "settings.themeTitle": "Theme",
+  "settings.languageTitle": "Sprache",
+  "settings.languageGerman": "Deutsch",
+  "settings.languageEnglish": "Englisch",
   "settings.libraryTitle": "Bibliothek",
   "settings.showCoverTextLabel": "Titel/Autor auf Regal-Cover anzeigen",
   "settings.showCoverTextDescription": "die meisten echten Cover-Bilder tragen Titel/Autor bereits selbst",

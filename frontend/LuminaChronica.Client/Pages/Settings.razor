@@ -30,10 +30,10 @@
 </div>
 
 <div class="settings-card">
-    <h2>Sprache</h2>
+    <h2>@I18n.T("settings.languageTitle")</h2>
     <div class="theme-picker">
-        <button class="btn @(I18n.CurrentLanguage == "de" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("de")'>Deutsch</button>
-        <button class="btn @(I18n.CurrentLanguage == "en" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("en")'>English</button>
+        <button class="btn @(I18n.CurrentLanguage == "de" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("de")'>@I18n.T("settings.languageGerman")</button>
+        <button class="btn @(I18n.CurrentLanguage == "en" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("en")'>@I18n.T("settings.languageEnglish")</button>
     </div>
 </div>
 
