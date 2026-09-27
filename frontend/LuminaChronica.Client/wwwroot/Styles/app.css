@@ -18,6 +18,13 @@ a {
     transition: color var(--motion-micro) var(--ease-standard);
 }
 
+/* A link styled as a button ("Buch hinzufügen", "Regale", "Lesen") should
+   read as a button, not as an underlined link inside a button. */
+a.btn,
+a.btn:hover {
+    text-decoration: none;
+}
+
 a:hover {
     color: var(--color-primary-hover);
 }
@@ -532,6 +539,20 @@ select:focus-visible,
     box-shadow: var(--shadow-card);
 }
 
+/* Inside a Dialog the dialog itself is the card: the form's own card
+   chrome (border, shadow, padding, centered 24rem/34rem column) turned
+   every dialog form into a card-in-a-card with a blank band above it and,
+   in the Large book-edit dialog, a narrow strip down the middle. */
+.dialog-body .auth-form,
+.dialog-body .book-form-card {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+}
+
 /* OAuth (issue #40) -- sits below .auth-form, same max-width so the "oder"
    divider and provider links line up visually with the form above them. */
 .auth-divider {
@@ -687,6 +708,12 @@ select:focus-visible,
     flex-direction: column;
     gap: var(--space-1);
     margin-top: var(--space-2);
+}
+
+/* A normal-size action under the textarea, not a full-width bar that
+   reads as a heavy disabled banner while the field is empty. */
+.comment-form > button {
+    align-self: flex-end;
 }
 
 .comment-form textarea {

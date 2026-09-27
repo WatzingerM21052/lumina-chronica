@@ -45,7 +45,21 @@
             </div>
             <div class="form-group">
                 <label for="project-cover">@I18n.T("projects.coverLabel")</label>
-                <InputFile id="project-cover" OnChange="OnCoverSelected" />
+                <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "") @(_selectedCover is not null ? "dropzone--filled" : "")"
+                     @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
+                     @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
+                    <InputFile id="project-cover" OnChange="OnCoverSelected" />
+                    <span class="dropzone-label">
+                        @if (_selectedCover is not null)
+                        {
+                            <text><Icon Name="document" /> @_selectedCover.Name</text>
+                        }
+                        else
+                        {
+                            <text>@I18n.T("projects.dropzoneLabel")</text>
+                        }
+                    </span>
+                </div>
             </div>
         </EditForm>
     </ChildContent>
@@ -91,6 +105,7 @@ else
     private bool _confirmingDiscardCreate;
     private bool _isCreating;
     private IBrowserFile? _selectedCover;
+    private bool _isDraggingCover;
 
     protected override Task OnInitializedAsync() => LoadProjectsAsync();
 
