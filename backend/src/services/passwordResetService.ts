@@ -62,19 +62,25 @@ export async function requestPasswordReset(db: D1Database, env: Pick<Bindings, "
         return;
     }
 
-    // D6: kill outstanding rows first, or N concurrent requests = N x
-    // MAX_CODE_ATTEMPTS guesses across N live codes.
-    await db.prepare("UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND consumed_at IS NULL").bind(user.id).run();
-
+    // Everything that can throw (notably the HMAC, which refuses an empty
+    // PASSWORD_CODE_SECRET) runs BEFORE any write: the caller swallows errors
+    // into a generic 200, so a failure after the D6 invalidation would
+    // silently burn the user's still-valid link too (review K-2).
     const rawToken = randomToken();
     const tokenHash = await sha256Hex(rawToken);
     const code = randomNumericCode(6);
     const codeHash = await hmacSha256Hex(env.PASSWORD_CODE_SECRET, code);
     const expiresAt = new Date(Date.now() + CODE_TTL_SECONDS * 1000).toISOString();
-    await db
-        .prepare("INSERT INTO password_reset_tokens (token_hash, code_hash, user_id, expires_at) VALUES (?, ?, ?, ?)")
-        .bind(tokenHash, codeHash, user.id, expiresAt)
-        .run();
+
+    // D6: kill outstanding rows first, or N concurrent requests = N x
+    // MAX_CODE_ATTEMPTS guesses across N live codes. One batch, so the
+    // invalidation and the new row commit together or not at all.
+    await db.batch([
+        db.prepare("UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND consumed_at IS NULL").bind(user.id),
+        db
+            .prepare("INSERT INTO password_reset_tokens (token_hash, code_hash, user_id, expires_at) VALUES (?, ?, ?, ?)")
+            .bind(tokenHash, codeHash, user.id, expiresAt),
+    ]);
 
     const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
     const email = renderPasswordResetCodeEmail(language, env.FRONTEND_URL, code, resetUrl);
@@ -97,15 +103,16 @@ export async function verifyResetCode(db: D1Database, codeSecret: string, identi
 
     // Single atomic statement -- never read attempt_count separately and
     // then decide (see the D1 replica-lag trap rateLimitService.ts already
-    // documents; the same failure mode applies here verbatim). The
-    // increment is unconditional, even on a match: a successful verify
-    // still costs one of MAX_CODE_ATTEMPTS, which is fine and keeps this a
-    // single round trip.
+    // documents; the same failure mode applies here verbatim). Only a
+    // MISMATCH costs an attempt: a correct check that also burned one made
+    // "9 typos, then the right code" show valid-with-0-left and then fail on
+    // submit (review M-1). An attacker gains nothing from free correct
+    // guesses -- only wrong ones are worth anything to them.
     const row = await db
         .withSession("first-primary")
         .prepare(
             `UPDATE password_reset_tokens
-                SET attempt_count = attempt_count + 1
+                SET attempt_count = attempt_count + CASE WHEN code_hash = ?2 THEN 0 ELSE 1 END
               WHERE id = (
                   SELECT id FROM password_reset_tokens
                    WHERE user_id = ?1
@@ -186,7 +193,7 @@ async function consumeByCode(db: D1Database, codeSecret: string, identifier: str
     if (!user) return null;
 
     const codeHash = await hmacSha256Hex(codeSecret, code);
-    // MUST burn an attempt on every call, matched or not -- this endpoint
+    // MUST burn an attempt on every MISMATCH -- this endpoint
     // changes the password directly, so it is itself a code-guessing oracle
     // if a wrong guess here is free. (The original version filtered by
     // code_hash in the WHERE clause: that correctly rejected wrong codes
@@ -199,12 +206,13 @@ async function consumeByCode(db: D1Database, codeSecret: string, identifier: str
     // /verify-reset-code.) Same single-atomic-statement shape as
     // verifyResetCode's live check, but ALSO consumes the row on a match,
     // in the same round trip -- consumed_at only changes when code_hash
-    // matches (the CASE), attempt_count always increments.
+    // matches (the CASE), attempt_count increments on every mismatch (a
+    // match consumes the row anyway, so counting it would gain nothing).
     const row = await db
         .withSession("first-primary")
         .prepare(
             `UPDATE password_reset_tokens
-                SET attempt_count = attempt_count + 1,
+                SET attempt_count = attempt_count + CASE WHEN code_hash = ?2 THEN 0 ELSE 1 END,
                     consumed_at = CASE WHEN code_hash = ?2 THEN CURRENT_TIMESTAMP ELSE consumed_at END
               WHERE id = (
                   SELECT id FROM password_reset_tokens

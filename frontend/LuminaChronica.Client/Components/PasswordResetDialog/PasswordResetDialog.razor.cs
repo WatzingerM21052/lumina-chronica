@@ -321,6 +321,18 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
             // transient request error, not a code-state change.
             _requestError = FormatRateLimitMessage(response.Error.Message);
             _codeState = CodeCheckState.Idle;
+            _lastCheckedCode = string.Empty; // the de-dup guard only protects real server verdicts -- a retry of the same digits must still check (review M-2)
+            return;
+        }
+
+        if (response?.Error?.Code == "NOT_FOUND")
+        {
+            // An older backend deploy without this route (frontend deploys
+            // automatically, backend doesn't -- review M-7). Retrying can
+            // never help here, but the link in the same email still works.
+            _requestError = I18n.T("passwordReset.codeUnsupported");
+            _codeState = CodeCheckState.Idle;
+            _lastCheckedCode = string.Empty;
             return;
         }
 
@@ -328,17 +340,17 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
         {
             _requestError = I18n.T("passwordReset.networkError");
             _codeState = CodeCheckState.Idle;
+            _lastCheckedCode = string.Empty;
             return;
         }
 
         var result = response.Data;
         _attemptsLeft = result.AttemptsLeft;
 
-        // Valid checked first: the last allowed guess can be both correct
-        // AND leave attemptsLeft at 0 in the same response (the row's
-        // attempt_count is incremented unconditionally, even on a match --
-        // see verifyResetCode's own comment) -- that's still a success, not
-        // a burned code.
+        // Valid checked first: a correct check no longer costs an attempt
+        // (see verifyResetCode's own comment), but an older backend still
+        // counts it and can answer "valid, 0 left" on the last allowed guess
+        // -- that's still a success, not a burned code.
         if (result.Valid)
         {
             _codeState = CodeCheckState.Valid;

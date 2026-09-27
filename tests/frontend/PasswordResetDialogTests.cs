@@ -180,6 +180,60 @@ public class PasswordResetDialogTests : BunitContext
     }
 
     [Fact]
+    public void NetworkErrorOnLiveCheck_RetypingTheSameCode_ChecksAgain()
+    {
+        // Regression (review M-2): _lastCheckedCode was set before the
+        // request and never cleared on failure, so after one dropped
+        // connection the de-dup guard silently swallowed every retry of the
+        // same six digits.
+        var callCount = 0;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/forgot-password", """{"success":true,"data":{"message":"ok"}}""")
+            .When(r => r.RequestUri!.AbsolutePath.EndsWith("/verify-reset-code"), _ =>
+            {
+                callCount++;
+                if (callCount == 1) throw new HttpRequestException("connection dropped");
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"valid":true,"attemptsLeft":9}}""");
+            });
+        RegisterServices(handler);
+
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
+
+        cut.Find("#passwordResetCode").Input("123456");
+        cut.WaitForAssertion(() => Assert.Contains("Verbindung fehlgeschlagen", cut.Markup), Wait);
+
+        cut.Find("#passwordResetCode").Input("12345");
+        cut.Find("#passwordResetCode").Input("123456");
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("#passwordResetNewPassword")), Wait);
+        Assert.Equal(2, callCount);
+    }
+
+    [Fact]
+    public void BackendWithoutCodeRoute_PointsTheUserToTheEmailLink_InsteadOfANetworkError()
+    {
+        // Review M-7: an older backend deploy (frontend auto-deploys, the
+        // backend doesn't) answers the live check with the framework's
+        // generic 404. That is not a flaky connection -- retrying can never
+        // help, but the link in the same email still works.
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/forgot-password", """{"success":true,"data":{"message":"ok"}}""")
+            .When(r => r.RequestUri!.AbsolutePath.EndsWith("/verify-reset-code"), _ =>
+                new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
+                {
+                    Content = new StringContent("""{"success":false,"error":{"code":"NOT_FOUND","message":"Not found."}}""", System.Text.Encoding.UTF8, "application/json"),
+                });
+        RegisterServices(handler);
+
+        var cut = Render<PasswordResetDialog>(parameters => parameters.Add(p => p.IsOpen, true));
+        SubmitIdentifyAndAdvanceToCodeEntry(cut);
+        cut.Find("#passwordResetCode").Input("123456");
+
+        cut.WaitForAssertion(() => Assert.Contains("Link in der E-Mail", cut.Markup), Wait);
+        Assert.DoesNotContain("Verbindung fehlgeschlagen", cut.Markup);
+    }
+
+    [Fact]
     public void RetypingTheSameSixDigits_DoesNotCallTheServerTwice()
     {
         // Isolates _lastCheckedCode specifically, not just "nothing fired
