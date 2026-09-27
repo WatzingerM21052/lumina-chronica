@@ -1,0 +1,38 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@if (IsOpen)
+{
+    <div class="dialog-overlay" @onclick="HandleOverlayClickAsync">
+        <div class="dialog dialog--@SizeClass" role="@Role" aria-modal="true"
+             aria-labelledby="@(Title is not null ? EffectiveTitleId : null)"
+             tabindex="-1" @ref="_dialogElement" @onclick:stopPropagation="true" @onkeydown="HandleKeyDownAsync">
+
+            @if (Title is not null || ShowCloseButton)
+            {
+                <div class="dialog-header">
+                    @if (Title is not null)
+                    {
+                        <h2 class="dialog-title" id="@EffectiveTitleId">@Title</h2>
+                    }
+                    @if (ShowCloseButton)
+                    {
+                        <button type="button" class="dialog-close" aria-label="@I18n.T("dialog.closeButton")" @onclick="() => OnClose.InvokeAsync()">✕</button>
+                    }
+                </div>
+            }
+
+            <div class="dialog-body">
+                @ChildContent
+            </div>
+
+            @if (Footer is not null)
+            {
+                <div class="dialog-actions">
+                    @Footer
+                </div>
+            }
+        </div>
+    </div>
+}

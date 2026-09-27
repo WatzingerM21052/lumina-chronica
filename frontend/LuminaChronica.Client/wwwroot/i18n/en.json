@@ -129,6 +129,7 @@
   "errorPage.defaultMessage": "Something went wrong. Please try again.",
   "confirmDialog.confirmButton": "Yes, delete",
   "confirmDialog.cancelButton": "Cancel",
+  "dialog.closeButton": "Close",
   "toast.dismiss": "Dismiss message",
 
   "avatarUploadDialog.title": "Change Profile Picture",

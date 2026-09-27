@@ -1,0 +1,157 @@
+/* §7.2/7.3 of the password-reset modernization design doc: a modal over a
+   dimmed page is a third elevation level above the app's existing two
+   (--shadow-card / --shadow-card-hover), and the scrim is tinted toward
+   each theme's own --color-bg-dark instead of a generic rgba(0,0,0,0.5) --
+   see tokens.css / themes/*.css for --shadow-overlay / --color-overlay-scrim. */
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3);
+    /* Fallback covers a theme file that fails to load or a future theme
+       that forgets the token -- without it, a missing custom property
+       resolves to fully transparent, which would leave the scrim
+       invisible (still-clickable-looking page under an open dialog)
+       instead of just slightly off-palette. */
+    background-color: var(--color-overlay-scrim, rgba(36, 26, 18, 0.45));
+    animation: dialog-scrim-enter var(--motion-standard) var(--ease-standard);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+    .dialog-overlay {
+        backdrop-filter: blur(2px);
+    }
+}
+
+.dialog {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: calc(100vh - var(--space-6));
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-overlay, 0 24px 48px rgba(30, 20, 10, 0.28), 0 4px 12px rgba(30, 20, 10, 0.14));
+    animation: dialog-card-enter var(--motion-reveal) var(--ease-standard);
+}
+
+.dialog:focus {
+    outline: none;
+}
+
+.dialog--small {
+    max-width: 24rem;
+}
+
+.dialog--medium {
+    max-width: 32rem;
+}
+
+.dialog--large {
+    max-width: 48rem;
+}
+
+/* Right-anchored, full height -- the shape for something genuinely
+   navigational/persistent (§6.1), not used by the password-reset dialog
+   itself. Collapses to a full-screen sheet below the mobile breakpoint,
+   matching ToastHost's own breakpoint. */
+.dialog--sheet {
+    max-width: 40rem;
+    height: 100vh;
+    max-height: 100vh;
+    margin-left: auto;
+    border-radius: 0;
+}
+
+.dialog-overlay:has(.dialog--sheet) {
+    padding: 0;
+    align-items: stretch;
+    justify-content: flex-end;
+}
+
+.dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.dialog-title {
+    margin: 0;
+    font-family: var(--font-family-display);
+    font-size: var(--font-size-h3);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.dialog-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: var(--font-size-body);
+    line-height: 1;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+}
+
+.dialog-close:hover {
+    color: var(--color-text-primary);
+}
+
+.dialog-body {
+    overflow-y: auto;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.dialog-actions .btn {
+    min-height: 2.5rem;
+}
+
+@keyframes dialog-scrim-enter {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes dialog-card-enter {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dialog-overlay,
+    .dialog {
+        animation-name: dialog-scrim-enter;
+    }
+}
+
+@media (max-width: 40rem) {
+    .dialog-actions .btn {
+        flex: 1;
+    }
+
+    .dialog--sheet {
+        max-width: none;
+    }
+}

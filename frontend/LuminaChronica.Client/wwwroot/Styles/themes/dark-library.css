@@ -24,6 +24,11 @@
     --color-bg-paper: #1c1510;
     --color-bg-light: #251c14;
     --color-bg-dark: #120d09;
+    /* Plain black rather than a tinted rgba(120,13,9,...): this theme's own
+       --color-bg-dark is already near-black, so the tint would be
+       imperceptible -- a slightly deeper scrim reads better against an
+       already-dark page. */
+    --color-overlay-scrim: rgba(0, 0, 0, 0.6);
     --color-bg-card: #241c15;
     --color-bg-reader: #201810;
 

@@ -143,6 +143,7 @@ public class FakeI18nService : II18nService
         ["errorPage.defaultMessage"] = "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
         ["confirmDialog.confirmButton"] = "Ja, löschen",
         ["confirmDialog.cancelButton"] = "Abbrechen",
+        ["dialog.closeButton"] = "Schließen",
         ["toast.dismiss"] = "Meldung schließen",
 
         ["avatarUploadDialog.title"] = "Profilbild ändern",
