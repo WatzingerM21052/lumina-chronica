@@ -20,7 +20,7 @@
     background: var(--color-bg-dark);
     color: var(--color-text-on-dark);
     border: 1px solid var(--color-gold-accent);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-card-hover);
     padding: var(--space-1) var(--space-2);
     animation: toast-enter var(--motion-reveal) var(--ease-standard);

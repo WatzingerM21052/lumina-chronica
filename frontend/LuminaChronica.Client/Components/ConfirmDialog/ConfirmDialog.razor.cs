@@ -16,6 +16,12 @@ public partial class ConfirmDialog : ComponentBase
     [Parameter]
     public string? CancelText { get; set; }
 
+    // Every current caller confirms a delete or a discard of typed input, so
+    // destructive (red, §7.3) is the default; pass false for a confirm whose
+    // action loses nothing.
+    [Parameter]
+    public bool Destructive { get; set; } = true;
+
     [Parameter]
     public EventCallback OnConfirm { get; set; }
 

@@ -69,7 +69,22 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
     private const int AutoCloseAfterMs = 3000;
 
     private bool _wasOpen;
-    private PasswordResetStep _step;
+    private PasswordResetStep _stepValue;
+
+    // Direction of the last step change, for the step panel's slide-in
+    // (§7.3 motion): forward steps enter from the right, a step back
+    // ("Andere E-Mail-Adresse", an expired code on submit) from the left.
+    private bool _steppedBack;
+
+    private PasswordResetStep _step
+    {
+        get => _stepValue;
+        set
+        {
+            _steppedBack = value < _stepValue;
+            _stepValue = value;
+        }
+    }
     private Dialog? _dialog;
     // The step last focused for -- a step change swaps out the button that
     // had focus, so focus is moved to the new step's first field (review M-3).

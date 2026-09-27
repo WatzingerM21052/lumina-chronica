@@ -50,8 +50,8 @@
         </EditForm>
     </ChildContent>
     <Footer>
-        <button type="submit" form="project-create-form" class="btn btn-primary" disabled="@_isCreating">@I18n.T("projects.createSubmitButton")</button>
         <button type="button" class="btn" @onclick="RequestCloseCreate">@I18n.T("projects.cancelButton")</button>
+        <button type="submit" form="project-create-form" class="btn btn-primary" disabled="@_isCreating">@I18n.T("projects.createSubmitButton")</button>
     </Footer>
 </Dialog>
 <ConfirmDialog IsOpen="_confirmingDiscardCreate" Message="@I18n.T("dialog.discardChangesMessage")"

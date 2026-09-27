@@ -57,17 +57,6 @@
     border-top: 1px solid var(--color-error);
 }
 
-.btn-danger {
-    background: transparent;
-    border: 1px solid var(--color-error);
-    color: var(--color-error);
-}
-
-.btn-danger:hover {
-    background: var(--color-error);
-    color: var(--color-bg-card);
-}
-
 .linked-accounts-list {
     display: flex;
     flex-direction: column;
