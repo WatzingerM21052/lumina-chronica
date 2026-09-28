@@ -19,57 +19,81 @@
     </div>
 </div>
 
+@* Plan A7: one "appearance" card (theme previews, language, shelf cover
+   text) instead of three; preferences are switches with the label left
+   and the switch right; in-app notifications and what the public
+   activity log shows are separate groups. *@
 <div class="settings-card">
-    <h2>@I18n.T("settings.themeTitle")</h2>
-    <div class="theme-picker">
+    <h2>@I18n.T("settings.appearanceTitle")</h2>
+
+    <h3 class="settings-subheading">@I18n.T("settings.themeTitle")</h3>
+    @* Each preview carries its own data-theme, so the theme files' own
+       tokens paint it: always the real colours, nothing duplicated here. *@
+    <div class="theme-cards" role="group" aria-label="@I18n.T("settings.themeTitle")">
         @foreach (var (value, label) in Themes)
         {
-            <button class="btn @(_currentTheme == value ? "btn-primary" : "")" @onclick="() => SetThemeAsync(value)">@label</button>
+            var isActive = _currentTheme == value;
+            <button type="button" class="theme-card @(isActive ? "is-active" : null)" aria-pressed="@(isActive ? "true" : "false")" @onclick="() => SetThemeAsync(value)">
+                @if (value == "system")
+                {
+                    <span class="theme-card-preview theme-card-preview--split" aria-hidden="true">
+                        <span class="theme-card-half" data-theme="modern-light">@ThemePreview</span>
+                        <span class="theme-card-half" data-theme="dark-library">@ThemePreview</span>
+                    </span>
+                }
+                else
+                {
+                    <span class="theme-card-preview" data-theme="@value" aria-hidden="true">@ThemePreview</span>
+                }
+                <span class="theme-card-label">@label</span>
+            </button>
         }
     </div>
-</div>
 
-<div class="settings-card">
-    <h2>@I18n.T("settings.languageTitle")</h2>
+    <h3 class="settings-subheading">@I18n.T("settings.languageTitle")</h3>
     <div class="theme-picker">
         <button class="btn @(I18n.CurrentLanguage == "de" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("de")'>@I18n.T("settings.languageGerman")</button>
         <button class="btn @(I18n.CurrentLanguage == "en" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("en")'>@I18n.T("settings.languageEnglish")</button>
     </div>
-</div>
 
-<div class="settings-card">
-    <h2>@I18n.T("settings.libraryTitle")</h2>
-    <label class="library-preference-row">
-        <input type="checkbox" checked="@_showShelfCoverText" @onchange="e => SetShowShelfCoverTextAsync((bool)e.Value!)" />
-        <span>
+    <h3 class="settings-subheading">@I18n.T("settings.libraryTitle")</h3>
+    <label class="preference-row library-preference-row">
+        <span class="preference-row-text">
             <strong>@I18n.T("settings.showCoverTextLabel")</strong>
-            <span class="text-muted"> — @I18n.T("settings.showCoverTextDescription")</span>
+            <span class="text-muted">@I18n.T("settings.showCoverTextDescription")</span>
         </span>
+        <input type="checkbox" role="switch" class="switch" checked="@_showShelfCoverText" @onchange="e => SetShowShelfCoverTextAsync((bool)e.Value!)" />
     </label>
 </div>
 
-<div class="settings-card">
-    <h2>@I18n.T("settings.notificationsTitle")</h2>
-    @if (_preferences is null)
-    {
+@if (_preferences is null)
+{
+    <div class="settings-card">
+        <h2>@I18n.T("settings.notificationsTitle")</h2>
         <p class="text-muted">@I18n.T("settings.loadingPreferences")</p>
-    }
-    else
+    </div>
+}
+else
+{
+    @foreach (var (titleKey, types) in PreferenceGroups)
     {
-        <div class="notification-preferences">
-            @foreach (var type in NotificationTypes)
-            {
-                <label class="notification-preference-row">
-                    <input type="checkbox" checked="@GetPreference(type.Type)" @onchange="e => SetPreferenceAsync(type.Type, (bool)e.Value!)" />
-                    <span>
-                        <strong>@I18n.T(type.LabelKey)</strong>
-                        <span class="text-muted"> — @I18n.T(type.DescriptionKey)</span>
-                    </span>
-                </label>
-            }
+        <div class="settings-card">
+            <h2>@I18n.T(titleKey)</h2>
+            <div class="notification-preferences">
+                @foreach (var type in types)
+                {
+                    <label class="preference-row notification-preference-row">
+                        <span class="preference-row-text">
+                            <strong>@I18n.T(type.LabelKey)</strong>
+                            <span class="text-muted">@I18n.T(type.DescriptionKey)</span>
+                        </span>
+                        <input type="checkbox" role="switch" class="switch" checked="@GetPreference(type.Type)" @onchange="e => SetPreferenceAsync(type.Type, (bool)e.Value!)" />
+                    </label>
+                }
+            </div>
         </div>
     }
-</div>
+}
 
 @code {
     private static readonly (string Value, string Label)[] Themes =
@@ -103,6 +127,18 @@
         ("ACTIVITY_RATING", "settings.notif.activityRating.label", "settings.notif.activityRating.description"),
         ("ACTIVITY_RATING_STARS", "settings.notif.activityRatingStars.label", "settings.notif.activityRatingStars.description"),
     ];
+
+    // In-app notifications vs. what the public activity log reveals: same
+    // preference store, but different questions for the user.
+    private static readonly (string TitleKey, (string Type, string LabelKey, string DescriptionKey)[] Types)[] PreferenceGroups =
+    [
+        ("settings.notificationsTitle", NotificationTypes[..4]),
+        ("settings.privacyTitle", NotificationTypes[4..]),
+    ];
+
+    // A miniature page: dark header bar, a card with two text lines and an
+    // accent button, all in the preview's own theme tokens.
+    private static readonly RenderFragment ThemePreview = @<text><span class="tp-bar"></span><span class="tp-card"><span class="tp-line"></span><span class="tp-line tp-line--short"></span><span class="tp-button"></span></span></text>;
 
     private string? _currentTheme;
     private NotificationPreferences? _preferences;

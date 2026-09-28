@@ -163,4 +163,36 @@ public class SettingsPageTests : BunitContext
         Assert.Contains(languageButtons, b => b.TextContent == "English" && b.GetAttribute("class")!.Contains("btn-primary"));
         Assert.Contains(languageButtons, b => b.TextContent == "Deutsch" && !b.GetAttribute("class")!.Contains("btn-primary"));
     }
+
+    [Fact]
+    public void Settings_ThemeCards_MarkTheActiveTheme_AndSwitchOnClick()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+
+        var cut = Render<Settings>();
+
+        var cards = cut.FindAll(".theme-card");
+        Assert.Equal(4, cards.Count);
+        Assert.Equal("true", cards[0].GetAttribute("aria-pressed"));
+        // Each preview is painted by its own theme; System shows light and dark.
+        Assert.Equal("dark-library", cards[2].QuerySelector(".theme-card-preview")!.GetAttribute("data-theme"));
+        Assert.Equal(2, cards[3].QuerySelectorAll(".theme-card-half").Length);
+
+        cards[2].Click();
+
+        Assert.Equal("true", cut.FindAll(".theme-card")[2].GetAttribute("aria-pressed"));
+        Assert.Equal("false", cut.FindAll(".theme-card")[0].GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void Settings_Preferences_AreSwitches_SplitIntoNotificationsAndPrivacy()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+
+        var cut = Render<Settings>();
+
+        Assert.All(cut.FindAll(".preference-row input"), i => Assert.Equal("switch", i.GetAttribute("role")));
+        var headings = cut.FindAll(".settings-card h2").Select(h => h.TextContent).ToList();
+        Assert.Equal(["Darstellung", "Benachrichtigungen", "Privatsphäre"], headings);
+    }
 }
