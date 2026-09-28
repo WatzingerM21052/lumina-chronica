@@ -91,11 +91,11 @@ async function checkLimit(db: D1Database, route: string, ip: string, identifier:
 // as text is a silent bug ('T' > ' ' in ASCII, so expires_at > CURRENT_TIMESTAMP
 // was always true and the window never actually expired). Binding both
 // sides in the same format sidesteps the mismatch entirely. Returns the
-// window's count INCLUDING this attempt, read back from the write itself
-// (RETURNING) -- so a caller can check-and-record in one atomic step, with
-// no separate read that could race a concurrent request or hit a lagging
-// replica.
-async function recordAttempt(db: D1Database, route: string, ip: string, identifier: string, windowMs: number): Promise<number> {
+// window's count INCLUDING this attempt (and when the window ends), read
+// back from the write itself (RETURNING) -- so a caller can check-and-record
+// in one atomic step, with no separate read that could race a concurrent
+// request or hit a lagging replica.
+async function recordAttempt(db: D1Database, route: string, ip: string, identifier: string, windowMs: number): Promise<ThrottleRow> {
     const nowIso = new Date().toISOString();
     const freshExpiresAt = new Date(Date.now() + windowMs).toISOString();
     const row = await db
@@ -106,11 +106,24 @@ async function recordAttempt(db: D1Database, route: string, ip: string, identifi
                  attempt_count = CASE WHEN expires_at > ?5 THEN attempt_count + 1 ELSE 1 END,
                  expires_at = CASE WHEN expires_at > ?5 THEN expires_at ELSE ?4 END,
                  updated_at = CURRENT_TIMESTAMP
-             RETURNING attempt_count`
+             RETURNING attempt_count, expires_at`
         )
         .bind(route, ip, identifier, freshExpiresAt, nowIso)
-        .first<{ attempt_count: number }>();
-    return row?.attempt_count ?? 1;
+        .first<ThrottleRow>();
+    return row ?? { attempt_count: 1, expires_at: freshExpiresAt };
+}
+
+// Record-then-compare (review M-9): two concurrent requests can't both pass
+// a separate check and then both record -- each one's own write says where
+// it landed. The attempt counts even when it's rejected, but the window's
+// expires_at is fixed at its first attempt, so this never extends a lockout;
+// the number of allowed attempts per window is the same as check-then-record.
+async function consumeAttempt(db: D1Database, route: string, ip: string, identifier: string, maxAttempts: number): Promise<void> {
+    const row = await recordAttempt(db, route, ip, identifier, windowMsFor(route));
+    if (row.attempt_count <= maxAttempts) return;
+
+    const retryAfterSeconds = Math.max(1, Math.ceil((new Date(row.expires_at).getTime() - Date.now()) / 1000));
+    throw new RateLimitedError(retryAfterSeconds);
 }
 
 async function clearAttempts(db: D1Database, route: string, ip: string, identifier: string): Promise<void> {
@@ -131,8 +144,17 @@ function windowMsFor(route: string): number {
     return WINDOW_MS;
 }
 
+// For routes where EVERY attempt counts regardless of outcome (register,
+// restore, forgot-password, verify-reset-code, reset-password): records this
+// attempt and throws RateLimitedError if it went over the cap, atomically.
+export async function consumeRateLimit(c: { env: { DB: D1Database }; req: { header(name: string): string | undefined } }, route: string, identifier: string): Promise<void> {
+    await consumeAttempt(c.env.DB, route, getClientIp(c), identifier, maxAttemptsFor(route));
+}
+
 // Throws RateLimitedError if the (ip, identifier) pair is already at the
-// cap for this window -- call before doing the real (expensive) work.
+// cap for this window -- call before doing the real (expensive) work. Only
+// for login, which counts FAILED attempts only (and clears on success), so
+// it can't record up front.
 export async function assertNotRateLimited(c: { env: { DB: D1Database }; req: { header(name: string): string | undefined } }, route: string, identifier: string): Promise<{ ip: string; identifier: string }> {
     const ip = getClientIp(c);
     await checkLimit(c.env.DB, route, ip, identifier, maxAttemptsFor(route));
@@ -146,12 +168,8 @@ export async function assertNotRateLimited(c: { env: { DB: D1Database }; req: { 
 // identical whether or not `identifier` resolves to a real account. Do not
 // key this one on IP; an attacker probing identifiers would just rotate IPs
 // to dodge the cooldown, undermining the exact symmetry this exists for.
-export async function assertResendNotRateLimited(db: D1Database, identifier: string): Promise<void> {
-    await checkLimit(db, "forgot-password-resend", "", identifier, FORGOT_PASSWORD_RESEND_MAX_ATTEMPTS);
-}
-
-export async function recordResendAttempt(db: D1Database, identifier: string): Promise<void> {
-    await recordAttempt(db, "forgot-password-resend", "", identifier, windowMsFor("forgot-password-resend"));
+export async function consumeResendCooldown(db: D1Database, identifier: string): Promise<void> {
+    await consumeAttempt(db, "forgot-password-resend", "", identifier, FORGOT_PASSWORD_RESEND_MAX_ATTEMPTS);
 }
 
 // H-1 (see RESET_EMAILS_PER_ACCOUNT_MAX above): records one reset email
@@ -161,8 +179,8 @@ export async function recordResendAttempt(db: D1Database, identifier: string): P
 // keep rising past the cap inside a window, but the window's expires_at is
 // fixed at its first attempt, so hammering never extends a lockout.
 export async function consumeAccountResetBudget(db: D1Database, userId: number): Promise<boolean> {
-    const count = await recordAttempt(db, ACCOUNT_RESET_ROUTE, "", String(userId), RESET_EMAILS_PER_ACCOUNT_WINDOW_MS);
-    return count <= RESET_EMAILS_PER_ACCOUNT_MAX;
+    const row = await recordAttempt(db, ACCOUNT_RESET_ROUTE, "", String(userId), RESET_EMAILS_PER_ACCOUNT_WINDOW_MS);
+    return row.attempt_count <= RESET_EMAILS_PER_ACCOUNT_MAX;
 }
 
 export async function recordFailedAttempt(db: D1Database, route: string, ip: string, identifier: string): Promise<void> {

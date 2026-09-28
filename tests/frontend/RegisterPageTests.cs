@@ -50,6 +50,28 @@ public class RegisterPageTests : BunitContext
         Assert.Contains("Die Passwörter stimmen nicht überein.", cut.Markup);
     }
 
+    [Theory]
+    [InlineData("bob@example.com", "correct horse", "Der Benutzername braucht 3–32 Zeichen")]
+    [InlineData("al", "correct horse", "Der Benutzername braucht 3–32 Zeichen")]
+    [InlineData("alice", "htlgk", "Das Passwort braucht mindestens 6 Zeichen.")]
+    public void Register_InvalidUsernameOrShortPassword_ShowsTranslatedErrorBeforeCallingApi(string username, string password, string expected)
+    {
+        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"backend message"}}""");
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        RegisterAuthServices(this);
+
+        var cut = Render<Register>();
+        cut.Find("#username").Change(username);
+        cut.Find("#email").Change("alice@example.com");
+        cut.Find("#password").Change(password);
+        cut.Find("#confirmPassword").Change(password);
+        cut.Find("form").Submit();
+
+        Assert.Contains(expected, cut.Markup);
+        Assert.DoesNotContain("backend message", cut.Markup);
+    }
+
     [Fact]
     public void Register_FailedSubmit_ShowsErrorMessageFromApi()
     {

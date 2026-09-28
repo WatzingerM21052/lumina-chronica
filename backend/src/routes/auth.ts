@@ -7,6 +7,7 @@ import {
     DeletedAccountFoundError,
     EmailTakenError,
     InvalidCredentialsError,
+    InvalidUsernameError,
     NoDeletedAccountError,
     UsernameTakenError,
     loginUser,
@@ -29,51 +30,66 @@ import {
 } from "../services/oauthService";
 import type { ResetPasswordCredential } from "../services/passwordResetService";
 import { InvalidResetTokenError, requestPasswordReset, resetPassword, verifyResetCode } from "../services/passwordResetService";
-import { RateLimitedError, assertNotRateLimited, assertResendNotRateLimited, clearRateLimit, recordFailedAttempt, recordResendAttempt } from "../services/rateLimitService";
+import { RateLimitedError, assertNotRateLimited, clearRateLimit, consumeRateLimit, consumeResendCooldown, recordFailedAttempt } from "../services/rateLimitService";
+import { EMAIL_PATTERN, MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, USERNAME_RULE_MESSAGE, isBoundedString, normalizeIdentifier } from "../utils/identity";
 
 export const authRoute = new Hono<AppEnv>();
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 8;
+// Review N-3: every body field is type- and length-checked before it reaches
+// a service -- an object or number used to 500 deep inside a query. These
+// are format checks that answer the same for every account, so they don't
+// weaken the anti-enumeration rules of the reset routes.
+const MAX_IDENTIFIER_LENGTH = MAX_EMAIL_LENGTH;
+const MAX_USERNAME_INPUT_LENGTH = 64; // the real rule is USERNAME_PATTERN in the service; this only bounds garbage
+const MAX_TOKEN_LENGTH = 512;
+const RESET_CODE_PATTERN = /^\d{6}$/;
 
 function rateLimitedResponse(c: Context<AppEnv>, err: RateLimitedError) {
     c.header("Retry-After", String(err.retryAfterSeconds));
     return c.json(failure("RATE_LIMITED", `Too many attempts. Try again in ${err.retryAfterSeconds} seconds.`), 429);
 }
 
+type AccountBody = { username: string; email: string; password: string };
+
+// Shared by /register and /restore. Returns an error message, or null when
+// the body is well-formed.
+function accountBodyError(body: Record<string, unknown> | null): string | null {
+    if (!body || !isBoundedString(body.username, MAX_USERNAME_INPUT_LENGTH) || !isBoundedString(body.email, MAX_EMAIL_LENGTH) || typeof body.password !== "string" || !body.password) {
+        return "username, email, and password are required.";
+    }
+    if (!EMAIL_PATTERN.test(body.email.trim())) return "email is not a valid address.";
+    if (body.password.length < MIN_PASSWORD_LENGTH) return `password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+    if (body.password.length > MAX_PASSWORD_LENGTH) return `password must be at most ${MAX_PASSWORD_LENGTH} characters.`;
+    return null;
+}
+
 authRoute.post("/register", async (c) => {
     // Keyed by IP only (not per-email) -- the resource being protected is
     // "how many accounts can this source create," not any one address.
-    let rateLimit;
+    // Every POST counts toward the IP's window regardless of outcome --
+    // including validation failures, since a flood of malformed requests is
+    // the same resource-abuse shape as a flood of valid-but-duplicate ones.
     try {
-        rateLimit = await assertNotRateLimited(c, "register", "");
+        await consumeRateLimit(c, "register", "");
     } catch (err) {
         if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
         throw err;
     }
 
-    const body = await c.req.json<{ username?: string; email?: string; password?: string; confirmNewAccount?: boolean }>().catch(() => null);
-    const { username, email, password, confirmNewAccount } = body ?? {};
-
-    // Every POST counts toward the IP's window regardless of outcome --
-    // including validation failures, since a flood of malformed requests is
-    // the same resource-abuse shape as a flood of valid-but-duplicate ones.
-    await recordFailedAttempt(c.env.DB, "register", rateLimit.ip, "");
-
-    if (!username || !email || !password) {
-        return c.json(failure("VALIDATION_ERROR", "username, email, and password are required."), 400);
+    const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+    const validationError = accountBodyError(body);
+    if (validationError) return c.json(failure("VALIDATION_ERROR", validationError), 400);
+    if (body!.confirmNewAccount !== undefined && typeof body!.confirmNewAccount !== "boolean") {
+        return c.json(failure("VALIDATION_ERROR", "confirmNewAccount must be a boolean."), 400);
     }
-    if (!EMAIL_PATTERN.test(email)) {
-        return c.json(failure("VALIDATION_ERROR", "email is not a valid address."), 400);
-    }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-        return c.json(failure("VALIDATION_ERROR", `password must be at least ${MIN_PASSWORD_LENGTH} characters.`), 400);
-    }
+    const { username, email, password } = body as AccountBody;
+    const confirmNewAccount = body!.confirmNewAccount as boolean | undefined;
 
     try {
         const result = await registerUser(c.env.DB, c.env.JWT_SECRET, { username, email, password, confirmNewAccount });
         return c.json(success(result), 201);
     } catch (err) {
+        if (err instanceof InvalidUsernameError) return c.json(failure("VALIDATION_ERROR", USERNAME_RULE_MESSAGE), 400);
         if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);
         if (err instanceof UsernameTakenError) return c.json(failure("USERNAME_TAKEN", "This username is already taken."), 409);
         if (err instanceof DeletedAccountFoundError) {
@@ -84,33 +100,23 @@ authRoute.post("/register", async (c) => {
 });
 
 authRoute.post("/restore", async (c) => {
-    let rateLimit;
     try {
-        rateLimit = await assertNotRateLimited(c, "register", "");
+        await consumeRateLimit(c, "register", "");
     } catch (err) {
         if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
         throw err;
     }
 
-    const body = await c.req.json<{ username?: string; email?: string; password?: string }>().catch(() => null);
-    const { username, email, password } = body ?? {};
-
-    await recordFailedAttempt(c.env.DB, "register", rateLimit.ip, "");
-
-    if (!username || !email || !password) {
-        return c.json(failure("VALIDATION_ERROR", "username, email, and password are required."), 400);
-    }
-    if (!EMAIL_PATTERN.test(email)) {
-        return c.json(failure("VALIDATION_ERROR", "email is not a valid address."), 400);
-    }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-        return c.json(failure("VALIDATION_ERROR", `password must be at least ${MIN_PASSWORD_LENGTH} characters.`), 400);
-    }
+    const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+    const validationError = accountBodyError(body);
+    if (validationError) return c.json(failure("VALIDATION_ERROR", validationError), 400);
+    const { username, email, password } = body as AccountBody;
 
     try {
         const result = await restoreUser(c.env.DB, c.env.JWT_SECRET, { username, email, password });
         return c.json(success(result), 200);
     } catch (err) {
+        if (err instanceof InvalidUsernameError) return c.json(failure("VALIDATION_ERROR", USERNAME_RULE_MESSAGE), 400);
         if (err instanceof NoDeletedAccountError) return c.json(failure("NOT_FOUND", "No deleted account found for this email."), 404);
         if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);
         if (err instanceof UsernameTakenError) return c.json(failure("USERNAME_TAKEN", "This username is already taken."), 409);
@@ -119,26 +125,31 @@ authRoute.post("/restore", async (c) => {
 });
 
 authRoute.post("/forgot-password", async (c) => {
-    const body = await c.req.json<{ identifier?: string }>().catch(() => null);
-    if (!body?.identifier) {
+    const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+    if (!isBoundedString(body?.identifier, MAX_IDENTIFIER_LENGTH)) {
         return c.json(failure("VALIDATION_ERROR", "identifier is required."), 400);
     }
+    // Throttle keys use the normalized form (review N-6): "Foo@x.at" and
+    // "foo@x.at" share one cooldown and one abuse bucket. The lookup itself
+    // gets the typed casing, so an exact-case legacy row still wins there
+    // (see authService.ts's findLiveUserByIdentifier).
+    const identifier = normalizeIdentifier(body.identifier);
 
     // D2's 60s resend cooldown (docs/superpowers/specs/2026-09-27-password-
     // reset-modernization-design.md §3.4 step 0) -- checked FIRST, before
     // the identifier is looked up against any user, and before the existing
     // (ip, identifier) abuse throttle below. Deliberately IP-independent and
-    // keyed on the raw identifier alone: the point is that "please wait" (a
+    // keyed on the identifier alone: the point is that "please wait" (a
     // 429, same shape as the abuse throttle) fires identically whether or
     // not this identifier resolves to a real account, so submitting twice
-    // fast can't be used to confirm account existence.
+    // fast can't be used to confirm account existence. Check and record are
+    // one atomic step (review M-9): two parallel requests can't both pass.
     try {
-        await assertResendNotRateLimited(c.env.DB, body.identifier);
+        await consumeResendCooldown(c.env.DB, identifier);
     } catch (err) {
         if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
         throw err;
     }
-    await recordResendAttempt(c.env.DB, body.identifier);
 
     // Keyed by (ip, identifier), same rationale as /login: an attacker must
     // not be able to email-bomb one victim's inbox from many IPs, while the
@@ -146,14 +157,12 @@ authRoute.post("/forgot-password", async (c) => {
     // attempt counts regardless of outcome (like /register), since this
     // route has no distinguishable success/failure to condition on -- that
     // asymmetry is the whole point of the generic response below.
-    let rateLimit;
     try {
-        rateLimit = await assertNotRateLimited(c, "forgot-password", body.identifier);
+        await consumeRateLimit(c, "forgot-password", identifier);
     } catch (err) {
         if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
         throw err;
     }
-    await recordFailedAttempt(c.env.DB, "forgot-password", rateLimit.ip, rateLimit.identifier);
 
     try {
         await requestPasswordReset(c.env.DB, c.env, body.identifier);
@@ -175,53 +184,61 @@ authRoute.post("/forgot-password", async (c) => {
 // generously since the dialog's live check (§4.3) fires on every completed
 // 6-digit entry while typing, not just on deliberate submits.
 authRoute.post("/verify-reset-code", async (c) => {
-    const body = await c.req.json<{ identifier?: string; code?: string }>().catch(() => null);
-    if (!body?.identifier || !body?.code) {
-        return c.json(failure("VALIDATION_ERROR", "identifier and code are required."), 400);
+    const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+    if (!isBoundedString(body?.identifier, MAX_IDENTIFIER_LENGTH) || typeof body.code !== "string" || !RESET_CODE_PATTERN.test(body.code)) {
+        return c.json(failure("VALIDATION_ERROR", "identifier and a 6-digit code are required."), 400);
     }
+    const identifier = normalizeIdentifier(body.identifier);
 
-    let rateLimit;
     try {
-        rateLimit = await assertNotRateLimited(c, "verify-reset-code", body.identifier);
+        await consumeRateLimit(c, "verify-reset-code", identifier);
     } catch (err) {
         if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
         throw err;
     }
-    await recordFailedAttempt(c.env.DB, "verify-reset-code", rateLimit.ip, rateLimit.identifier);
 
     const result = await verifyResetCode(c.env.DB, c.env.PASSWORD_CODE_SECRET, body.identifier, body.code);
     return c.json(success(result));
 });
 
 authRoute.post("/reset-password", async (c) => {
-    const body = await c.req.json<{ token?: string; identifier?: string; code?: string; newPassword?: string }>().catch(() => null);
-    if (!body?.newPassword) {
+    const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+    if (!body || typeof body.newPassword !== "string" || !body.newPassword) {
         return c.json(failure("VALIDATION_ERROR", "newPassword is required."), 400);
     }
     if (body.newPassword.length < MIN_PASSWORD_LENGTH) {
         return c.json(failure("VALIDATION_ERROR", `newPassword must be at least ${MIN_PASSWORD_LENGTH} characters.`), 400);
     }
+    if (body.newPassword.length > MAX_PASSWORD_LENGTH) {
+        return c.json(failure("VALIDATION_ERROR", `newPassword must be at most ${MAX_PASSWORD_LENGTH} characters.`), 400);
+    }
 
     // Exactly one credential (D3's hybrid: a link token, or an
-    // identifier+code pair) -- never both, never neither. Reject ambiguous
-    // or incomplete bodies before doing any throttling/DB work.
-    const hasToken = Boolean(body.token);
-    const hasCode = Boolean(body.identifier && body.code);
+    // identifier+code pair) -- never both, never neither. Reject ambiguous,
+    // incomplete or malformed bodies before doing any throttling/DB work.
+    const hasToken = body.token !== undefined && body.token !== null && body.token !== "";
+    const hasCode = (body.identifier !== undefined && body.identifier !== null && body.identifier !== "") || (body.code !== undefined && body.code !== null && body.code !== "");
     if (hasToken === hasCode) {
         return c.json(failure("VALIDATION_ERROR", "Provide exactly one of: token, or identifier+code."), 400);
     }
+    let credential: ResetPasswordCredential;
+    if (hasToken) {
+        if (!isBoundedString(body.token, MAX_TOKEN_LENGTH)) return c.json(failure("VALIDATION_ERROR", "token is invalid."), 400);
+        credential = { kind: "token", rawToken: body.token };
+    } else {
+        if (!isBoundedString(body.identifier, MAX_IDENTIFIER_LENGTH) || typeof body.code !== "string" || !RESET_CODE_PATTERN.test(body.code)) {
+            return c.json(failure("VALIDATION_ERROR", "Provide exactly one of: token, or identifier+code."), 400);
+        }
+        credential = { kind: "code", identifier: body.identifier, code: body.code };
+    }
 
-    const throttleKey = body.identifier ?? body.token ?? "";
-    let rateLimit;
+    const throttleKey = credential.kind === "token" ? credential.rawToken : normalizeIdentifier(credential.identifier);
     try {
-        rateLimit = await assertNotRateLimited(c, "reset-password", throttleKey);
+        await consumeRateLimit(c, "reset-password", throttleKey);
     } catch (err) {
         if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
         throw err;
     }
-    await recordFailedAttempt(c.env.DB, "reset-password", rateLimit.ip, rateLimit.identifier);
-
-    const credential: ResetPasswordCredential = hasToken ? { kind: "token", rawToken: body.token! } : { kind: "code", identifier: body.identifier!, code: body.code! };
 
     try {
         const result = await resetPassword(c.env.DB, c.env, credential, body.newPassword);
@@ -235,17 +252,18 @@ authRoute.post("/reset-password", async (c) => {
 });
 
 authRoute.post("/login", async (c) => {
-    const body = await c.req.json<{ identifier?: string; password?: string }>().catch(() => null);
-    if (!body?.identifier || !body?.password) {
+    const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+    if (!isBoundedString(body?.identifier, MAX_IDENTIFIER_LENGTH) || !isBoundedString(body.password, MAX_PASSWORD_LENGTH)) {
         return c.json(failure("VALIDATION_ERROR", "identifier and password are required."), 400);
     }
+    const identifier = normalizeIdentifier(body.identifier);
 
     // Keyed by (ip, identifier) rather than identifier alone -- an attacker
     // spamming a victim's username from many IPs must not be able to lock
     // the victim out of logging in from their own IP.
     let rateLimit;
     try {
-        rateLimit = await assertNotRateLimited(c, "login", body.identifier);
+        rateLimit = await assertNotRateLimited(c, "login", identifier);
     } catch (err) {
         if (err instanceof RateLimitedError) return rateLimitedResponse(c, err);
         throw err;
@@ -384,8 +402,8 @@ authRoute.get("/oauth/:provider/callback", async (c) => {
 });
 
 authRoute.post("/oauth/exchange", async (c) => {
-    const body = await c.req.json<{ code?: string }>().catch(() => null);
-    if (!body?.code) return c.json(failure("VALIDATION_ERROR", "code is required."), 400);
+    const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+    if (!isBoundedString(body?.code, MAX_TOKEN_LENGTH)) return c.json(failure("VALIDATION_ERROR", "code is required."), 400);
 
     const result = await redeemExchangeCode(c.env.DB, c.env.JWT_SECRET, body.code);
     if (!result) return c.json(failure("INVALID_CODE", "This sign-in link has expired or was already used."), 401);

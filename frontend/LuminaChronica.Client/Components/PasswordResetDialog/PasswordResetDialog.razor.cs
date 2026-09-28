@@ -69,6 +69,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    private const int MinPasswordLength = AccountRules.MinPasswordLength;
     private const int ResendCooldownSeconds = 60;
     private const int CodeDebounceMs = 400;
     private const int ConfirmDebounceMs = 600;
@@ -319,7 +320,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
 
     private async Task OnCodeInputAsync(ChangeEventArgs e)
     {
-        var digits = new string((e.Value?.ToString() ?? string.Empty).Where(char.IsDigit).ToArray());
+        var digits = new string((e.Value?.ToString() ?? string.Empty).Where(char.IsAsciiDigit).ToArray());
         if (digits.Length > 6) digits = digits[..6];
         _codeDigits = digits;
 
@@ -462,7 +463,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
         _confirmPassword.Length > 0 && _newPassword != _confirmPassword &&
         (_confirmPassword.Length >= _newPassword.Length || _confirmBlurred || _confirmDebounceElapsed);
 
-    private bool CanSubmitPassword => _newPassword.Length >= 8 && _newPassword == _confirmPassword;
+    private bool CanSubmitPassword => _newPassword.Length >= MinPasswordLength && _newPassword == _confirmPassword;
 
     private Task HandlePasswordKeyDownAsync(KeyboardEventArgs e) => e.Key == "Enter" && CanSubmitPassword ? SubmitPasswordAsync() : Task.CompletedTask;
 

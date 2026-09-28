@@ -418,3 +418,89 @@ describe("POST /api/auth/restore", () => {
         expect(json.data.userId).not.toBe(firstId);
     });
 });
+
+describe("auth identity rules (review N-3/N-5/N-6, 6-char minimum)", () => {
+    it("accepts a 6-character password and rejects a 5-character one", async () => {
+        const ok = await app.request("/api/auth/register", jsonRequest({ username: "sixer", email: "six@example.com", password: "htlgkr" }), env);
+        expect(ok.status).toBe(201);
+        const tooShort = await app.request("/api/auth/register", jsonRequest({ username: "fiver", email: "five@example.com", password: "htlgk" }), env);
+        expect(tooShort.status).toBe(400);
+    });
+
+    it("rejects usernames containing @ or outside the allowed pattern", async () => {
+        for (const username of ["victim@example.com", "ab", "has space", "x".repeat(33)]) {
+            const res = await app.request("/api/auth/register", jsonRequest({ username, email: `${username.length}@example.com`, password: "correct horse" }), env);
+            expect(res.status, username).toBe(400);
+            expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
+        }
+    });
+
+    it("stores emails lowercase, logs in with any casing, and treats case-variants as taken", async () => {
+        const reg = await app.request("/api/auth/register", jsonRequest({ username: "carla", email: "  Carla@Example.COM ", password: "correct horse" }), env);
+        expect(reg.status).toBe(201);
+        const row = await env.DB.prepare("SELECT email FROM users WHERE username = 'carla'").first<{ email: string }>();
+        expect(row?.email).toBe("carla@example.com");
+
+        const login = await app.request("/api/auth/login", jsonRequest({ identifier: "CARLA@example.com", password: "correct horse" }), env);
+        expect(login.status).toBe(200);
+
+        const dup = await app.request("/api/auth/register", jsonRequest({ username: "carla2", email: "carla@EXAMPLE.com", password: "correct horse" }), env);
+        expect(dup.status).toBe(409);
+        expect((await readJson(dup)).error.code).toBe("EMAIL_TAKEN");
+    });
+
+    it("still finds a legacy mixed-case email row, preferring the exact-case owner", async () => {
+        await app.request("/api/auth/register", jsonRequest({ username: "dora", email: "dora@example.com", password: "dora password" }), env);
+        await env.DB.prepare("UPDATE users SET email = 'Dora@Example.com' WHERE username = 'dora'").run();
+
+        const login = await app.request("/api/auth/login", jsonRequest({ identifier: "dora@example.com", password: "dora password" }), env);
+        expect(login.status).toBe(200);
+    });
+
+    it("lets each of two legacy rows differing only in email case log into its own account", async () => {
+        const upper = await app.request("/api/auth/register", jsonRequest({ username: "upper", email: "tmp-upper@example.com", password: "password upper" }), env);
+        const upperId = (await readJson(upper)).data.userId;
+        const lower = await app.request("/api/auth/register", jsonRequest({ username: "lower", email: "dora@example.com", password: "password lower" }), env);
+        const lowerId = (await readJson(lower)).data.userId;
+        await env.DB.prepare("UPDATE users SET email = 'Dora@Example.com' WHERE id = ?").bind(upperId).run();
+
+        const asUpper = await app.request("/api/auth/login", jsonRequest({ identifier: "Dora@Example.com", password: "password upper" }), env);
+        expect(asUpper.status).toBe(200);
+        expect((await readJson(asUpper)).data.userId).toBe(upperId);
+
+        const asLower = await app.request("/api/auth/login", jsonRequest({ identifier: "dora@example.com", password: "password lower" }), env);
+        expect(asLower.status).toBe(200);
+        expect((await readJson(asLower)).data.userId).toBe(lowerId);
+    });
+
+    it("prefers the email owner over a legacy username that looks like that email", async () => {
+        const victim = await app.request("/api/auth/register", jsonRequest({ username: "victim", email: "victim@example.com", password: "victim password" }), env);
+        const victimId = (await readJson(victim)).data.userId;
+        await app.request("/api/auth/register", jsonRequest({ username: "squatter", email: "squatter@example.com", password: "squatter password" }), env);
+        await env.DB.prepare("UPDATE users SET username = 'victim@example.com' WHERE username = 'squatter'").run();
+
+        const login = await app.request("/api/auth/login", jsonRequest({ identifier: "victim@example.com", password: "victim password" }), env);
+        expect(login.status).toBe(200);
+        expect((await readJson(login)).data.userId).toBe(victimId);
+    });
+
+    it("answers non-string or oversized fields with 400 instead of a 500", async () => {
+        const cases: [string, unknown][] = [
+            ["/api/auth/login", { identifier: { a: 1 }, password: "x" }],
+            ["/api/auth/login", { identifier: "a".repeat(255), password: "x" }],
+            ["/api/auth/register", { username: 123, email: "n@example.com", password: "correct horse" }],
+            ["/api/auth/register", { username: "numbers", email: "n@example.com", password: "correct horse", confirmNewAccount: "yes" }],
+            ["/api/auth/register", { username: "longpw", email: "l@example.com", password: "p".repeat(1025) }],
+            ["/api/auth/forgot-password", { identifier: 42 }],
+            ["/api/auth/verify-reset-code", { identifier: { a: 1 }, code: "123456" }],
+            ["/api/auth/verify-reset-code", { identifier: "a@example.com", code: "12345" }],
+            ["/api/auth/reset-password", { identifier: "a@example.com", code: 123456, newPassword: "correct horse" }],
+            ["/api/auth/reset-password", { token: ["x"], newPassword: "correct horse" }],
+            ["/api/auth/oauth/exchange", { code: { a: 1 } }],
+        ];
+        for (const [path, body] of cases) {
+            const res = await app.request(path, jsonRequest(body), env);
+            expect(res.status, `${path} ${JSON.stringify(body)}`).toBe(400);
+        }
+    });
+});

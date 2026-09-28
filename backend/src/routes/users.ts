@@ -6,6 +6,7 @@ import { optionalAuth, requireAuth } from "../middleware/auth";
 import {
     EmailTakenError,
     InvalidPasswordError,
+    InvalidUsernameError,
     UsernameTakenError,
     ValidationError,
     deleteUser,
@@ -16,10 +17,10 @@ import {
 } from "../services/userService";
 import { getPublicProfile } from "../services/publicProfileService";
 import { NotFoundError, SelfFollowError, followUser, listFollowers, listFollowing, unfollowUser } from "../services/followService";
+import { EMAIL_PATTERN, MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, USERNAME_RULE_MESSAGE } from "../utils/identity";
 
 export const usersRoute = new Hono<AppEnv>();
 
-const MIN_PASSWORD_LENGTH = 8;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
@@ -119,15 +120,27 @@ usersRoute.put("/me", requireAuth, async (c) => {
     const body = await c.req
         .json<{ username?: string; email?: string; currentPassword?: string; newPassword?: string }>()
         .catch(() => null);
-    if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+    if (!body || typeof body !== "object") return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+    // Review N-3: optional fields, but if present they must be strings.
+    const fields = [body.username, body.email, body.currentPassword, body.newPassword];
+    if (fields.some((v) => v !== undefined && v !== null && typeof v !== "string")) {
+        return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+    }
+    if (body.email && (body.email.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(body.email.trim()))) {
+        return c.json(failure("VALIDATION_ERROR", "email is not a valid address."), 400);
+    }
     if (body.newPassword && body.newPassword.length < MIN_PASSWORD_LENGTH) {
         return c.json(failure("VALIDATION_ERROR", `newPassword must be at least ${MIN_PASSWORD_LENGTH} characters.`), 400);
+    }
+    if ((body.newPassword?.length ?? 0) > MAX_PASSWORD_LENGTH || (body.currentPassword?.length ?? 0) > MAX_PASSWORD_LENGTH) {
+        return c.json(failure("VALIDATION_ERROR", `password must be at most ${MAX_PASSWORD_LENGTH} characters.`), 400);
     }
 
     try {
         const profile = await updateUserProfile(c.env.DB, c.env, c.get("userId"), body, new URL(c.req.url).origin);
         return c.json(success(profile));
     } catch (err) {
+        if (err instanceof InvalidUsernameError) return c.json(failure("VALIDATION_ERROR", USERNAME_RULE_MESSAGE), 400);
         if (err instanceof EmailTakenError) return c.json(failure("EMAIL_TAKEN", "This email is already registered."), 409);
         if (err instanceof UsernameTakenError) return c.json(failure("USERNAME_TAKEN", "This username is already taken."), 409);
         if (err instanceof InvalidPasswordError) return c.json(failure("INVALID_PASSWORD", "Current password is incorrect."), 400);

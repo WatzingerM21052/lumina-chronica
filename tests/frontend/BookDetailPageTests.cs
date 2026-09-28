@@ -299,9 +299,8 @@ public class BookDetailPageTests : BunitContext
     }
 
     // Phase 4 item 18 (dialog rollout, design doc §6.3) -- the edit form is
-    // now a Dialog(Large) with CloseOnOverlayClick/CloseOnEscape both false,
-    // so the only way out is Speichern or Abbrechen/✕, and both of the
-    // latter must check for unsaved changes first (D12's dirty-state guard).
+    // a Dialog(Large). Every way out except Speichern (Abbrechen, ✕, Escape,
+    // overlay click; review N-4) goes through D12's dirty-state guard.
     [Fact]
     public void BookDetail_EditDialog_CancelWithNoChanges_ClosesImmediately()
     {
@@ -353,6 +352,31 @@ public class BookDetailPageTests : BunitContext
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
 
         Assert.Empty(cut.FindAll("#edit-title"));
+    }
+
+    // Review N-4: Escape used to be switched off entirely for this dialog.
+    [Fact]
+    public void BookDetail_EditDialog_Escape_ClosesWhenClean_AndAsksWhenDirty()
+    {
+        UseApiResponse("""
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":"Frank Herbert","description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":null
+            }}
+            """);
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        cut.Find("#edit-button").Click();
+        cut.Find(".dialog").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+        Assert.Empty(cut.FindAll("#edit-title"));
+
+        cut.Find("#edit-button").Click();
+        cut.Find("#edit-title").Change("Dune Messiah");
+        cut.Find(".dialog").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+        Assert.NotNull(cut.Find("#edit-title"));
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
     }
 
     [Fact]
