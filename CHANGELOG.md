@@ -19,6 +19,9 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Book page: the shelves are a "Regale (n)" dropdown with a checkbox per shelf in the action row, instead of one inline checkbox per shelf that would not scale to many shelves.
+- Comments, descriptions, biographies and timeline entries keep the line breaks you typed, and a very long word or link wraps at the edge instead of running out of the card. The comment field shows how many of the 2000 characters are used.
+- Every free-text field now has a maximum length (titles 300, descriptions 10,000, biography 50,000, a lore entry 200,000 characters, up to 30 tags of 50 characters); the fields stop at that length and the server rejects anything longer. Before, only comments were limited.
 - Tablets in portrait (600–839px) use the same floating bottom bar as phones, centred and phone-sized; on 840–1199px wide windows the header shows the logo mark and profile icon without their labels, so the navigation stays on one line instead of wrapping into two or three rows.
 - Scrollbars are thin and quiet everywhere (page, dialogs, lists) and keep a clear gap from form fields in dialogs; horizontal strips such as the reading calendar and the project tabs scroll without a visible bar. The page no longer shifts sideways when moving between short and long pages.
 - A started book's page shows how far you are ("62 % gelesen") and offers "Weiterlesen".
@@ -45,6 +48,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Security
 
+- Text in every script (umlauts, ß, emoji, Chinese, Arabic, Greek, typographic quotes) is stored exactly as typed. A request whose body is not valid UTF-8 is now rejected with a clear error instead of being saved with "�" in place of the broken characters.
 - A deleted account with a linked Google/GitHub sign-in could still log in through it; deleting an account now removes its linked identities and open reset links.
 - Every auth route checks the type and length of its input; malformed requests are rejected instead of causing a server error. Rate limits can no longer be bypassed by sending several requests in parallel.
 - Profile: changing the account's email address now requires the current password, and the previous address receives a notification with the new address masked (review M-6). Before this, anyone holding a logged-in session could redirect password resets to their own inbox without knowing the password. Accounts that only sign in via Google/GitHub have no password, so for them the session is still the proof; the notification still goes out.
