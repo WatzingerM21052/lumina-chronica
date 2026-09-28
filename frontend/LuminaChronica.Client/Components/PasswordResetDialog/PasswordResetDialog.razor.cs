@@ -320,7 +320,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
 
     private async Task OnCodeInputAsync(ChangeEventArgs e)
     {
-        var digits = new string((e.Value?.ToString() ?? string.Empty).Where(char.IsDigit).ToArray());
+        var digits = new string((e.Value?.ToString() ?? string.Empty).Where(char.IsAsciiDigit).ToArray());
         if (digits.Length > 6) digits = digits[..6];
         _codeDigits = digits;
 

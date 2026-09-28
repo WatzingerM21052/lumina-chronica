@@ -129,8 +129,10 @@ authRoute.post("/forgot-password", async (c) => {
     if (!isBoundedString(body?.identifier, MAX_IDENTIFIER_LENGTH)) {
         return c.json(failure("VALIDATION_ERROR", "identifier is required."), 400);
     }
-    // Normalized before any throttle key is derived from it (review N-6):
-    // "Foo@x.at" and "foo@x.at" share one cooldown and one abuse bucket.
+    // Throttle keys use the normalized form (review N-6): "Foo@x.at" and
+    // "foo@x.at" share one cooldown and one abuse bucket. The lookup itself
+    // gets the typed casing, so an exact-case legacy row still wins there
+    // (see authService.ts's findLiveUserByIdentifier).
     const identifier = normalizeIdentifier(body.identifier);
 
     // D2's 60s resend cooldown (docs/superpowers/specs/2026-09-27-password-
@@ -163,7 +165,7 @@ authRoute.post("/forgot-password", async (c) => {
     }
 
     try {
-        await requestPasswordReset(c.env.DB, c.env, identifier);
+        await requestPasswordReset(c.env.DB, c.env, body.identifier);
     } catch (err) {
         // A failure anywhere in requestPasswordReset (DB lookup, token
         // insert, or the email send itself) shouldn't leak through as a
@@ -195,7 +197,7 @@ authRoute.post("/verify-reset-code", async (c) => {
         throw err;
     }
 
-    const result = await verifyResetCode(c.env.DB, c.env.PASSWORD_CODE_SECRET, identifier, body.code);
+    const result = await verifyResetCode(c.env.DB, c.env.PASSWORD_CODE_SECRET, body.identifier, body.code);
     return c.json(success(result));
 });
 
@@ -227,10 +229,10 @@ authRoute.post("/reset-password", async (c) => {
         if (!isBoundedString(body.identifier, MAX_IDENTIFIER_LENGTH) || typeof body.code !== "string" || !RESET_CODE_PATTERN.test(body.code)) {
             return c.json(failure("VALIDATION_ERROR", "Provide exactly one of: token, or identifier+code."), 400);
         }
-        credential = { kind: "code", identifier: normalizeIdentifier(body.identifier), code: body.code };
+        credential = { kind: "code", identifier: body.identifier, code: body.code };
     }
 
-    const throttleKey = credential.kind === "token" ? credential.rawToken : credential.identifier;
+    const throttleKey = credential.kind === "token" ? credential.rawToken : normalizeIdentifier(credential.identifier);
     try {
         await consumeRateLimit(c, "reset-password", throttleKey);
     } catch (err) {
@@ -268,7 +270,7 @@ authRoute.post("/login", async (c) => {
     }
 
     try {
-        const result = await loginUser(c.env.DB, c.env.JWT_SECRET, { identifier, password: body.password });
+        const result = await loginUser(c.env.DB, c.env.JWT_SECRET, { identifier: body.identifier, password: body.password });
         await clearRateLimit(c.env.DB, "login", rateLimit.ip, rateLimit.identifier);
         return c.json(success(result));
     } catch (err) {

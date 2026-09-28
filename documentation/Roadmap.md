@@ -1515,4 +1515,4 @@ All five phases are done.
 - **M-9**: rate limits for register/restore/forgot-password/verify/reset are record-then-compare in one statement (`consumeRateLimit`, `consumeResendCooldown`), so parallel requests can't both pass a separate check. Login keeps check-then-record-on-failure since it clears on success.
 - **N-4**: the book-edit dialog closes with Escape and overlay click again, both through the unsaved-changes guard.
 - **M-5**: the spec's anti-enumeration claim for the reset flow is corrected (it isn't fully enumeration-safe; accepted, see spec §3.3). `backend/.dev.vars.example` lists every binding.
-Backend: 468/468, frontend: 503/503. Needs a manual backend deploy; no migration.
+Backend: 469/469, frontend: 503/503. Needs a manual backend deploy; no migration.

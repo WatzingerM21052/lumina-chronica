@@ -457,6 +457,22 @@ describe("auth identity rules (review N-3/N-5/N-6, 6-char minimum)", () => {
         expect(login.status).toBe(200);
     });
 
+    it("lets each of two legacy rows differing only in email case log into its own account", async () => {
+        const upper = await app.request("/api/auth/register", jsonRequest({ username: "upper", email: "tmp-upper@example.com", password: "password upper" }), env);
+        const upperId = (await readJson(upper)).data.userId;
+        const lower = await app.request("/api/auth/register", jsonRequest({ username: "lower", email: "dora@example.com", password: "password lower" }), env);
+        const lowerId = (await readJson(lower)).data.userId;
+        await env.DB.prepare("UPDATE users SET email = 'Dora@Example.com' WHERE id = ?").bind(upperId).run();
+
+        const asUpper = await app.request("/api/auth/login", jsonRequest({ identifier: "Dora@Example.com", password: "password upper" }), env);
+        expect(asUpper.status).toBe(200);
+        expect((await readJson(asUpper)).data.userId).toBe(upperId);
+
+        const asLower = await app.request("/api/auth/login", jsonRequest({ identifier: "dora@example.com", password: "password lower" }), env);
+        expect(asLower.status).toBe(200);
+        expect((await readJson(asLower)).data.userId).toBe(lowerId);
+    });
+
     it("prefers the email owner over a legacy username that looks like that email", async () => {
         const victim = await app.request("/api/auth/register", jsonRequest({ username: "victim", email: "victim@example.com", password: "victim password" }), env);
         const victimId = (await readJson(victim)).data.userId;
