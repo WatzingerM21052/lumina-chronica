@@ -2,29 +2,29 @@
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient Api
+@inject II18nService I18n
 
-@if (_loading)
+@* Silent while the backend answers: "Backend: online" is a developer
+   signal, not something a reader needs on the home page. Only an
+   unreachable backend is worth telling the user about. *@
+@if (_failed)
 {
-    <LoadingIndicator Text="Verbinde mit Backend..." />
-}
-else if (_response is { Success: true, Data: not null })
-{
-    <p class="status-ok">Backend: @_response.Data.Status</p>
-}
-else
-{
-    <p class="status-error">
-        Backend nicht erreichbar@(_response?.Error is not null ? $" ({_response.Error.Message})" : "").
+    <p class="status-error" role="alert">
+        @I18n.T("statusWidget.unreachable")@(_errorMessage is not null ? $" ({_errorMessage})" : "")
     </p>
 }
 
 @code {
-    private bool _loading = true;
-    private ApiResponse<StatusResult>? _response;
+    private bool _failed;
+    private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        _response = await Api.GetAsync<StatusResult>("/api/status");
-        _loading = false;
+        var response = await Api.GetAsync<StatusResult>("/api/status");
+        if (response is not { Success: true, Data: not null })
+        {
+            _failed = true;
+            _errorMessage = response?.Error?.Message;
+        }
     }
 }

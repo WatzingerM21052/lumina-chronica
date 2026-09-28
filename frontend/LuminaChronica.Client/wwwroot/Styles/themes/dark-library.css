@@ -5,6 +5,7 @@
 */
 
 [data-theme="dark-library"] {
+    color-scheme: dark;
     --color-primary: #d9b04c;
     --color-primary-hover: #c49a35;
     --color-primary-active: #ad8526;

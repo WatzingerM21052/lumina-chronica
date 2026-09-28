@@ -454,7 +454,12 @@ input[type="checkbox"] {
     flex-shrink: 0;
     margin: 0;
     border-radius: 0.3rem;
-    border: 1.5px solid var(--color-border);
+    /* --color-text-muted, not --color-border: an unchecked box is a
+       control, and --color-border sits at ~1.3:1 on the card background
+       (Dark Library: #3c2f22 on #241c15), so an empty box all but
+       disappeared. text-muted clears WCAG's 3:1 for UI components in all
+       four themes. */
+    border: 1.5px solid var(--color-text-muted);
     background-color: var(--color-bg-card);
     cursor: pointer;
     position: relative;

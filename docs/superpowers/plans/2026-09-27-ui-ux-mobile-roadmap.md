@@ -80,8 +80,43 @@ D1 3–5 Kandidaten als SVG → D2 Vergleichsseite, der Nutzer wählt → D3 all
 
 - Reader- und Toast-Meldungen nutzen noch kurze echte Verzögerungen (nicht deploy-blockierend).
 - `user_settings.language` wird nie geschrieben → E-Mails immer Deutsch.
-- CI als Pflicht-Check in den Branch-Regeln (Repo-Einstellung des Nutzers).
+- ~~CI als Pflicht-Check in den Branch-Regeln~~ erledigt (geprüft 2026-09-28: beide Checks sind Pflicht, „strict“).
 - Resend-Domain-Verifizierung für `luminachronica.com` (Stand unbekannt).
+
+### Block F — Design-Durchgang 2026-09-28 (neue Befunde)
+
+Rundgang durch alle Seiten in Brave (Dark Library + Classic Library, 1920px) und per Playwright bei 390px, mit Testkonto und
+Beispieldaten (10 Bücher, 2 Regale, Projekt mit Charakteren/Orten/Lore/Zeitleiste). Was schon in A–D steht, ist hier
+nicht wiederholt, nur bestätigt.
+
+**Bestätigt, bereits geplant:**
+- Handy (B1/B2): Auf **jeder** Seite scrollt die Seite bei 390px 12px seitwärts (der Header mit Profil-Link ist zu breit);
+  die sieben Navigationspunkte stapeln sich senkrecht im Header und belegen gut die Hälfte des Bildschirms. Zusätzlich
+  zu breit: die Button-Zeile im Bibliotheks-Kopf, der Lesekalender. Das ist der dringendste Punkt der ganzen App.
+- Einstellungen (A7): Checkboxen statt Schaltern, Theme als Textknöpfe ohne Vorschau.
+- Konto-Menü (A8): „Abmelden“ steht mitten im Profil zwischen „Verknüpfte Konten“ und „Konto löschen“.
+- Statistik (C): Kennzahlen-Leiste nutzt nur die halbe Breite, die Lesekalender-Karte ist großteils leer, das
+  Jahresziel-Formular (Eingabe über die volle Breite + zwei Knöpfe) wirkt wie ein Rohformular.
+
+**Sofort behoben (PR „design quick wins“):** „Backend: online“ nicht mehr auf der Startseite (nur noch eine Warnung, wenn der
+Server nicht erreichbar ist); native Bedienelemente (Scrollleisten, Auswahllisten) folgen per `color-scheme` dem Theme,
+im Dark-Theme waren sie weiß; leere Checkboxen waren im Dark-Theme fast unsichtbar (Rand ~1,3:1), jetzt ≥ 3:1 in allen
+Themes; die Sprachwahl nennt jede Sprache in sich selbst („Deutsch“, „English“).
+
+| # | Befund | Vorschlag | Aufwand |
+|---|---|---|---|
+| F1 | **Seitenköpfe uneinheitlich**: Bibliothek = Karte mit Titel + Aktionen, Projekte = nacktes `h1` + Knopf, Entdecken = `h1` mit kursivem Untertitel, Statistik/Offline/Einstellungen = Foto-Hero, Profil = zentriertes Siegel über linksbündigem Inhalt | eine `PageHeader`-Komponente (Titel, optional Untertitel/Hero-Bild, Aktionen rechts, auf dem Handy darunter); Heros bleiben, aber mit gleicher Titelposition | M |
+| F2 | **Buchdetail zeigt den Lesefortschritt nicht**: bei 62 % gelesen steht dort nur „Lesen“ | Fortschrittsbalken + „Weiterlesen (62 %)“ als Hauptknopf, „Von vorn beginnen“ im Menü | S |
+| F3 | **Projekt-Übersicht ist dünn**: nur Beschreibung + Kommentare; die Tab-Leiste steht über dem Titel | Tabs unter den Kopf; auf der Übersicht Kennzahlen (Charaktere, Orte, Lore, Ereignisse) als klickbare Kacheln | M |
+| F4 | **Karten-Raster in Projekten/Charakteren/Orten**: kleine Querformat-Vorschauen (≈130px), viel Leerraum rechts; Charaktere ohne Bild zeigen nur ein graues Feld | Hochformat-Karten wie bei Büchern, Raster `auto-fill, minmax(10rem, 1fr)`; Platzhalter mit Initialen statt leerem Icon | S–M |
+| F5 | **Burgunder (`--color-secondary`) liest sich im Dark-Theme wie ein Fehler-Rot**: Fortschrittsbalken auf Buchkarten, Datum in der Zeitleiste („JAHR 312“) | Fortschritt in Gold (`--color-accent-text`, wie schon bei der großen Karte), Zeitleisten-Datum in `--color-text-secondary` + Kapitälchen | S |
+| F6 | **Native `<select>`s** (Buchgröße, Sortieren, Pro Seite, Entdecken-Sortierung) weichen von den übrigen Bedienelementen ab: 16px statt 14px Schrift, 41px statt 40px Höhe, eigener Pfeil | ein gemeinsamer `select`-Stil in `app.css` (Höhe/Radius/Pfeil wie Eingabefelder) | S |
+| F7 | **Profil**: eine schmale Spalte (24rem), rechte Hälfte leer; Google/GitHub ohne Logos; Kopf zentriert, Inhalt linksbündig | zusammen mit A8 und der Profil-Redesign-Idee (2 Spalten: Identität links, Einstellungen rechts) | M–L |
+| F8 | **Zurück-Links** sind unterstrichener Fließtext direkt über dem Titel | kleiner „Ghost“-Link mit Pfeil-Icon und festem Abstand, überall gleich (7 Seiten) | S |
+| F9 | Beziehungs-Bearbeiten, Relationships und Lore-Seite | in #509 bereits behoben (Liste, Rückfrage beim Löschen, Lore-Karte) | erledigt |
+
+Reihenfolge-Vorschlag: B1/B2 (Handy) zuerst, weil jede Seite betroffen ist; dann F5, F6, F8, F2 (klein, sichtbar);
+dann F1 + F4 zusammen (Seitenköpfe und Raster teilen sich Layout-Regeln); F3 und F7 gemeinsam mit A8.
 
 ### Danach (Backlog, nicht in diesem Plan)
 

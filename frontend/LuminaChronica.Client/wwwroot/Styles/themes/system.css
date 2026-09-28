@@ -6,6 +6,7 @@
 
 @media (prefers-color-scheme: light) {
     [data-theme="system"] {
+        color-scheme: light;
         --color-primary: #3b6fe0;
         --color-primary-hover: #2f5bc0;
         --color-primary-active: #274ba3;
@@ -34,6 +35,7 @@
 
 @media (prefers-color-scheme: dark) {
     [data-theme="system"] {
+        color-scheme: dark;
         --color-primary: #d9b04c;
         --color-primary-hover: #c49a35;
         --color-primary-active: #ad8526;

@@ -132,7 +132,7 @@
   "settings.title": "Settings",
   "settings.themeTitle": "Theme",
   "settings.languageTitle": "Language",
-  "settings.languageGerman": "German",
+  "settings.languageGerman": "Deutsch",
   "settings.languageEnglish": "English",
   "settings.libraryTitle": "Library",
   "settings.showCoverTextLabel": "Show title/author on shelf covers",
@@ -684,6 +684,7 @@
   "oauthCallback.genericError": "Sign-in failed. Please try again.",
 
   "home.welcomeBack": "Welcome back",
+  "statusWidget.unreachable": "The server can't be reached right now. You can still read your offline books.",
   "home.continueReadingTitle": "Continue reading",
   "home.libraryTitle": "Your library",
   "home.statBooks": "Books",

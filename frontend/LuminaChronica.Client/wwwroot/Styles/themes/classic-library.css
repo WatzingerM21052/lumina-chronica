@@ -8,6 +8,7 @@
 
 :root,
 [data-theme="classic-library"] {
+    color-scheme: light;
     /* Brass / gilt-lettering — primary interactive accent */
     --color-primary: #8c6a24;
     --color-primary-hover: #78591d;
