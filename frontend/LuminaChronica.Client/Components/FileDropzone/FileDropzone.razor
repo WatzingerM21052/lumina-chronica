@@ -1,0 +1,32 @@
+@namespace LuminaChronica.Client.Components
+
+@* A file picker styled as the app's dropzone (click or drag a file onto it),
+   instead of the browser's bare "Datei auswählen / Keine ausgewählt" input.
+   Shows the chosen file's name once one is picked (UI/UX plan A5). The
+   parent keeps the IBrowserFile from OnChange, as with a plain InputFile. *@
+<div class="dropzone @(_isDragging ? "dropzone--active" : "") @(SelectedFileName is not null ? "dropzone--filled" : "")"
+     @ondragenter="() => _isDragging = true" @ondragleave="() => _isDragging = false"
+     @ondragover:preventDefault @ondrop="() => _isDragging = false">
+    <InputFile id="@Id" accept="@Accept" OnChange="OnChange" />
+    <span class="dropzone-label">@(SelectedFileName ?? Label)</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    // e.g. "image/*"; omitted from the input when null.
+    [Parameter]
+    public string? Accept { get; set; }
+
+    [Parameter]
+    public string? SelectedFileName { get; set; }
+
+    [Parameter]
+    public EventCallback<InputFileChangeEventArgs> OnChange { get; set; }
+
+    private bool _isDragging;
+}

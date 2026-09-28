@@ -180,31 +180,33 @@ else
     {
         <div class="library-header">
             <h2>@I18n.T("projectDetail.charactersTitle")</h2>
-            <button type="button" class="btn btn-primary" @onclick="() => _showCreateCharacterForm = !_showCreateCharacterForm">
-                @(_showCreateCharacterForm ? I18n.T("projectDetail.cancelButton") : I18n.T("projectDetail.addCharacterButton"))
-            </button>
+            <button type="button" id="add-character-button" class="btn btn-primary" @onclick="OpenCreateCharacter">@I18n.T("projectDetail.addCharacterButton")</button>
         </div>
 
-        @if (_showCreateCharacterForm)
-        {
-            <EditForm Model="_createCharacterForm" OnValidSubmit="CreateCharacterAsync" class="book-form-card">
-                @if (_createCharacterErrorMessage is not null)
-                {
-                    <p class="form-error">@_createCharacterErrorMessage</p>
-                }
-                <div class="form-group">
-                    <label for="character-name">@I18n.T("projectDetail.nameLabel")</label>
-                    <InputText id="character-name" @bind-Value="_createCharacterForm.Name" />
-                </div>
-                <div class="form-group">
-                    <label for="character-image">@I18n.T("projectDetail.imageOptionalLabel")</label>
-                    <InputFile id="character-image" OnChange="OnCharacterImageSelected" />
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.addButton")</button>
-                </div>
-            </EditForm>
-        }
+        <Dialog IsOpen="_showCreateCharacterForm" Title="@I18n.T("projectDetail.addCharacterButton")"
+                OnClose="() => RequestCloseDialog(IsCreateCharacterDirty, () => _showCreateCharacterForm = false)">
+            <ChildContent>
+                <EditForm id="create-character-form" Model="_createCharacterForm" OnValidSubmit="() => SubmitDialogAsync(CreateCharacterAsync)" class="auth-form">
+                    @if (_createCharacterErrorMessage is not null)
+                    {
+                        <p class="form-error">@_createCharacterErrorMessage</p>
+                    }
+                    <div class="form-group">
+                        <label for="character-name">@I18n.T("projectDetail.nameLabel")</label>
+                        <InputText id="character-name" @bind-Value="_createCharacterForm.Name" />
+                    </div>
+                    <div class="form-group">
+                        <label for="character-image">@I18n.T("projectDetail.imageOptionalLabel")</label>
+                        <FileDropzone Id="character-image" Accept="image/*" Label="@I18n.T("projectDetail.imageDropzoneLabel")"
+                                      SelectedFileName="@_selectedCharacterImage?.Name" OnChange="OnCharacterImageSelected" />
+                    </div>
+                </EditForm>
+            </ChildContent>
+            <Footer>
+                <button type="button" class="btn" @onclick="() => RequestCloseDialog(IsCreateCharacterDirty, () => _showCreateCharacterForm = false)">@I18n.T("projectDetail.cancelButton")</button>
+                <button type="submit" form="create-character-form" class="btn btn-primary" disabled="@_isSubmittingDialog">@I18n.T("projectDetail.addButton")</button>
+            </Footer>
+        </Dialog>
 
         @if (_charactersErrorMessage is not null)
         {
@@ -277,31 +279,33 @@ else
 
         <div class="library-header">
             <h2>@I18n.T("projectDetail.locationsTitle")</h2>
-            <button type="button" class="btn btn-primary" @onclick="() => _showCreateLocationForm = !_showCreateLocationForm">
-                @(_showCreateLocationForm ? I18n.T("projectDetail.cancelButton") : I18n.T("projectDetail.addLocationButton"))
-            </button>
+            <button type="button" id="add-location-button" class="btn btn-primary" @onclick="OpenCreateLocation">@I18n.T("projectDetail.addLocationButton")</button>
         </div>
 
-        @if (_showCreateLocationForm)
-        {
-            <EditForm Model="_createLocationForm" OnValidSubmit="CreateLocationAsync" class="book-form-card">
-                @if (_createLocationErrorMessage is not null)
-                {
-                    <p class="form-error">@_createLocationErrorMessage</p>
-                }
-                <div class="form-group">
-                    <label for="location-name">@I18n.T("projectDetail.nameLabel")</label>
-                    <InputText id="location-name" @bind-Value="_createLocationForm.Name" />
-                </div>
-                <div class="form-group">
-                    <label for="location-image">@I18n.T("projectDetail.imageOptionalLabel")</label>
-                    <InputFile id="location-image" OnChange="OnLocationImageSelected" />
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.addButton")</button>
-                </div>
-            </EditForm>
-        }
+        <Dialog IsOpen="_showCreateLocationForm" Title="@I18n.T("projectDetail.addLocationButton")"
+                OnClose="() => RequestCloseDialog(IsCreateLocationDirty, () => _showCreateLocationForm = false)">
+            <ChildContent>
+                <EditForm id="create-location-form" Model="_createLocationForm" OnValidSubmit="() => SubmitDialogAsync(CreateLocationAsync)" class="auth-form">
+                    @if (_createLocationErrorMessage is not null)
+                    {
+                        <p class="form-error">@_createLocationErrorMessage</p>
+                    }
+                    <div class="form-group">
+                        <label for="location-name">@I18n.T("projectDetail.nameLabel")</label>
+                        <InputText id="location-name" @bind-Value="_createLocationForm.Name" />
+                    </div>
+                    <div class="form-group">
+                        <label for="location-image">@I18n.T("projectDetail.imageOptionalLabel")</label>
+                        <FileDropzone Id="location-image" Accept="image/*" Label="@I18n.T("projectDetail.imageDropzoneLabel")"
+                                      SelectedFileName="@_selectedLocationImage?.Name" OnChange="OnLocationImageSelected" />
+                    </div>
+                </EditForm>
+            </ChildContent>
+            <Footer>
+                <button type="button" class="btn" @onclick="() => RequestCloseDialog(IsCreateLocationDirty, () => _showCreateLocationForm = false)">@I18n.T("projectDetail.cancelButton")</button>
+                <button type="submit" form="create-location-form" class="btn btn-primary" disabled="@_isSubmittingDialog">@I18n.T("projectDetail.addButton")</button>
+            </Footer>
+        </Dialog>
 
         @if (_locationsErrorMessage is not null)
         {
@@ -335,35 +339,64 @@ else
     {
         <div class="library-header">
             <h2>@I18n.T("projectDetail.timelineTitle")</h2>
-            <button type="button" class="btn btn-primary" @onclick="() => _showCreateEventForm = !_showCreateEventForm">
-                @(_showCreateEventForm ? I18n.T("projectDetail.cancelButton") : I18n.T("projectDetail.addEventButton"))
-            </button>
+            <button type="button" id="add-event-button" class="btn btn-primary" @onclick="OpenCreateEvent">@I18n.T("projectDetail.addEventButton")</button>
         </div>
 
-        @if (_showCreateEventForm)
-        {
-            <EditForm Model="_createEventForm" OnValidSubmit="CreateTimelineEventAsync" class="book-form-card">
-                @if (_createEventErrorMessage is not null)
-                {
-                    <p class="form-error">@_createEventErrorMessage</p>
-                }
-                <div class="form-group">
-                    <label for="event-title">@I18n.T("projectDetail.titleLabel")</label>
-                    <InputText id="event-title" @bind-Value="_createEventForm.Title" />
-                </div>
-                <div class="form-group">
-                    <label for="event-date">@I18n.T("projectDetail.eventDateLabel")</label>
-                    <InputText id="event-date" @bind-Value="_createEventForm.Date" />
-                </div>
-                <div class="form-group">
-                    <label for="event-description">@I18n.T("projectDetail.descriptionLabel")</label>
-                    <InputTextArea id="event-description" @bind-Value="_createEventForm.Description" />
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.addButton")</button>
-                </div>
-            </EditForm>
-        }
+        <Dialog IsOpen="_showCreateEventForm" Title="@I18n.T("projectDetail.addEventButton")"
+                OnClose="() => RequestCloseDialog(IsCreateEventDirty, () => _showCreateEventForm = false)">
+            <ChildContent>
+                <EditForm id="create-event-form" Model="_createEventForm" OnValidSubmit="() => SubmitDialogAsync(CreateTimelineEventAsync)" class="auth-form">
+                    @if (_createEventErrorMessage is not null)
+                    {
+                        <p class="form-error">@_createEventErrorMessage</p>
+                    }
+                    <div class="form-group">
+                        <label for="event-title">@I18n.T("projectDetail.titleLabel")</label>
+                        <InputText id="event-title" @bind-Value="_createEventForm.Title" />
+                    </div>
+                    <div class="form-group">
+                        <label for="event-date">@I18n.T("projectDetail.eventDateLabel")</label>
+                        <InputText id="event-date" @bind-Value="_createEventForm.Date" />
+                    </div>
+                    <div class="form-group">
+                        <label for="event-description">@I18n.T("projectDetail.descriptionLabel")</label>
+                        <InputTextArea id="event-description" @bind-Value="_createEventForm.Description" />
+                    </div>
+                </EditForm>
+            </ChildContent>
+            <Footer>
+                <button type="button" class="btn" @onclick="() => RequestCloseDialog(IsCreateEventDirty, () => _showCreateEventForm = false)">@I18n.T("projectDetail.cancelButton")</button>
+                <button type="submit" form="create-event-form" class="btn btn-primary" disabled="@_isSubmittingDialog">@I18n.T("projectDetail.addButton")</button>
+            </Footer>
+        </Dialog>
+
+        <Dialog IsOpen="_editingEventId is not null" Title="@I18n.T("projectDetail.editEventDialogTitle")"
+                OnClose="() => RequestCloseDialog(IsEditEventDirty, () => _editingEventId = null)">
+            <ChildContent>
+                <EditForm id="edit-event-form" Model="_editEventForm" OnValidSubmit="() => SubmitDialogAsync(SaveTimelineEventAsync)" class="auth-form">
+                    @if (_editEventErrorMessage is not null)
+                    {
+                        <p class="form-error">@_editEventErrorMessage</p>
+                    }
+                    <div class="form-group">
+                        <label for="event-edit-title">@I18n.T("projectDetail.titleLabel")</label>
+                        <InputText id="event-edit-title" @bind-Value="_editEventForm.Title" />
+                    </div>
+                    <div class="form-group">
+                        <label for="event-edit-date">@I18n.T("projectDetail.dateLabel")</label>
+                        <InputText id="event-edit-date" @bind-Value="_editEventForm.Date" />
+                    </div>
+                    <div class="form-group">
+                        <label for="event-edit-description">@I18n.T("projectDetail.descriptionLabel")</label>
+                        <InputTextArea id="event-edit-description" @bind-Value="_editEventForm.Description" />
+                    </div>
+                </EditForm>
+            </ChildContent>
+            <Footer>
+                <button type="button" class="btn" @onclick="() => RequestCloseDialog(IsEditEventDirty, () => _editingEventId = null)">@I18n.T("projectDetail.cancelButton")</button>
+                <button type="submit" form="edit-event-form" class="btn btn-primary" disabled="@_isSubmittingDialog">@I18n.T("projectDetail.saveButton")</button>
+            </Footer>
+        </Dialog>
 
         @if (_eventsErrorMessage is not null)
         {
@@ -383,53 +416,25 @@ else
                 @foreach (var (timelineEvent, index) in _events.Select((e, i) => (e, i)))
                 {
                     <li class="timeline-event">
-                        @if (_editingEventId == timelineEvent.Id)
-                        {
-                            <EditForm Model="_editEventForm" OnValidSubmit="SaveTimelineEventAsync" class="timeline-event-card">
-                                @if (_editEventErrorMessage is not null)
-                                {
-                                    <p class="form-error">@_editEventErrorMessage</p>
-                                }
-                                <div class="form-group">
-                                    <label for="@($"event-edit-title-{timelineEvent.Id}")">@I18n.T("projectDetail.titleLabel")</label>
-                                    <InputText id="@($"event-edit-title-{timelineEvent.Id}")" @bind-Value="_editEventForm.Title" />
+                        <div class="timeline-event-card">
+                            @if (!string.IsNullOrWhiteSpace(timelineEvent.Date))
+                            {
+                                <div class="timeline-event-date">@timelineEvent.Date</div>
+                            }
+                            <div class="timeline-event-title">@timelineEvent.Title</div>
+                            @if (!string.IsNullOrWhiteSpace(timelineEvent.Description))
+                            {
+                                <p>@timelineEvent.Description</p>
+                            }
+                            <div class="timeline-event-controls">
+                                <div class="timeline-move-buttons">
+                                    <button type="button" class="btn" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="@I18n.T("projectDetail.moveUpTitle")">▲</button>
+                                    <button type="button" class="btn" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="@I18n.T("projectDetail.moveDownTitle")">▼</button>
                                 </div>
-                                <div class="form-group">
-                                    <label for="@($"event-edit-date-{timelineEvent.Id}")">@I18n.T("projectDetail.dateLabel")</label>
-                                    <InputText id="@($"event-edit-date-{timelineEvent.Id}")" @bind-Value="_editEventForm.Date" />
-                                </div>
-                                <div class="form-group">
-                                    <label for="@($"event-edit-description-{timelineEvent.Id}")">@I18n.T("projectDetail.descriptionLabel")</label>
-                                    <InputTextArea id="@($"event-edit-description-{timelineEvent.Id}")" @bind-Value="_editEventForm.Description" />
-                                </div>
-                                <div class="form-actions">
-                                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.saveButton")</button>
-                                    <button type="button" class="btn" @onclick="() => _editingEventId = null">@I18n.T("projectDetail.cancelButton")</button>
-                                </div>
-                            </EditForm>
-                        }
-                        else
-                        {
-                            <div class="timeline-event-card">
-                                @if (!string.IsNullOrWhiteSpace(timelineEvent.Date))
-                                {
-                                    <div class="timeline-event-date">@timelineEvent.Date</div>
-                                }
-                                <div class="timeline-event-title">@timelineEvent.Title</div>
-                                @if (!string.IsNullOrWhiteSpace(timelineEvent.Description))
-                                {
-                                    <p>@timelineEvent.Description</p>
-                                }
-                                <div class="timeline-event-controls">
-                                    <div class="timeline-move-buttons">
-                                        <button type="button" class="btn" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="@I18n.T("projectDetail.moveUpTitle")">▲</button>
-                                        <button type="button" class="btn" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="@I18n.T("projectDetail.moveDownTitle")">▼</button>
-                                    </div>
-                                    <button type="button" class="btn" @onclick="() => StartEditingEvent(timelineEvent)">@I18n.T("projectDetail.editButton")</button>
-                                    <button type="button" class="btn" @onclick="() => DeleteTimelineEventAsync(timelineEvent.Id)">@I18n.T("projectDetail.deleteButton")</button>
-                                </div>
+                                <button type="button" class="btn" @onclick="() => StartEditingEvent(timelineEvent)">@I18n.T("projectDetail.editButton")</button>
+                                <button type="button" class="btn" @onclick="() => DeleteTimelineEventAsync(timelineEvent.Id)">@I18n.T("projectDetail.deleteButton")</button>
                             </div>
-                        }
+                        </div>
                     </li>
                 }
             </ol>
@@ -439,31 +444,32 @@ else
     {
         <div class="library-header">
             <h2>@I18n.T("projectDetail.loreTitle")</h2>
-            <button type="button" class="btn btn-primary" @onclick="() => _showCreateLoreForm = !_showCreateLoreForm">
-                @(_showCreateLoreForm ? I18n.T("projectDetail.cancelButton") : I18n.T("projectDetail.addLoreButton"))
-            </button>
+            <button type="button" id="add-lore-button" class="btn btn-primary" @onclick="OpenCreateLore">@I18n.T("projectDetail.addLoreButton")</button>
         </div>
 
-        @if (_showCreateLoreForm)
-        {
-            <EditForm Model="_createLoreForm" OnValidSubmit="CreateLoreEntryAsync" class="book-form-card">
-                @if (_createLoreErrorMessage is not null)
-                {
-                    <p class="form-error">@_createLoreErrorMessage</p>
-                }
-                <div class="form-group">
-                    <label for="lore-title">@I18n.T("projectDetail.titleLabel")</label>
-                    <InputText id="lore-title" @bind-Value="_createLoreForm.Title" />
-                </div>
-                <div class="form-group">
-                    <label for="lore-content">@I18n.T("projectDetail.loreContentLabel")</label>
-                    <InputTextArea id="lore-content" @bind-Value="_createLoreForm.Content" rows="8" />
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.addButton")</button>
-                </div>
-            </EditForm>
-        }
+        <Dialog IsOpen="_showCreateLoreForm" Size="DialogSize.Large" Title="@I18n.T("projectDetail.addLoreButton")"
+                OnClose="() => RequestCloseDialog(IsCreateLoreDirty, () => _showCreateLoreForm = false)">
+            <ChildContent>
+                <EditForm id="create-lore-form" Model="_createLoreForm" OnValidSubmit="() => SubmitDialogAsync(CreateLoreEntryAsync)" class="auth-form">
+                    @if (_createLoreErrorMessage is not null)
+                    {
+                        <p class="form-error">@_createLoreErrorMessage</p>
+                    }
+                    <div class="form-group">
+                        <label for="lore-title">@I18n.T("projectDetail.titleLabel")</label>
+                        <InputText id="lore-title" @bind-Value="_createLoreForm.Title" />
+                    </div>
+                    <div class="form-group">
+                        <label for="lore-content">@I18n.T("projectDetail.loreContentLabel")</label>
+                        <InputTextArea id="lore-content" @bind-Value="_createLoreForm.Content" rows="10" />
+                    </div>
+                </EditForm>
+            </ChildContent>
+            <Footer>
+                <button type="button" class="btn" @onclick="() => RequestCloseDialog(IsCreateLoreDirty, () => _showCreateLoreForm = false)">@I18n.T("projectDetail.cancelButton")</button>
+                <button type="submit" form="create-lore-form" class="btn btn-primary" disabled="@_isSubmittingDialog">@I18n.T("projectDetail.addButton")</button>
+            </Footer>
+        </Dialog>
 
         @if (_loreErrorMessage is not null)
         {
@@ -563,7 +569,8 @@ else
             </div>
             <div class="form-group">
                 <label for="file-upload">@I18n.T("projectDetail.fileLabel")</label>
-                <InputFile id="file-upload" OnChange="OnProjectFileSelected" />
+                <FileDropzone Id="file-upload" Label="@I18n.T("projectDetail.fileDropzoneLabel")"
+                              SelectedFileName="@_selectedProjectFile?.Name" OnChange="OnProjectFileSelected" />
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.uploadButton")</button>
@@ -613,6 +620,13 @@ else
     }
 }
 
+
+@* Shared by the create/edit dialogs on the Charaktere, Karte, Zeitleiste and
+   Lore tabs: RequestCloseDialog parks the close action here when there are
+   unsaved changes, and only "Verwerfen" runs it. *@
+<ConfirmDialog IsOpen="_pendingDiscard is not null" Message="@I18n.T("dialog.discardChangesMessage")"
+               ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
+               OnConfirm="ConfirmPendingDiscard" OnCancel="() => _pendingDiscard = null" />
 @code {
     [Parameter]
     public int Id { get; set; }
@@ -661,6 +675,7 @@ else
     private int? _editingEventId;
     private string? _editEventErrorMessage;
     private UpdateTimelineEventRequest _editEventForm = new();
+    private (string? Title, string? Date, string? Description)? _editEventSnapshot;
 
     private List<LoreEntry>? _loreEntries;
     private string? _loreErrorMessage;
@@ -910,6 +925,86 @@ else
 
     private void OnCharacterImageSelected(InputFileChangeEventArgs e) => _selectedCharacterImage = e.File;
 
+    // --- Create/edit dialogs on the tabs (UI/UX plan A5) --------------------
+    // Each dialog opens on a fresh form (no leftovers from a cancelled
+    // attempt, cf. review N-2), asks before discarding typed input, and
+    // SubmitDialogAsync keeps a double click from creating two entries.
+    private Action? _pendingDiscard;
+    private bool _isSubmittingDialog;
+
+    private void RequestCloseDialog(bool isDirty, Action close)
+    {
+        if (isDirty)
+        {
+            _pendingDiscard = close;
+            return;
+        }
+        close();
+    }
+
+    private void ConfirmPendingDiscard()
+    {
+        var close = _pendingDiscard;
+        _pendingDiscard = null;
+        close?.Invoke();
+    }
+
+    private async Task SubmitDialogAsync(Func<Task> submit)
+    {
+        if (_isSubmittingDialog) return;
+        _isSubmittingDialog = true;
+        try
+        {
+            await submit();
+        }
+        finally
+        {
+            _isSubmittingDialog = false;
+        }
+    }
+
+    private static bool HasText(string? value) => !string.IsNullOrWhiteSpace(value);
+
+    private bool IsCreateCharacterDirty => HasText(_createCharacterForm.Name) || _selectedCharacterImage is not null;
+    private bool IsCreateLocationDirty => HasText(_createLocationForm.Name) || _selectedLocationImage is not null;
+    private bool IsCreateEventDirty => HasText(_createEventForm.Title) || HasText(_createEventForm.Date) || HasText(_createEventForm.Description);
+    private bool IsCreateLoreDirty => HasText(_createLoreForm.Title) || HasText(_createLoreForm.Content);
+    private bool IsEditEventDirty =>
+        _editEventSnapshot is not { } snapshot ||
+        (_editEventForm.Title ?? "") != (snapshot.Title ?? "") ||
+        (_editEventForm.Date ?? "") != (snapshot.Date ?? "") ||
+        (_editEventForm.Description ?? "") != (snapshot.Description ?? "");
+
+    private void OpenCreateCharacter()
+    {
+        _createCharacterForm = new CreateCharacterFormModel();
+        _selectedCharacterImage = null;
+        _createCharacterErrorMessage = null;
+        _showCreateCharacterForm = true;
+    }
+
+    private void OpenCreateLocation()
+    {
+        _createLocationForm = new CreateLocationFormModel();
+        _selectedLocationImage = null;
+        _createLocationErrorMessage = null;
+        _showCreateLocationForm = true;
+    }
+
+    private void OpenCreateEvent()
+    {
+        _createEventForm = new CreateTimelineEventRequest();
+        _createEventErrorMessage = null;
+        _showCreateEventForm = true;
+    }
+
+    private void OpenCreateLore()
+    {
+        _createLoreForm = new CreateLoreEntryRequest();
+        _createLoreErrorMessage = null;
+        _showCreateLoreForm = true;
+    }
+
     private async Task CreateCharacterAsync()
     {
         _createCharacterErrorMessage = null;
@@ -1114,6 +1209,7 @@ else
     private void StartEditingEvent(TimelineEvent timelineEvent)
     {
         _editEventForm = new UpdateTimelineEventRequest { Title = timelineEvent.Title, Date = timelineEvent.Date, Description = timelineEvent.Description };
+        _editEventSnapshot = (timelineEvent.Title, timelineEvent.Date, timelineEvent.Description);
         _editEventErrorMessage = null;
         _editingEventId = timelineEvent.Id;
     }
