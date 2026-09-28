@@ -25,25 +25,31 @@ else if (_shelf is null)
 }
 else
 {
-    <div class="book-detail-cover">
-        @if (_coverObjectUrl is not null)
-        {
-            <img src="@_coverObjectUrl" alt="@_shelf.Name" />
-        }
-        else
-        {
-            <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="book" /></div>
-        }
-    </div>
+    @* Same header as book/project/character pages (design audit): cover
+       beside the name instead of a large cover stacked above it. *@
+    <div class="book-detail">
+        <div class="book-detail-cover">
+            @if (_coverObjectUrl is not null)
+            {
+                <img src="@_coverObjectUrl" alt="@_shelf.Name" />
+            }
+            else
+            {
+                <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="book" /></div>
+            }
+        </div>
 
-    <h1>@_shelf.Name</h1>
-    @if (!string.IsNullOrWhiteSpace(_shelf.Description))
-    {
-        <p class="user-text">@_shelf.Description</p>
-    }
-    <div class="form-actions">
-        <button type="button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("shelfDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("shelfDetail.editButton")</span></button>
-        <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("shelfDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("shelfDetail.deleteButton")</span></button>
+        <div class="book-detail-info">
+            <h1>@_shelf.Name</h1>
+            @if (!string.IsNullOrWhiteSpace(_shelf.Description))
+            {
+                <p class="user-text">@_shelf.Description</p>
+            }
+            <div class="form-actions">
+                <button type="button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("shelfDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("shelfDetail.editButton")</span></button>
+                <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("shelfDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("shelfDetail.deleteButton")</span></button>
+            </div>
+        </div>
     </div>
     <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("shelfDetail.deleteConfirmMessage")"
                    OnConfirm="DeleteShelfAsync" OnCancel="() => _confirmingDelete = false" />
@@ -101,12 +107,12 @@ else
     }
     else
     {
-        <div class="library-grid">
+        <div class="library-grid shelf-books">
             @foreach (var book in _books.Items)
             {
                 <div class="shelf-book-entry">
                     <BookCard Book="book" />
-                    <button type="button" class="btn shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)">@I18n.T("shelfDetail.removeBookButton")</button>
+                    <button type="button" class="btn btn-icon btn-icon-sm shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)" title="@I18n.T("shelfDetail.removeBookButton")"><Icon Name="remove" /><span class="visually-hidden">@I18n.T("shelfDetail.removeBookButton")</span></button>
                 </div>
             }
         </div>

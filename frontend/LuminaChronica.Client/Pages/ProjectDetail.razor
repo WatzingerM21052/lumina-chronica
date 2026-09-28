@@ -31,6 +31,12 @@ else if (_project is null)
 }
 else
 {
+    @* Design audit F3: the other tabs showed no project name at all, only
+       "Charaktere" etc. The overview has the full header below. *@
+    @if (_activeTab != "overview")
+    {
+        <h1 class="project-compact-title">@_project.Title</h1>
+    }
     <div class="project-tabs" role="tablist">
         <button type="button" class="project-tab @(_activeTab == "overview" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "overview" ? "true" : "false")" @onclick="@(() => _activeTab = "overview")">@I18n.T("projectDetail.tabOverview")</button>
         <button type="button" class="project-tab @(_activeTab == "characters" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "characters" ? "true" : "false")" @onclick="@(() => _activeTab = "characters")">@I18n.T("projectDetail.tabCharacters")</button>
@@ -68,6 +74,18 @@ else
                 </div>
             </div>
         </div>
+
+        @* Design audit F3: what the project holds at a glance; each tile
+           opens its tab. *@
+        <nav class="project-stats" aria-label="@I18n.T("projectDetail.statsLabel")">
+            @foreach (var (tab, count, labelKey) in ProjectStats)
+            {
+                <button type="button" class="project-stat" @onclick="() => _activeTab = tab">
+                    <span class="project-stat-value">@count</span>
+                    <span class="project-stat-label">@I18n.T(labelKey)</span>
+                </button>
+            }
+        </nav>
 
         @* UI/UX plan A3: edit in a dialog like book and shelf, instead of
            swapping the header for an inline form. Every way out except
@@ -338,7 +356,7 @@ else
                         <LocationCard Location="location" />
                         @if (location.X is null && _mapObjectUrl is not null)
                         {
-                            <button type="button" class="btn shelf-book-remove" @onclick="() => _placingLocationId = location.Id">@I18n.T("projectDetail.placeOnMapButton")</button>
+                            <button type="button" class="btn btn-icon btn-icon-sm shelf-book-remove" @onclick="() => _placingLocationId = location.Id" title="@I18n.T("projectDetail.placeOnMapButton")"><Icon Name="location-pin" /><span class="visually-hidden">@I18n.T("projectDetail.placeOnMapButton")</span></button>
                         }
                     </div>
                 }
@@ -657,6 +675,16 @@ else
     private bool _confirmingDelete;
 
     private string _activeTab = "overview";
+    private IEnumerable<(string Tab, int Count, string LabelKey)> ProjectStats =>
+    [
+        ("characters", _characters?.Count ?? 0, "projectDetail.tabCharacters"),
+        ("map", _locations?.Count ?? 0, "projectDetail.statLocations"),
+        ("timeline", _events?.Count ?? 0, "projectDetail.statEvents"),
+        ("lore", _loreEntries?.Count ?? 0, "projectDetail.tabLore"),
+        ("books", _linkedBooks?.Count ?? 0, "projectDetail.tabBooks"),
+        ("files", _files?.Count ?? 0, "projectDetail.tabFiles"),
+    ];
+
     private List<Character>? _characters;
     private string? _charactersErrorMessage;
     private bool _showCreateCharacterForm;

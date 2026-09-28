@@ -992,4 +992,23 @@ public class ProjectDetailPageTests : BunitContext
         Assert.Equal("/api/projects/1/comments", postRequest?.RequestUri?.AbsolutePath);
         Assert.Contains("\"content\":\"Love this world!\"", postBody);
     }
+
+    // Design audit F3: the overview counts what the project holds, and each
+    // tile opens its tab; the other tabs keep the project name on screen.
+    [Fact]
+    public void ProjectDetail_OverviewStats_OpenTheirTab_AndOtherTabsShowTheProjectName()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        var tiles = cut.FindAll(".project-stats .project-stat");
+        Assert.Equal(6, tiles.Count);
+        Assert.Equal("0", tiles[0].QuerySelector(".project-stat-value")!.TextContent);
+        Assert.Empty(cut.FindAll(".project-compact-title"));
+
+        cut.FindAll(".project-stat").Single(t => t.TextContent.Contains("Orte")).Click();
+
+        Assert.Equal("true", cut.FindAll(".project-tabs [role=tab]")[2].GetAttribute("aria-selected"));
+        Assert.Equal("Aetherfall", cut.Find("h1.project-compact-title").TextContent);
+    }
 }

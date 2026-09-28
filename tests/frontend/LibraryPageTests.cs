@@ -61,7 +61,7 @@ public class LibraryPageTests : BunitContext
 
         var cut = Render<Library>();
 
-        Assert.Equal("library/upload", cut.Find(".library-header a.btn-primary").GetAttribute("href"));
+        Assert.Equal("library/upload", cut.Find(".page-header a.btn-primary").GetAttribute("href"));
         Assert.Empty(cut.FindAll(".dialog"));
     }
 

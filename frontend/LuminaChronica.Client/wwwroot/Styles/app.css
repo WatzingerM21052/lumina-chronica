@@ -1012,6 +1012,24 @@ select:focus-visible,
 
 .isbn-enrichment-row input {
     flex: 1;
+    min-width: 0;
+}
+
+/* The lookup buttons stay one line ("Info abrufen" wrapped to two on a
+   phone and stood taller than its input). */
+.isbn-enrichment-row .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Phones: form cards (upload page, dialogs' page-form fallbacks) lose a
+   level of padding -- 16px page + 24px card left the fields 40px from
+   each screen edge. */
+@media (max-width: 599.98px) {
+    /* `main` so it outranks the base .book-form-card rule further down. */
+    main .book-form-card {
+        padding: var(--space-2);
+    }
 }
 
 .enrichment-search-row {
@@ -1252,28 +1270,39 @@ select:focus-visible,
     justify-content: space-between;
     align-items: center;
     gap: var(--space-2);
+    /* Section header (h2 + its add button) inside a page: the same gap
+       above and below everywhere. */
+    margin: var(--space-4) 0 var(--space-2);
 }
 
-/* Dark shelf-themed treatment for the Library page's own header only --
-   applied alongside .library-header via a second class so the shared
-   .library-header pattern used by ProjectDetail/CharacterDetail/Projects/
-   Shelves section headers stays unaffected. */
-.library-header-shelf {
-    padding: var(--space-3) var(--space-4, 2rem);
-    background: linear-gradient(160deg, color-mix(in srgb, var(--color-bg-dark) 92%, var(--color-primary) 8%), var(--color-bg-dark));
-    border-radius: var(--radius-lg, var(--radius));
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    color: var(--color-text-on-dark, #f2e9d8);
+.library-header h2 {
+    margin: 0;
 }
 
-.library-header-shelf h1 {
-    color: inherit;
+/* Directly under a tab bar, which brings its own gap. */
+.project-tabs + .library-header {
+    margin-top: 0;
 }
 
-@media (max-width: 599.98px) {
-    .library-header-shelf {
-        padding: var(--space-2) var(--space-3);
-    }
+/* Page header (design audit F1) for pages without a photo hero: title on
+   the left, the page's actions on the right (below it on a phone), and one
+   fixed gap to the content. Replaces the Library's dark one-off card and
+   the bare h1 + button rows, so every such page starts the same way. */
+.page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.page-header h1 {
+    margin: 0;
+}
+
+.page-header .form-actions {
+    flex-shrink: 0;
 }
 
 .library-shelf {
@@ -1512,6 +1541,7 @@ select:focus-visible,
        action (a location's "place on map", a shelf book's "remove"). */
     main .library-grid > *,
     main .library-raster > * {
+        width: auto;
         min-width: 0;
     }
 
@@ -1574,9 +1604,16 @@ select:focus-visible,
         gap: var(--space-1);
     }
 
-    main .dashboard-stat {
+    main .dashboard-stat,
+    main .stats-overview .dashboard-stat {
         min-width: 0;
         padding: var(--space-1) 0.25rem;
+    }
+
+    /* Statistics' five tiles: 3 + 2 (its desktop 8rem minimum made it
+       2 + 2 + 1 on a phone). */
+    main .dashboard-overview.stats-overview {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     main .dashboard-stat-value {
@@ -2019,8 +2056,14 @@ select:focus-visible,
 .shelf-book-entry {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: var(--space-1);
     width: 10rem;
+}
+
+/* The shelf's books sit a section-gap below its header. */
+.shelf-books {
+    margin-top: var(--space-4);
 }
 
 /* ShelfBook: books stand spine-out at rest, rotate ~90 deg on hover/
@@ -2830,16 +2873,58 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     min-width: 0;
 }
 
-/* Cover beside the info column only where there is room for both: a
-   12rem cover plus a display-size title scrolled the page sideways on a
-   phone (BookDetail by 55px, ProjectDetail's overview by 85px). */
+/* Phones: a small cover beside the title instead of a 9rem cover stacked
+   above it (compact mobile layout, user feedback). The info column may
+   shrink (min-width: 0 above), so a long title wraps instead of pushing
+   the page sideways -- the reason the cover once had to stack. */
 @media (max-width: 40rem) {
+    /* Only the first two lines of the info column (title, then author /
+       type / facts) sit beside the cover; everything after it --
+       description, details, progress, actions -- runs full width below.
+       display: contents lets the info column's children join the grid
+       without changing the markup of the six detail pages using it. */
     .book-detail {
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 6.5rem minmax(0, 1fr);
+        column-gap: var(--space-2);
+        row-gap: var(--space-1);
+        align-items: start;
     }
 
     .book-detail-cover {
-        width: 9rem;
+        width: 6.5rem;
+        grid-row: 1 / span 2;
+    }
+
+    .book-detail-info {
+        display: contents;
+    }
+
+    /* The grid's row gap is the only spacing between the blocks (their
+       own margins -- 16px on p/dl, more on the progress bar -- added up
+       to uneven 16-40px gaps). */
+    .book-detail {
+        row-gap: var(--space-2);
+    }
+
+    .book-detail .book-detail-info > * {
+        grid-column: 1 / -1;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .book-detail .book-detail-info > :nth-child(1),
+    .book-detail .book-detail-info > :nth-child(2) {
+        grid-column: 2;
+    }
+
+
+    /* A title beside a 6.5rem cover: one step smaller, hyphenated rather
+       than broken mid-word. */
+    .book-detail-info h1 {
+        font-size: var(--font-size-h2);
+        hyphens: auto;
+        overflow-wrap: break-word;
     }
 }
 
