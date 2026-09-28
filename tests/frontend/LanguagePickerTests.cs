@@ -202,6 +202,7 @@ public class LanguagePickerTests : BunitContext
     public void TypedTextIsCommittedOnChange_RecognizingNamesAsCodes()
     {
         var cut = RenderPicker(null);
+        cut.Find("#language").Input("english");
         cut.Find("#language").Change("english");
         Assert.Equal("en", _value);
     }
@@ -210,8 +211,59 @@ public class LanguagePickerTests : BunitContext
     public void ClearingTheFieldStoresNull()
     {
         var cut = RenderPicker("de");
+        cut.Find("#language").Input("");
         cut.Find("#language").Change("");
         Assert.Null(_value);
+    }
+
+    // Review of #505: leaving the field must agree with what's highlighted,
+    // or half-typed text ("ital") ends up saved as a custom language.
+    [Fact]
+    public void Tab_AfterTyping_TakesTheHighlightedLanguage()
+    {
+        var cut = RenderPicker(null);
+        cut.Find("#language").Input("ital");
+
+        cut.Find("#language").KeyDown(new KeyboardEventArgs { Key = "Tab" });
+
+        Assert.Equal("it", _value);
+    }
+
+    [Fact]
+    public void Tab_AfterArrowKeysOnly_TakesTheHighlightedLanguage()
+    {
+        var cut = RenderPicker("de");
+        cut.Find("#language").Focus();
+        cut.Find("#language").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+
+        cut.Find("#language").KeyDown(new KeyboardEventArgs { Key = "Tab" });
+
+        Assert.NotEqual("de", _value);
+        Assert.NotNull(LanguageCatalog.Find(_value));
+    }
+
+    [Fact]
+    public void ClickingAway_AfterTyping_TakesTheHighlightedLanguage()
+    {
+        var cut = RenderPicker(null);
+        cut.Find("#language").Input("ital");
+
+        cut.Find("#language").Change("ital");
+
+        Assert.Equal("it", _value);
+    }
+
+    [Fact]
+    public void TabbingThroughAnUntouchedLegacyValue_ChangesNothing()
+    {
+        var cut = RenderPicker("ger");
+        cut.Find("#language").Focus();
+
+        cut.Find("#language").KeyDown(new KeyboardEventArgs { Key = "Tab" });
+        cut.Find("#language").Blur();
+
+        Assert.Equal("ger", _value);
+        Assert.Equal("Deutsch", cut.Find("#language").GetAttribute("value"));
     }
 
     [Fact]

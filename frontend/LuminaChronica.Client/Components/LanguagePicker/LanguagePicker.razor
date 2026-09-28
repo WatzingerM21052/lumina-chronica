@@ -12,7 +12,10 @@
 
     @if (_isOpen)
     {
-        <ul id="@ListId" class="language-picker-list" role="listbox" aria-label="@I18n.T("languagePicker.listLabel")">
+        @* mousedown anywhere in the list (options, padding, its scrollbar) must
+           not blur the input, or the list closes mid-scroll. *@
+        <ul id="@ListId" class="language-picker-list" role="listbox" aria-label="@I18n.T("languagePicker.listLabel")"
+            @onmousedown:preventDefault="true">
             @for (var i = 0; i < _options.Count; i++)
             {
                 var index = i;

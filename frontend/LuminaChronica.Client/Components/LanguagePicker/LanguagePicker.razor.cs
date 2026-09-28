@@ -35,6 +35,10 @@ public partial class LanguagePicker : ComponentBase, IAsyncDisposable
     private bool _isOpen;
     private List<Option> _options = [];
     private int _activeIndex = -1;
+    // True once the user typed or moved the highlight since the list opened.
+    // Only then does leaving the field (Tab, click elsewhere) take the
+    // highlighted option; merely passing through must change nothing.
+    private bool _navigated;
     private bool _revealActive;
 
     private string ListId => $"{Id}-list";
@@ -86,6 +90,7 @@ public partial class LanguagePicker : ComponentBase, IAsyncDisposable
     {
         if (_isOpen) return;
         _isOpen = true;
+        _navigated = false;
 
         // Untouched text (the current value's name): show the whole list with
         // the current language highlighted, not a list filtered down to it.
@@ -100,19 +105,26 @@ public partial class LanguagePicker : ComponentBase, IAsyncDisposable
     {
         _isOpen = false;
         _activeIndex = -1;
+        _navigated = false;
     }
+
+    private bool HasNavigatedHighlight => _isOpen && _navigated && _activeIndex >= 0;
 
     private void OnInput(ChangeEventArgs e)
     {
         _text = e.Value?.ToString() ?? string.Empty;
         _isOpen = true;
+        _navigated = true;
         _options = BuildOptions(_text);
         _activeIndex = string.IsNullOrWhiteSpace(_text) || _options.Count == 0 ? -1 : 0;
     }
 
-    // Native "change": fires on blur after typing, and when dialog.js
-    // re-dispatches it on Escape so the edit dialog's dirty guard sees it.
-    private Task OnChangeAsync(ChangeEventArgs e) => CommitTextAsync(e.Value?.ToString() ?? _text);
+    // Native "change": fires on blur after typing (before the blur event),
+    // and when dialog.js re-dispatches it on Escape so the edit dialog's
+    // dirty guard sees it. Reads _text, not the event's value: after a pick
+    // the DOM may still hold the typed text for a moment.
+    private Task OnChangeAsync(ChangeEventArgs _) =>
+        HasNavigatedHighlight ? PickAsync(_activeIndex) : CommitTextAsync(_text);
 
     private async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
@@ -130,6 +142,7 @@ public partial class LanguagePicker : ComponentBase, IAsyncDisposable
                 _activeIndex = _activeIndex < 0
                     ? (step > 0 ? 0 : _options.Count - 1)
                     : (_activeIndex + step + _options.Count) % _options.Count;
+                _navigated = true;
                 _revealActive = true;
                 break;
             case "Enter" when _isOpen:
@@ -146,7 +159,10 @@ public partial class LanguagePicker : ComponentBase, IAsyncDisposable
                 AbandonSearch();
                 break;
             case "Tab":
-                Close();
+                // Tab doesn't fire "change" if only the arrow keys were used,
+                // so the highlighted option is taken here.
+                if (HasNavigatedHighlight) await PickAsync(_activeIndex);
+                else Close();
                 break;
         }
     }
