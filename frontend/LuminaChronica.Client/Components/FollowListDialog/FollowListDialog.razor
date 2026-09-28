@@ -52,7 +52,6 @@
             }
         }
     </ChildContent>
-    <Footer>
-        <button type="button" class="btn" @onclick="() => OnClose.InvokeAsync()">@I18n.T("followListDialog.closeButton")</button>
-    </Footer>
+    @* No footer "Schließen": the ✕, Escape and a click outside already
+       close this read-only list (plan F9, fewer redundant buttons). *@
 </Dialog>
