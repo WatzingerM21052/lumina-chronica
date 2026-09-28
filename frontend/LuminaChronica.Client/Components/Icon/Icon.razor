@@ -18,6 +18,15 @@
             <circle cx="12" cy="8" r="4" />
             <path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" />
             break;
+        @* Library sort direction (UI/UX plan A4): arrow plus stacked bars. *@
+        case "sort-desc":
+            <path d="M7 5v14M7 19l-3-3M7 19l3-3" />
+            <path d="M13 7h7M13 12h5M13 17h3" />
+            break;
+        case "sort-asc":
+            <path d="M7 19V5M7 5 4 8M7 5l3 3" />
+            <path d="M13 7h3M13 12h5M13 17h7" />
+            break;
         case "search":
             <circle cx="10.5" cy="10.5" r="6" />
             <path d="M15.2 15.2 20 20" />

@@ -22,71 +22,98 @@
 </div>
 
 
+@* UI/UX plan A4: two rows instead of ten equal controls in one. Row 1:
+   the search gets the room, the view settings sit apart on the right.
+   Row 2: what narrows the list (filters) and how it's ordered (sort). *@
 <div class="library-toolbar">
-    <div class="library-search-wrapper">
-        <input type="search" placeholder="@I18n.T("library.searchPlaceholder")" value="@_searchTerm" @oninput="OnSearchInput" />
-        @if (_suggestions is { Count: > 0 })
-        {
-            <ul class="library-search-suggestions">
-                @foreach (var book in _suggestions)
-                {
-                    <li>
-                        <button type="button" @onclick="() => GoToBook(book.Id)">
-                            @book.Title
-                            @if (!string.IsNullOrWhiteSpace(book.Author))
-                            {
-                                <span class="text-muted"> — @book.Author</span>
-                            }
-                        </button>
-                    </li>
-                }
-            </ul>
-        }
+    <div class="library-toolbar-row">
+        <div class="library-search-wrapper">
+            <Icon Name="search" Class="library-search-icon" />
+            <input type="search" aria-label="@I18n.T("library.searchPlaceholder")" placeholder="@I18n.T("library.searchPlaceholder")" value="@_searchTerm" @oninput="OnSearchInput" />
+            @if (_suggestions is { Count: > 0 })
+            {
+                <ul class="library-search-suggestions">
+                    @foreach (var book in _suggestions)
+                    {
+                        <li>
+                            <button type="button" @onclick="() => GoToBook(book.Id)">
+                                @book.Title
+                                @if (!string.IsNullOrWhiteSpace(book.Author))
+                                {
+                                    <span class="text-muted"> — @book.Author</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="library-view-settings" role="group" aria-label="@I18n.T("library.viewGroupLabel")">
+            <div class="library-view-toggle segmented">
+                <button type="button" class="segmented-option @(_viewMode == LibraryViewMode.Grid ? "is-selected" : "")" aria-pressed="@(_viewMode == LibraryViewMode.Grid ? "true" : "false")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>@I18n.T("library.viewModeShelf")</button>
+                <button type="button" class="segmented-option @(_viewMode == LibraryViewMode.List ? "is-selected" : "")" aria-pressed="@(_viewMode == LibraryViewMode.List ? "true" : "false")" @onclick='() => SetViewMode(LibraryViewMode.List)'>@I18n.T("library.viewModeRaster")</button>
+            </div>
+            @if (_viewMode == LibraryViewMode.Grid)
+            {
+                <label class="library-inline-label">
+                    <span>@I18n.T("library.bookSizeLabel")</span>
+                    <select class="library-shelf-book-zoom" @bind="_shelfBookZoom" @bind:after="OnShelfBookZoomChangedAsync">
+                        @foreach (var zoom in ShelfBookZoomOptions)
+                        {
+                            <option value="@zoom">@ShelfBookZoomLabel(zoom)</option>
+                        }
+                    </select>
+                </label>
+            }
+            @if (_viewMode == LibraryViewMode.List)
+            {
+                <label class="library-inline-label">
+                    <span>@I18n.T("library.pageSizeLabel")</span>
+                    <select class="library-raster-page-size" @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
+                        @foreach (var size in RasterPageSizeOptions)
+                        {
+                            <option value="@size">@size</option>
+                        }
+                    </select>
+                </label>
+            }
+        </div>
     </div>
 
-    <MultiSelectDropdown Label="@I18n.T("library.genreLabel")" Options="@(_facets?.Genres ?? [])" SelectedValues="_genreFilters" SelectedValuesChanged="OnGenreFiltersChanged" />
-    <MultiSelectDropdown Label="@I18n.T("library.tagLabel")" Options="@(_facets?.Tags ?? [])" SelectedValues="_tagFilters" SelectedValuesChanged="OnTagFiltersChanged" />
+    <div class="library-toolbar-row">
+        <div class="library-filters" role="group" aria-label="@I18n.T("library.filterGroupLabel")">
+            <MultiSelectDropdown Label="@I18n.T("library.genreLabel")" Options="@(_facets?.Genres ?? [])" SelectedValues="_genreFilters" SelectedValuesChanged="OnGenreFiltersChanged" />
+            <MultiSelectDropdown Label="@I18n.T("library.tagLabel")" Options="@(_facets?.Tags ?? [])" SelectedValues="_tagFilters" SelectedValuesChanged="OnTagFiltersChanged" />
+            <label class="library-favorite-filter @(_favoritesOnly ? "is-active" : "")">
+                <input type="checkbox" @bind="_favoritesOnly" @bind:after="ApplyFiltersAsync" />
+                @I18n.T("library.favoritesOnlyLabel")
+            </label>
+            @if (HasActiveFilters)
+            {
+                <button type="button" class="btn-link library-clear-filters" @onclick="ClearFiltersAsync">@I18n.T("library.clearFiltersButton")</button>
+            }
+        </div>
 
-    <select @bind="_sort" @bind:after="ApplyFiltersAsync">
-        <option value="createdAt">@I18n.T("library.sortCreatedAt")</option>
-        <option value="title">@I18n.T("library.sortTitle")</option>
-        <option value="author">@I18n.T("library.sortAuthor")</option>
-        <option value="genre">@I18n.T("library.sortGenre")</option>
-    </select>
-    <select @bind="_order" @bind:after="ApplyFiltersAsync">
-        <option value="desc">@I18n.T("library.orderDesc")</option>
-        <option value="asc">@I18n.T("library.orderAsc")</option>
-    </select>
-
-    <label class="library-favorite-filter">
-        <input type="checkbox" @bind="_favoritesOnly" @bind:after="ApplyFiltersAsync" />
-        @I18n.T("library.favoritesOnlyLabel")
-    </label>
-
-    <button type="button" class="btn" @onclick="ClearFiltersAsync">@I18n.T("library.clearFiltersButton")</button>
-
-    <div class="library-view-toggle">
-        <button type="button" class="btn @(_viewMode == LibraryViewMode.Grid ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>@I18n.T("library.viewModeShelf")</button>
-        <button type="button" class="btn @(_viewMode == LibraryViewMode.List ? "btn-primary" : "")" @onclick='() => SetViewMode(LibraryViewMode.List)'>@I18n.T("library.viewModeRaster")</button>
+        <div class="library-sort">
+            <label class="library-inline-label">
+                <span>@I18n.T("library.sortLabel")</span>
+                <select class="library-sort-field" @bind="_sort" @bind:after="ApplyFiltersAsync">
+                    <option value="createdAt">@I18n.T("library.sortCreatedAt")</option>
+                    <option value="title">@I18n.T("library.sortTitle")</option>
+                    <option value="author">@I18n.T("library.sortAuthor")</option>
+                    <option value="genre">@I18n.T("library.sortGenre")</option>
+                </select>
+            </label>
+            @{
+                var orderLabel = I18n.T(_order == "desc" ? "library.orderDesc" : "library.orderAsc");
+            }
+            <button type="button" class="btn library-sort-order" @onclick="ToggleOrderAsync"
+                    aria-label="@string.Format(I18n.T("library.orderToggleLabel"), orderLabel)" title="@orderLabel">
+                <Icon Name="@(_order == "desc" ? "sort-desc" : "sort-asc")" />
+            </button>
+        </div>
     </div>
-    @if (_viewMode == LibraryViewMode.Grid)
-    {
-        <select class="library-shelf-book-zoom" @bind="_shelfBookZoom" @bind:after="OnShelfBookZoomChangedAsync">
-            @foreach (var zoom in ShelfBookZoomOptions)
-            {
-                <option value="@zoom">@ShelfBookZoomLabel(zoom)</option>
-            }
-        </select>
-    }
-    @if (_viewMode == LibraryViewMode.List)
-    {
-        <select class="library-raster-page-size" @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
-            @foreach (var size in RasterPageSizeOptions)
-            {
-                <option value="@size">@string.Format(I18n.T("library.perPageSuffix"), size)</option>
-            }
-        </select>
-    }
 </div>
 
 @if (_errorMessage is not null)
@@ -198,6 +225,12 @@ else
     private ElementReference _shelfRef;
     private IJSObjectReference? _shelfPhysicsModule;
     private bool _shelfPhysicsInitialized;
+
+    private Task ToggleOrderAsync()
+    {
+        _order = _order == "desc" ? "asc" : "desc";
+        return ApplyFiltersAsync();
+    }
 
     private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || _genreFilters.Count > 0 || _tagFilters.Count > 0 || _favoritesOnly;
 
