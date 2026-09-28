@@ -390,6 +390,7 @@
   "projectDetail.tabBooks": "Books",
   "projectDetail.tabFiles": "Files",
   "projectDetail.editButton": "Edit",
+  "projectDetail.editDialogTitle": "Edit project",
   "projectDetail.deleteButton": "Delete",
   "projectDetail.deleteConfirmMessage": "Really delete this project?",
   "projectDetail.commentsTitle": "Comments",

@@ -396,6 +396,7 @@ public class FakeI18nService : II18nService
         ["projectDetail.tabBooks"] = "Bücher",
         ["projectDetail.tabFiles"] = "Dateien",
         ["projectDetail.editButton"] = "Bearbeiten",
+        ["projectDetail.editDialogTitle"] = "Projekt bearbeiten",
         ["projectDetail.deleteButton"] = "Löschen",
         ["projectDetail.deleteConfirmMessage"] = "Projekt wirklich löschen?",
         ["projectDetail.commentsTitle"] = "Kommentare",

@@ -56,122 +56,125 @@ else
             </div>
 
             <div class="book-detail-info">
-                @if (!_isEditing)
+                <h1>@_project.Title</h1>
+                <p class="text-muted">@ProjectTypeLabel.For(_project.Type, I18n)</p>
+                @if (!string.IsNullOrWhiteSpace(_project.Description))
                 {
-                    <h1>@_project.Title</h1>
-                    <p class="text-muted">@ProjectTypeLabel.For(_project.Type, I18n)</p>
-                    @if (!string.IsNullOrWhiteSpace(_project.Description))
-                    {
-                        <p>@_project.Description</p>
-                    }
-                    <div class="form-actions">
-                        <button type="button" class="btn" @onclick="StartEditing">@I18n.T("projectDetail.editButton")</button>
-                        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("projectDetail.deleteButton")</button>
-                    </div>
+                    <p>@_project.Description</p>
                 }
-                else
-                {
-                    <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
-                        @if (_saveErrorMessage is not null)
-                        {
-                            <p class="form-error">@_saveErrorMessage</p>
-                        }
-                        <div class="form-group">
-                            <label for="project-edit-cover">@I18n.T("projectDetail.replaceCoverLabel")</label>
-                            <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
-                                 @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
-                                 @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
-                                <InputFile id="project-edit-cover" OnChange="OnEditCoverSelected" />
-                                <span class="dropzone-label">@I18n.T("projectDetail.coverDropzoneLabel")</span>
-                            </div>
-                            @if (_coverSaveErrorMessage is not null)
-                            {
-                                <p class="form-error">@_coverSaveErrorMessage</p>
-                            }
-                        </div>
-                        <div class="form-group">
-                            <label for="project-edit-title">@I18n.T("projectDetail.titleLabel")</label>
-                            <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
-                        </div>
-                        <div class="form-group">
-                            <label for="project-edit-type">@I18n.T("projectDetail.typeLabel")</label>
-                            <InputSelect id="project-edit-type" @bind-Value="_editForm.Type">
-                                @foreach (var type in ProjectTypeLabel.Options)
-                                {
-                                    <option value="@type">@ProjectTypeLabel.For(type, I18n)</option>
-                                }
-                            </InputSelect>
-                        </div>
-                        <div class="form-group">
-                            <label for="project-edit-description">@I18n.T("projectDetail.descriptionLabel")</label>
-                            <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
-                        </div>
-                        <div class="form-group">
-                            <label for="project-edit-visibility">@I18n.T("projectDetail.visibilityLabel")</label>
-                            <InputSelect id="project-edit-visibility" @bind-Value="_editForm.Visibility">
-                                @foreach (var option in VisibilityOption.Options)
-                                {
-                                    <option value="@option">@VisibilityOption.For(option, I18n)</option>
-                                }
-                            </InputSelect>
-                            <p class="text-muted">@I18n.T("projectDetail.visibilityHint")</p>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.saveButton")</button>
-                            <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("projectDetail.cancelButton")</button>
-                        </div>
-                    </EditForm>
-                }
+                <div class="form-actions">
+                    <button type="button" id="project-edit-button" class="btn" @onclick="StartEditing">@I18n.T("projectDetail.editButton")</button>
+                    <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("projectDetail.deleteButton")</button>
+                </div>
             </div>
         </div>
-        @if (!_isEditing)
-        {
-            <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("projectDetail.deleteConfirmMessage")"
-                           OnConfirm="DeleteProjectAsync" OnCancel="() => _confirmingDelete = false" />
 
-            <section class="book-comments">
-                <h2>@I18n.T("projectDetail.commentsTitle")</h2>
-                @if (_comments is null)
+        @* UI/UX plan A3: edit in a dialog like book and shelf, instead of
+           swapping the header for an inline form. Every way out except
+           Speichern goes through the unsaved-changes guard. *@
+        <Dialog IsOpen="_isEditing" Title="@I18n.T("projectDetail.editDialogTitle")" OnClose="RequestCloseEdit">
+            <ChildContent>
+                <EditForm id="project-edit-form" Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
+                    @if (_saveErrorMessage is not null)
+                    {
+                        <p class="form-error">@_saveErrorMessage</p>
+                    }
+                    <div class="form-group">
+                        <label for="project-edit-title">@I18n.T("projectDetail.titleLabel")</label>
+                        <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
+                    </div>
+                    <div class="form-group">
+                        <label for="project-edit-type">@I18n.T("projectDetail.typeLabel")</label>
+                        <InputSelect id="project-edit-type" @bind-Value="_editForm.Type">
+                            @foreach (var type in ProjectTypeLabel.Options)
+                            {
+                                <option value="@type">@ProjectTypeLabel.For(type, I18n)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="form-group">
+                        <label for="project-edit-description">@I18n.T("projectDetail.descriptionLabel")</label>
+                        <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
+                    </div>
+                    <div class="form-group">
+                        <label for="project-edit-cover">@I18n.T("projectDetail.replaceCoverLabel")</label>
+                        <div class="dropzone @(_isDraggingCover ? "dropzone--active" : "")"
+                             @ondragenter="() => _isDraggingCover = true" @ondragleave="() => _isDraggingCover = false"
+                             @ondragover:preventDefault @ondrop="() => _isDraggingCover = false">
+                            <InputFile id="project-edit-cover" OnChange="OnEditCoverSelected" />
+                            <span class="dropzone-label">@(_selectedEditCover?.Name ?? I18n.T("projectDetail.coverDropzoneLabel"))</span>
+                        </div>
+                        @if (_coverSaveErrorMessage is not null)
+                        {
+                            <p class="form-error">@_coverSaveErrorMessage</p>
+                        }
+                    </div>
+                    <div class="form-group">
+                        <label for="project-edit-visibility">@I18n.T("projectDetail.visibilityLabel")</label>
+                        <InputSelect id="project-edit-visibility" @bind-Value="_editForm.Visibility">
+                            @foreach (var option in VisibilityOption.Options)
+                            {
+                                <option value="@option">@VisibilityOption.For(option, I18n)</option>
+                            }
+                        </InputSelect>
+                        <p class="text-muted">@I18n.T("projectDetail.visibilityHint")</p>
+                    </div>
+                </EditForm>
+            </ChildContent>
+            <Footer>
+                <button type="button" class="btn" @onclick="RequestCloseEdit">@I18n.T("projectDetail.cancelButton")</button>
+                <button type="submit" form="project-edit-form" class="btn btn-primary" disabled="@_isSaving">@I18n.T("projectDetail.saveButton")</button>
+            </Footer>
+        </Dialog>
+        <ConfirmDialog IsOpen="_confirmingDiscardEdit" Message="@I18n.T("dialog.discardChangesMessage")"
+                       ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
+                       OnConfirm="ConfirmDiscardEdit" OnCancel="() => _confirmingDiscardEdit = false" />
+
+        <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("projectDetail.deleteConfirmMessage")"
+                       OnConfirm="DeleteProjectAsync" OnCancel="() => _confirmingDelete = false" />
+
+        <section class="book-comments">
+            <h2>@I18n.T("projectDetail.commentsTitle")</h2>
+            @if (_comments is null)
+            {
+                <p class="text-muted">@I18n.T("projectDetail.commentsLoading")</p>
+            }
+            else
+            {
+                @if (_comments.Count == 0)
                 {
-                    <p class="text-muted">@I18n.T("projectDetail.commentsLoading")</p>
+                    <p class="text-muted">@I18n.T("projectDetail.noCommentsMessage")</p>
                 }
                 else
                 {
-                    @if (_comments.Count == 0)
-                    {
-                        <p class="text-muted">@I18n.T("projectDetail.noCommentsMessage")</p>
-                    }
-                    else
-                    {
-                        <ul class="book-comment-list">
-                            @foreach (var comment in _comments)
-                            {
-                                <li class="book-comment-item">
-                                    <div class="book-comment-header">
-                                        <strong>@comment.Username</strong>
-                                        <span class="text-muted">@comment.CreatedAt</span>
-                                    </div>
-                                    <p>@comment.Content</p>
-                                    @if (comment.UserId == _currentUserId)
-                                    {
-                                        <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">@I18n.T("projectDetail.deleteButton")</button>
-                                    }
-                                </li>
-                            }
-                        </ul>
-                    }
-
-                    <EditForm Model="_commentForm" OnValidSubmit="SubmitCommentAsync" class="comment-form">
-                        @if (_commentErrorMessage is not null)
+                    <ul class="book-comment-list">
+                        @foreach (var comment in _comments)
                         {
-                            <p class="form-error">@_commentErrorMessage</p>
+                            <li class="book-comment-item">
+                                <div class="book-comment-header">
+                                    <strong>@comment.Username</strong>
+                                    <span class="text-muted">@comment.CreatedAt</span>
+                                </div>
+                                <p>@comment.Content</p>
+                                @if (comment.UserId == _currentUserId)
+                                {
+                                    <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">@I18n.T("projectDetail.deleteButton")</button>
+                                }
+                            </li>
                         }
-                        <InputTextArea @bind-Value="_commentForm.Content" placeholder="@I18n.T("projectDetail.commentPlaceholder")" />
-                        <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">@I18n.T("projectDetail.commentSubmitButton")</button>
-                    </EditForm>
+                    </ul>
                 }
-            </section>
-        }
+
+                <EditForm Model="_commentForm" OnValidSubmit="SubmitCommentAsync" class="comment-form">
+                    @if (_commentErrorMessage is not null)
+                    {
+                        <p class="form-error">@_commentErrorMessage</p>
+                    }
+                    <InputTextArea @bind-Value="_commentForm.Content" placeholder="@I18n.T("projectDetail.commentPlaceholder")" />
+                    <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">@I18n.T("projectDetail.commentSubmitButton")</button>
+                </EditForm>
+            }
+        </section>
     }
     else if (_activeTab == "characters")
     {
@@ -624,6 +627,9 @@ else
     private IBrowserFile? _selectedEditCover;
     private bool _isDraggingCover;
     private EditFormModel _editForm = new();
+    private EditFormModel _editFormSnapshot = new();
+    private bool _confirmingDiscardEdit;
+    private bool _isSaving;
     private bool _confirmingDelete;
 
     private string _activeTab = "overview";
@@ -786,6 +792,7 @@ else
     {
         if (_project is null) return;
         _editForm = new EditFormModel { Title = _project.Title, Type = _project.Type, Description = _project.Description, Visibility = _project.Visibility };
+        _editFormSnapshot = _editForm with { };
         _saveErrorMessage = null;
         _coverSaveErrorMessage = null;
         _selectedEditCover = null;
@@ -794,7 +801,41 @@ else
 
     private void OnEditCoverSelected(InputFileChangeEventArgs e) => _selectedEditCover = e.File;
 
+    private bool IsEditFormDirty => _editForm != _editFormSnapshot || _selectedEditCover is not null;
+
+    private void RequestCloseEdit()
+    {
+        if (IsEditFormDirty)
+        {
+            _confirmingDiscardEdit = true;
+            return;
+        }
+        _isEditing = false;
+    }
+
+    private void ConfirmDiscardEdit()
+    {
+        _confirmingDiscardEdit = false;
+        _isEditing = false;
+    }
+
+    // Guarded like ShelfDetail's: a double click on Speichern must not send
+    // the update (and the cover upload) twice.
     private async Task SaveAsync()
+    {
+        if (_isSaving) return;
+        _isSaving = true;
+        try
+        {
+            await SaveCoreAsync();
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task SaveCoreAsync()
     {
         _saveErrorMessage = null;
         _coverSaveErrorMessage = null;
@@ -1336,7 +1377,7 @@ else
         _bookSearchDebounceTimer?.Dispose();
     }
 
-    private class EditFormModel
+    private record EditFormModel
     {
         public string Title { get; set; } = string.Empty;
         public string Type { get; set; } = "WORLD";
