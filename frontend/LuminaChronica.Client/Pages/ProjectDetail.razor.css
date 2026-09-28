@@ -50,6 +50,83 @@
     }
 }
 
+/* Project name above the tabs on every tab but the overview (F3): the
+   page's h1, a size below a full page title so the tab content stays near
+   the top. */
+.project-compact-title {
+    margin: 0 0 var(--space-2);
+    padding-bottom: 0;
+    border-bottom: none;
+    font-size: var(--font-size-h2);
+}
+
+/* Overview tiles: one per tab, count over label; the whole tile opens it. */
+.project-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+}
+
+.project-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-card);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color var(--motion-micro) var(--ease-standard), transform var(--motion-micro) var(--ease-standard);
+}
+
+.project-stat:hover {
+    border-color: var(--color-accent-text);
+    transform: translateY(-1px);
+}
+
+.project-stat-value {
+    font-family: var(--font-family-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-accent-text);
+}
+
+.project-stat-label {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 599.98px) {
+    .project-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-1);
+        margin-top: var(--space-3);
+    }
+
+    .project-stat {
+        padding: var(--space-1);
+    }
+
+    .project-stat-value {
+        font-size: 1.35rem;
+    }
+
+    .project-stat-label {
+        font-size: var(--font-size-caption);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .project-stat {
+        transition: none;
+    }
+}
+
 .map-wrapper {
     position: relative;
     display: inline-block;

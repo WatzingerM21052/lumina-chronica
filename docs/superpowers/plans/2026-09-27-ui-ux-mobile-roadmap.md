@@ -140,8 +140,8 @@ Datei-Inputs, 1px beim Hero-Titel).
 
 | # | Was | Vorschlag |
 |---|---|---|
-| F1 | Seitenköpfe | `PageHeader`-Komponente: Titel + optionaler Untertitel links, Aktionen rechts; Seiten mit Foto-Hero (Startseite, Statistik, Offline, Einstellungen) behalten den Hero, aber gleiche Titelposition/-größe; Bibliothek verliert die dunkle Sonderkarte zugunsten des Standards |
-| F3 | Projekt-Übersicht | Projekttitel (klein) immer über den Tabs, damit auch „Charaktere“/„Karte“ zeigen, wo man ist; Übersicht mit Kennzahl-Kacheln (Charaktere, Orte, Lore, Ereignisse, Bücher), die zum Tab springen |
+| F1 | Seitenköpfe | **erledigt 2026-09-28** als gemeinsame Klasse `.page-header` (Bibliothek, Projekte, Regale, Entdecken; dunkle Bibliotheks-Karte entfernt); Foto-Heros und Profil-Siegel bleiben. Ursprünglicher Vorschlag: `PageHeader`-Komponente: Titel + optionaler Untertitel links, Aktionen rechts; Seiten mit Foto-Hero (Startseite, Statistik, Offline, Einstellungen) behalten den Hero, aber gleiche Titelposition/-größe; Bibliothek verliert die dunkle Sonderkarte zugunsten des Standards |
+| F3 | Projekt-Übersicht | **erledigt 2026-09-28**: kompakter Projekttitel über den Tabs (außer Übersicht), sechs Kennzahl-Kacheln öffnen ihren Tab. Ursprünglicher Vorschlag: Projekttitel (klein) immer über den Tabs, damit auch „Charaktere“/„Karte“ zeigen, wo man ist; Übersicht mit Kennzahl-Kacheln (Charaktere, Orte, Lore, Ereignisse, Bücher), die zum Tab springen |
 | F4 | Karten-Raster | **erledigt 2026-09-28**: Projekt/Charakter/Lore hochkant (2:3), Orte quer; Initialen statt Icon (`CardInitials`); doppeltes `ProjectCard.razor.css` entfernt. Handy: 3 Spalten in allen Rastern, Startseiten-Abschnitte als Wisch-Reihen, Kennzahlen in einer Zeile, kleinere Überschriften, Footer weg solange die Bottom-Leiste da ist (Nutzerwunsch) |
 | F7/A8 | Profil/Konto-Menü | Avatar-Menü oben rechts (Profil, Einstellungen, Sicherheit, Abmelden); „Sicherheit“ bündelt Passwort, E-Mail, verknüpfte Konten — Aufteilung mit dem Nutzer abstimmen |
 | A7 | Einstellungen | Checkboxen → Schalter; Theme als Vorschaukarten |
