@@ -595,6 +595,8 @@ Kritische Kernfunktionen müssen getestet werden:
 * Fortschritt
 * Synchronisation
 
+Umsetzung im Repo (seit 2026-09-27): bUnit (`tests/frontend/`) und Vitest (`tests/backend/`) laufen per GitHub Actions (`ci.yml`) bei jedem Pull Request; beide sind Pflicht-Checks für `main`, und beide Deploys laufen nur nach grünen Tests. UI-Änderungen werden zusätzlich im echten Browser gegen ein lokales Backend geprüft.
+
 ---
 
 # 10. Dokumentationsregeln

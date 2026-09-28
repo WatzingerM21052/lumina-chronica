@@ -1,8 +1,9 @@
 name: Deploy backend to Cloudflare Workers
 
-# Manual trigger only until CLOUDFLARE_API_TOKEN is added as a repo secret
-# (Settings → Secrets and variables → Actions). See documentation/Architecture.md
-# for why this isn't automated on push yet.
+# Manual trigger only, on purpose: a backend release often needs a D1
+# migration applied by hand first, which should stay a conscious step rather
+# than something a push to main sets off. Uses the CLOUDFLARE_API_TOKEN repo
+# secret. See documentation/Architecture.md ("CI/CD").
 on:
   workflow_dispatch:
 

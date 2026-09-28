@@ -4,7 +4,23 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+### Added
+
+- Dashboard and Statistics reworked with parallax hero images; statistics use dials and a star-chart reading calendar.
+- The library is a 3D bookshelf: books with real spine/cover geometry, spine colors taken from the cover, wood and leather textures, grouping by genre, adjustable book size, an optional title/author overlay, and a "Raster" grid view with a configurable page size.
+- Offline library reworked as the "Travelling Library"; Settings and Profile reworked (hero banner, card sections, ex-libris seal); themed checkboxes across the app.
+- Profile: upload your own avatar, delete your account (and restore it later by registering with the same email), link or unlink Google and GitHub sign-in.
+- Public profiles: the follower and following counts open a list with a follow button per person.
+- Password reset: request it from the login page or your profile, then enter the 6-digit code from the email or open the link in it; the whole flow is one dialog.
+- The interface is available in German and English (Settings → Sprache); emails follow the account's language.
+- The app runs at https://luminachronica.com; the old github.io address redirects there.
+- Book language is picked from a searchable list of 75 languages (custom languages still possible) instead of typing a code like "de".
+- Editing a book, shelf or project, and adding characters, places, timeline events and lore entries (or editing a timeline event), happens in dialogs; closing one with unsaved input asks first.
+
 ### Changed
+
+- The library toolbar is two calmer rows: search and view settings on top, filters and sorting below; "Filter zurücksetzen" only appears while a filter is active.
+- Minimum password length is 6 characters (was 8). New usernames may only use letters, digits, `_`, `.` and `-` (3–32 characters); existing usernames keep working.
 
 - Project page overview: the cover now sits beside the title, type, description and actions, the same header as a book's page, instead of a large cover stacked above the title; the tab bar has breathing room and is announced as tabs to screen readers. On phones, book and project headers stack instead of scrolling the page sideways. Link buttons such as "Lesen" are now the same height as the buttons next to them.
 - "Buch bearbeiten" is split into named sections (Allgemein, Details, Cover, Daten abrufen, Sichtbarkeit) with short fields side by side, about 40% shorter than the single long column; one column on phones. Profile's account and password forms now line up under their headings instead of floating in the middle of the page.
@@ -15,15 +31,15 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 ### Fixed
 
 - Dialog footer buttons never received their intended 40px height or full width on phones: the rule lived in the dialog's scoped CSS and couldn't reach buttons passed in from other components.
+- Email addresses are compared case-insensitively everywhere (login, registration, reset, OAuth linking), so "Name@Example.com" and "name@example.com" are the same account.
+- Tests: the frontend bUnit suite no longer depends on wall-clock timing. Several tests raced a real timer against a fixed `WaitForAssertion` timeout, or raced two real timers against each other. They could fail at random on a cold or loaded parallel run, and CI gates deploys on this suite. Affected: ProjectDetail's "Bücher" search, Library search, Discover user search, the password-reset dialog's code check, the Bible page's scroll-to-verse, and `AsyncButtonRunner`'s Loading threshold. Every such debounce, delay and timer now goes through an injected `TimeProvider`, which is `TimeProvider.System` in `Program.cs`, so the app behaves as before. That covers the Library/Discover/ProjectDetail/BookDetail search debounces, all of `PasswordResetDialog`'s delays, the Bible pre-scroll delay, and an optional `timeProvider` parameter on `AsyncButtonRunner.RunAsync`. The tests drive a `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`, test project only). The Library search test now checks the suggestion list itself: the initial load already showed the matching title, so the old check passed even when the debounce never fired. Suite runtime dropped from ~7s to ~2s.
 
 ### Security
 
+- A deleted account with a linked Google/GitHub sign-in could still log in through it; deleting an account now removes its linked identities and open reset links.
+- Every auth route checks the type and length of its input; malformed requests are rejected instead of causing a server error. Rate limits can no longer be bypassed by sending several requests in parallel.
 - Profile: changing the account's email address now requires the current password, and the previous address receives a notification with the new address masked (review M-6). Before this, anyone holding a logged-in session could redirect password resets to their own inbox without knowing the password. Accounts that only sign in via Google/GitHub have no password, so for them the session is still the proof; the notification still goes out.
 - Password reset: at most 5 reset emails per account per 24 hours (review H-1). Previously, rotating IPs and alternating an account's email and username could request a fresh reset code about twice a minute without limit, both multiplying the code-guessing budget and flooding the owner's inbox. Over the cap, the request is answered exactly like one for an unknown account and the last code/link already sent stays valid.
-
-### Fixed
-
-- Tests: the frontend bUnit suite no longer depends on wall-clock timing. Several tests raced a real timer against a fixed `WaitForAssertion` timeout, or raced two real timers against each other. They could fail at random on a cold or loaded parallel run, and CI gates deploys on this suite. Affected: ProjectDetail's "Bücher" search, Library search, Discover user search, the password-reset dialog's code check, the Bible page's scroll-to-verse, and `AsyncButtonRunner`'s Loading threshold. Every such debounce, delay and timer now goes through an injected `TimeProvider`, which is `TimeProvider.System` in `Program.cs`, so the app behaves as before. That covers the Library/Discover/ProjectDetail/BookDetail search debounces, all of `PasswordResetDialog`'s delays, the Bible pre-scroll delay, and an optional `timeProvider` parameter on `AsyncButtonRunner.RunAsync`. The tests drive a `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`, test project only). The Library search test now checks the suggestion list itself: the initial load already showed the matching title, so the old check passed even when the debounce never fired. Suite runtime dropped from ~7s to ~2s.
 
 ## [3.5.0] - 2026-08-09
 
