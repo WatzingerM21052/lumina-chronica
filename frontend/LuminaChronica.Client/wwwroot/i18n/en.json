@@ -263,6 +263,10 @@
 
   "multiSelectDropdown.noOptions": "No options available.",
   "multiSelectDropdown.doneButton": "Done",
+  "languagePicker.placeholder": "Search or type a language",
+  "languagePicker.listLabel": "Languages",
+  "languagePicker.useCustom": "Use “{0}” as a custom language",
+  "languagePicker.noMatches": "No matching language.",
 
   "projectType.world": "World",
   "projectType.novel": "Novel",

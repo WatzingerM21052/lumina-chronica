@@ -277,6 +277,10 @@ public class FakeI18nService : II18nService
 
         ["multiSelectDropdown.noOptions"] = "Keine Optionen vorhanden.",
         ["multiSelectDropdown.doneButton"] = "Fertig",
+        ["languagePicker.placeholder"] = "Sprache suchen oder eingeben",
+        ["languagePicker.listLabel"] = "Sprachen",
+        ["languagePicker.useCustom"] = "„{0}“ als eigene Sprache verwenden",
+        ["languagePicker.noMatches"] = "Keine passende Sprache.",
         ["projectType.world"] = "Welt",
         ["projectType.novel"] = "Roman",
         ["projectType.rpg"] = "Pen & Paper",

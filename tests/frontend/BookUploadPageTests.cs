@@ -10,6 +10,16 @@ namespace LuminaChronica.Client.Tests;
 
 public class BookUploadPageTests : BunitContext
 {
+    // Every render mounts the language picker (UI/UX plan A2), which loads
+    // its small keyboard helper module; its calls need no answer.
+    public BookUploadPageTests()
+    {
+        var combobox = JSInterop.SetupModule("./js/combobox.js");
+        combobox.SetupVoid("attach", _ => true);
+        combobox.SetupVoid("revealOption", _ => true);
+        combobox.SetupVoid("placeList", _ => true);
+    }
+
     private void UseApiResponse(string responseJson)
     {
         var handler = new FakeHttpMessageHandler(responseJson);
@@ -260,7 +270,7 @@ public class BookUploadPageTests : BunitContext
             {
                 Title = "Extracted Title",
                 Author = "Extracted Author",
-                Language = "de",
+                Language = "en-US",
                 HasCover = false,
             });
 
@@ -269,7 +279,10 @@ public class BookUploadPageTests : BunitContext
 
         Assert.Equal("Extracted Title", cut.Find("#title").GetAttribute("value"));
         Assert.Equal("Extracted Author", cut.Find("#author").GetAttribute("value"));
-        Assert.Equal("de", cut.Find("#language").GetAttribute("value"));
+        // Region-tagged EPUB language is stored as the plain ISO code and
+        // shown by name (UI/UX plan A2).
+        Assert.Equal("Englisch", cut.Find("#language").GetAttribute("value"));
+        Assert.Equal("en", cut.FindComponent<LuminaChronica.Client.Components.LanguagePicker>().Instance.Value);
     }
 
     [Fact]

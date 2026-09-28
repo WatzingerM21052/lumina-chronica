@@ -49,7 +49,10 @@ function onKeyDown(e) {
     const { el, dotNetRef } = top;
     const focusInside = el.contains(document.activeElement);
 
-    if (e.key === "Escape" && focusInside && document.activeElement.matches(TEXT_FIELDS)) {
+    // An open combobox (Components/LanguagePicker) uses Escape to abandon
+    // the typed search, not to commit it, and keeps the dialog open.
+    const openCombobox = document.activeElement.getAttribute("aria-expanded") === "true";
+    if (e.key === "Escape" && focusInside && !openCombobox && document.activeElement.matches(TEXT_FIELDS)) {
         // Blazor's InputText/InputTextArea only update their model on
         // "change" (i.e. on blur). Without this, typing and pressing Escape
         // straight away closes the dialog before the dirty-state guard ever

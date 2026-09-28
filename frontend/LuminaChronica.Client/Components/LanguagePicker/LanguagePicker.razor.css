@@ -1,0 +1,65 @@
+.language-picker {
+    position: relative;
+}
+
+.language-picker-input {
+    width: 100%;
+}
+
+.language-picker-list {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    left: 0;
+    right: 0;
+    z-index: 30;
+    max-height: 15rem;
+    overflow-y: auto;
+    margin: 0;
+    padding: var(--space-1);
+    list-style: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, var(--radius));
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card-hover, var(--shadow-card));
+}
+
+/* Set by combobox.js's placeList when there's more room above the input. */
+.language-picker-list.opens-up {
+    top: auto;
+    bottom: calc(100% + var(--space-1));
+}
+
+.language-picker-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-height: 2.5rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius);
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
+.language-picker-option:hover,
+.language-picker-option.is-active {
+    background-color: var(--color-bg-light);
+}
+
+.language-picker-option.is-active {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+}
+
+.language-picker-code {
+    color: var(--color-text-secondary, var(--color-text-primary));
+    font-size: var(--font-size-small);
+    font-variant: all-small-caps;
+    letter-spacing: 0.05em;
+}
+
+.language-picker-empty {
+    padding: var(--space-2);
+    color: var(--color-text-secondary, var(--color-text-primary));
+    font-size: var(--font-size-small);
+}
