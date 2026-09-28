@@ -138,9 +138,14 @@
     margin-bottom: var(--space-3);
 }
 
-.bible-search input[type="search"] {
+/* The field is the shared SearchInput (plan A6); its own padding makes
+   room for the magnifier and clear button, only the parchment look is
+   the bible's. */
+.bible-search ::deep .search-input {
     flex: 1;
-    padding: var(--space-1) var(--space-2);
+}
+
+.bible-search ::deep input[type="search"] {
     border: 1px solid var(--bible-gold);
     border-radius: var(--radius);
     background: var(--bible-parchment-panel);

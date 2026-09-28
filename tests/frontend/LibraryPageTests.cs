@@ -287,7 +287,7 @@ public class LibraryPageTests : BunitContext
         cut.Find("input[type=checkbox]").Change(true);
         Assert.Contains("favorite=true", capturedRequests[^1].RequestUri?.Query);
 
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Filter zurücksetzen").Click();
+        cut.Find(".library-clear-filters").Click();
 
         Assert.DoesNotContain("favorite=true", capturedRequests[^1].RequestUri?.Query);
     }

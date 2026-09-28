@@ -1,0 +1,57 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* One search field for the whole app (plan A6): magnifier inside the
+   field, a clear button once there's text, the browser's own clear "x"
+   hidden. It is a plain controlled input -- debouncing and searching stay
+   with the page's OnInput handler, which the clear button calls with an
+   empty value so "clear" behaves exactly like deleting the text.
+   ChildContent renders inside the positioned wrapper, for suggestion
+   dropdowns anchored under the field. *@
+<div class="search-input @Class">
+    <Icon Name="search" Class="search-input-icon" />
+    <input type="search" id="@Id" placeholder="@Placeholder" aria-label="@(AriaLabel ?? Placeholder)"
+           value="@Value" maxlength="@MaxLength" autocomplete="off"
+           @oninput="OnInput" @onkeydown="OnKeyDown" />
+    @if (!string.IsNullOrEmpty(Value))
+    {
+        <button type="button" class="search-input-clear" title="@I18n.T("searchInput.clear")" @onclick="ClearAsync">
+            <span aria-hidden="true">✕</span><span class="visually-hidden">@I18n.T("searchInput.clear")</span>
+        </button>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> OnInput { get; set; }
+
+    [Parameter]
+    public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    // Defaults to the placeholder.
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    [Parameter]
+    public int? MaxLength { get; set; } = 200;
+
+    // Extra classes on the wrapper (e.g. a page's width rule).
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private Task ClearAsync() => OnInput.InvokeAsync(new ChangeEventArgs { Value = string.Empty });
+}

@@ -287,6 +287,7 @@ public class FakeI18nService : II18nService
         ["multiSelectDropdown.noOptions"] = "Keine Optionen vorhanden.",
         ["multiSelectDropdown.doneButton"] = "Fertig",
         ["overflowMenu.label"] = "Weitere Aktionen",
+        ["searchInput.clear"] = "Suche leeren",
         ["languagePicker.placeholder"] = "Sprache suchen oder eingeben",
         ["languagePicker.listLabel"] = "Sprachen",
         ["languagePicker.useCustom"] = "„{0}“ als eigene Sprache verwenden",

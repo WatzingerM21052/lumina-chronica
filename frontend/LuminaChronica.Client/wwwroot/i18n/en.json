@@ -273,6 +273,7 @@
   "multiSelectDropdown.noOptions": "No options available.",
   "multiSelectDropdown.doneButton": "Done",
   "overflowMenu.label": "More actions",
+  "searchInput.clear": "Clear search",
   "languagePicker.placeholder": "Search or type a language",
   "languagePicker.listLabel": "Languages",
   "languagePicker.useCustom": "Use “{0}” as a custom language",

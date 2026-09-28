@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- One search field everywhere (library, linked books in a project, sharing a book, Discover, world bible): magnifier inside the field and a ✕ to clear it; "no books found" in the library now has a "reset filters" button right under it.
 - On phones every form dialog (edit, create, avatar, password reset, follower lists) opens as a sheet from the bottom edge, full width and within thumb reach; only short confirmations stay a centred card.
 - Book page: only "Read" and "Shelves" stay visible; save offline, edit and delete are in a "⋯" menu (new `OverflowMenu` component, closes on Escape or a click outside).
 - Profile: "change password" and "delete account" are collapsed cards you open by their heading, so the page is no longer three forms long (on a phone ~1900 → ~1200px).

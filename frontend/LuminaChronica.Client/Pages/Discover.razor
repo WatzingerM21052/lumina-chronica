@@ -18,10 +18,8 @@
 
 <section class="discover-section" data-reveal style="--reveal-delay: 60ms">
     <h2 class="discover-subheading">@I18n.T("discover.searchUsersTitle")</h2>
-    <div class="discover-search-field">
-        <Icon Name="search" Class="discover-search-icon" />
-        <input placeholder="@I18n.T("discover.usernamePlaceholder")" aria-label="@I18n.T("discover.searchUsersAriaLabel")" @oninput="OnUserSearchInput" />
-    </div>
+    <SearchInput Class="discover-search-field" Placeholder="@I18n.T("discover.usernamePlaceholder")" AriaLabel="@I18n.T("discover.searchUsersAriaLabel")"
+                 Value="@_userSearchTerm" OnInput="OnUserSearchInput" />
 
     @* aria-live="polite" -- announces the debounced search's outcome
        (result count via the list itself, or the empty/loading message)

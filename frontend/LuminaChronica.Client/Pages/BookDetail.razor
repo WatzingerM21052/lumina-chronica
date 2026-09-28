@@ -407,7 +407,7 @@ else
                             <p class="text-muted">@I18n.T("bookDetail.notSharedMessage")</p>
                         }
 
-                        <input placeholder="@I18n.T("bookDetail.shareSearchPlaceholder")" @oninput="OnShareSearchInput" value="@_shareSearchTerm" />
+                        <SearchInput Placeholder="@I18n.T("bookDetail.shareSearchPlaceholder")" Value="@_shareSearchTerm" OnInput="OnShareSearchInput" />
                         @if (_shareSearchResults is { Count: > 0 })
                         {
                             <ul class="book-share-search-results">
