@@ -58,6 +58,33 @@
             <path d="M12 11v5" />
             <circle cx="12" cy="7.7" r="0.6" fill="currentColor" />
             break;
+        @* Icon-only actions (plan F9: an icon instead of a word where the
+           meaning is universal); the word stays as visually-hidden text
+           and tooltip. *@
+        case "edit":
+            <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" />
+            <path d="M14.5 7.5l3 3" />
+            break;
+        case "trash":
+            <path d="M4.5 7h15" />
+            <path d="M9.5 7V4.8h5V7" />
+            <path d="M6.5 7l.9 12.2a1 1 0 0 0 1 .8h7.2a1 1 0 0 0 1-.8L17.5 7" />
+            <path d="M10.3 10.5v6M13.7 10.5v6" />
+            break;
+        case "chevron-up":
+            <path d="M6 15l6-6 6 6" />
+            break;
+        case "chevron-down":
+            <path d="M6 9l6 6 6-6" />
+            break;
+        case "download":
+            <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5" />
+            <path d="M5 19.5h14" />
+            break;
+        case "download-done":
+            <path d="M6 12.5 10 16.5 18 8" />
+            <path d="M5 20h14" />
+            break;
         @* Library view toggle + filter disclosure (compact toolbar, plan F9). *@
         case "grid":
             <rect x="4" y="4" width="6.5" height="6.5" rx="1" />

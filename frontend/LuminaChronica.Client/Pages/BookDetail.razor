@@ -162,18 +162,6 @@ else
                     @if (_book.File is not null)
                     {
                         <a class="btn btn-primary" href="@($"library/books/{Id}/read")">@(IsInProgress ? I18n.T("bookDetail.continueReadingButton") : I18n.T("bookDetail.readButton"))</a>
-                        @if (_isOfflineSaved)
-                        {
-                            <button type="button" class="btn" disabled="@_isSavingOffline" @onclick="RemoveOfflineAsync">
-                                @string.Format(I18n.T("bookDetail.removeOfflineButton"), FormatSize(_offlineSizeBytes))
-                            </button>
-                        }
-                        else
-                        {
-                            <button type="button" class="btn" disabled="@_isSavingOffline" @onclick="SaveOfflineAsync">
-                                @(_isSavingOffline ? I18n.T("bookDetail.savingOffline") : I18n.T("bookDetail.saveOfflineButton"))
-                            </button>
-                        }
                     }
                     @if (_book.IsOwner && _shelves is { Count: > 0 })
                     {
@@ -183,10 +171,30 @@ else
                                           Options="ShelfOptions" SelectedIds="_shelfIds"
                                           OnToggle="t => ToggleShelfAsync(t.Id, t.Checked)" />
                     }
+                    @if (_book.File is not null)
+                    {
+                        @* Offline as an icon toggle (plan F9): download arrow to save,
+                           a tick once saved; the full wording -- including the
+                           size when saved -- is the tooltip and screen-reader text. *@
+                        @if (_isOfflineSaved)
+                        {
+                            var removeLabel = string.Format(I18n.T("bookDetail.removeOfflineButton"), FormatSize(_offlineSizeBytes));
+                            <button type="button" class="btn btn-icon is-saved-offline" disabled="@_isSavingOffline" @onclick="RemoveOfflineAsync" title="@removeLabel">
+                                <Icon Name="download-done" /><span class="visually-hidden">@removeLabel</span>
+                            </button>
+                        }
+                        else
+                        {
+                            var saveLabel = _isSavingOffline ? I18n.T("bookDetail.savingOffline") : I18n.T("bookDetail.saveOfflineButton");
+                            <button type="button" class="btn btn-icon" disabled="@_isSavingOffline" @onclick="SaveOfflineAsync" title="@saveLabel">
+                                <Icon Name="download" /><span class="visually-hidden">@saveLabel</span>
+                            </button>
+                        }
+                    }
                     @if (_book.IsOwner)
                     {
-                        <button type="button" id="edit-button" class="btn" @onclick="StartEditingAsync">@I18n.T("bookDetail.editButton")</button>
-                        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("bookDetail.deleteButton")</button>
+                        <button type="button" id="edit-button" class="btn btn-icon" @onclick="StartEditingAsync" title="@I18n.T("bookDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("bookDetail.editButton")</span></button>
+                        <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("bookDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("bookDetail.deleteButton")</span></button>
                     }
                 </div>
                 @if (_book.IsOwner)
@@ -447,15 +455,19 @@ else
                     @foreach (var comment in _comments)
                     {
                         <li class="book-comment-item">
+                            @* Delete sits small in the header next to the date instead of a
+                               row of its own under every comment (plan F9). *@
                             <div class="book-comment-header">
                                 <strong>@comment.Username</strong>
-                                <span class="text-muted">@comment.CreatedAt</span>
+                                <span class="book-comment-meta">
+                                    <span class="text-muted">@comment.CreatedAt</span>
+                                    @if (comment.UserId == _currentUserId)
+                                    {
+                                        <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)" title="@I18n.T("bookDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("bookDetail.deleteButton")</span></button>
+                                    }
+                                </span>
                             </div>
                             <p class="user-text">@comment.Content</p>
-                            @if (comment.UserId == _currentUserId)
-                            {
-                                <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">@I18n.T("bookDetail.deleteButton")</button>
-                            }
                         </li>
                     }
                 </ul>

@@ -67,8 +67,8 @@ else
                 <p class="user-text"><strong>@I18n.T("characterDetail.biographyLabel"):</strong> @_character.Biography</p>
             }
             <div class="form-actions">
-                <button type="button" id="character-edit-button" class="btn" @onclick="StartEditing">@I18n.T("characterDetail.editButton")</button>
-                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("characterDetail.deleteButton")</button>
+                <button type="button" id="character-edit-button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("characterDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("characterDetail.editButton")</span></button>
+                <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("characterDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("characterDetail.deleteButton")</span></button>
             </div>
         </div>
     </div>
@@ -226,8 +226,8 @@ else
                         }
                     </div>
                     <div class="relationship-actions">
-                        <button type="button" class="btn" @onclick="() => StartEditingRelationship(relationship)">@I18n.T("characterDetail.editButton")</button>
-                        <button type="button" class="btn" @onclick="() => _confirmingRelationshipDeleteId = relationship.Id">@I18n.T("characterDetail.deleteButton")</button>
+                        <button type="button" class="btn btn-icon btn-icon-sm" @onclick="() => StartEditingRelationship(relationship)" title="@I18n.T("characterDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("characterDetail.editButton")</span></button>
+                        <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => _confirmingRelationshipDeleteId = relationship.Id" title="@I18n.T("characterDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("characterDetail.deleteButton")</span></button>
                     </div>
                 </li>
             }

@@ -63,8 +63,8 @@ else
                     <p class="user-text">@_project.Description</p>
                 }
                 <div class="form-actions">
-                    <button type="button" id="project-edit-button" class="btn" @onclick="StartEditing">@I18n.T("projectDetail.editButton")</button>
-                    <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("projectDetail.deleteButton")</button>
+                    <button type="button" id="project-edit-button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("projectDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("projectDetail.editButton")</span></button>
+                    <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
                 </div>
             </div>
         </div>
@@ -151,15 +151,19 @@ else
                         @foreach (var comment in _comments)
                         {
                             <li class="book-comment-item">
+                                @* Delete sits small in the header next to the date instead of a
+                                   row of its own under every comment (plan F9). *@
                                 <div class="book-comment-header">
                                     <strong>@comment.Username</strong>
-                                    <span class="text-muted">@comment.CreatedAt</span>
+                                    <span class="book-comment-meta">
+                                        <span class="text-muted">@comment.CreatedAt</span>
+                                        @if (comment.UserId == _currentUserId)
+                                        {
+                                            <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
+                                        }
+                                    </span>
                                 </div>
                                 <p class="user-text">@comment.Content</p>
-                                @if (comment.UserId == _currentUserId)
-                                {
-                                    <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">@I18n.T("projectDetail.deleteButton")</button>
-                                }
                             </li>
                         }
                     </ul>
@@ -434,11 +438,11 @@ else
                             }
                             <div class="timeline-event-controls">
                                 <div class="timeline-move-buttons">
-                                    <button type="button" class="btn" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="@I18n.T("projectDetail.moveUpTitle")">▲</button>
-                                    <button type="button" class="btn" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="@I18n.T("projectDetail.moveDownTitle")">▼</button>
+                                    <button type="button" class="btn btn-icon btn-icon-sm" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="@I18n.T("projectDetail.moveUpTitle")"><Icon Name="chevron-up" /><span class="visually-hidden">@I18n.T("projectDetail.moveUpTitle")</span></button>
+                                    <button type="button" class="btn btn-icon btn-icon-sm" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="@I18n.T("projectDetail.moveDownTitle")"><Icon Name="chevron-down" /><span class="visually-hidden">@I18n.T("projectDetail.moveDownTitle")</span></button>
                                 </div>
-                                <button type="button" class="btn" @onclick="() => StartEditingEvent(timelineEvent)">@I18n.T("projectDetail.editButton")</button>
-                                <button type="button" class="btn" @onclick="() => DeleteTimelineEventAsync(timelineEvent.Id)">@I18n.T("projectDetail.deleteButton")</button>
+                                <button type="button" class="btn btn-icon btn-icon-sm" @onclick="() => StartEditingEvent(timelineEvent)" title="@I18n.T("projectDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("projectDetail.editButton")</span></button>
+                                <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => DeleteTimelineEventAsync(timelineEvent.Id)" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
                             </div>
                         </div>
                     </li>
@@ -617,7 +621,7 @@ else
                         </div>
                         <div class="form-actions">
                             <button type="button" class="btn" @onclick="() => DownloadProjectFileAsync(file)">@I18n.T("projectDetail.downloadButton")</button>
-                            <button type="button" class="btn" @onclick="() => DeleteProjectFileAsync(file.Id)">@I18n.T("projectDetail.deleteButton")</button>
+                            <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => DeleteProjectFileAsync(file.Id)" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
                         </div>
                     </div>
                 }

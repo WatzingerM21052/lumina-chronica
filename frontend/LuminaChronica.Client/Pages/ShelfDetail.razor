@@ -42,8 +42,8 @@ else
         <p class="user-text">@_shelf.Description</p>
     }
     <div class="form-actions">
-        <button type="button" class="btn" @onclick="StartEditing">@I18n.T("shelfDetail.editButton")</button>
-        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("shelfDetail.deleteButton")</button>
+        <button type="button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("shelfDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("shelfDetail.editButton")</span></button>
+        <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("shelfDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("shelfDetail.deleteButton")</span></button>
     </div>
     <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("shelfDetail.deleteConfirmMessage")"
                    OnConfirm="DeleteShelfAsync" OnCancel="() => _confirmingDelete = false" />

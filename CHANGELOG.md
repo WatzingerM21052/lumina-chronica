@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Secondary actions are icons instead of text buttons: edit (pencil), delete (trash, turns red on hover), save offline (download arrow, a tick once saved) and move up/down in the timeline, each with a tooltip and a screen-reader label. On the book page the row is now "Weiterlesen", "Regale" and three icons. A comment's delete icon sits small next to its date instead of in a row of its own.
 - Library toolbar in one row: the view is two icon buttons with "Raster" as the default and first option (the 3D shelf is one click away), genre/tag/favourite filters fold out behind a "Filter" button that shows how many are active, and sort/size/page settings drop their visible labels ("20 / Seite"). The select arrow no longer sits on top of the "Pro Seite" value.
 - Follower/following list: a compact follow pill per row in a wider dialog, instead of a full-size default button; the redundant "Schließen" button is gone (✕, Escape and a click outside close it).
 - Book page: the shelves are a "Regale (n)" dropdown with a checkbox per shelf in the action row, instead of one inline checkbox per shelf that would not scale to many shelves.
