@@ -1,4 +1,5 @@
 import { hashPassword, signJwt, verifyPassword } from "../utils/crypto";
+import { InvalidUsernameError, USERNAME_PATTERN, normalizeEmail, normalizeIdentifier } from "../utils/identity";
 
 // 7 days, no refresh-token flow this phase — see documentation/Architecture.md.
 const TOKEN_EXPIRY_SECONDS = 60 * 60 * 24 * 7;
@@ -10,12 +11,34 @@ export class UsernameTakenError extends Error {}
 export class InvalidCredentialsError extends Error {}
 export class DeletedAccountFoundError extends Error {}
 export class NoDeletedAccountError extends Error {}
+export { InvalidUsernameError };
 
-type UserRow = {
+export type IdentifiedUserRow = {
     id: number;
+    email: string;
     password_hash: string;
     role_id: number;
 };
+
+// The one email-or-username lookup, shared by login and the reset flow
+// (passwordResetService.ts). Emails compare case-insensitively (review N-6);
+// usernames stay case-sensitive as stored. Deterministic when several rows
+// match (review N-5): an email match beats a username match (a legacy
+// username that looks like someone's email never shadows that account), an
+// exact-case email beats a case-variant one (legacy rows that differ only
+// in case keep their old owner), then the oldest account.
+export async function findLiveUserByIdentifier(db: D1Database, identifier: string): Promise<IdentifiedUserRow | null> {
+    const raw = identifier.trim();
+    return db
+        .prepare(
+            `SELECT id, email, password_hash, role_id FROM users
+              WHERE (lower(email) = ?1 OR username = ?2) AND deleted_at IS NULL
+              ORDER BY (lower(email) = ?1) DESC, (email = ?2) DESC, id ASC
+              LIMIT 1`
+        )
+        .bind(normalizeEmail(normalizeIdentifier(raw)), raw)
+        .first<IdentifiedUserRow>();
+}
 
 // Exported for oauthService.ts, which needs the same lookup when issuing a
 // token at exchange time.
@@ -29,8 +52,11 @@ export async function registerUser(
     jwtSecret: string,
     input: { username: string; email: string; password: string; confirmNewAccount?: boolean }
 ): Promise<AuthResult> {
+    if (!USERNAME_PATTERN.test(input.username)) throw new InvalidUsernameError();
+    const email = normalizeEmail(input.email);
+
     const [emailTaken, usernameTaken] = await Promise.all([
-        db.prepare("SELECT id FROM users WHERE email = ?").bind(input.email).first(),
+        db.prepare("SELECT id FROM users WHERE lower(email) = ?").bind(email).first(),
         db.prepare("SELECT id FROM users WHERE username = ?").bind(input.username).first(),
     ]);
     if (emailTaken) throw new EmailTakenError();
@@ -47,8 +73,8 @@ export async function registerUser(
         // two deletions in the same second would otherwise tie and fall
         // back to SQLite's unspecified order.
         const deletedMatch = await db
-            .prepare("SELECT id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
-            .bind(input.email)
+            .prepare("SELECT id FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+            .bind(email)
             .first();
         if (deletedMatch) throw new DeletedAccountFoundError();
     }
@@ -59,7 +85,7 @@ export async function registerUser(
     const passwordHash = await hashPassword(input.password);
     const insertUser = await db
         .prepare("INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)")
-        .bind(input.username, input.email, passwordHash, userRole.id)
+        .bind(input.username, email, passwordHash, userRole.id)
         .run();
     const userId = insertUser.meta.last_row_id;
 
@@ -83,10 +109,7 @@ export async function loginUser(
     jwtSecret: string,
     input: { identifier: string; password: string }
 ): Promise<AuthResult> {
-    const user = await db
-        .prepare("SELECT id, password_hash, role_id FROM users WHERE (email = ?1 OR username = ?1) AND deleted_at IS NULL")
-        .bind(input.identifier)
-        .first<UserRow>();
+    const user = await findLiveUserByIdentifier(db, input.identifier);
 
     // Wrong identifier and wrong password both fail the same way -- don't
     // leak which one was incorrect, or whether the identifier even exists.
@@ -109,11 +132,16 @@ export async function restoreUser(
     // Same ORDER BY deleted_at DESC, id DESC tie-break as registerUser's
     // deleted-account gate above -- most-recently-deleted wins when the
     // same email has been deleted-and-reclaimed-and-deleted-again.
+    const email = normalizeEmail(input.email);
     const deletedMatch = await db
-        .prepare("SELECT id, role_id FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
-        .bind(input.email)
-        .first<{ id: number; role_id: number }>();
+        .prepare("SELECT id, role_id, deleted_username FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+        .bind(email)
+        .first<{ id: number; role_id: number; deleted_username: string | null }>();
     if (!deletedMatch) throw new NoDeletedAccountError();
+
+    // Taking the account's own old username back is always fine, even a
+    // legacy one from before the N-5 pattern existed.
+    if (input.username !== deletedMatch.deleted_username && !USERNAME_PATTERN.test(input.username)) throw new InvalidUsernameError();
 
     const usernameTaken = await db
         .prepare("SELECT id FROM users WHERE username = ? AND id != ?")
@@ -125,8 +153,8 @@ export async function restoreUser(
     // claimed it live (e.g. via registerUser's confirmNewAccount path) --
     // an ordinary uniqueness conflict, not special-cased.
     const emailTaken = await db
-        .prepare("SELECT id FROM users WHERE email = ? AND id != ?")
-        .bind(input.email, deletedMatch.id)
+        .prepare("SELECT id FROM users WHERE lower(email) = ? AND id != ?")
+        .bind(email, deletedMatch.id)
         .first();
     if (emailTaken) throw new EmailTakenError();
 
@@ -137,7 +165,7 @@ export async function restoreUser(
              deleted_username = NULL, deleted_email = NULL, deleted_at = NULL, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?`
         )
-        .bind(input.username, input.email, passwordHash, deletedMatch.id)
+        .bind(input.username, email, passwordHash, deletedMatch.id)
         .run();
 
     const role = await roleName(db, deletedMatch.role_id);

@@ -84,6 +84,18 @@
         _errorMessage = null;
         _deletedAccountFound = false;
 
+        if (!AccountRules.IsValidUsername(_form.Username))
+        {
+            _errorMessage = I18n.T("register.usernameInvalid");
+            return;
+        }
+
+        if (_form.Password.Length < AccountRules.MinPasswordLength)
+        {
+            _errorMessage = I18n.T("register.passwordTooShort");
+            return;
+        }
+
         if (_form.Password != _form.ConfirmPassword)
         {
             _errorMessage = I18n.T("register.passwordMismatch");

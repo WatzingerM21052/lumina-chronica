@@ -1,0 +1,28 @@
+# Copy to backend/.dev.vars for `npm run dev` (wrangler reads it automatically).
+# .dev.vars is gitignored -- never commit real values. In production each of
+# these is a Worker secret: `npx wrangler secret put <NAME>`, and check with
+# `npx wrangler secret list` whenever a change adds a new env.* binding (a
+# missing secret does NOT fail the deploy, see documentation/Architecture.md).
+# FRONTEND_URL is a plain [vars] entry in wrangler.toml, not a secret.
+# The binding list lives in backend/src/models/env.ts.
+
+# Signs session JWTs. Any long random string locally.
+JWT_SECRET=change-me-local-jwt-secret
+
+# HMAC key for the 6-digit password-reset codes. Must be non-empty, or every
+# reset request silently sends nothing (generic 200 hides the error).
+PASSWORD_CODE_SECRET=change-me-local-code-secret
+
+# Resend API key for reset/notice emails. A dummy value is fine locally as
+# long as you don't need real mails (sending fails and is logged).
+RESEND_API_KEY=re_dummy
+
+# api.bible key for the Bible reader.
+BIBLE_API_KEY=
+
+# OAuth apps (issue #40). Leave empty unless you test Google/GitHub sign-in;
+# the callback URL is derived from the request origin (http://127.0.0.1:8787).
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=

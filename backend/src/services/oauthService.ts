@@ -1,5 +1,6 @@
 import { roleName } from "./authService";
 import { OAUTH_NO_PASSWORD_SENTINEL, randomToken, sha256Hex, signJwt } from "../utils/crypto";
+import { normalizeEmail } from "../utils/identity";
 import { OAuthExchangeError, type OAuthProfile, type OAuthProviderName, providerFor } from "./oauthProviders";
 
 // 7 days -- mirrors authService.ts's TOKEN_EXPIRY_SECONDS exactly, so an
@@ -125,8 +126,8 @@ async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderN
     // this behavior explicitly: convenient, with the accepted tradeoff that
     // whoever controls that Google/GitHub account also reaches this one.
     const existingUser = await db
-        .prepare("SELECT id FROM users WHERE email = ? AND deleted_at IS NULL")
-        .bind(profile.email)
+        .prepare("SELECT id FROM users WHERE lower(email) = ? AND deleted_at IS NULL ORDER BY (email = ?) DESC, id ASC")
+        .bind(normalizeEmail(profile.email), profile.email)
         .first<{ id: number }>();
 
     let userId: number;
@@ -153,8 +154,8 @@ async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderN
         // ambiguous-collision scenario (multiple soft-deleted rows sharing
         // the same deleted_email) -- most-recently-deleted wins.
         const deletedMatch = await db
-            .prepare("SELECT id, deleted_username FROM users WHERE deleted_email = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
-            .bind(profile.email)
+            .prepare("SELECT id, deleted_username FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+            .bind(normalizeEmail(profile.email))
             .first<{ id: number; deleted_username: string }>();
 
         if (deletedMatch) {
@@ -179,7 +180,7 @@ async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderN
                      deleted_username = NULL, deleted_email = NULL, deleted_at = NULL, updated_at = CURRENT_TIMESTAMP
                      WHERE id = ?`
                 )
-                .bind(restoredUsername, profile.email, deletedMatch.id)
+                .bind(restoredUsername, normalizeEmail(profile.email), deletedMatch.id)
                 .run();
             userId = deletedMatch.id;
         } else {
@@ -189,7 +190,7 @@ async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderN
             const username = await generateUniqueUsername(db, profile);
             const insertUser = await db
                 .prepare("INSERT INTO users (username, email, password_hash, avatar_url, role_id) VALUES (?, ?, ?, ?, ?)")
-                .bind(username, profile.email, OAUTH_NO_PASSWORD_SENTINEL, profile.avatarUrl ?? null, userRole.id)
+                .bind(username, normalizeEmail(profile.email), OAUTH_NO_PASSWORD_SENTINEL, profile.avatarUrl ?? null, userRole.id)
                 .run();
             userId = insertUser.meta.last_row_id;
 

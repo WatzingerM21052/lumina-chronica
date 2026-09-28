@@ -1,5 +1,6 @@
 import type { Bindings } from "../models/env";
 import { OAUTH_NO_PASSWORD_SENTINEL, hashPassword, verifyPassword } from "../utils/crypto";
+import { InvalidUsernameError, USERNAME_PATTERN, normalizeEmail } from "../utils/identity";
 import { renderEmailChangedEmail } from "../emails/emailChanged";
 import type { EmailLanguage } from "../emails/strings";
 import { formatEmailTimestamp } from "../emails/strings";
@@ -9,6 +10,7 @@ import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, Valid
 export class InvalidPasswordError extends Error {}
 export class EmailTakenError extends Error {}
 export class UsernameTakenError extends Error {}
+export { InvalidUsernameError };
 export { ValidationError };
 
 export type UserProfile = {
@@ -130,9 +132,9 @@ export async function updateUserProfile(
     origin: string
 ): Promise<UserProfile> {
     const current = await db
-        .prepare("SELECT email, password_hash FROM users WHERE id = ?")
+        .prepare("SELECT username, email, password_hash FROM users WHERE id = ?")
         .bind(userId)
-        .first<{ email: string; password_hash: string }>();
+        .first<{ username: string; email: string; password_hash: string }>();
     if (!current) throw new Error("User disappeared during profile update.");
 
     // Review M-6: the email is the account's recovery channel -- whoever
@@ -144,19 +146,28 @@ export async function updateUserProfile(
     // with a username edit. OAuth-only accounts have no password to check,
     // so the session is the proof there, the same asymmetry deleteUser and
     // the password-change check below already have.
-    const emailChanging = Boolean(input.email) && input.email !== current.email;
+    //
+    // Compared normalized on both sides (review N-6): a legacy "Foo@x.at"
+    // row plus Profile.razor re-sending it must not count as a change (or
+    // ask for the password and mail a change notice on every save).
+    const newEmail = input.email ? normalizeEmail(input.email) : null;
+    const emailChanging = newEmail !== null && newEmail !== normalizeEmail(current.email);
+    // Same "only an actual change counts" rule for the username, so legacy
+    // usernames from before the N-5 pattern can still save other fields.
+    const usernameChanging = Boolean(input.username) && input.username !== current.username;
+    if (usernameChanging && !USERNAME_PATTERN.test(input.username!)) throw new InvalidUsernameError();
     if (emailChanging && current.password_hash !== OAUTH_NO_PASSWORD_SENTINEL) {
         if (!input.currentPassword || !(await verifyPassword(input.currentPassword, current.password_hash))) {
             throw new InvalidPasswordError();
         }
     }
 
-    if (input.username) {
+    if (usernameChanging) {
         const taken = await db.prepare("SELECT id FROM users WHERE username = ? AND id != ?").bind(input.username, userId).first();
         if (taken) throw new UsernameTakenError();
     }
-    if (input.email) {
-        const taken = await db.prepare("SELECT id FROM users WHERE email = ? AND id != ?").bind(input.email, userId).first();
+    if (emailChanging) {
+        const taken = await db.prepare("SELECT id FROM users WHERE lower(email) = ? AND id != ?").bind(newEmail, userId).first();
         if (taken) throw new EmailTakenError();
     }
 
@@ -178,13 +189,13 @@ export async function updateUserProfile(
 
     const sets: string[] = [];
     const values: unknown[] = [];
-    if (input.username) {
+    if (usernameChanging) {
         sets.push("username = ?");
         values.push(input.username);
     }
-    if (input.email) {
+    if (emailChanging) {
         sets.push("email = ?");
-        values.push(input.email);
+        values.push(newEmail);
     }
     if (newPasswordHash) {
         sets.push("password_hash = ?");
@@ -197,7 +208,7 @@ export async function updateUserProfile(
         await db.prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`).bind(...values).run();
     }
 
-    if (emailChanging) await sendEmailChangedNotice(db, env, userId, current.email, input.email!);
+    if (emailChanging) await sendEmailChangedNotice(db, env, userId, current.email, newEmail!);
 
     const profile = await getUserProfile(db, userId, origin);
     if (!profile) throw new Error("User disappeared during profile update.");

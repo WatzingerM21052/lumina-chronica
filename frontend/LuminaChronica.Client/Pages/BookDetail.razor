@@ -201,7 +201,7 @@ else
             else
             {
                 <Dialog IsOpen="_isEditing" Size="DialogSize.Large" Title="@I18n.T("bookDetail.editDialogTitle")"
-                        CloseOnOverlayClick="false" CloseOnEscape="false" OnClose="RequestCloseEditAsync">
+                        OnClose="RequestCloseEditAsync">
                 <ChildContent>
                 <EditForm id="book-edit-form" Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
                     @if (_saveErrorMessage is not null)

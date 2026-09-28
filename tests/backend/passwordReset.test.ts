@@ -177,6 +177,15 @@ describe("POST /api/auth/forgot-password", () => {
         expect(other.status).toBe(200);
     });
 
+    it("the resend cooldown can't be skipped by changing the email's case (review N-6)", async () => {
+        const first = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "alice@example.com" }), env);
+        expect(first.status).toBe(200);
+
+        const variant = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: " ALICE@Example.com" }), env);
+        expect(variant.status).toBe(429);
+        expect(Number(variant.headers.get("Retry-After"))).toBeGreaterThan(0);
+    });
+
     it("a request that fails before issuing a new code leaves the previously issued link intact", async () => {
         // Regression (review K-2): the invalidate-old-rows UPDATE used to run
         // BEFORE the HMAC, so a missing PASSWORD_CODE_SECRET threw only after
@@ -254,12 +263,12 @@ describe("POST /api/auth/forgot-password", () => {
         });
 
         it("also caps the OAuth-only informational email", async () => {
-            const register = await app.request("/api/auth/register", jsonRequest({ username: "jo", email: "jo@example.com", password: "correct horse" }), env);
+            const register = await app.request("/api/auth/register", jsonRequest({ username: "jon", email: "jon@example.com", password: "correct horse" }), env);
             const { data: registered } = await readJson(register);
             await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(OAUTH_NO_PASSWORD_SENTINEL, registered.userId).run();
-            await exhaustBudget("jo@example.com", "jo");
+            await exhaustBudget("jon@example.com", "jon");
 
-            await requestFromFreshIp("jo@example.com", 99);
+            await requestFromFreshIp("jon@example.com", 99);
             expect(globalThis.fetch).toHaveBeenCalledTimes(RESET_EMAILS_PER_ACCOUNT_MAX);
         });
 

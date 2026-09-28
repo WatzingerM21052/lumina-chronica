@@ -177,8 +177,20 @@ The dialog must send *something* alongside the code. Two options:
   or it leaks existence. Extra column, extra plumbing.
 - **(b) The identifier the user already typed.** ✅ **Recommended.**
   `findUserByIdentifier()` already exists. The dialog has the identifier in
-  memory for the whole flow. Anti-enumeration is preserved because
-  "no such user" and "wrong code" return the *byte-identical* response (§3.5).
+  memory for the whole flow. "No such user" and "no usable code" return the
+  *byte-identical* response (§3.5).
+
+> **Correction (review M-5, 2026-09-28): this is NOT full anti-enumeration.**
+> The byte-identical rule only covers the case where no row exists. An
+> attacker can first call `/forgot-password` for an identifier (creating a
+> row if the account exists), then send one wrong code: a real account
+> answers `attemptsLeft: 9`, an unknown one `attemptsLeft: 0`. There is also
+> a timing difference, since `requestPasswordReset` awaits the Resend call
+> for real accounts only. Accepted for now because `/register` already
+> reveals existence through `EMAIL_TAKEN`/`USERNAME_TAKEN`, and the probe
+> mails the victim. A real fix needs option (a) below plus closing the
+> register leaks, and would be its own piece of work. Don't rely on this
+> flow being enumeration-safe.
 
 Pick (b). If we ever want a "paste the code, don't retype your email" entry
 point, (a) can be layered on later without touching the credential model.
@@ -496,7 +508,7 @@ Two fields, both with `@oninput` (not `@onchange` — the default Blazor
 **New password** — rules evaluated on every keystroke, no debounce (pure client
 work, free). Render a compact rule list, each row a dot → check:
 
-- `Mindestens 8 Zeichen` — mirrors `MIN_PASSWORD_LENGTH` in `auth.ts`.
+- `Mindestens 6 Zeichen` — mirrors `MIN_PASSWORD_LENGTH` (`backend/src/utils/identity.ts`; lowered from 8 to 6 on 2026-09-28).
   **This is the only blocking rule**, because it's the only rule the backend
   actually enforces. Do not invent client-side rules the server doesn't share;
   that's how you get a form that rejects a password the API would accept.

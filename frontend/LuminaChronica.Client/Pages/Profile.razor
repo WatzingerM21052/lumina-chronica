@@ -312,6 +312,14 @@ else
     {
         _profileErrorMessage = null;
 
+        // Only a changed username has to follow the rule -- legacy ones from
+        // before it existed can still save the rest of the form.
+        if (_profileForm.Username != _profile?.Username && !AccountRules.IsValidUsername(_profileForm.Username))
+        {
+            _profileErrorMessage = I18n.T("profile.usernameInvalid");
+            return false;
+        }
+
         var request = new UpdateProfileRequest
         {
             Username = _profileForm.Username,
@@ -335,6 +343,12 @@ else
     {
         _passwordErrorMessage = null;
         _passwordSuccessMessage = null;
+
+        if (_passwordForm.NewPassword.Length < AccountRules.MinPasswordLength)
+        {
+            _passwordErrorMessage = I18n.T("profile.passwordTooShort");
+            return;
+        }
 
         if (_passwordForm.NewPassword != _passwordForm.ConfirmNewPassword)
         {

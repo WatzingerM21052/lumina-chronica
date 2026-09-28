@@ -342,3 +342,45 @@ describe("DELETE /api/users/me", () => {
         expect(getRes.status).toBe(404);
     });
 });
+
+describe("PUT /api/users/me -- identity rules (review N-3/N-5/N-6)", () => {
+    it("does not treat a legacy mixed-case email re-sent unchanged as an email change", async () => {
+        await env.DB.prepare("UPDATE users SET email = 'Alice@Example.com' WHERE username = 'alice'").run();
+
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { username: "alice", email: "Alice@Example.com" }, token), env);
+        expect(res.status).toBe(200);
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it("lets a legacy username outside the pattern save other fields, but not pick a new invalid one", async () => {
+        await env.DB.prepare("UPDATE users SET username = 'a' WHERE username = 'alice'").run();
+
+        const keep = await app.request("/api/users/me", jsonRequest("PUT", { username: "a", email: "alice@example.com" }, token), env);
+        expect(keep.status).toBe(200);
+
+        const invalid = await app.request("/api/users/me", jsonRequest("PUT", { username: "bob@example.com", email: "alice@example.com" }, token), env);
+        expect(invalid.status).toBe(400);
+        expect((await readJson(invalid)).error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("stores a changed email lowercase and rejects a case-variant of someone else's email", async () => {
+        await app.request("/api/auth/register", jsonRequest("POST", { username: "bob", email: "bob@example.com", password: "correct horse" }), env);
+
+        const taken = await app.request("/api/users/me", jsonRequest("PUT", { email: "BOB@example.com", currentPassword: "correct horse" }, token), env);
+        expect(taken.status).toBe(409);
+
+        const ok = await app.request("/api/users/me", jsonRequest("PUT", { email: "Alice.New@Example.com", currentPassword: "correct horse" }, token), env);
+        expect(ok.status).toBe(200);
+        expect((await readJson(ok)).data.email).toBe("alice.new@example.com");
+    });
+
+    it("rejects non-string fields with 400 instead of a 500", async () => {
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { email: { a: 1 } }, token), env);
+        expect(res.status).toBe(400);
+    });
+
+    it("accepts a 6-character new password", async () => {
+        const res = await app.request("/api/users/me", jsonRequest("PUT", { newPassword: "htlgkr", currentPassword: "correct horse" }, token), env);
+        expect(res.status).toBe(200);
+    });
+});

@@ -1,6 +1,7 @@
 import type { Bindings } from "../models/env";
 import { OAUTH_NO_PASSWORD_SENTINEL, hashPassword, hmacSha256Hex, randomNumericCode, randomToken, sha256Hex, signJwt } from "../utils/crypto";
-import { roleName } from "./authService";
+import type { IdentifiedUserRow } from "./authService";
+import { findLiveUserByIdentifier, roleName } from "./authService";
 import { userLanguage } from "./userService";
 import { sendEmail } from "./emailService";
 import { consumeAccountResetBudget } from "./rateLimitService";
@@ -18,15 +19,10 @@ const JWT_EXPIRY_SECONDS = 60 * 60 * 24 * 7; // matches authService.ts's own log
 
 export class InvalidResetTokenError extends Error {}
 
-type UserRow = { id: number; email: string; password_hash: string; role_id: number };
-
-// Same lookup as authService.ts's loginUser -- email or username, case as
-// stored, excluding soft-deleted accounts.
-async function findUserByIdentifier(db: D1Database, identifier: string): Promise<UserRow | null> {
-    return db
-        .prepare("SELECT id, email, password_hash, role_id FROM users WHERE (email = ?1 OR username = ?1) AND deleted_at IS NULL")
-        .bind(identifier)
-        .first<UserRow>();
+// Same lookup as authService.ts's loginUser (email case-insensitive,
+// username as stored, soft-deleted accounts excluded).
+function findUserByIdentifier(db: D1Database, identifier: string): Promise<IdentifiedUserRow | null> {
+    return findLiveUserByIdentifier(db, identifier);
 }
 
 // Never *reveals* whether a match was found -- the caller (the
