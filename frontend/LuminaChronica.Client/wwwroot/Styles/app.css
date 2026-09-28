@@ -79,6 +79,13 @@ html {
     body:has(.bottom-nav) .toast-host {
         bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
     }
+
+    /* The footer's only job is the Impressum link, which the bar's "Mehr"
+       sheet already has (user request). Logged out there is no bar, so
+       the footer -- and the legally required link -- stays. */
+    .app-shell:has(.bottom-nav) .app-footer {
+        display: none;
+    }
 }
 
 a {
@@ -1487,6 +1494,113 @@ select:focus-visible,
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
+}
+
+/* Phones (user request: one big card per row meant endless scrolling).
+   Grids (library raster, projects, characters, shelves, ...) show three
+   covers per row; the home page's sections become rows you swipe
+   sideways, so each section costs one row of height. `main` in the
+   selectors outranks BookCard's own scoped width rule. */
+@media (max-width: 599.98px) {
+    main .library-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-2) var(--space-1);
+    }
+
+    /* Descendants, not children: some grids wrap each card with its own
+       action (a location's "place on map", a shelf book's "remove"). */
+    main .library-grid > *,
+    main .library-raster > * {
+        min-width: 0;
+    }
+
+    main .library-grid .book-card,
+    main .library-grid .project-card,
+    main .library-raster .book-card {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* Library raster: same three columns (was fixed 10rem = two per row). */
+    main .library-raster {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-2) var(--space-1);
+    }
+
+    /* Landscape location cards: two per row. */
+    main .library-grid:has(.project-card--landscape) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    main .library-grid--strip {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        gap: var(--space-2);
+        margin: 0 calc(-1 * var(--space-2));
+        padding: 0 var(--space-2) var(--space-1);
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-padding-inline: var(--space-2);
+        scrollbar-width: none;
+    }
+
+    main .library-grid--strip::-webkit-scrollbar {
+        display: none;
+    }
+
+    main .library-grid--strip > .book-card,
+    main .library-grid--strip > .project-card {
+        flex: 0 0 7rem;
+        width: 7rem;
+        scroll-snap-align: start;
+    }
+
+    /* The featured "Weiterlesen" card stays a little larger. */
+    main .library-grid--strip > .book-card-large {
+        flex-basis: 9rem;
+        width: 9rem;
+    }
+
+    main .continue-reading-grid {
+        align-items: flex-end;
+    }
+
+    /* Stat tiles: one tight row of four instead of 3 + 1. */
+    main .dashboard-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+        gap: var(--space-1);
+    }
+
+    main .dashboard-stat {
+        min-width: 0;
+        padding: var(--space-1) 0.25rem;
+    }
+
+    main .dashboard-stat-value {
+        font-size: 1.35rem;
+        height: 1.35rem;
+    }
+
+    main .dashboard-stat-label {
+        font-size: var(--font-size-caption);
+        text-align: center;
+    }
+
+    /* Smaller type under the smaller covers. */
+    main .library-grid .book-card-title,
+    main .library-grid .project-card-title,
+    main .library-raster .book-card-title {
+        font-size: var(--font-size-small);
+    }
+
+    main .library-grid .book-card-author,
+    main .library-grid .project-card-type,
+    main .library-raster .book-card-author {
+        font-size: var(--font-size-caption);
+    }
 }
 
 /* Home "Weiterlesen": the first card is the large featured one; aligning
@@ -3571,8 +3685,11 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     width: 10rem;
 }
 
+/* Portrait like a book cover (design audit F4): projects, characters and
+   lore entries sit in the same grids and at the same size as books.
+   Locations stay landscape -- place images are usually landscapes. */
 .project-card-cover {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 2 / 3;
     border-radius: var(--radius, 4px);
     overflow: hidden;
     background-color: var(--color-bg-card);
@@ -3604,6 +3721,26 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
 .project-card-cover-placeholder svg {
     width: 40%;
     height: 40%;
+}
+
+.project-card--landscape {
+    width: 14rem;
+}
+
+.project-card--landscape .project-card-cover {
+    aspect-ratio: 4 / 3;
+}
+
+/* No image: the name's initials in the display face, brass on a faint
+   brass wash -- tells the cards apart where one grey icon on every card
+   did not. */
+.project-card-initials {
+    font-family: var(--font-family-display);
+    font-size: 2.25rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-accent-text);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-accent-text) 14%, var(--color-bg-card)), var(--color-bg-card));
 }
 
 .project-card-title {
