@@ -235,4 +235,73 @@ public class CharacterDetailPageTests : BunitContext
 
         Assert.NotNull(deleteRequest);
     }
+
+    // UI/UX plan A5: edit and relationship forms are dialogs that ask
+    // before discarding typed input.
+    [Fact]
+    public void CharacterDetail_EditDialog_CancelWithChanges_AsksBeforeDiscarding()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<CharacterDetail>(DefaultParams);
+        cut.Find("#character-edit-button").Click();
+        Assert.Equal("Charakter bearbeiten", cut.Find(".dialog-title").TextContent);
+        cut.Find("#character-edit-origin").Change("The Ashen Coast");
+        cut.FindAll(".dialog button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+
+        Assert.Empty(cut.FindAll("#character-edit-form"));
+        Assert.Contains("The Silver Vale", cut.Markup);
+    }
+
+    [Fact]
+    public void CharacterDetail_AddRelationshipDialog_CancelWithoutChanges_ClosesImmediately()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<CharacterDetail>(DefaultParams);
+        cut.Find("#add-relationship-button").Click();
+        cut.FindAll(".dialog button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+
+        Assert.Empty(cut.FindAll("#create-relationship-form"));
+        Assert.DoesNotContain("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+    }
+
+    [Fact]
+    public void CharacterDetail_EditRelationshipDialog_SendsUpdatedTypeAndCloses()
+    {
+        HttpRequestMessage? putRequest = null;
+        string? putBody = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Put, r =>
+            {
+                putRequest = r;
+                putBody = r.Content!.ReadAsStringAsync().Result;
+                return RoutedFakeHttpMessageHandler.JsonResponse(
+                    """{"success":true,"data":{"id":1,"projectId":1,"characterAId":5,"characterAName":"Elarion","characterBId":6,"characterBName":"Berin","relationshipType":"Freund von","description":null,"createdAt":"2026-01-01"}}""");
+            })
+            .WhenPathEndsWith(
+                "/relationships",
+                """{"success":true,"data":[{"id":1,"projectId":1,"characterAId":5,"characterAName":"Elarion","characterBId":6,"characterBName":"Berin","relationshipType":"Mentor von","description":null,"createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/characters", EmptyOtherCharactersJson)
+            .WhenPathEndsWith("/characters/5", CharacterJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+
+        var cut = Render<CharacterDetail>(DefaultParams);
+        cut.FindAll("button").Where(b => b.TextContent.Trim() == "Bearbeiten").Last().Click();
+        Assert.Equal("Beziehung bearbeiten", cut.Find(".dialog-title").TextContent);
+        Assert.Equal("Mentor von", cut.Find("#relationship-edit-type").GetAttribute("value"));
+        cut.Find("#relationship-edit-type").Change("Freund von");
+        cut.Find("#edit-relationship-form").Submit();
+
+        Assert.Equal("/api/projects/1/relationships/1", putRequest?.RequestUri?.AbsolutePath);
+        Assert.Contains("Freund von", putBody);
+        Assert.Empty(cut.FindAll("#edit-relationship-form"));
+    }
 }
