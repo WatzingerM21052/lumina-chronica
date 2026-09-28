@@ -46,12 +46,12 @@ else
                 <p class="user-text">@_location.Description</p>
             }
             <div class="form-actions">
-                <button type="button" id="location-edit-button" class="btn" @onclick="StartEditing">@I18n.T("locationDetail.editButton")</button>
+                <button type="button" id="location-edit-button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("locationDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("locationDetail.editButton")</span></button>
                 @if (_location.X is not null)
                 {
                     <button type="button" class="btn" @onclick="RemovePositionAsync">@I18n.T("locationDetail.removeFromMapButton")</button>
                 }
-                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("locationDetail.deleteButton")</button>
+                <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("locationDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("locationDetail.deleteButton")</span></button>
             </div>
         </div>
     </div>

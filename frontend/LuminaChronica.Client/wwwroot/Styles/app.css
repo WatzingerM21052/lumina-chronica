@@ -903,6 +903,19 @@ select:focus-visible,
     overflow-wrap: anywhere;
 }
 
+/* The comment text brings no margin of its own: the card's padding is the
+   same above the header and below the text. */
+.book-comment-item p {
+    margin: 0;
+}
+
+.book-comment-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex-shrink: 0;
+}
+
 .book-comment-header {
     display: flex;
     justify-content: space-between;
@@ -1103,6 +1116,51 @@ select:focus-visible,
     color: var(--color-accent-text);
     text-decoration: underline;
     text-underline-offset: 0.2em;
+}
+
+/* Square icon-only button (plan F9): secondary actions like edit, delete
+   or "save offline" as a symbol, with the word as tooltip (title) and as
+   visually-hidden text for screen readers. The page's main action stays a
+   labelled button. */
+.btn.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    min-width: 2.5rem;
+    padding: 0;
+    position: relative;
+}
+
+.btn.btn-icon .icon {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+/* Smaller icon button for per-item actions inside a list or card header. */
+.btn.btn-icon.btn-icon-sm {
+    width: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+}
+
+.btn.btn-icon.btn-icon-sm .icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* "Saved offline" reads as done: the tick in the accent colour. */
+.btn.btn-icon.is-saved-offline {
+    color: var(--color-accent-text);
+    border-color: var(--color-accent-text);
+}
+
+/* Destructive icon buttons stay neutral at rest and only turn red on
+   hover/focus -- a row of red trash cans would shout. */
+.btn.btn-icon.btn-icon-danger:hover,
+.btn.btn-icon.btn-icon-danger:focus-visible {
+    border-color: var(--color-error);
+    color: var(--color-error);
 }
 
 .form-actions {

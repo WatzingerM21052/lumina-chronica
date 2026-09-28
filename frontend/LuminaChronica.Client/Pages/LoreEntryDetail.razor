@@ -28,8 +28,8 @@ else
     <header class="lore-header">
         <h1>@_entry.Title</h1>
         <div class="form-actions">
-            <button type="button" id="lore-edit-button" class="btn" @onclick="StartEditing">@I18n.T("loreEntryDetail.editButton")</button>
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("loreEntryDetail.deleteButton")</button>
+            <button type="button" id="lore-edit-button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("loreEntryDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("loreEntryDetail.editButton")</span></button>
+            <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("loreEntryDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("loreEntryDetail.deleteButton")</span></button>
         </div>
     </header>
     @if (!string.IsNullOrWhiteSpace(_entry.Content))
