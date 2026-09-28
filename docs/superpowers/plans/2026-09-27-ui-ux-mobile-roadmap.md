@@ -49,8 +49,8 @@ Quellen: [Material 3 Navigation bar](https://m3.material.io/components/navigatio
 
 | # | Schritt | Status |
 |---|---|---|
-| A1 | Projekt-Detailkopf wie BookDetail, Detail-Köpfe stapeln auf dem Handy | PR #501 im Review |
-| A2 | **Sprachauswahl**: Combobox mit ISO-639-1-Liste, Namen über `Intl.DisplayNames`, Suche beim Tippen, „Eigene Sprache“ als Ausnahme; bestehende Freitext-Werte bleiben gültig; Anzeige als Name statt Code (Upload, Bearbeiten, Detail, Bibliotheks-Karten) | offen |
+| A1 | Projekt-Detailkopf wie BookDetail, Detail-Köpfe stapeln auf dem Handy | erledigt (#501) |
+| A2 | **Sprachauswahl**: Combobox mit ISO-639-1-Liste, Namen über `Intl.DisplayNames`, Suche beim Tippen, „Eigene Sprache“ als Ausnahme; bestehende Freitext-Werte bleiben gültig; Anzeige als Name statt Code (Upload, Bearbeiten, Detail, Bibliotheks-Karten) | erledigt 2026-09-28. Abweichend: feste Sprachliste mit DE/EN-Namen statt `Intl.DisplayNames` (synchron, testbar, unabhängig von geladenen ICU-Daten); Bibliotheks-Karten zeigen keine Sprache, dort war nichts zu tun. |
 | A3 | **Projekt bearbeiten als Dialog** (wie Buch/Regal), statt Inline-Formular | offen |
 | A4 | **Bibliotheks-Werkzeugleiste entzerren**: Suche breit, Filter/Sortierung gebündelt, Ansicht (Regal/Raster/Größe) als eigene Gruppe; eindeutige Beschriftungen („Sortieren: Hinzugefügt“) | offen |
 | A5 | **Worldbuilding-Formulare** (Charakter, Ort, Lore, Zeitleiste, Dateien): Screenshot-Befund, gleiche Muster (Dialog statt Inline, wo sinnvoll; Dropzones; Abschnitte) | offen |
@@ -90,6 +90,11 @@ EPUB Realistische Ansicht (#189), `app.css` gliedern, Regal-Deko, KI (#270/#14),
 recipemaster.at-Vergleich (braucht lokale Chrome-Session).
 
 ## 4. Lokal testen mit echten Daten (so wurde der UI-Durchgang gemacht)
+
+> **Lokal beim Nutzer (nicht Cloud):** Interaktionen im echten Browser des Nutzers (Brave) über die
+> Claude-in-Chrome-Extension testen, nicht headless. Playwright nur, wo die Extension nicht reicht
+> (z. B. 390px-Viewport, weil sich das maximierte Brave-Fenster nicht verkleinern lässt). Die Schritte
+> unten beschreiben die Cloud-Umgebung.
 
 Aus einer Cloud-Session sind die Live-API und externe Seiten meist gesperrt. Backend und Frontend lassen sich aber lokal starten:
 

@@ -158,7 +158,7 @@
 
     <div class="form-group">
         <label for="language">@I18n.T("bookUpload.languageLabel")</label>
-        <InputText id="language" @bind-Value="_form.Language" />
+        <LanguagePicker Id="language" @bind-Value="_form.Language" />
     </div>
 
     <div class="form-group">
@@ -282,7 +282,7 @@
             if (string.IsNullOrWhiteSpace(_form.Title) && !string.IsNullOrWhiteSpace(metadata.Title)) _form.Title = metadata.Title;
             if (string.IsNullOrWhiteSpace(_form.Author) && !string.IsNullOrWhiteSpace(metadata.Author)) _form.Author = metadata.Author;
             if (string.IsNullOrWhiteSpace(_form.Description) && !string.IsNullOrWhiteSpace(metadata.Description)) _form.Description = metadata.Description;
-            if (string.IsNullOrWhiteSpace(_form.Language) && !string.IsNullOrWhiteSpace(metadata.Language)) _form.Language = metadata.Language;
+            if (string.IsNullOrWhiteSpace(_form.Language) && !string.IsNullOrWhiteSpace(metadata.Language)) _form.Language = LanguageCatalog.Normalize(metadata.Language);
             if (string.IsNullOrWhiteSpace(_form.Publisher) && !string.IsNullOrWhiteSpace(metadata.Publisher)) _form.Publisher = metadata.Publisher;
             if (string.IsNullOrWhiteSpace(_form.Isbn) && !string.IsNullOrWhiteSpace(metadata.Isbn)) _form.Isbn = metadata.Isbn;
 

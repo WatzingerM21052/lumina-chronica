@@ -1,0 +1,40 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@inject II18nService I18n
+
+<div class="language-picker">
+    <input id="@Id" type="text" class="language-picker-input" role="combobox" autocomplete="off"
+           aria-autocomplete="list" aria-expanded="@(_isOpen ? "true" : "false")" aria-controls="@ListId"
+           aria-activedescendant="@ActiveDescendant" placeholder="@I18n.T("languagePicker.placeholder")"
+           value="@_text" @ref="_input"
+           @oninput="OnInput" @onchange="OnChangeAsync" @onfocus="Open" @onblur="Close" @onclick="Open"
+           @onkeydown="OnKeyDownAsync" />
+
+    @if (_isOpen)
+    {
+        <ul id="@ListId" class="language-picker-list" role="listbox" aria-label="@I18n.T("languagePicker.listLabel")">
+            @for (var i = 0; i < _options.Count; i++)
+            {
+                var index = i;
+                var option = _options[i];
+                <li id="@OptionId(index)" role="option" aria-selected="@(index == _activeIndex ? "true" : "false")"
+                    class="language-picker-option @(index == _activeIndex ? "is-active" : "")"
+                    @onmousedown="() => PickAsync(index)" @onmousedown:preventDefault="true">
+                    @if (option.Language is not null)
+                    {
+                        <span>@option.Language.Name(I18n.CurrentLanguage)</span>
+                        <span class="language-picker-code">@option.Language.Code</span>
+                    }
+                    else
+                    {
+                        <span>@string.Format(I18n.T("languagePicker.useCustom"), option.Custom)</span>
+                    }
+                </li>
+            }
+            @if (_options.Count == 0)
+            {
+                <li class="language-picker-empty" role="presentation">@I18n.T("languagePicker.noMatches")</li>
+            }
+        </ul>
+    }
+</div>

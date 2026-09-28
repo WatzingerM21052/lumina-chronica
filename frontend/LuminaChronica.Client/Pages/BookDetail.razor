@@ -115,7 +115,7 @@ else
                     }
                     @if (!string.IsNullOrWhiteSpace(_book.Language))
                     {
-                        <dt>@I18n.T("bookDetail.languageLabel")</dt><dd>@_book.Language</dd>
+                        <dt>@I18n.T("bookDetail.languageLabel")</dt><dd>@LanguageCatalog.DisplayName(_book.Language, I18n.CurrentLanguage)</dd>
                     }
                     @if (!string.IsNullOrWhiteSpace(_book.Isbn))
                     {
@@ -230,7 +230,7 @@ else
                         </div>
                         <div class="form-group">
                             <label for="edit-language">@I18n.T("bookDetail.languageLabel")</label>
-                            <InputText id="edit-language" @bind-Value="_editForm.Language" />
+                            <LanguagePicker Id="edit-language" @bind-Value="_editForm.Language" />
                         </div>
                     </div>
                     <div class="form-grid-2">
