@@ -25,70 +25,75 @@ else if (_location is null)
 }
 else
 {
-    <div class="book-detail-cover">
-        @if (_imageObjectUrl is not null)
-        {
-            <img src="@_imageObjectUrl" alt="@_location.Name" />
-        }
-        else
-        {
-            <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="location-pin" /></div>
-        }
-    </div>
-
-    @if (!_isEditing)
-    {
-        <h1>@_location.Name</h1>
-        <p class="text-muted">@(_location.X is not null ? I18n.T("locationDetail.placedOnMap") : I18n.T("locationDetail.notPlacedOnMap"))</p>
-        @if (!string.IsNullOrWhiteSpace(_location.Description))
-        {
-            <p>@_location.Description</p>
-        }
-        <div class="form-actions">
-            <button type="button" class="btn" @onclick="StartEditing">@I18n.T("locationDetail.editButton")</button>
-            @if (_location.X is not null)
+    @* UI/UX plan A5: same header layout as book and project; editing in a dialog. *@
+    <div class="book-detail">
+        <div class="book-detail-cover">
+            @if (_imageObjectUrl is not null)
             {
-                <button type="button" class="btn" @onclick="RemovePositionAsync">@I18n.T("locationDetail.removeFromMapButton")</button>
+                <img src="@_imageObjectUrl" alt="@_location.Name" />
             }
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("locationDetail.deleteButton")</button>
+            else
+            {
+                <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="location-pin" /></div>
+            }
         </div>
-        <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("locationDetail.deleteConfirmMessage")"
-                       OnConfirm="DeleteLocationAsync" OnCancel="() => _confirmingDelete = false" />
-    }
-    else
-    {
-        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
-            @if (_saveErrorMessage is not null)
+
+        <div class="book-detail-info">
+            <h1>@_location.Name</h1>
+            <p class="text-muted">@(_location.X is not null ? I18n.T("locationDetail.placedOnMap") : I18n.T("locationDetail.notPlacedOnMap"))</p>
+            @if (!string.IsNullOrWhiteSpace(_location.Description))
             {
-                <p class="form-error">@_saveErrorMessage</p>
+                <p>@_location.Description</p>
             }
-            <div class="form-group">
-                <label for="location-edit-image">@I18n.T("locationDetail.replaceImageLabel")</label>
-                <div class="dropzone @(_isDraggingImage ? "dropzone--active" : "")"
-                     @ondragenter="() => _isDraggingImage = true" @ondragleave="() => _isDraggingImage = false"
-                     @ondragover:preventDefault @ondrop="() => _isDraggingImage = false">
-                    <InputFile id="location-edit-image" OnChange="OnEditImageSelected" />
-                    <span class="dropzone-label">@I18n.T("locationDetail.dropzoneLabel")</span>
-                </div>
-                @if (_imageSaveErrorMessage is not null)
-                {
-                    <p class="form-error">@_imageSaveErrorMessage</p>
-                }
-            </div>
-            <div class="form-group">
-                <label for="location-edit-name">@I18n.T("locationDetail.nameLabel")</label>
-                <InputText id="location-edit-name" @bind-Value="_editForm.Name" />
-            </div>
-            <div class="form-group">
-                <label for="location-edit-description">@I18n.T("locationDetail.descriptionLabel")</label>
-                <InputTextArea id="location-edit-description" @bind-Value="_editForm.Description" />
-            </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">@I18n.T("locationDetail.saveButton")</button>
-                <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("locationDetail.cancelButton")</button>
+                <button type="button" id="location-edit-button" class="btn" @onclick="StartEditing">@I18n.T("locationDetail.editButton")</button>
+                @if (_location.X is not null)
+                {
+                    <button type="button" class="btn" @onclick="RemovePositionAsync">@I18n.T("locationDetail.removeFromMapButton")</button>
+                }
+                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("locationDetail.deleteButton")</button>
             </div>
-        </EditForm>
-    }
+        </div>
+    </div>
+    <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("locationDetail.deleteConfirmMessage")"
+                   OnConfirm="DeleteLocationAsync" OnCancel="() => _confirmingDelete = false" />
+
+    <Dialog IsOpen="_isEditing" Title="@I18n.T("locationDetail.editDialogTitle")"
+            OnClose="() => _guard.RequestClose(IsEditFormDirty, () => _isEditing = false)">
+        <ChildContent>
+            <EditForm id="location-edit-form" Model="_editForm" OnValidSubmit="() => _guard.SubmitAsync(SaveAsync)" class="auth-form">
+                @if (_saveErrorMessage is not null)
+                {
+                    <p class="form-error">@_saveErrorMessage</p>
+                }
+                <div class="form-group">
+                    <label for="location-edit-name">@I18n.T("locationDetail.nameLabel")</label>
+                    <InputText id="location-edit-name" @bind-Value="_editForm.Name" />
+                </div>
+                <div class="form-group">
+                    <label for="location-edit-description">@I18n.T("locationDetail.descriptionLabel")</label>
+                    <InputTextArea id="location-edit-description" @bind-Value="_editForm.Description" />
+                </div>
+                <div class="form-group">
+                    <label for="location-edit-image">@I18n.T("locationDetail.replaceImageLabel")</label>
+                    <FileDropzone Id="location-edit-image" Accept="image/*" Label="@I18n.T("locationDetail.dropzoneLabel")"
+                                  SelectedFileName="@_selectedEditImage?.Name" OnChange="OnEditImageSelected" />
+                    @if (_imageSaveErrorMessage is not null)
+                    {
+                        <p class="form-error">@_imageSaveErrorMessage</p>
+                    }
+                </div>
+            </EditForm>
+        </ChildContent>
+        <Footer>
+            <button type="button" class="btn" @onclick="() => _guard.RequestClose(IsEditFormDirty, () => _isEditing = false)">@I18n.T("locationDetail.cancelButton")</button>
+            <button type="submit" form="location-edit-form" class="btn btn-primary" disabled="@_guard.IsSubmitting">@I18n.T("locationDetail.saveButton")</button>
+        </Footer>
+    </Dialog>
+
+    <ConfirmDialog IsOpen="_guard.IsConfirmingDiscard" Message="@I18n.T("dialog.discardChangesMessage")"
+                   ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
+                   OnConfirm="_guard.ConfirmDiscard" OnCancel="_guard.CancelDiscard" />
 }
 
 @code {
@@ -106,8 +111,9 @@ else
     private string? _saveErrorMessage;
     private string? _imageSaveErrorMessage;
     private IBrowserFile? _selectedEditImage;
-    private bool _isDraggingImage;
     private EditFormModel _editForm = new();
+    private EditFormModel _editFormSnapshot = new();
+    private readonly DialogGuard _guard = new();
     private bool _confirmingDelete;
 
     protected override Task OnParametersSetAsync() => LoadLocationAsync();
@@ -148,6 +154,7 @@ else
     {
         if (_location is null) return;
         _editForm = new EditFormModel { Name = _location.Name, Description = _location.Description };
+        _editFormSnapshot = _editForm with { };
         _saveErrorMessage = null;
         _imageSaveErrorMessage = null;
         _selectedEditImage = null;
@@ -155,6 +162,8 @@ else
     }
 
     private void OnEditImageSelected(InputFileChangeEventArgs e) => _selectedEditImage = e.File;
+
+    private bool IsEditFormDirty => _editForm != _editFormSnapshot || _selectedEditImage is not null;
 
     private async Task SaveAsync()
     {
@@ -234,7 +243,7 @@ else
         }
     }
 
-    private class EditFormModel
+    private record EditFormModel
     {
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }

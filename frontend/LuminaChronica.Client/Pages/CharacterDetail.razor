@@ -25,138 +25,178 @@ else if (_character is null)
 }
 else
 {
-    <div class="book-detail-cover">
-        @if (_imageObjectUrl is not null)
-        {
-            <img src="@_imageObjectUrl" alt="@_character.Name" />
-        }
-        else
-        {
-            <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="person" /></div>
-        }
-    </div>
-
-    @if (!_isEditing)
-    {
-        <h1>@_character.Name</h1>
-        @if (!string.IsNullOrWhiteSpace(_character.Origin))
-        {
-            <p class="text-muted">@_character.Origin</p>
-        }
-        @if (!string.IsNullOrWhiteSpace(_character.Age))
-        {
-            <p><strong>@I18n.T("characterDetail.ageLabel"):</strong> @_character.Age</p>
-        }
-        @if (!string.IsNullOrWhiteSpace(_character.Description))
-        {
-            <p>@_character.Description</p>
-        }
-        @if (!string.IsNullOrWhiteSpace(_character.Personality))
-        {
-            <p><strong>@I18n.T("characterDetail.personalityLabel"):</strong> @_character.Personality</p>
-        }
-        @if (!string.IsNullOrWhiteSpace(_character.Biography))
-        {
-            <p><strong>@I18n.T("characterDetail.biographyLabel"):</strong> @_character.Biography</p>
-        }
-        <div class="form-actions">
-            <button type="button" class="btn" @onclick="StartEditing">@I18n.T("characterDetail.editButton")</button>
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("characterDetail.deleteButton")</button>
-        </div>
-        <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("characterDetail.deleteConfirmMessage")"
-                       OnConfirm="DeleteCharacterAsync" OnCancel="() => _confirmingDelete = false" />
-    }
-    else
-    {
-        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
-            @if (_saveErrorMessage is not null)
+    @* UI/UX plan A5: same header layout as book and project (image beside
+       the info column); editing and relationships happen in dialogs. *@
+    <div class="book-detail">
+        <div class="book-detail-cover">
+            @if (_imageObjectUrl is not null)
             {
-                <p class="form-error">@_saveErrorMessage</p>
+                <img src="@_imageObjectUrl" alt="@_character.Name" />
             }
-            <div class="form-group">
-                <label for="character-edit-image">@I18n.T("characterDetail.replaceImageLabel")</label>
-                <div class="dropzone @(_isDraggingImage ? "dropzone--active" : "")"
-                     @ondragenter="() => _isDraggingImage = true" @ondragleave="() => _isDraggingImage = false"
-                     @ondragover:preventDefault @ondrop="() => _isDraggingImage = false">
-                    <InputFile id="character-edit-image" OnChange="OnEditImageSelected" />
-                    <span class="dropzone-label">@I18n.T("characterDetail.dropzoneLabel")</span>
+            else
+            {
+                <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="person" /></div>
+            }
+        </div>
+
+        <div class="book-detail-info">
+            <h1>@_character.Name</h1>
+            @if (!string.IsNullOrWhiteSpace(_character.Origin) || !string.IsNullOrWhiteSpace(_character.Age))
+            {
+                <dl class="book-detail-meta">
+                    @if (!string.IsNullOrWhiteSpace(_character.Origin))
+                    {
+                        <dt>@I18n.T("characterDetail.originLabel")</dt><dd>@_character.Origin</dd>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_character.Age))
+                    {
+                        <dt>@I18n.T("characterDetail.ageLabel")</dt><dd>@_character.Age</dd>
+                    }
+                </dl>
+            }
+            @if (!string.IsNullOrWhiteSpace(_character.Description))
+            {
+                <p>@_character.Description</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(_character.Personality))
+            {
+                <p><strong>@I18n.T("characterDetail.personalityLabel"):</strong> @_character.Personality</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(_character.Biography))
+            {
+                <p><strong>@I18n.T("characterDetail.biographyLabel"):</strong> @_character.Biography</p>
+            }
+            <div class="form-actions">
+                <button type="button" id="character-edit-button" class="btn" @onclick="StartEditing">@I18n.T("characterDetail.editButton")</button>
+                <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("characterDetail.deleteButton")</button>
+            </div>
+        </div>
+    </div>
+    <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("characterDetail.deleteConfirmMessage")"
+                   OnConfirm="DeleteCharacterAsync" OnCancel="() => _confirmingDelete = false" />
+
+    <Dialog IsOpen="_isEditing" Size="DialogSize.Large" Title="@I18n.T("characterDetail.editDialogTitle")"
+            OnClose="() => _guard.RequestClose(IsEditFormDirty, () => _isEditing = false)">
+        <ChildContent>
+            <EditForm id="character-edit-form" Model="_editForm" OnValidSubmit="() => _guard.SubmitAsync(SaveAsync)" class="auth-form">
+                @if (_saveErrorMessage is not null)
+                {
+                    <p class="form-error">@_saveErrorMessage</p>
+                }
+                <h3 class="form-section-title">@I18n.T("characterDetail.editSectionGeneral")</h3>
+                <div class="form-group">
+                    <label for="character-edit-name">@I18n.T("characterDetail.nameLabel")</label>
+                    <InputText id="character-edit-name" @bind-Value="_editForm.Name" />
                 </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="character-edit-age">@I18n.T("characterDetail.ageLabel")</label>
+                        <InputText id="character-edit-age" @bind-Value="_editForm.Age" />
+                    </div>
+                    <div class="form-group">
+                        <label for="character-edit-origin">@I18n.T("characterDetail.originLabel")</label>
+                        <InputText id="character-edit-origin" @bind-Value="_editForm.Origin" />
+                    </div>
+                </div>
+
+                <h3 class="form-section-title">@I18n.T("characterDetail.editSectionStory")</h3>
+                <div class="form-group">
+                    <label for="character-edit-description">@I18n.T("characterDetail.descriptionLabel")</label>
+                    <InputTextArea id="character-edit-description" @bind-Value="_editForm.Description" />
+                </div>
+                <div class="form-group">
+                    <label for="character-edit-personality">@I18n.T("characterDetail.personalityLabel")</label>
+                    <InputTextArea id="character-edit-personality" @bind-Value="_editForm.Personality" />
+                </div>
+                <div class="form-group">
+                    <label for="character-edit-biography">@I18n.T("characterDetail.biographyLabel")</label>
+                    <InputTextArea id="character-edit-biography" @bind-Value="_editForm.Biography" />
+                </div>
+
+                <h3 class="form-section-title">@I18n.T("characterDetail.replaceImageLabel")</h3>
+                <FileDropzone Id="character-edit-image" Accept="image/*" Label="@I18n.T("characterDetail.dropzoneLabel")"
+                              SelectedFileName="@_selectedEditImage?.Name" OnChange="OnEditImageSelected" />
                 @if (_imageSaveErrorMessage is not null)
                 {
                     <p class="form-error">@_imageSaveErrorMessage</p>
                 }
-            </div>
-            <div class="form-group">
-                <label for="character-edit-name">@I18n.T("characterDetail.nameLabel")</label>
-                <InputText id="character-edit-name" @bind-Value="_editForm.Name" />
-            </div>
-            <div class="form-group">
-                <label for="character-edit-age">@I18n.T("characterDetail.ageLabel")</label>
-                <InputText id="character-edit-age" @bind-Value="_editForm.Age" />
-            </div>
-            <div class="form-group">
-                <label for="character-edit-origin">@I18n.T("characterDetail.originLabel")</label>
-                <InputText id="character-edit-origin" @bind-Value="_editForm.Origin" />
-            </div>
-            <div class="form-group">
-                <label for="character-edit-description">@I18n.T("characterDetail.descriptionLabel")</label>
-                <InputTextArea id="character-edit-description" @bind-Value="_editForm.Description" />
-            </div>
-            <div class="form-group">
-                <label for="character-edit-personality">@I18n.T("characterDetail.personalityLabel")</label>
-                <InputTextArea id="character-edit-personality" @bind-Value="_editForm.Personality" />
-            </div>
-            <div class="form-group">
-                <label for="character-edit-biography">@I18n.T("characterDetail.biographyLabel")</label>
-                <InputTextArea id="character-edit-biography" @bind-Value="_editForm.Biography" />
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">@I18n.T("characterDetail.saveButton")</button>
-                <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("characterDetail.cancelButton")</button>
-            </div>
-        </EditForm>
-    }
+            </EditForm>
+        </ChildContent>
+        <Footer>
+            <button type="button" class="btn" @onclick="() => _guard.RequestClose(IsEditFormDirty, () => _isEditing = false)">@I18n.T("characterDetail.cancelButton")</button>
+            <button type="submit" form="character-edit-form" class="btn btn-primary" disabled="@_guard.IsSubmitting">@I18n.T("characterDetail.saveButton")</button>
+        </Footer>
+    </Dialog>
 
     <div class="library-header">
         <h2>@I18n.T("characterDetail.relationshipsTitle")</h2>
-        <button type="button" class="btn btn-primary" @onclick="() => _showCreateRelationshipForm = !_showCreateRelationshipForm">
-            @(_showCreateRelationshipForm ? I18n.T("characterDetail.cancelButton") : I18n.T("characterDetail.addRelationshipButton"))
-        </button>
+        <button type="button" id="add-relationship-button" class="btn btn-primary" @onclick="OpenCreateRelationship">@I18n.T("characterDetail.addRelationshipButton")</button>
     </div>
 
-    @if (_showCreateRelationshipForm)
-    {
-        <EditForm Model="_createRelationshipForm" OnValidSubmit="CreateRelationshipAsync" class="book-form-card">
-            @if (_createRelationshipErrorMessage is not null)
-            {
-                <p class="form-error">@_createRelationshipErrorMessage</p>
-            }
-            <div class="form-group">
-                <label for="relationship-other-character">@I18n.T("characterDetail.otherCharacterLabel")</label>
-                <InputSelect id="relationship-other-character" @bind-Value="_createRelationshipForm.OtherCharacterId">
-                    <option value="0">@I18n.T("characterDetail.selectPlaceholder")</option>
-                    @if (_otherCharacters is not null)
-                    {
-                        @foreach (var other in _otherCharacters)
+    <Dialog IsOpen="_showCreateRelationshipForm" Title="@I18n.T("characterDetail.addRelationshipButton")"
+            OnClose="() => _guard.RequestClose(IsCreateRelationshipDirty, () => _showCreateRelationshipForm = false)">
+        <ChildContent>
+            <EditForm id="create-relationship-form" Model="_createRelationshipForm" OnValidSubmit="() => _guard.SubmitAsync(CreateRelationshipAsync)" class="auth-form">
+                @if (_createRelationshipErrorMessage is not null)
+                {
+                    <p class="form-error">@_createRelationshipErrorMessage</p>
+                }
+                <div class="form-group">
+                    <label for="relationship-other-character">@I18n.T("characterDetail.otherCharacterLabel")</label>
+                    <InputSelect id="relationship-other-character" @bind-Value="_createRelationshipForm.OtherCharacterId">
+                        <option value="0">@I18n.T("characterDetail.selectPlaceholder")</option>
+                        @if (_otherCharacters is not null)
                         {
-                            <option value="@other.Id">@other.Name</option>
+                            @foreach (var other in _otherCharacters)
+                            {
+                                <option value="@other.Id">@other.Name</option>
+                            }
                         }
-                    }
-                </InputSelect>
-            </div>
-            <div class="form-group">
-                <label for="relationship-type">@I18n.T("characterDetail.relationshipTypeLabel")</label>
-                <InputText id="relationship-type" @bind-Value="_createRelationshipForm.RelationshipType" />
-            </div>
-            <div class="form-group">
-                <label for="relationship-description">@I18n.T("characterDetail.relationshipDescriptionLabel")</label>
-                <InputTextArea id="relationship-description" @bind-Value="_createRelationshipForm.Description" />
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">@I18n.T("characterDetail.addRelationshipSubmitButton")</button>
-            </div>
-        </EditForm>
-    }
+                    </InputSelect>
+                </div>
+                <div class="form-group">
+                    <label for="relationship-type">@I18n.T("characterDetail.relationshipTypeLabel")</label>
+                    <InputText id="relationship-type" @bind-Value="_createRelationshipForm.RelationshipType" />
+                </div>
+                <div class="form-group">
+                    <label for="relationship-description">@I18n.T("characterDetail.relationshipDescriptionLabel")</label>
+                    <InputTextArea id="relationship-description" @bind-Value="_createRelationshipForm.Description" />
+                </div>
+            </EditForm>
+        </ChildContent>
+        <Footer>
+            <button type="button" class="btn" @onclick="() => _guard.RequestClose(IsCreateRelationshipDirty, () => _showCreateRelationshipForm = false)">@I18n.T("characterDetail.cancelButton")</button>
+            <button type="submit" form="create-relationship-form" class="btn btn-primary" disabled="@_guard.IsSubmitting">@I18n.T("characterDetail.addRelationshipSubmitButton")</button>
+        </Footer>
+    </Dialog>
+
+    <Dialog IsOpen="_editingRelationshipId is not null" Title="@I18n.T("characterDetail.editRelationshipDialogTitle")"
+            OnClose="() => _guard.RequestClose(IsEditRelationshipDirty, () => _editingRelationshipId = null)">
+        <ChildContent>
+            <EditForm id="edit-relationship-form" Model="_editRelationshipForm" OnValidSubmit="() => _guard.SubmitAsync(SaveRelationshipAsync)" class="auth-form">
+                @if (_editRelationshipErrorMessage is not null)
+                {
+                    <p class="form-error">@_editRelationshipErrorMessage</p>
+                }
+                @if (_relationships?.FirstOrDefault(r => r.Id == _editingRelationshipId) is { } editing)
+                {
+                    <p class="text-muted" id="relationship-edit-pair">@editing.CharacterAName → @editing.CharacterBName</p>
+                }
+                <div class="form-group">
+                    <label for="relationship-edit-type">@I18n.T("characterDetail.relationshipLabel")</label>
+                    <InputText id="relationship-edit-type" @bind-Value="_editRelationshipForm.RelationshipType" />
+                </div>
+                <div class="form-group">
+                    <label for="relationship-edit-description">@I18n.T("characterDetail.descriptionLabel")</label>
+                    <InputTextArea id="relationship-edit-description" @bind-Value="_editRelationshipForm.Description" />
+                </div>
+            </EditForm>
+        </ChildContent>
+        <Footer>
+            <button type="button" class="btn" @onclick="() => _guard.RequestClose(IsEditRelationshipDirty, () => _editingRelationshipId = null)">@I18n.T("characterDetail.cancelButton")</button>
+            <button type="submit" form="edit-relationship-form" class="btn btn-primary" disabled="@_guard.IsSubmitting">@I18n.T("characterDetail.saveButton")</button>
+        </Footer>
+    </Dialog>
 
     @if (_relationshipsErrorMessage is not null)
     {
@@ -172,45 +212,33 @@ else
     }
     else
     {
-        @foreach (var relationship in _relationships)
-        {
-            <div class="book-form-card">
-                @if (_editingRelationshipId == relationship.Id)
-                {
-                    <EditForm Model="_editRelationshipForm" OnValidSubmit="SaveRelationshipAsync">
-                        @if (_editRelationshipErrorMessage is not null)
+        @* A plain list, not the centered upload-form card: rows span the
+           content width with the text left and the actions right. *@
+        <ul class="relationship-list">
+            @foreach (var relationship in _relationships)
+            {
+                <li class="relationship-item">
+                    <div class="relationship-text">
+                        <p class="relationship-pair"><strong>@relationship.CharacterAName</strong> <span class="relationship-type">@relationship.RelationshipType</span> <strong>@relationship.CharacterBName</strong></p>
+                        @if (!string.IsNullOrWhiteSpace(relationship.Description))
                         {
-                            <p class="form-error">@_editRelationshipErrorMessage</p>
+                            <p class="text-secondary">@relationship.Description</p>
                         }
-                        <div class="form-group">
-                            <label for="@($"relationship-edit-type-{relationship.Id}")">@I18n.T("characterDetail.relationshipLabel")</label>
-                            <InputText id="@($"relationship-edit-type-{relationship.Id}")" @bind-Value="_editRelationshipForm.RelationshipType" />
-                        </div>
-                        <div class="form-group">
-                            <label for="@($"relationship-edit-description-{relationship.Id}")">@I18n.T("characterDetail.descriptionLabel")</label>
-                            <InputTextArea id="@($"relationship-edit-description-{relationship.Id}")" @bind-Value="_editRelationshipForm.Description" />
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">@I18n.T("characterDetail.saveButton")</button>
-                            <button type="button" class="btn" @onclick="() => _editingRelationshipId = null">@I18n.T("characterDetail.cancelButton")</button>
-                        </div>
-                    </EditForm>
-                }
-                else
-                {
-                    <p><strong>@relationship.CharacterAName</strong> — @relationship.RelationshipType — <strong>@relationship.CharacterBName</strong></p>
-                    @if (!string.IsNullOrWhiteSpace(relationship.Description))
-                    {
-                        <p>@relationship.Description</p>
-                    }
-                    <div class="form-actions">
-                        <button type="button" class="btn" @onclick="() => StartEditingRelationship(relationship)">@I18n.T("characterDetail.editButton")</button>
-                        <button type="button" class="btn" @onclick="() => DeleteRelationshipAsync(relationship.Id)">@I18n.T("characterDetail.deleteButton")</button>
                     </div>
-                }
-            </div>
-        }
+                    <div class="relationship-actions">
+                        <button type="button" class="btn" @onclick="() => StartEditingRelationship(relationship)">@I18n.T("characterDetail.editButton")</button>
+                        <button type="button" class="btn" @onclick="() => _confirmingRelationshipDeleteId = relationship.Id">@I18n.T("characterDetail.deleteButton")</button>
+                    </div>
+                </li>
+            }
+        </ul>
     }
+    <ConfirmDialog IsOpen="_confirmingRelationshipDeleteId is not null" Message="@I18n.T("characterDetail.deleteRelationshipConfirmMessage")"
+                   OnConfirm="DeleteRelationshipAsync" OnCancel="() => _confirmingRelationshipDeleteId = null" />
+
+    <ConfirmDialog IsOpen="_guard.IsConfirmingDiscard" Message="@I18n.T("dialog.discardChangesMessage")"
+                   ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
+                   OnConfirm="_guard.ConfirmDiscard" OnCancel="_guard.CancelDiscard" />
 }
 
 @code {
@@ -228,9 +256,11 @@ else
     private string? _saveErrorMessage;
     private string? _imageSaveErrorMessage;
     private IBrowserFile? _selectedEditImage;
-    private bool _isDraggingImage;
     private EditFormModel _editForm = new();
+    private EditFormModel _editFormSnapshot = new();
+    private readonly DialogGuard _guard = new();
     private bool _confirmingDelete;
+    private int? _confirmingRelationshipDeleteId;
 
     private List<CharacterRelationship>? _relationships;
     private string? _relationshipsErrorMessage;
@@ -241,6 +271,7 @@ else
     private int? _editingRelationshipId;
     private string? _editRelationshipErrorMessage;
     private UpdateCharacterRelationshipRequest _editRelationshipForm = new();
+    private (string? Type, string? Description)? _editRelationshipSnapshot;
 
     protected override Task OnParametersSetAsync() =>
         Task.WhenAll(LoadCharacterAsync(), LoadRelationshipsAsync(), LoadOtherCharactersAsync());
@@ -289,10 +320,31 @@ else
             Personality = _character.Personality,
             Biography = _character.Biography,
         };
+        _editFormSnapshot = _editForm with { };
         _saveErrorMessage = null;
         _imageSaveErrorMessage = null;
         _selectedEditImage = null;
         _isEditing = true;
+    }
+
+    private bool IsEditFormDirty => _editForm != _editFormSnapshot || _selectedEditImage is not null;
+
+    private bool IsCreateRelationshipDirty =>
+        _createRelationshipForm.OtherCharacterId != 0 ||
+        DialogGuard.HasText(_createRelationshipForm.RelationshipType) ||
+        DialogGuard.HasText(_createRelationshipForm.Description);
+
+    private bool IsEditRelationshipDirty =>
+        _editRelationshipSnapshot is not { } snapshot ||
+        (_editRelationshipForm.RelationshipType ?? "") != (snapshot.Type ?? "") ||
+        (_editRelationshipForm.Description ?? "") != (snapshot.Description ?? "");
+
+    // Opens on a fresh form every time, so a cancelled attempt leaves nothing behind.
+    private void OpenCreateRelationship()
+    {
+        _createRelationshipForm = new CreateRelationshipFormModel();
+        _createRelationshipErrorMessage = null;
+        _showCreateRelationshipForm = true;
     }
 
     private void OnEditImageSelected(InputFileChangeEventArgs e) => _selectedEditImage = e.File;
@@ -419,6 +471,7 @@ else
     private void StartEditingRelationship(CharacterRelationship relationship)
     {
         _editRelationshipForm = new UpdateCharacterRelationshipRequest { RelationshipType = relationship.RelationshipType, Description = relationship.Description };
+        _editRelationshipSnapshot = (relationship.RelationshipType, relationship.Description);
         _editRelationshipErrorMessage = null;
         _editingRelationshipId = relationship.Id;
     }
@@ -440,8 +493,10 @@ else
         }
     }
 
-    private async Task DeleteRelationshipAsync(int relationshipId)
+    private async Task DeleteRelationshipAsync()
     {
+        if (_confirmingRelationshipDeleteId is not { } relationshipId) return;
+        _confirmingRelationshipDeleteId = null;
         var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/relationships/{relationshipId}");
         if (succeeded)
         {
@@ -457,7 +512,7 @@ else
         }
     }
 
-    private class EditFormModel
+    private record EditFormModel
     {
         public string Name { get; set; } = string.Empty;
         public string? Age { get; set; }

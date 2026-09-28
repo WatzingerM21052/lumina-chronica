@@ -135,5 +135,38 @@ public class LoreEntryDetailPageTests : BunitContext
         Assert.Equal(HttpMethod.Put, putRequest?.Method);
         Assert.Equal("/api/projects/1/lore/3", putRequest?.RequestUri?.AbsolutePath);
         Assert.Contains("The Silver Vale Reborn", cut.Markup);
+        Assert.Empty(cut.FindAll("#lore-edit-form"));
+    }
+
+    // UI/UX plan A5: editing happens in a dialog that asks before
+    // discarding typed input.
+    [Fact]
+    public void LoreEntryDetail_EditDialog_CancelWithoutChanges_ClosesImmediately()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<LoreEntryDetail>(DefaultParams);
+        cut.Find("#lore-edit-button").Click();
+        Assert.Equal("Lore-Eintrag bearbeiten", cut.Find(".dialog-title").TextContent);
+        cut.FindAll(".dialog button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+
+        Assert.Empty(cut.FindAll("#lore-edit-form"));
+    }
+
+    [Fact]
+    public void LoreEntryDetail_EditDialog_KeepEditing_LeavesTheDialogOpen()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<LoreEntryDetail>(DefaultParams);
+        cut.Find("#lore-edit-button").Click();
+        cut.Find("#lore-edit-title").Change("The Silver Vale Reborn");
+        cut.FindAll(".dialog button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Weiter bearbeiten").Click();
+
+        Assert.DoesNotContain("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+        Assert.Equal("The Silver Vale Reborn", cut.Find("#lore-edit-title").GetAttribute("value"));
     }
 }

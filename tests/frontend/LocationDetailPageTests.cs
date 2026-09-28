@@ -155,5 +155,50 @@ public class LocationDetailPageTests : BunitContext
         Assert.Equal(HttpMethod.Put, putRequest?.Method);
         Assert.Equal("/api/projects/1/locations/9", putRequest?.RequestUri?.AbsolutePath);
         Assert.Contains("Ashen Hollow Reborn", cut.Markup);
+        Assert.Empty(cut.FindAll("#location-edit-form"));
+    }
+
+    // UI/UX plan A5: editing happens in a dialog that asks before
+    // discarding typed input.
+    [Fact]
+    public void LocationDetail_EditDialog_CancelWithoutChanges_ClosesImmediately()
+    {
+        UseHandler(UseDefaultRoutes(LocationJson));
+
+        var cut = Render<LocationDetail>(DefaultParams);
+        cut.Find("#location-edit-button").Click();
+        Assert.Equal("Ort bearbeiten", cut.Find(".dialog-title").TextContent);
+        cut.FindAll(".dialog button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+
+        Assert.Empty(cut.FindAll("#location-edit-form"));
+    }
+
+    [Fact]
+    public void LocationDetail_EditDialog_CancelWithChanges_AsksBeforeDiscarding()
+    {
+        UseHandler(UseDefaultRoutes(LocationJson));
+
+        var cut = Render<LocationDetail>(DefaultParams);
+        cut.Find("#location-edit-button").Click();
+        cut.Find("#location-edit-name").Change("Ashen Hollow Reborn");
+        cut.FindAll(".dialog button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+        Assert.NotEmpty(cut.FindAll("#location-edit-form"));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+        Assert.Empty(cut.FindAll("#location-edit-form"));
+        Assert.Equal("Ashen Hollow", cut.Find("h1").TextContent);
+    }
+
+    [Fact]
+    public void LocationDetail_EditDialog_UsesADropzoneForTheImage()
+    {
+        UseHandler(UseDefaultRoutes(LocationJson));
+
+        var cut = Render<LocationDetail>(DefaultParams);
+        cut.Find("#location-edit-button").Click();
+
+        Assert.NotNull(cut.Find(".dialog .dropzone #location-edit-image"));
     }
 }
