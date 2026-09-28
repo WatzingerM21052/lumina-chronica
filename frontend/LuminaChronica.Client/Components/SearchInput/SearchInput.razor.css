@@ -1,0 +1,63 @@
+.search-input {
+    position: relative;
+    min-width: 0;
+}
+
+.search-input input {
+    width: 100%;
+    min-height: 2.5rem;
+    padding-left: 2.25rem;
+    padding-right: 2.5rem;
+}
+
+/* Our own clear button replaces the browser's (which only some browsers
+   draw, each differently). */
+.search-input input::-webkit-search-cancel-button,
+.search-input input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.search-input ::deep .search-input-icon {
+    position: absolute;
+    left: 0.7rem;
+    top: 1.25rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    transform: translateY(-50%);
+    color: var(--color-text-secondary);
+    pointer-events: none;
+}
+
+/* Centred on the 40px input row (top, not 50%: suggestion lists rendered
+   inside the wrapper would otherwise pull it down). 2rem square, so it's a
+   comfortable tap target without growing the field. */
+.search-input-clear {
+    position: absolute;
+    right: 0.25rem;
+    top: 1.25rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.search-input-clear:hover {
+    color: var(--color-text-primary);
+    background-color: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+}
+
+.search-input-clear:focus-visible {
+    outline: 2px solid var(--color-gold-accent);
+    outline-offset: 0;
+}

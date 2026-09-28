@@ -173,7 +173,7 @@ public class DiscoverPageTests : BunitContext
 
         var cut = Render<Discover>();
 
-        Assert.NotEmpty(cut.FindAll(".discover-search-icon"));
+        Assert.NotEmpty(cut.FindAll(".discover-search-field .search-input-icon"));
         Assert.Equal("Nutzer nach Benutzername durchsuchen", cut.Find("input").GetAttribute("aria-label"));
     }
 

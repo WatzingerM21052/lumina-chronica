@@ -527,8 +527,7 @@ else
             <h2>@I18n.T("projectDetail.linkedBooksTitle")</h2>
         </div>
 
-        <div class="library-search-wrapper">
-            <input type="search" placeholder="@I18n.T("projectDetail.bookSearchPlaceholder")" value="@_bookSearchTerm" @oninput="OnBookSearchInput" />
+        <SearchInput Class="library-search-wrapper" Placeholder="@I18n.T("projectDetail.bookSearchPlaceholder")" Value="@_bookSearchTerm" OnInput="OnBookSearchInput">
             @if (_bookSuggestions is { Count: > 0 })
             {
                 <ul class="library-search-suggestions">
@@ -546,7 +545,7 @@ else
                     }
                 </ul>
             }
-        </div>
+        </SearchInput>
         @if (_addBookErrorMessage is not null)
         {
             <p class="form-error">@_addBookErrorMessage</p>

@@ -81,7 +81,7 @@
     </div>
 
     <div class="bible-search">
-        <input type="search" placeholder="@I18n.T("bible.searchPlaceholder")" @bind="_searchQuery" @bind:event="oninput" @onkeydown="OnSearchKeyDownAsync" />
+        <SearchInput Placeholder="@I18n.T("bible.searchPlaceholder")" Value="@_searchQuery" OnInput="e => _searchQuery = e.Value?.ToString()" OnKeyDown="OnSearchKeyDownAsync" />
         <button type="button" class="btn" disabled="@string.IsNullOrWhiteSpace(_searchQuery)" @onclick="SearchAsync">@I18n.T("bible.searchButton")</button>
     </div>
 

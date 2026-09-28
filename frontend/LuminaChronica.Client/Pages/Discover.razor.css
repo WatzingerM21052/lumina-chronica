@@ -22,47 +22,9 @@
     margin-bottom: var(--space-2);
 }
 
-/* "Antikpapier, dünner Goldrand, dezenter Schatten, Material Focus State" */
-.discover-search-field {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
+/* The field itself is the shared SearchInput component (plan A6). */
+.discover-section ::deep .discover-search-field {
     max-width: 24rem;
-    padding: 0.55rem var(--space-2);
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-card);
-    transition: border-color var(--motion-micro) var(--ease-standard), box-shadow var(--motion-micro) var(--ease-standard);
-}
-
-.discover-search-field:focus-within {
-    border-color: var(--color-gold-accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold-accent) 25%, transparent);
-}
-
-.discover-search-icon {
-    color: var(--color-text-muted);
-    flex-shrink: 0;
-}
-
-.discover-search-field input {
-    flex: 1;
-    min-width: 0;
-    /* The field is the box; the global input padding made it 60px tall
-       with the placeholder 60px in from the edge. */
-    padding: var(--space-1) 0;
-    border: none;
-    background: none;
-    outline: none;
-    font-family: var(--font-family-reader);
-    font-style: italic;
-    font-size: var(--font-size-body);
-    color: var(--color-text-primary);
-}
-
-.discover-search-field input::placeholder {
-    color: var(--color-text-muted);
 }
 
 /* Author-card search results -- a small, restrained "author card" per
@@ -183,7 +145,6 @@
    matching CatalogCard's real shape instead of a page-local approximation. */
 
 @media (prefers-reduced-motion: reduce) {
-    .discover-search-field,
     .discover-author-card,
     .discover-author-avatar,
     .discover-sort-field select {
@@ -196,9 +157,8 @@
         margin-bottom: var(--space-4);
     }
 
-    .discover-search-field {
+    .discover-section ::deep .discover-search-field {
         max-width: none;
-        padding-block: 0.25rem;
     }
 
     .discover-books-toolbar {

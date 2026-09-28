@@ -30,9 +30,7 @@
    text are now aria-labels/titles. *@
 <div class="library-toolbar">
     <div class="library-toolbar-row">
-        <div class="library-search-wrapper">
-            <Icon Name="search" Class="library-search-icon" />
-            <input type="search" aria-label="@I18n.T("library.searchPlaceholder")" placeholder="@I18n.T("library.searchPlaceholder")" value="@_searchTerm" @oninput="OnSearchInput" />
+        <SearchInput Class="library-search-wrapper" Placeholder="@I18n.T("library.searchPlaceholder")" Value="@_searchTerm" OnInput="OnSearchInput">
             @if (_suggestions is { Count: > 0 })
             {
                 <ul class="library-search-suggestions">
@@ -50,7 +48,7 @@
                     }
                 </ul>
             }
-        </div>
+        </SearchInput>
 
         <button type="button" id="library-filter-toggle" class="btn library-filter-toggle @(ActiveFilterCount > 0 ? "has-active" : null)"
                 aria-expanded="@(_filtersOpen ? "true" : "false")" aria-controls="library-filter-panel"
@@ -149,7 +147,11 @@ else if (_allItems.Count == 0 && !HasActiveFilters)
 }
 else if (_allItems.Count == 0)
 {
-    <p class="text-muted">@I18n.T("library.noResultsMessage")</p>
+    @* No dead end (plan A6): the way back sits right under the message. *@
+    <div class="library-no-results">
+        <p class="text-muted">@I18n.T("library.noResultsMessage")</p>
+        <button type="button" class="btn" @onclick="ClearFiltersAsync">@I18n.T("library.clearFiltersButton")</button>
+    </div>
 }
 else
 {
