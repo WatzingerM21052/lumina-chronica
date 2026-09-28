@@ -201,6 +201,61 @@ public class LibraryPageTests : BunitContext
         Assert.Equal("Tag (1)", cut.FindAll("button").Single(b => b.TextContent.Trim().StartsWith("Tag")).TextContent.Trim());
     }
 
+    // UI/UX plan A4: the toolbar only offers "Filter zurücksetzen" when
+    // there is something to reset, and sort direction is a labelled toggle.
+    private (IRenderedComponent<Library> Cut, List<HttpRequestMessage> Requests) RenderLibraryCapturingRequests()
+    {
+        var capturedRequests = new List<HttpRequestMessage>();
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/facets", """{"success":true,"data":{"tags":[],"genres":[]}}""")
+            .When(r => r.RequestUri!.AbsolutePath == "/api/books", r =>
+            {
+                capturedRequests.Add(r);
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""");
+            });
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<CoverColorService>();
+        return (Render<Library>(), capturedRequests);
+    }
+
+    [Fact]
+    public void Library_ClearFilters_OnlyShownWhileAFilterIsActive()
+    {
+        var (cut, _) = RenderLibraryCapturingRequests();
+        Assert.Empty(cut.FindAll(".library-clear-filters"));
+
+        cut.Find("input[type=checkbox]").Change(true);
+        Assert.Single(cut.FindAll(".library-clear-filters"));
+    }
+
+    [Fact]
+    public void Library_SortOrderToggle_FlipsDirection_AndHasAnAccessibleName()
+    {
+        var (cut, requests) = RenderLibraryCapturingRequests();
+        var toggle = cut.Find(".library-sort-order");
+        Assert.Contains("Absteigend", toggle.GetAttribute("aria-label"));
+
+        toggle.Click();
+
+        Assert.Contains("order=asc", requests[^1].RequestUri?.Query);
+        Assert.Contains("Aufsteigend", cut.Find(".library-sort-order").GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void Library_ViewToggle_ExposesPressedState()
+    {
+        var (cut, _) = RenderLibraryCapturingRequests();
+        Assert.Equal("true", cut.FindAll(".segmented-option").Single(b => b.TextContent.Trim() == "Regal").GetAttribute("aria-pressed"));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+
+        Assert.Equal("true", cut.FindAll(".segmented-option").Single(b => b.TextContent.Trim() == "Raster").GetAttribute("aria-pressed"));
+        Assert.Equal("false", cut.FindAll(".segmented-option").Single(b => b.TextContent.Trim() == "Regal").GetAttribute("aria-pressed"));
+    }
+
     [Fact]
     public void Library_ClearFiltersButton_ResetsFavoritesOnlyAndReloadsWithoutIt()
     {

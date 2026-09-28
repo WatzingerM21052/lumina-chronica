@@ -315,6 +315,49 @@ button,
     opacity: 0.5;
 }
 
+/* Text-only action (e.g. "Filter zurücksetzen"): secondary, not a box. */
+.btn-link {
+    font-family: inherit;
+    border: none;
+    background: none;
+    padding: var(--space-1);
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+}
+
+/* Segmented control: mutually exclusive options as one joined group
+   (library view Regal/Raster). Selection carried by aria-pressed too. */
+.segmented {
+    display: inline-flex;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.segmented-option {
+    font-family: inherit;
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    min-height: 2.5rem;
+    padding: 0 var(--space-2);
+    border: none;
+    background-color: var(--color-bg-card);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background-color var(--motion-micro) var(--ease-standard);
+}
+
+.segmented-option + .segmented-option {
+    border-left: 1px solid var(--color-border);
+}
+
+.segmented-option.is-selected {
+    background-color: var(--color-primary);
+    color: var(--color-bg-light);
+}
+
 button:hover,
 .btn:hover {
     border-color: var(--color-primary);
@@ -1022,12 +1065,56 @@ select:focus-visible,
     flex-direction: column;
 }
 
+/* UI/UX plan A4: two rows -- search + view settings, then filters + sort. */
 .library-toolbar {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: var(--space-2);
+    margin: var(--space-2) 0 var(--space-3);
+}
+
+.library-toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    margin: var(--space-2) 0;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-3);
+}
+
+.library-filters,
+.library-sort,
+.library-view-settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.library-inline-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.library-sort-order {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0;
+}
+
+.library-sort-order .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.library-clear-filters {
+    font-size: var(--font-size-small);
 }
 
 .library-toolbar input,
@@ -1043,6 +1130,25 @@ select:focus-visible,
 
 .library-search-wrapper {
     position: relative;
+    flex: 1 1 18rem;
+    max-width: 36rem;
+}
+
+.library-search-wrapper input[type="search"] {
+    width: 100%;
+    min-height: 2.5rem;
+    padding-left: 2.25rem;
+}
+
+.library-search-icon {
+    position: absolute;
+    left: 0.7rem;
+    top: 50%;
+    width: 1.1rem;
+    height: 1.1rem;
+    transform: translateY(-50%);
+    color: var(--color-text-secondary);
+    pointer-events: none;
 }
 
 .library-search-suggestions {
@@ -1086,19 +1192,24 @@ select:focus-visible,
     margin: var(--space-3) 0;
 }
 
+/* Styled as a chip so it reads as a filter like Genre/Tag, not a stray form field. */
 .library-favorite-filter {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: var(--space-1);
+    min-height: 2.5rem;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
     font-size: var(--font-size-small);
     color: var(--color-text-secondary);
     white-space: nowrap;
+    cursor: pointer;
 }
 
-.library-view-toggle {
-    display: flex;
-    gap: var(--space-2);
-    margin-left: auto;
+.library-favorite-filter.is-active {
+    border-color: var(--color-primary);
+    color: var(--color-text-primary);
 }
 
 .library-grid {

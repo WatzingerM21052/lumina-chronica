@@ -52,7 +52,7 @@ Quellen: [Material 3 Navigation bar](https://m3.material.io/components/navigatio
 | A1 | Projekt-Detailkopf wie BookDetail, Detail-Köpfe stapeln auf dem Handy | erledigt (#501) |
 | A2 | **Sprachauswahl**: Combobox mit ISO-639-1-Liste, Namen über `Intl.DisplayNames`, Suche beim Tippen, „Eigene Sprache“ als Ausnahme; bestehende Freitext-Werte bleiben gültig; Anzeige als Name statt Code (Upload, Bearbeiten, Detail, Bibliotheks-Karten) | erledigt 2026-09-28. Abweichend: feste Sprachliste mit DE/EN-Namen statt `Intl.DisplayNames` (synchron, testbar, unabhängig von geladenen ICU-Daten); Bibliotheks-Karten zeigen keine Sprache, dort war nichts zu tun. |
 | A3 | **Projekt bearbeiten als Dialog** (wie Buch/Regal), statt Inline-Formular | erledigt 2026-09-28 |
-| A4 | **Bibliotheks-Werkzeugleiste entzerren**: Suche breit, Filter/Sortierung gebündelt, Ansicht (Regal/Raster/Größe) als eigene Gruppe; eindeutige Beschriftungen („Sortieren: Hinzugefügt“) | offen |
+| A4 | **Bibliotheks-Werkzeugleiste entzerren**: Suche breit, Filter/Sortierung gebündelt, Ansicht (Regal/Raster/Größe) als eigene Gruppe; eindeutige Beschriftungen („Sortieren: Hinzugefügt“) | erledigt 2026-09-28 |
 | A5 | **Worldbuilding-Formulare** (Charakter, Ort, Lore, Zeitleiste, Dateien): Screenshot-Befund, gleiche Muster (Dialog statt Inline, wo sinnvoll; Dropzones; Abschnitte) | offen |
 | A6 | **Suche vereinheitlichen** (Bibliothek, Entdecken, Metadaten): Löschen-Button im Feld, Debounce, leere Zustände | offen |
 | A7 | **Einstellungen** (Rest aus #358): Theme-Vorschau-Karten, Benachrichtigungen gruppiert | offen |
