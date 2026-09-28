@@ -327,6 +327,44 @@ public class ProjectDetailPageTests : BunitContext
 
         Assert.Equal(HttpMethod.Post, createRequest?.Method);
         Assert.Equal("/api/projects/1/characters", createRequest?.RequestUri?.AbsolutePath);
+        Assert.Empty(cut.FindAll("#create-character-form"));
+    }
+
+    // UI/UX plan A5: the tab forms are dialogs that open fresh and ask
+    // before discarding typed input.
+    [Fact]
+    public void ProjectDetail_CreateCharacterDialog_AsksBeforeDiscarding_AndReopensEmpty()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Charaktere").Click();
+        cut.Find("#add-character-button").Click();
+        Assert.Equal("Charakter hinzufügen", cut.Find(".dialog-title").TextContent);
+
+        cut.Find("#character-name").Change("Elarion");
+        cut.FindAll(".dialog button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+        Assert.NotEmpty(cut.FindAll("#create-character-form"));
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+        Assert.Empty(cut.FindAll("#create-character-form"));
+
+        cut.Find("#add-character-button").Click();
+        Assert.Equal("", cut.Find("#character-name").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void ProjectDetail_CreateCharacterDialog_UsesADropzoneForTheImage()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Charaktere").Click();
+        cut.Find("#add-character-button").Click();
+
+        Assert.NotNull(cut.Find(".dialog .dropzone #character-image"));
+        Assert.Contains("Bild hierher ziehen", cut.Find(".dialog .dropzone-label").TextContent);
     }
 
     [Fact]
@@ -520,6 +558,49 @@ public class ProjectDetailPageTests : BunitContext
 
         Assert.Equal(HttpMethod.Post, createRequest?.Method);
         Assert.Equal("/api/projects/1/timeline", createRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public void ProjectDetail_TimelineEvent_EditsInADialog()
+    {
+        HttpRequestMessage? putRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .When(r => r.Method == HttpMethod.Put, r =>
+            {
+                putRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse(
+                    """{"success":true,"data":{"id":1,"projectId":1,"title":"The Great Sundering","description":null,"date":"Jahr 1247","order":0,"createdAt":"2026-01-01"}}""");
+            })
+            .WhenPathEndsWith(
+                "/timeline",
+                """{"success":true,"data":[{"id":1,"projectId":1,"title":"The Sundering","description":null,"date":"Jahr 1247","order":0,"createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
+        cut.Find(".timeline-event-controls").QuerySelectorAll("button").Single(b => b.TextContent.Trim() == "Bearbeiten").Click();
+
+        Assert.Equal("Ereignis bearbeiten", cut.Find(".dialog-title").TextContent);
+        Assert.Equal("The Sundering", cut.Find("#event-edit-title").GetAttribute("value"));
+        // The list keeps showing the card; it isn't swapped for a form.
+        Assert.Single(cut.FindAll(".timeline-event-card"));
+
+        cut.Find("#event-edit-title").Change("The Great Sundering");
+        cut.Find("#edit-event-form").Submit();
+
+        Assert.Equal("/api/projects/1/timeline/1", putRequest?.RequestUri?.AbsolutePath);
+        Assert.Empty(cut.FindAll("#edit-event-form"));
     }
 
     [Fact]
