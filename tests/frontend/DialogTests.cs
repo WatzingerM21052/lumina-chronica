@@ -173,6 +173,24 @@ public class DialogTests : BunitContext
     }
 
     [Fact]
+    public void Dialog_ReRenderedWhileOpen_ThenClosed_LocksAndUnlocksExactlyOnce()
+    {
+        // User report: after closing the follower list the page stayed
+        // unscrollable. FollowListDialog re-renders right after opening
+        // (its list arrives); a second OnAfterRenderAsync pass before the
+        // first had finished used to lock the page again, and the close
+        // released only one lock. Locks and unlocks must always pair up.
+        var cut = Render<Dialog>(parameters => parameters.Add(p => p.IsOpen, true).Add(p => p.Title, "Follower"));
+        cut.Render(parameters => parameters.Add(p => p.Title, "Follower (2)"));
+        cut.Render(parameters => parameters.Add(p => p.Title, "Follower (3)"));
+
+        cut.Render(parameters => parameters.Add(p => p.IsOpen, false));
+
+        Assert.Single(JSInterop.Invocations["lockScroll"]);
+        Assert.Single(JSInterop.Invocations["unlockScroll"]);
+    }
+
+    [Fact]
     public void Dialog_NoFooterSlot_RendersNoActionsContainer()
     {
         var cut = Render<Dialog>(parameters => parameters.Add(p => p.IsOpen, true));

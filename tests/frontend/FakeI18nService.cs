@@ -262,6 +262,7 @@ public class FakeI18nService : II18nService
         ["library.filterGroupLabel"] = "Filter",
         ["library.bookSizeLabel"] = "Buchgröße",
         ["library.pageSizeLabel"] = "Pro Seite",
+        ["library.pageSizeOption"] = "{0} / Seite",
         ["library.sortLabel"] = "Sortieren nach",
         ["library.orderToggleLabel"] = "Reihenfolge: {0} (umschalten)",
         ["library.viewModeShelf"] = "Regal",

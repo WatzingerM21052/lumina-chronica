@@ -248,6 +248,7 @@
   "library.filterGroupLabel": "Filters",
   "library.bookSizeLabel": "Book size",
   "library.pageSizeLabel": "Per page",
+  "library.pageSizeOption": "{0} / page",
   "library.sortLabel": "Sort by",
   "library.orderToggleLabel": "Order: {0} (toggle)",
   "library.viewModeShelf": "Shelf",

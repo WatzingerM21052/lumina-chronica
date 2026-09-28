@@ -106,21 +106,32 @@ public partial class Dialog : ComponentBase, IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // _wasOpen flips BEFORE the first await, not after the whole block:
+        // a consumer that re-renders while the module import is still in
+        // flight (FollowListDialog loading its list right after opening)
+        // re-entered this branch with _wasOpen still false and locked the
+        // page a second time -- the close then released only one of the two
+        // locks and the page stayed unscrollable (user report).
         if (IsOpen && !_wasOpen)
         {
+            _wasOpen = true;
             _module ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/dialog.js");
-            await _module.InvokeVoidAsync("lockScroll");
+            if (!IsOpen) return; // closed again while the module loaded
             _scrollLocked = true;
+            await _module.InvokeVoidAsync("lockScroll");
             _dotNetRef ??= DotNetObjectReference.Create(this);
-            await _module.InvokeVoidAsync("activate", _instanceId, _dialogElement, _dotNetRef, InitialFocusSelector);
             _focusActive = true;
+            await _module.InvokeVoidAsync("activate", _instanceId, _dialogElement, _dotNetRef, InitialFocusSelector);
+            // Closed while the lock/activation calls were running: the
+            // close pass saw the flags already set and released them, or it
+            // runs right after this -- either way nothing is left held.
         }
         else if (!IsOpen && _wasOpen)
         {
+            _wasOpen = false;
             await ReleaseFocusAsync();
             await UnlockScrollAsync();
         }
-        _wasOpen = IsOpen;
     }
 
     private void HandleOverlayPointerDown() => _pointerDownOnOverlay = true;

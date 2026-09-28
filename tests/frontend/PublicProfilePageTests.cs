@@ -518,11 +518,11 @@ public class PublicProfilePageTests : BunitContext
         cut.Find("#showFollowingButton").Click();
         cut.WaitForAssertion(() => Assert.Contains("carol", cut.Markup));
 
-        cut.Find(".dialog .btn-follow").Click();
+        cut.Find(".dialog .follow-list-dialog-toggle").Click();
 
         Assert.Equal(HttpMethod.Post, followRequest?.Method);
         Assert.Equal("/api/users/carol/follow", followRequest?.RequestUri?.AbsolutePath);
-        Assert.Equal("✓ Gefolgt", cut.Find(".dialog .btn-follow").TextContent.Trim());
+        Assert.Equal("✓ Gefolgt", cut.Find(".dialog .follow-list-dialog-toggle").TextContent.Trim());
     }
 
     [Fact]

@@ -58,6 +58,22 @@
             <path d="M12 11v5" />
             <circle cx="12" cy="7.7" r="0.6" fill="currentColor" />
             break;
+        @* Library view toggle + filter disclosure (compact toolbar, plan F9). *@
+        case "grid":
+            <rect x="4" y="4" width="6.5" height="6.5" rx="1" />
+            <rect x="13.5" y="4" width="6.5" height="6.5" rx="1" />
+            <rect x="4" y="13.5" width="6.5" height="6.5" rx="1" />
+            <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" />
+            break;
+        case "shelf":
+            <path d="M3 20h18" />
+            <path d="M5.5 20V6.5h3V20" />
+            <path d="M9.5 20V4.5h3V20" />
+            <path d="M14.2 20.3l2.9-12.8 2.9.7-2.9 12.8" />
+            break;
+        case "filter":
+            <path d="M4 5.5h16l-6.2 7.3v5.2l-3.6 1.8v-7z" />
+            break;
         @* "Mehr" in the phone bottom navigation (UI/UX plan B2). *@
         case "more":
             <circle cx="5.5" cy="12" r="1.4" />

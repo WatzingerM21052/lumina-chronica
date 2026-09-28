@@ -1224,12 +1224,68 @@ select:focus-visible,
     margin: var(--space-2) 0 var(--space-3);
 }
 
+/* One compact row (plan F9): the search takes the free width, everything
+   else sits at its natural size after it and wraps as a group. */
 .library-toolbar-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2) var(--space-3);
+    gap: var(--space-2);
+}
+
+.library-toolbar-row .library-search-wrapper {
+    margin-right: auto;
+}
+
+.library-filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.library-filter-toggle .icon {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.library-filter-toggle.has-active,
+.library-filter-toggle[aria-expanded="true"] {
+    border-color: var(--color-accent-text);
+}
+
+/* Active-filter count as a small brass pill on the toggle. */
+.library-filter-count {
+    min-width: 1.35rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background-color: var(--color-accent-text);
+    color: var(--color-bg-card);
+    font-size: var(--font-size-caption);
+    font-weight: 700;
+    line-height: 1.35rem;
+    text-align: center;
+}
+
+/* The folded-out filters: a quiet strip under the toolbar row. */
+.library-toolbar #library-filter-panel {
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: color-mix(in srgb, var(--color-bg-card) 70%, transparent);
+}
+
+/* Icon-only view toggle: square buttons, the icon centred. */
+.segmented-option--icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    padding: 0 0.6rem;
+}
+
+.segmented-option--icon .icon {
+    width: 1.2rem;
+    height: 1.2rem;
 }
 
 .library-filters,
@@ -1272,11 +1328,17 @@ select:focus-visible,
 .library-toolbar select {
     font-family: inherit;
     font-size: var(--font-size-body);
-    padding: var(--space-1);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     background-color: var(--color-bg-light);
     color: var(--color-text-primary);
+}
+
+/* Padding for the text inputs only: on the selects it overrode the
+   app-wide right padding that keeps the drawn chevron clear of the text
+   (user report: the "Pro Seite" arrow sat on top of the "20"). */
+.library-toolbar input {
+    padding: var(--space-1);
 }
 
 .library-search-wrapper {
