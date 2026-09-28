@@ -4,6 +4,7 @@
 */
 
 [data-theme="modern-light"] {
+    color-scheme: light;
     --color-primary: #3b6fe0;
     --color-primary-hover: #2f5bc0;
     --color-primary-active: #274ba3;

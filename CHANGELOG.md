@@ -12,7 +12,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Profile: upload your own avatar, delete your account (and restore it later by registering with the same email), link or unlink Google and GitHub sign-in.
 - Public profiles: the follower and following counts open a list with a follow button per person.
 - Password reset: request it from the login page or your profile, then enter the 6-digit code from the email or open the link in it; the whole flow is one dialog.
-- The interface is available in German and English (Settings → Sprache); emails follow the account's language.
+- The interface is available in German and English (Settings → Sprache). Emails are still always German: the templates exist in both languages, but the chosen language is not saved to the account yet.
 - The app runs at https://luminachronica.com; the old github.io address redirects there.
 - Book language is picked from a searchable list of 75 languages (custom languages still possible) instead of typing a code like "de".
 - Editing a book, shelf or project, and adding characters, places, timeline events and lore entries (or editing a timeline event), happens in dialogs; closing one with unsaved input asks first.
@@ -30,6 +30,10 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Fixed
 
+- The home page no longer shows "Backend: online"; it only warns when the server can't be reached.
+- Dark theme: scrollbars and dropdown lists were bright white; native controls now follow the theme. Empty checkboxes were almost invisible on dark cards and now have a clearly visible border in every theme.
+- The language switch names each language in itself ("Deutsch", "English").
+- Deleting a character relationship asks first instead of deleting on the first click.
 - Dialog footer buttons never received their intended 40px height or full width on phones: the rule lived in the dialog's scoped CSS and couldn't reach buttons passed in from other components.
 - Email addresses are compared case-insensitively everywhere (login, registration, reset, OAuth linking), so "Name@Example.com" and "name@example.com" are the same account.
 - Tests: the frontend bUnit suite no longer depends on wall-clock timing. Several tests raced a real timer against a fixed `WaitForAssertion` timeout, or raced two real timers against each other. They could fail at random on a cold or loaded parallel run, and CI gates deploys on this suite. Affected: ProjectDetail's "Bücher" search, Library search, Discover user search, the password-reset dialog's code check, the Bible page's scroll-to-verse, and `AsyncButtonRunner`'s Loading threshold. Every such debounce, delay and timer now goes through an injected `TimeProvider`, which is `TimeProvider.System` in `Program.cs`, so the app behaves as before. That covers the Library/Discover/ProjectDetail/BookDetail search debounces, all of `PasswordResetDialog`'s delays, the Bible pre-scroll delay, and an optional `timeProvider` parameter on `AsyncButtonRunner.RunAsync`. The tests drive a `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`, test project only). The Library search test now checks the suggestion list itself: the initial load already showed the matching title, so the old check passed even when the debounce never fired. Suite runtime dropped from ~7s to ~2s.
