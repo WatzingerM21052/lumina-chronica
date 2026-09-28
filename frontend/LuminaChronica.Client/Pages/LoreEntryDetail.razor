@@ -23,41 +23,46 @@ else if (_entry is null)
 }
 else
 {
-    @if (!_isEditing)
+    <h1>@_entry.Title</h1>
+    @if (!string.IsNullOrWhiteSpace(_entry.Content))
     {
-        <h1>@_entry.Title</h1>
-        @if (!string.IsNullOrWhiteSpace(_entry.Content))
-        {
-            <div class="lore-content">@((MarkupString)Markdown.ToHtml(_entry.Content, MarkdownPipeline))</div>
-        }
-        <div class="form-actions">
-            <button type="button" class="btn" @onclick="StartEditing">@I18n.T("loreEntryDetail.editButton")</button>
-            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("loreEntryDetail.deleteButton")</button>
-        </div>
-        <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("loreEntryDetail.deleteConfirmMessage")"
-                       OnConfirm="DeleteEntryAsync" OnCancel="() => _confirmingDelete = false" />
+        <div class="lore-content">@((MarkupString)Markdown.ToHtml(_entry.Content, MarkdownPipeline))</div>
     }
-    else
-    {
-        <EditForm Model="_editForm" OnValidSubmit="SaveAsync" class="auth-form">
-            @if (_saveErrorMessage is not null)
-            {
-                <p class="form-error">@_saveErrorMessage</p>
-            }
-            <div class="form-group">
-                <label for="lore-edit-title">@I18n.T("loreEntryDetail.titleLabel")</label>
-                <InputText id="lore-edit-title" @bind-Value="_editForm.Title" />
-            </div>
-            <div class="form-group">
-                <label for="lore-edit-content">@I18n.T("loreEntryDetail.contentLabel")</label>
-                <InputTextArea id="lore-edit-content" @bind-Value="_editForm.Content" rows="16" />
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">@I18n.T("loreEntryDetail.saveButton")</button>
-                <button type="button" class="btn" @onclick="() => _isEditing = false">@I18n.T("loreEntryDetail.cancelButton")</button>
-            </div>
-        </EditForm>
-    }
+    <div class="form-actions">
+        <button type="button" id="lore-edit-button" class="btn" @onclick="StartEditing">@I18n.T("loreEntryDetail.editButton")</button>
+        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("loreEntryDetail.deleteButton")</button>
+    </div>
+    <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("loreEntryDetail.deleteConfirmMessage")"
+                   OnConfirm="DeleteEntryAsync" OnCancel="() => _confirmingDelete = false" />
+
+    @* UI/UX plan A5: edit in a large dialog, so the rendered entry stays visible behind it. *@
+    <Dialog IsOpen="_isEditing" Size="DialogSize.Large" Title="@I18n.T("loreEntryDetail.editDialogTitle")"
+            OnClose="() => _guard.RequestClose(IsEditFormDirty, () => _isEditing = false)">
+        <ChildContent>
+            <EditForm id="lore-edit-form" Model="_editForm" OnValidSubmit="() => _guard.SubmitAsync(SaveAsync)" class="auth-form">
+                @if (_saveErrorMessage is not null)
+                {
+                    <p class="form-error">@_saveErrorMessage</p>
+                }
+                <div class="form-group">
+                    <label for="lore-edit-title">@I18n.T("loreEntryDetail.titleLabel")</label>
+                    <InputText id="lore-edit-title" @bind-Value="_editForm.Title" />
+                </div>
+                <div class="form-group">
+                    <label for="lore-edit-content">@I18n.T("loreEntryDetail.contentLabel")</label>
+                    <InputTextArea id="lore-edit-content" @bind-Value="_editForm.Content" rows="16" />
+                </div>
+            </EditForm>
+        </ChildContent>
+        <Footer>
+            <button type="button" class="btn" @onclick="() => _guard.RequestClose(IsEditFormDirty, () => _isEditing = false)">@I18n.T("loreEntryDetail.cancelButton")</button>
+            <button type="submit" form="lore-edit-form" class="btn btn-primary" disabled="@_guard.IsSubmitting">@I18n.T("loreEntryDetail.saveButton")</button>
+        </Footer>
+    </Dialog>
+
+    <ConfirmDialog IsOpen="_guard.IsConfirmingDiscard" Message="@I18n.T("dialog.discardChangesMessage")"
+                   ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
+                   OnConfirm="_guard.ConfirmDiscard" OnCancel="_guard.CancelDiscard" />
 }
 
 @code {
@@ -78,6 +83,12 @@ else
     private bool _isEditing;
     private string? _saveErrorMessage;
     private UpdateLoreEntryRequest _editForm = new();
+    private (string? Title, string? Content) _editSnapshot;
+    private readonly DialogGuard _guard = new();
+
+    private bool IsEditFormDirty =>
+        (_editForm.Title ?? "") != (_editSnapshot.Title ?? "") ||
+        (_editForm.Content ?? "") != (_editSnapshot.Content ?? "");
     private bool _confirmingDelete;
 
     protected override Task OnParametersSetAsync() => LoadEntryAsync();
@@ -100,6 +111,7 @@ else
     {
         if (_entry is null) return;
         _editForm = new UpdateLoreEntryRequest { Title = _entry.Title, Content = _entry.Content };
+        _editSnapshot = (_entry.Title, _entry.Content);
         _saveErrorMessage = null;
         _isEditing = true;
     }
