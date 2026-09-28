@@ -142,7 +142,7 @@ Datei-Inputs, 1px beim Hero-Titel).
 |---|---|---|
 | F1 | Seitenköpfe | `PageHeader`-Komponente: Titel + optionaler Untertitel links, Aktionen rechts; Seiten mit Foto-Hero (Startseite, Statistik, Offline, Einstellungen) behalten den Hero, aber gleiche Titelposition/-größe; Bibliothek verliert die dunkle Sonderkarte zugunsten des Standards |
 | F3 | Projekt-Übersicht | Projekttitel (klein) immer über den Tabs, damit auch „Charaktere“/„Karte“ zeigen, wo man ist; Übersicht mit Kennzahl-Kacheln (Charaktere, Orte, Lore, Ereignisse, Bücher), die zum Tab springen |
-| F4 | Karten-Raster | Projekt-, Charakter- und Ortskarten hochkant wie Buchkarten, Raster `repeat(auto-fill, minmax(10rem, 1fr))`; Platzhalter mit Initialen |
+| F4 | Karten-Raster | **erledigt 2026-09-28**: Projekt/Charakter/Lore hochkant (2:3), Orte quer; Initialen statt Icon (`CardInitials`); doppeltes `ProjectCard.razor.css` entfernt. Handy: 3 Spalten in allen Rastern, Startseiten-Abschnitte als Wisch-Reihen, Kennzahlen in einer Zeile, kleinere Überschriften, Footer weg solange die Bottom-Leiste da ist (Nutzerwunsch) |
 | F7/A8 | Profil/Konto-Menü | Avatar-Menü oben rechts (Profil, Einstellungen, Sicherheit, Abmelden); „Sicherheit“ bündelt Passwort, E-Mail, verknüpfte Konten — Aufteilung mit dem Nutzer abstimmen |
 | A7 | Einstellungen | Checkboxen → Schalter; Theme als Vorschaukarten |
 | C | Statistik | Jahresübersicht + Genres in Karten im selben Raster wie Jahresziel/Kalender; Jahresziel-Formular kompakter (Stepper statt Vollbreite-Feld) — Richtung mit dem Nutzer abstimmen (C2) |

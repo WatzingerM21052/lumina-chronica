@@ -30,7 +30,7 @@
     <h2>@I18n.T("home.continueReadingTitle")</h2>
     @* Bottom-aligned: the first card is the large featured one, so the
        smaller cards' titles and progress bars line up with its own. *@
-    <div class="library-grid continue-reading-grid">
+    <div class="library-grid library-grid--strip continue-reading-grid">
         @for (var i = 0; i < _dashboard.ContinueReading.Count; i++)
         {
             var item = _dashboard.ContinueReading[i];
@@ -63,7 +63,7 @@ else if (_books.Count == 0)
 }
 else
 {
-    <div class="library-grid">
+    <div class="library-grid library-grid--strip">
         @foreach (var book in _books)
         {
             <BookCard Book="book" />
@@ -78,7 +78,7 @@ else
 @if (_dashboard is { Recommendations.Count: > 0 })
 {
     <h2>@I18n.T("home.recommendationsTitle")</h2>
-    <div class="library-grid">
+    <div class="library-grid library-grid--strip">
         @foreach (var book in _dashboard.Recommendations)
         {
             <BookCard Book="book" />
@@ -99,7 +99,7 @@ else if (_projects.Count == 0)
 }
 else
 {
-    <div class="library-grid">
+    <div class="library-grid library-grid--strip">
         @* Only shows newest projects; backend orders by created_at DESC (see projectService.listProjects) *@
         @foreach (var project in _projects.Take(RecentProjectsLimit))
         {

@@ -90,3 +90,14 @@
        that has no single fixed duration of its own. */
     --motion-spring-sync: 700ms;
 }
+
+/* Phones: a step down the type scale for headings, so a page title and its
+   header card don't take a third of a 390px screen (user feedback: the
+   mobile layout should be more compact). Body text stays at 1rem. */
+@media (max-width: 599.98px) {
+    :root {
+        --font-size-h1: 2rem;
+        --font-size-h2: 1.4rem;
+        --font-size-h3: 1.125rem;
+    }
+}
