@@ -625,7 +625,7 @@ public class FakeI18nService : II18nService
         ["bookDetail.discardEditCancelButton"] = "Weiter bearbeiten",
         ["bookDetail.deleteButton"] = "Löschen",
         ["bookDetail.deleteConfirmMessage"] = "Buch wirklich löschen?",
-        ["bookDetail.addToShelfLabel"] = "Zu Regal hinzufügen",
+        ["bookDetail.shelvesButton"] = "Regale",
         ["bookDetail.replaceCoverLabel"] = "Cover ersetzen",
         ["bookDetail.coverDropzoneLabel"] = "Cover hierher ziehen oder klicken zum Auswählen",
         ["bookDetail.titleLabel"] = "Titel",

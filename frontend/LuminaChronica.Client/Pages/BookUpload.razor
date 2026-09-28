@@ -55,7 +55,7 @@
     <div class="form-group">
         <label for="isbn">@I18n.T("bookUpload.isbnLabel")</label>
         <div class="isbn-enrichment-row">
-            <InputText id="isbn" @bind-Value="_form.Isbn" />
+            <InputText id="isbn" maxlength="@TextLimits.Code" @bind-Value="_form.Isbn" />
             <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_form.Isbn) || _isLookingUpEnrichment)" @onclick="LookupEnrichmentAsync">
                 @I18n.T("bookUpload.lookupButton")
             </button>
@@ -138,22 +138,22 @@
 
     <div class="form-group">
         <label for="title">@I18n.T("bookUpload.titleLabel")</label>
-        <InputText id="title" @bind-Value="_form.Title" />
+        <InputText id="title" maxlength="@TextLimits.Title" @bind-Value="_form.Title" />
     </div>
 
     <div class="form-group">
         <label for="author">@I18n.T("bookUpload.authorLabel")</label>
-        <InputText id="author" @bind-Value="_form.Author" />
+        <InputText id="author" maxlength="@TextLimits.ShortText" @bind-Value="_form.Author" />
     </div>
 
     <div class="form-group">
         <label for="description">@I18n.T("bookUpload.descriptionLabel")</label>
-        <InputTextArea id="description" @bind-Value="_form.Description" />
+        <InputTextArea id="description" maxlength="@TextLimits.Description" @bind-Value="_form.Description" />
     </div>
 
     <div class="form-group">
         <label for="genre">@I18n.T("bookUpload.genreLabel")</label>
-        <InputText id="genre" @bind-Value="_form.Genre" />
+        <InputText id="genre" maxlength="@TextLimits.ShortText" @bind-Value="_form.Genre" />
     </div>
 
     <div class="form-group">
@@ -163,12 +163,12 @@
 
     <div class="form-group">
         <label for="tags">@I18n.T("bookUpload.tagsLabel")</label>
-        <InputText id="tags" @bind-Value="_form.Tags" />
+        <InputText id="tags" maxlength="@TextLimits.TagsInput" @bind-Value="_form.Tags" />
     </div>
 
     <div class="form-group">
         <label for="publisher">@I18n.T("bookUpload.publisherLabel")</label>
-        <InputText id="publisher" @bind-Value="_form.Publisher" />
+        <InputText id="publisher" maxlength="@TextLimits.ShortText" @bind-Value="_form.Publisher" />
     </div>
 
     <div class="form-group">

@@ -17,6 +17,7 @@ import { deleteProjectBooksForProject } from "./projectBookService";
 import { deleteCharacterRelationshipsForProject } from "./characterRelationshipService";
 import { recordProjectPublicActivity } from "./activityService";
 import { NotFoundError } from "./errors";
+import { TEXT_LIMITS, assertMaxLengths } from "../utils/textLimits";
 
 export { NotFoundError, ValidationError };
 
@@ -88,6 +89,7 @@ export type CreateProjectInput = {
 
 export async function createProject(db: D1Database, storage: R2Bucket, ownerId: number, input: CreateProjectInput): Promise<ProjectSummary> {
     if (!input.title.trim()) throw new ValidationError("title is required.");
+    assertMaxLengths(input, { title: TEXT_LIMITS.title, description: TEXT_LIMITS.description });
     const type = assertValidType(input.type);
 
     const coverExt = input.cover ? validateFile(input.cover, ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, "Cover image") : null;
@@ -136,6 +138,7 @@ export async function updateProject(db: D1Database, ownerId: number, projectId: 
     const row = await findOwnedProjectRow(db, ownerId, projectId);
     if (!row) throw new NotFoundError();
     if (input.title !== undefined && !input.title.trim()) throw new ValidationError("title cannot be empty.");
+    assertMaxLengths(input, { title: TEXT_LIMITS.title, description: TEXT_LIMITS.description });
     if (input.visibility !== undefined && !VISIBILITY_VALUES.includes(input.visibility as (typeof VISIBILITY_VALUES)[number])) {
         throw new ValidationError(`visibility must be one of ${VISIBILITY_VALUES.join(", ")}.`);
     }

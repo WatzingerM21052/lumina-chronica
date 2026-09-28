@@ -28,7 +28,7 @@
             }
             <div class="form-group">
                 <label for="project-title">@I18n.T("projects.titleLabel")</label>
-                <InputText id="project-title" @bind-Value="_createForm.Title" />
+                <InputText id="project-title" maxlength="@TextLimits.Title" @bind-Value="_createForm.Title" />
             </div>
             <div class="form-group">
                 <label for="project-type">@I18n.T("projects.typeLabel")</label>
@@ -41,7 +41,7 @@
             </div>
             <div class="form-group">
                 <label for="project-description">@I18n.T("projects.descriptionLabel")</label>
-                <InputTextArea id="project-description" @bind-Value="_createForm.Description" />
+                <InputTextArea id="project-description" maxlength="@TextLimits.Description" @bind-Value="_createForm.Description" />
             </div>
             <div class="form-group">
                 <label for="project-cover">@I18n.T("projects.coverLabel")</label>

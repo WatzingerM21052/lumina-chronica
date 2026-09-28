@@ -1,0 +1,10 @@
+.char-counter {
+    font-size: var(--font-size-small);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-muted);
+}
+
+.char-counter.is-near-limit {
+    color: var(--color-accent-text);
+    font-weight: 600;
+}

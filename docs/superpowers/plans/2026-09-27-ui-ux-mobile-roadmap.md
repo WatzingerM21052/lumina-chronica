@@ -147,6 +147,7 @@ Datei-Inputs, 1px beim Hero-Titel).
 | A7 | Einstellungen | Checkboxen → Schalter; Theme als Vorschaukarten |
 | C | Statistik | Jahresübersicht + Genres in Karten im selben Raster wie Jahresziel/Kalender; Jahresziel-Formular kompakter (Stepper statt Vollbreite-Feld) — Richtung mit dem Nutzer abstimmen (C2) |
 | B4/B5 | Handy | Seiten-Durchgang bei 390/412px mit Blick auf Dichte; Formular-Dialoge als `BottomSheet` |
+| F9 | **Kompakter/minimalistischer** (Nutzerwunsch 2026-09-28) | Jede Seite darauf prüfen, wo viele Knöpfe/Dropdowns neben- oder untereinander stehen, und zusammenfassen: seltene Aktionen in ein „⋯“-Menü (z. B. Buchseite: Offline speichern, Bearbeiten, Löschen hinter „⋯“, nur „Weiterlesen“ + „Regale“ sichtbar), Filter/Einstellungen hinter einen „Filter“-Knopf oder aufklappbare Bereiche (Bibliotheks-Werkzeugleiste), selten genutzte Formularteile einklappbar. Erster Schritt erledigt: Regal-Auswahl als Dropdown statt Checkbox-Reihe (PR „shelf dropdown“). |
 
 ### Danach (Backlog, nicht in diesem Plan)
 

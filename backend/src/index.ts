@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "./models/env";
 import { corsMiddleware } from "./middleware/cors";
+import { requireUtf8Body } from "./middleware/utf8";
 import { requestLogger } from "./middleware/logger";
 import { handleError, handleNotFound } from "./middleware/errorHandler";
 import { statusRoute } from "./routes/status";
@@ -22,6 +23,7 @@ const app = new Hono<AppEnv>();
 
 app.use("*", requestLogger);
 app.use("*", corsMiddleware);
+app.use("/api/*", requireUtf8Body);
 
 app.route("/api/status", statusRoute);
 app.route("/api/auth", authRoute);

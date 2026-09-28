@@ -50,11 +50,11 @@ else
                 }
                 <div class="form-group">
                     <label for="lore-edit-title">@I18n.T("loreEntryDetail.titleLabel")</label>
-                    <InputText id="lore-edit-title" @bind-Value="_editForm.Title" />
+                    <InputText id="lore-edit-title" maxlength="@TextLimits.Title" @bind-Value="_editForm.Title" />
                 </div>
                 <div class="form-group">
                     <label for="lore-edit-content">@I18n.T("loreEntryDetail.contentLabel")</label>
-                    <InputTextArea id="lore-edit-content" @bind-Value="_editForm.Content" rows="16" />
+                    <InputTextArea id="lore-edit-content" maxlength="@TextLimits.LoreContent" @bind-Value="_editForm.Content" rows="16" />
                 </div>
             </EditForm>
         </ChildContent>

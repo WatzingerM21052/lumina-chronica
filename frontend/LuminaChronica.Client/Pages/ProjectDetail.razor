@@ -60,7 +60,7 @@ else
                 <p class="text-muted">@ProjectTypeLabel.For(_project.Type, I18n)</p>
                 @if (!string.IsNullOrWhiteSpace(_project.Description))
                 {
-                    <p>@_project.Description</p>
+                    <p class="user-text">@_project.Description</p>
                 }
                 <div class="form-actions">
                     <button type="button" id="project-edit-button" class="btn" @onclick="StartEditing">@I18n.T("projectDetail.editButton")</button>
@@ -81,7 +81,7 @@ else
                     }
                     <div class="form-group">
                         <label for="project-edit-title">@I18n.T("projectDetail.titleLabel")</label>
-                        <InputText id="project-edit-title" @bind-Value="_editForm.Title" />
+                        <InputText id="project-edit-title" maxlength="@TextLimits.Title" @bind-Value="_editForm.Title" />
                     </div>
                     <div class="form-group">
                         <label for="project-edit-type">@I18n.T("projectDetail.typeLabel")</label>
@@ -94,7 +94,7 @@ else
                     </div>
                     <div class="form-group">
                         <label for="project-edit-description">@I18n.T("projectDetail.descriptionLabel")</label>
-                        <InputTextArea id="project-edit-description" @bind-Value="_editForm.Description" />
+                        <InputTextArea id="project-edit-description" maxlength="@TextLimits.Description" @bind-Value="_editForm.Description" />
                     </div>
                     <div class="form-group">
                         <label for="project-edit-cover">@I18n.T("projectDetail.replaceCoverLabel")</label>
@@ -155,7 +155,7 @@ else
                                     <strong>@comment.Username</strong>
                                     <span class="text-muted">@comment.CreatedAt</span>
                                 </div>
-                                <p>@comment.Content</p>
+                                <p class="user-text">@comment.Content</p>
                                 @if (comment.UserId == _currentUserId)
                                 {
                                     <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">@I18n.T("projectDetail.deleteButton")</button>
@@ -170,8 +170,14 @@ else
                     {
                         <p class="form-error">@_commentErrorMessage</p>
                     }
-                    <InputTextArea @bind-Value="_commentForm.Content" placeholder="@I18n.T("projectDetail.commentPlaceholder")" />
-                    <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">@I18n.T("projectDetail.commentSubmitButton")</button>
+                    @* Plain textarea bound on every keystroke (InputTextArea only updates on
+                       blur), so the counter below follows the typing. *@
+                    <textarea @bind="_commentForm.Content" @bind:event="oninput" maxlength="@TextLimits.Comment" rows="3"
+                              aria-label="@I18n.T("projectDetail.commentPlaceholder")" placeholder="@I18n.T("projectDetail.commentPlaceholder")"></textarea>
+                    <div class="comment-form-footer">
+                        <CharCounter Value="@_commentForm.Content" Max="TextLimits.Comment" />
+                        <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">@I18n.T("projectDetail.commentSubmitButton")</button>
+                    </div>
                 </EditForm>
             }
         </section>
@@ -193,7 +199,7 @@ else
                     }
                     <div class="form-group">
                         <label for="character-name">@I18n.T("projectDetail.nameLabel")</label>
-                        <InputText id="character-name" @bind-Value="_createCharacterForm.Name" />
+                        <InputText id="character-name" maxlength="@TextLimits.Title" @bind-Value="_createCharacterForm.Name" />
                     </div>
                     <div class="form-group">
                         <label for="character-image">@I18n.T("projectDetail.imageOptionalLabel")</label>
@@ -292,7 +298,7 @@ else
                     }
                     <div class="form-group">
                         <label for="location-name">@I18n.T("projectDetail.nameLabel")</label>
-                        <InputText id="location-name" @bind-Value="_createLocationForm.Name" />
+                        <InputText id="location-name" maxlength="@TextLimits.Title" @bind-Value="_createLocationForm.Name" />
                     </div>
                     <div class="form-group">
                         <label for="location-image">@I18n.T("projectDetail.imageOptionalLabel")</label>
@@ -352,15 +358,15 @@ else
                     }
                     <div class="form-group">
                         <label for="event-title">@I18n.T("projectDetail.titleLabel")</label>
-                        <InputText id="event-title" @bind-Value="_createEventForm.Title" />
+                        <InputText id="event-title" maxlength="@TextLimits.Title" @bind-Value="_createEventForm.Title" />
                     </div>
                     <div class="form-group">
                         <label for="event-date">@I18n.T("projectDetail.eventDateLabel")</label>
-                        <InputText id="event-date" @bind-Value="_createEventForm.Date" />
+                        <InputText id="event-date" maxlength="@TextLimits.ShortText" @bind-Value="_createEventForm.Date" />
                     </div>
                     <div class="form-group">
                         <label for="event-description">@I18n.T("projectDetail.descriptionLabel")</label>
-                        <InputTextArea id="event-description" @bind-Value="_createEventForm.Description" />
+                        <InputTextArea id="event-description" maxlength="@TextLimits.Description" @bind-Value="_createEventForm.Description" />
                     </div>
                 </EditForm>
             </ChildContent>
@@ -380,15 +386,15 @@ else
                     }
                     <div class="form-group">
                         <label for="event-edit-title">@I18n.T("projectDetail.titleLabel")</label>
-                        <InputText id="event-edit-title" @bind-Value="_editEventForm.Title" />
+                        <InputText id="event-edit-title" maxlength="@TextLimits.Title" @bind-Value="_editEventForm.Title" />
                     </div>
                     <div class="form-group">
                         <label for="event-edit-date">@I18n.T("projectDetail.dateLabel")</label>
-                        <InputText id="event-edit-date" @bind-Value="_editEventForm.Date" />
+                        <InputText id="event-edit-date" maxlength="@TextLimits.ShortText" @bind-Value="_editEventForm.Date" />
                     </div>
                     <div class="form-group">
                         <label for="event-edit-description">@I18n.T("projectDetail.descriptionLabel")</label>
-                        <InputTextArea id="event-edit-description" @bind-Value="_editEventForm.Description" />
+                        <InputTextArea id="event-edit-description" maxlength="@TextLimits.Description" @bind-Value="_editEventForm.Description" />
                     </div>
                 </EditForm>
             </ChildContent>
@@ -424,7 +430,7 @@ else
                             <div class="timeline-event-title">@timelineEvent.Title</div>
                             @if (!string.IsNullOrWhiteSpace(timelineEvent.Description))
                             {
-                                <p>@timelineEvent.Description</p>
+                                <p class="user-text">@timelineEvent.Description</p>
                             }
                             <div class="timeline-event-controls">
                                 <div class="timeline-move-buttons">
@@ -457,11 +463,11 @@ else
                     }
                     <div class="form-group">
                         <label for="lore-title">@I18n.T("projectDetail.titleLabel")</label>
-                        <InputText id="lore-title" @bind-Value="_createLoreForm.Title" />
+                        <InputText id="lore-title" maxlength="@TextLimits.Title" @bind-Value="_createLoreForm.Title" />
                     </div>
                     <div class="form-group">
                         <label for="lore-content">@I18n.T("projectDetail.loreContentLabel")</label>
-                        <InputTextArea id="lore-content" @bind-Value="_createLoreForm.Content" rows="10" />
+                        <InputTextArea id="lore-content" maxlength="@TextLimits.LoreContent" @bind-Value="_createLoreForm.Content" rows="10" />
                     </div>
                 </EditForm>
             </ChildContent>

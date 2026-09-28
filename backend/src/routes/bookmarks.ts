@@ -10,8 +10,12 @@ import {
     updateBookmarkNote,
     type CreateBookmarkInput,
 } from "../services/bookmarkService";
+import { TEXT_LIMITS } from "../utils/textLimits";
 
 export const bookmarksRoute = new Hono<AppEnv>();
+
+const noteTooLong = (note: unknown) => typeof note === "string" && note.length > TEXT_LIMITS.bookmarkNote;
+const NOTE_TOO_LONG = `note must be at most ${TEXT_LIMITS.bookmarkNote} characters.`;
 
 bookmarksRoute.get("/:bookId", requireAuth, async (c) => {
     const bookId = Number(c.req.param("bookId"));
@@ -29,6 +33,7 @@ bookmarksRoute.post("/", requireAuth, async (c) => {
     if (!body || typeof body.bookId !== "number" || typeof body.percentage !== "number") {
         return c.json(failure("VALIDATION_ERROR", "bookId and percentage are required."), 400);
     }
+    if (noteTooLong(body.note)) return c.json(failure("VALIDATION_ERROR", NOTE_TOO_LONG), 400);
 
     try {
         const bookmark = await createBookmark(c.env.DB, c.get("userId"), {
@@ -49,6 +54,7 @@ bookmarksRoute.put("/:id", requireAuth, async (c) => {
     const bookmarkId = Number(c.req.param("id"));
     const body = await c.req.json<{ note?: string | null }>().catch(() => null);
     if (!body) return c.json(failure("VALIDATION_ERROR", "Invalid request body."), 400);
+    if (noteTooLong(body.note)) return c.json(failure("VALIDATION_ERROR", NOTE_TOO_LONG), 400);
 
     try {
         const bookmark = await updateBookmarkNote(c.env.DB, c.get("userId"), bookmarkId, body.note ?? null);

@@ -21,6 +21,7 @@ import { NotFoundError } from "./errors";
 import { isBookAccessibleTo, getBookOwnerId } from "./bookService";
 import { isProjectCommentableBy, getProjectOwnerId } from "./projectService";
 import { buildNotificationInsert } from "./notificationService";
+import { TEXT_LIMITS } from "../utils/textLimits";
 
 export { NotFoundError };
 export class ForbiddenError extends Error {}
@@ -37,7 +38,7 @@ export type Comment = {
 };
 
 const MAX_COMMENTS = 100;
-const MAX_CONTENT_LENGTH = 2000;
+const MAX_CONTENT_LENGTH = TEXT_LIMITS.comment;
 
 // 404, not 403, whether the target doesn't exist or the caller simply can't
 // read it -- same "don't leak existence" reasoning as findOwnedBookRow's

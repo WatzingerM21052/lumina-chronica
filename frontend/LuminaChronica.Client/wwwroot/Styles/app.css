@@ -1,5 +1,8 @@
 html,
 body {
+    /* A long unbroken word or URL anywhere wraps instead of pushing its
+       container (and the page) wider. */
+    overflow-wrap: break-word;
     margin: 0;
     padding: 0;
     font-family: var(--font-family-ui);
@@ -892,6 +895,14 @@ select:focus-visible,
     border-radius: var(--radius-lg);
 }
 
+/* User-written text keeps its own line breaks (a blank line between two
+   paragraphs used to collapse into one run of text) and breaks a long
+   word or URL at the card edge instead of overflowing it. */
+.user-text {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
 .book-comment-header {
     display: flex;
     justify-content: space-between;
@@ -907,10 +918,13 @@ select:focus-visible,
     margin-top: var(--space-2);
 }
 
-/* A normal-size action under the textarea, not a full-width bar that
-   reads as a heavy disabled banner while the field is empty. */
-.comment-form > button {
-    align-self: flex-end;
+/* Under the textarea: the character counter on the left, the submit
+   button (normal size, not a full-width bar) on the right. */
+.comment-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
 }
 
 .comment-form textarea {
@@ -2664,21 +2678,6 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
 .book-detail-rate-stars {
     display: flex;
     gap: 2px;
-}
-
-.book-detail-shelves {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-    margin-top: var(--space-2);
-}
-
-.book-detail-shelf-option {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    font-size: var(--font-size-small);
 }
 
 .book-detail-meta {

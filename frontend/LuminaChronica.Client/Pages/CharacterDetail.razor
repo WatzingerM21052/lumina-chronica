@@ -56,15 +56,15 @@ else
             }
             @if (!string.IsNullOrWhiteSpace(_character.Description))
             {
-                <p>@_character.Description</p>
+                <p class="user-text">@_character.Description</p>
             }
             @if (!string.IsNullOrWhiteSpace(_character.Personality))
             {
-                <p><strong>@I18n.T("characterDetail.personalityLabel"):</strong> @_character.Personality</p>
+                <p class="user-text"><strong>@I18n.T("characterDetail.personalityLabel"):</strong> @_character.Personality</p>
             }
             @if (!string.IsNullOrWhiteSpace(_character.Biography))
             {
-                <p><strong>@I18n.T("characterDetail.biographyLabel"):</strong> @_character.Biography</p>
+                <p class="user-text"><strong>@I18n.T("characterDetail.biographyLabel"):</strong> @_character.Biography</p>
             }
             <div class="form-actions">
                 <button type="button" id="character-edit-button" class="btn" @onclick="StartEditing">@I18n.T("characterDetail.editButton")</button>
@@ -86,31 +86,31 @@ else
                 <h3 class="form-section-title">@I18n.T("characterDetail.editSectionGeneral")</h3>
                 <div class="form-group">
                     <label for="character-edit-name">@I18n.T("characterDetail.nameLabel")</label>
-                    <InputText id="character-edit-name" @bind-Value="_editForm.Name" />
+                    <InputText id="character-edit-name" maxlength="@TextLimits.Title" @bind-Value="_editForm.Name" />
                 </div>
                 <div class="form-grid-2">
                     <div class="form-group">
                         <label for="character-edit-age">@I18n.T("characterDetail.ageLabel")</label>
-                        <InputText id="character-edit-age" @bind-Value="_editForm.Age" />
+                        <InputText id="character-edit-age" maxlength="@TextLimits.ShortText" @bind-Value="_editForm.Age" />
                     </div>
                     <div class="form-group">
                         <label for="character-edit-origin">@I18n.T("characterDetail.originLabel")</label>
-                        <InputText id="character-edit-origin" @bind-Value="_editForm.Origin" />
+                        <InputText id="character-edit-origin" maxlength="@TextLimits.ShortText" @bind-Value="_editForm.Origin" />
                     </div>
                 </div>
 
                 <h3 class="form-section-title">@I18n.T("characterDetail.editSectionStory")</h3>
                 <div class="form-group">
                     <label for="character-edit-description">@I18n.T("characterDetail.descriptionLabel")</label>
-                    <InputTextArea id="character-edit-description" @bind-Value="_editForm.Description" />
+                    <InputTextArea id="character-edit-description" maxlength="@TextLimits.Description" @bind-Value="_editForm.Description" />
                 </div>
                 <div class="form-group">
                     <label for="character-edit-personality">@I18n.T("characterDetail.personalityLabel")</label>
-                    <InputTextArea id="character-edit-personality" @bind-Value="_editForm.Personality" />
+                    <InputTextArea id="character-edit-personality" maxlength="@TextLimits.Description" @bind-Value="_editForm.Personality" />
                 </div>
                 <div class="form-group">
                     <label for="character-edit-biography">@I18n.T("characterDetail.biographyLabel")</label>
-                    <InputTextArea id="character-edit-biography" @bind-Value="_editForm.Biography" />
+                    <InputTextArea id="character-edit-biography" maxlength="@TextLimits.LongText" @bind-Value="_editForm.Biography" />
                 </div>
 
                 <h3 class="form-section-title">@I18n.T("characterDetail.replaceImageLabel")</h3>
@@ -156,11 +156,11 @@ else
                 </div>
                 <div class="form-group">
                     <label for="relationship-type">@I18n.T("characterDetail.relationshipTypeLabel")</label>
-                    <InputText id="relationship-type" @bind-Value="_createRelationshipForm.RelationshipType" />
+                    <InputText id="relationship-type" maxlength="@TextLimits.ShortText" @bind-Value="_createRelationshipForm.RelationshipType" />
                 </div>
                 <div class="form-group">
                     <label for="relationship-description">@I18n.T("characterDetail.relationshipDescriptionLabel")</label>
-                    <InputTextArea id="relationship-description" @bind-Value="_createRelationshipForm.Description" />
+                    <InputTextArea id="relationship-description" maxlength="@TextLimits.Description" @bind-Value="_createRelationshipForm.Description" />
                 </div>
             </EditForm>
         </ChildContent>
@@ -184,11 +184,11 @@ else
                 }
                 <div class="form-group">
                     <label for="relationship-edit-type">@I18n.T("characterDetail.relationshipLabel")</label>
-                    <InputText id="relationship-edit-type" @bind-Value="_editRelationshipForm.RelationshipType" />
+                    <InputText id="relationship-edit-type" maxlength="@TextLimits.ShortText" @bind-Value="_editRelationshipForm.RelationshipType" />
                 </div>
                 <div class="form-group">
                     <label for="relationship-edit-description">@I18n.T("characterDetail.descriptionLabel")</label>
-                    <InputTextArea id="relationship-edit-description" @bind-Value="_editRelationshipForm.Description" />
+                    <InputTextArea id="relationship-edit-description" maxlength="@TextLimits.Description" @bind-Value="_editRelationshipForm.Description" />
                 </div>
             </EditForm>
         </ChildContent>
@@ -222,7 +222,7 @@ else
                         <p class="relationship-pair"><strong>@relationship.CharacterAName</strong> <span class="relationship-type">@relationship.RelationshipType</span> <strong>@relationship.CharacterBName</strong></p>
                         @if (!string.IsNullOrWhiteSpace(relationship.Description))
                         {
-                            <p class="text-secondary">@relationship.Description</p>
+                            <p class="text-secondary user-text">@relationship.Description</p>
                         }
                     </div>
                     <div class="relationship-actions">

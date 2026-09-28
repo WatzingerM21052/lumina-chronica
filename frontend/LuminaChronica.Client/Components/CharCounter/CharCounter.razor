@@ -1,0 +1,21 @@
+@namespace LuminaChronica.Client.Components
+
+@* "123 / 2000" under a text field with a length limit (TextLimits). Quiet
+   until the text gets close to the limit, then in the accent colour.
+   aria-live so screen readers hear it only when it matters (polite, and
+   only the near-limit state is worth announcing). *@
+<span class="char-counter @(IsNearLimit ? "is-near-limit" : null)" aria-live="@(IsNearLimit ? "polite" : "off")">
+    @Length / @Max
+</span>
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter, EditorRequired]
+    public int Max { get; set; }
+
+    private int Length => Value?.Length ?? 0;
+
+    private bool IsNearLimit => Length >= Max * 0.9;
+}

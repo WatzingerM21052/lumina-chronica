@@ -43,7 +43,7 @@ else
             <p class="text-muted">@(_location.X is not null ? I18n.T("locationDetail.placedOnMap") : I18n.T("locationDetail.notPlacedOnMap"))</p>
             @if (!string.IsNullOrWhiteSpace(_location.Description))
             {
-                <p>@_location.Description</p>
+                <p class="user-text">@_location.Description</p>
             }
             <div class="form-actions">
                 <button type="button" id="location-edit-button" class="btn" @onclick="StartEditing">@I18n.T("locationDetail.editButton")</button>
@@ -68,11 +68,11 @@ else
                 }
                 <div class="form-group">
                     <label for="location-edit-name">@I18n.T("locationDetail.nameLabel")</label>
-                    <InputText id="location-edit-name" @bind-Value="_editForm.Name" />
+                    <InputText id="location-edit-name" maxlength="@TextLimits.Title" @bind-Value="_editForm.Name" />
                 </div>
                 <div class="form-group">
                     <label for="location-edit-description">@I18n.T("locationDetail.descriptionLabel")</label>
-                    <InputTextArea id="location-edit-description" @bind-Value="_editForm.Description" />
+                    <InputTextArea id="location-edit-description" maxlength="@TextLimits.Description" @bind-Value="_editForm.Description" />
                 </div>
                 <div class="form-group">
                     <label for="location-edit-image">@I18n.T("locationDetail.replaceImageLabel")</label>

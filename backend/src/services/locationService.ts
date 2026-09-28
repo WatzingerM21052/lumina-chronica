@@ -7,6 +7,7 @@
 
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 import { NotFoundError } from "./errors";
+import { TEXT_LIMITS, assertMaxLengths } from "../utils/textLimits";
 
 export { NotFoundError, ValidationError };
 
@@ -67,6 +68,7 @@ export type CreateLocationInput = {
 export async function createLocation(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number, input: CreateLocationInput): Promise<LocationSummary> {
     await assertOwnsProject(db, ownerId, projectId);
     if (!input.name.trim()) throw new ValidationError("name is required.");
+    assertMaxLengths(input, { name: TEXT_LIMITS.title, description: TEXT_LIMITS.description });
 
     const imageExt = input.image ? validateFile(input.image, ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, "Image") : null;
 
@@ -110,6 +112,7 @@ export async function updateLocation(db: D1Database, ownerId: number, projectId:
     const row = await findLocationRow(db, projectId, locationId);
     if (!row) throw new NotFoundError();
     if (input.name !== undefined && !input.name.trim()) throw new ValidationError("name cannot be empty.");
+    assertMaxLengths(input, { name: TEXT_LIMITS.title, description: TEXT_LIMITS.description });
 
     await db
         .prepare("UPDATE locations SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
