@@ -206,7 +206,51 @@ public class ProjectDetailPageTests : BunitContext
 
         Assert.Equal(HttpMethod.Put, putRequest?.Method);
         Assert.Equal("/api/projects/1", putRequest?.RequestUri?.AbsolutePath);
-        Assert.Contains("Aetherfall Reborn", cut.Markup);
+        Assert.Contains("Aetherfall Reborn", cut.Find("h1").TextContent);
+        Assert.Empty(cut.FindAll("#project-edit-form"));
+    }
+
+    // UI/UX plan A3: editing happens in a dialog; the header stays visible.
+    [Fact]
+    public void ProjectDetail_Edit_OpensADialog_AndKeepsTheHeaderVisible()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#project-edit-button").Click();
+
+        Assert.Equal("Projekt bearbeiten", cut.Find(".dialog-title").TextContent);
+        Assert.Contains("Aetherfall", cut.Find("h1").TextContent);
+    }
+
+    [Fact]
+    public void ProjectDetail_EditDialog_CancelWithoutChanges_ClosesImmediately()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#project-edit-button").Click();
+        cut.FindAll(".dialog button").Single(b => b.TextContent.Trim() == "Abbrechen").Click();
+
+        Assert.Empty(cut.FindAll("#project-edit-form"));
+    }
+
+    [Fact]
+    public void ProjectDetail_EditDialog_EscapeWithChanges_AsksBeforeDiscarding()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.Find("#project-edit-button").Click();
+        cut.Find("#project-edit-title").Change("Aetherfall II");
+        cut.Find(".dialog").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        Assert.NotEmpty(cut.FindAll("#project-edit-form"));
+        Assert.Contains("Ungespeicherte Änderungen verwerfen?", cut.Markup);
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verwerfen").Click();
+        Assert.Empty(cut.FindAll("#project-edit-form"));
+        Assert.Contains("Aetherfall", cut.Find("h1").TextContent);
     }
 
     [Fact]
