@@ -1,0 +1,53 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* "⋯" button that collects a page's rarer actions (plan F9) so only the
+   main ones stay visible. The caller passes plain buttons with the class
+   `overflow-menu-item` (add `is-danger` for destructive ones); any click
+   inside the panel closes it after the item's own handler has run.
+   Closes on Escape and on a click outside (transparent backdrop).
+
+   The panel is always rendered and toggled with `hidden`, so items keep
+   their ids and stay reachable for tests while the menu is closed; hidden
+   content is out of the layout and the accessibility tree. *@
+<div class="overflow-menu" @onkeydown="HandleKeyDown">
+    <button type="button" id="@Id" class="btn btn-icon overflow-menu-toggle"
+            aria-haspopup="true" aria-expanded="@(_isOpen ? "true" : "false")" aria-controls="@PanelId"
+            title="@ToggleLabel" @onclick="Toggle">
+        <Icon Name="more" /><span class="visually-hidden">@ToggleLabel</span>
+    </button>
+    @if (_isOpen)
+    {
+        <div class="overflow-menu-backdrop" @onclick="Close"></div>
+    }
+    <div class="overflow-menu-panel" id="@PanelId" hidden="@(!_isOpen)" @onclick="Close">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public RenderFragment? ChildContent { get; set; }
+
+    // Defaults to "Weitere Aktionen" / "More actions".
+    [Parameter]
+    public string? Label { get; set; }
+
+    [Parameter]
+    public string Id { get; set; } = $"overflow-menu-{Guid.NewGuid():N}";
+
+    private string PanelId => $"{Id}-panel";
+    private string ToggleLabel => Label ?? I18n.T("overflowMenu.label");
+
+    private bool _isOpen;
+
+    private void Toggle() => _isOpen = !_isOpen;
+
+    private void Close() => _isOpen = false;
+
+    private void HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _isOpen = false;
+    }
+}

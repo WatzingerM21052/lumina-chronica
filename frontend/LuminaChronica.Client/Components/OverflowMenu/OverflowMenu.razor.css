@@ -1,0 +1,93 @@
+.overflow-menu {
+    position: relative;
+    display: inline-block;
+}
+
+/* Invisible full-screen layer under the panel: a click anywhere else
+   closes it without a document-level JS listener (as CheckboxDropdown). */
+.overflow-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+}
+
+/* Right-aligned: the toggle is usually the last control in its row, and a
+   left-aligned panel would run off the screen edge on a phone. */
+.overflow-menu-panel {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    right: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    min-width: 13rem;
+    max-width: min(20rem, calc(100vw - 2 * var(--space-2)));
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card-hover, var(--shadow-card));
+}
+
+.overflow-menu-panel[hidden] {
+    display: none;
+}
+
+/* Items are the caller's own buttons, so they need ::deep. */
+.overflow-menu-panel ::deep .overflow-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0 var(--space-1);
+    border: none;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--color-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.overflow-menu-panel ::deep .overflow-menu-item:hover:not(:disabled),
+.overflow-menu-panel ::deep .overflow-menu-item:focus-visible {
+    background-color: color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+}
+
+.overflow-menu-panel ::deep .overflow-menu-item:focus-visible {
+    outline: 2px solid var(--color-gold-accent);
+    outline-offset: -2px;
+}
+
+.overflow-menu-panel ::deep .overflow-menu-item:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.overflow-menu-panel ::deep .overflow-menu-item .icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+    color: var(--color-text-secondary);
+}
+
+.overflow-menu-panel ::deep .overflow-menu-item.is-danger,
+.overflow-menu-panel ::deep .overflow-menu-item.is-danger .icon {
+    color: var(--color-error);
+}
+
+/* A thin rule before destructive items. */
+.overflow-menu-panel ::deep .overflow-menu-item.is-danger:not(:first-child) {
+    margin-top: var(--space-1);
+    position: relative;
+}
+
+.overflow-menu-panel ::deep .overflow-menu-item.is-danger:not(:first-child)::before {
+    content: "";
+    position: absolute;
+    top: calc(-1 * var(--space-1) / 2);
+    left: var(--space-1);
+    right: var(--space-1);
+    border-top: 1px solid var(--color-border);
+}
