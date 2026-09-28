@@ -13,7 +13,7 @@
 
 <PageTitle>@(_shelf?.Name ?? I18n.T("shelfDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="library/shelves">@I18n.T("shelfDetail.backLink")</a>
+<a class="back-link" href="library/shelves">@I18n.T("shelfDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {

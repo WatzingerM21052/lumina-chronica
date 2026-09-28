@@ -1141,4 +1141,51 @@ public class BookDetailPageTests : BunitContext
 
         Assert.Contains("Noch keine Kommentare", cut.Markup);
     }
+
+    private void UseBookWithProgress(string progressJson)
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .WhenPathEndsWith("/api/reading/1", progressJson)
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
+    }
+
+    // Design audit F2: a started book shows how far you are and offers
+    // "Weiterlesen" instead of a plain "Lesen".
+    [Fact]
+    public void BookDetail_StartedBook_ShowsProgressAndContinueReading()
+    {
+        UseBookWithProgress("""{"success":true,"data":{"chapter":2,"position":"x","percentage":62.4,"lastOpened":"2026-09-28"}}""");
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Equal("62", cut.Find(".book-detail-progress [role=progressbar]").GetAttribute("aria-valuenow"));
+        Assert.Equal("62 % gelesen", cut.Find(".book-detail-progress-text").TextContent);
+        Assert.Contains(cut.FindAll("a.btn"), a => a.TextContent.Trim() == "Weiterlesen");
+    }
+
+    [Fact]
+    public void BookDetail_UnstartedBook_ShowsNoProgressAndPlainRead()
+    {
+        UseBookWithProgress("""{"success":true,"data":{"chapter":null,"position":null,"percentage":0,"lastOpened":null}}""");
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Empty(cut.FindAll(".book-detail-progress"));
+        Assert.Contains(cut.FindAll("a.btn"), a => a.TextContent.Trim() == "Lesen");
+    }
 }

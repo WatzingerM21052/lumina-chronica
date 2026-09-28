@@ -8,16 +8,19 @@
 
 <div class="app-shell">
     <header class="app-header" @ref="_headerRef">
-        <a class="app-logo" href="">
+        @* The wordmark and the profile label are separate spans so the
+           header can drop to icon-only between 840 and 1199px, where the
+           full row (1116px) would otherwise wrap into two lines. *@
+        <a class="app-logo" href="" aria-label="Lumina Chronica">
             <img src="branding/logo-mark.svg" alt="" class="app-logo-mark" />
-            Lumina Chronica
+            <span class="app-logo-text">Lumina Chronica</span>
         </a>
         <NavMenu />
         <AuthorizeView>
             <Authorized>
                 <div class="app-header-actions">
                     <NotificationBell />
-                    <a class="app-profile" href="profile"><Icon Name="person" /> @I18n.T("nav.profile")</a>
+                    <a class="app-profile" href="profile" aria-label="@I18n.T("nav.profile")"><Icon Name="person" /> <span class="app-profile-text">@I18n.T("nav.profile")</span></a>
                 </div>
             </Authorized>
             <NotAuthorized>

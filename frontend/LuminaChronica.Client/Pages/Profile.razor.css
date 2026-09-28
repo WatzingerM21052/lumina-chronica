@@ -3,7 +3,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
 }
 
 .profile-seal-image {
@@ -16,11 +16,70 @@
     margin: 0;
 }
 
+/* One centred column (design audit F7): every section is a card of the
+   same width, on the same axis as the centred seal above. */
+.profile-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: 40rem;
+    margin: 0 auto;
+}
+
+.profile-card {
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card);
+}
+
+.profile-card h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--font-size-h3);
+}
+
+/* The forms already bring card chrome (.auth-form, shared with the login
+   page); inside a profile card that would be a card in a card. */
+.profile-card ::deep .auth-form.profile-form {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: none;
+}
+
+.profile-identity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
 .profile-avatar-row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    margin: var(--space-2) 0;
+    min-width: 0;
+}
+
+.profile-identity-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.profile-identity-text strong {
+    font-family: var(--font-family-display);
+    font-size: var(--font-size-h3);
+    overflow-wrap: anywhere;
+}
+
+.profile-identity-text a {
+    font-size: var(--font-size-small);
 }
 
 .profile-avatar-preview {
@@ -47,21 +106,27 @@
     height: 40%;
 }
 
+/* Separated from the change-password form above it by a hairline, inside
+   the same card. */
 .profile-password-reset {
-    margin: 0.5rem 0 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
 }
 
-.profile-danger-zone {
-    margin-top: var(--space-4);
-    padding-top: var(--space-3);
-    border-top: 1px solid var(--color-error);
+.profile-password-reset p {
+    margin: 0;
+    flex: 1 1 16rem;
 }
 
 .linked-accounts-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
-    margin-bottom: var(--space-3);
 }
 
 .linked-account-row {
@@ -69,11 +134,38 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
-    padding: var(--space-1) 0;
+    padding: var(--space-2) 0;
 }
 
-/* Same field width as the account/password forms above (.profile-form),
-   instead of a password field stretched across the whole page. */
-.profile-danger-zone .form-group {
-    max-width: 32rem;
+.linked-account-row + .linked-account-row {
+    border-top: 1px solid var(--color-border);
+}
+
+.linked-account-row:last-child {
+    padding-bottom: 0;
+}
+
+/* Danger zone: same card, red hairline and heading instead of a loose
+   rule across the page. Fields and actions stack with the form spacing,
+   so the delete button no longer touches the password field. */
+.profile-danger-zone {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    border-color: color-mix(in srgb, var(--color-error) 55%, var(--color-border));
+}
+
+.profile-danger-zone h2 {
+    margin-bottom: 0;
+    color: var(--color-error);
+}
+
+.profile-danger-zone p {
+    margin: 0;
+}
+
+@media (max-width: 599.98px) {
+    .profile-card {
+        padding: var(--space-2);
+    }
 }

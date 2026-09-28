@@ -28,7 +28,9 @@
 @if (_dashboard is { ContinueReading.Count: > 0 })
 {
     <h2>@I18n.T("home.continueReadingTitle")</h2>
-    <div class="library-grid">
+    @* Bottom-aligned: the first card is the large featured one, so the
+       smaller cards' titles and progress bars line up with its own. *@
+    <div class="library-grid continue-reading-grid">
         @for (var i = 0; i < _dashboard.ContinueReading.Count; i++)
         {
             var item = _dashboard.ContinueReading[i];
@@ -69,7 +71,7 @@ else
     </div>
     @if (_totalBooks > _books.Count)
     {
-        <p><a href="library">@string.Format(I18n.T("home.viewFullLibraryLink"), _totalBooks)</a></p>
+        <p class="section-more"><a class="btn-link" href="library">@string.Format(I18n.T("home.viewFullLibraryLink"), _totalBooks) →</a></p>
     }
 }
 
@@ -106,7 +108,7 @@ else
     </div>
     @if (_projects.Count > RecentProjectsLimit)
     {
-        <p><a href="projects">@string.Format(I18n.T("home.viewAllProjectsLink"), _projects.Count)</a></p>
+        <p class="section-more"><a class="btn-link" href="projects">@string.Format(I18n.T("home.viewAllProjectsLink"), _projects.Count) →</a></p>
     }
 }
 

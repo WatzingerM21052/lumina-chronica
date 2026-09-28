@@ -142,8 +142,22 @@
     border-color: var(--color-border);
 }
 
+/* The scrollbar lives in the card's own right padding, a full --space-2
+   away from the fields: scrollbar-gutter reserves its slot (no layout jump
+   when content starts to scroll) and the negative margin hands the body
+   that padding strip. Before, inputs ran right up against the bar. */
 .dialog-body {
     overflow-y: auto;
+    scrollbar-gutter: stable;
+    margin-right: calc(-1 * var(--space-3));
+    padding-right: var(--space-3);
+}
+
+@media (max-width: 40rem) {
+    .dialog-body {
+        margin-right: calc(-1 * var(--space-2));
+        padding-right: var(--space-2);
+    }
 }
 
 .dialog-actions {

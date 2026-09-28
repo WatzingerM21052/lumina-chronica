@@ -19,7 +19,7 @@
 
 <PageTitle>@(_project?.Title ?? I18n.T("projectDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="projects">@I18n.T("projectDetail.backLink")</a>
+<a class="back-link" href="projects">@I18n.T("projectDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -31,14 +31,14 @@ else if (_project is null)
 }
 else
 {
-    <div class="form-actions project-tabs" role="tablist">
-        <button type="button" class="btn @(_activeTab == "overview" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "overview" ? "true" : "false")" @onclick="@(() => _activeTab = "overview")">@I18n.T("projectDetail.tabOverview")</button>
-        <button type="button" class="btn @(_activeTab == "characters" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "characters" ? "true" : "false")" @onclick="@(() => _activeTab = "characters")">@I18n.T("projectDetail.tabCharacters")</button>
-        <button type="button" class="btn @(_activeTab == "map" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "map" ? "true" : "false")" @onclick="@(() => _activeTab = "map")">@I18n.T("projectDetail.tabMap")</button>
-        <button type="button" class="btn @(_activeTab == "timeline" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "timeline" ? "true" : "false")" @onclick="@(() => _activeTab = "timeline")">@I18n.T("projectDetail.tabTimeline")</button>
-        <button type="button" class="btn @(_activeTab == "lore" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "lore" ? "true" : "false")" @onclick="@(() => _activeTab = "lore")">@I18n.T("projectDetail.tabLore")</button>
-        <button type="button" class="btn @(_activeTab == "books" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "books" ? "true" : "false")" @onclick="@(() => _activeTab = "books")">@I18n.T("projectDetail.tabBooks")</button>
-        <button type="button" class="btn @(_activeTab == "files" ? "btn-primary" : "")" role="tab" aria-selected="@(_activeTab == "files" ? "true" : "false")" @onclick="@(() => _activeTab = "files")">@I18n.T("projectDetail.tabFiles")</button>
+    <div class="project-tabs" role="tablist">
+        <button type="button" class="project-tab @(_activeTab == "overview" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "overview" ? "true" : "false")" @onclick="@(() => _activeTab = "overview")">@I18n.T("projectDetail.tabOverview")</button>
+        <button type="button" class="project-tab @(_activeTab == "characters" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "characters" ? "true" : "false")" @onclick="@(() => _activeTab = "characters")">@I18n.T("projectDetail.tabCharacters")</button>
+        <button type="button" class="project-tab @(_activeTab == "map" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "map" ? "true" : "false")" @onclick="@(() => _activeTab = "map")">@I18n.T("projectDetail.tabMap")</button>
+        <button type="button" class="project-tab @(_activeTab == "timeline" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "timeline" ? "true" : "false")" @onclick="@(() => _activeTab = "timeline")">@I18n.T("projectDetail.tabTimeline")</button>
+        <button type="button" class="project-tab @(_activeTab == "lore" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "lore" ? "true" : "false")" @onclick="@(() => _activeTab = "lore")">@I18n.T("projectDetail.tabLore")</button>
+        <button type="button" class="project-tab @(_activeTab == "books" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "books" ? "true" : "false")" @onclick="@(() => _activeTab = "books")">@I18n.T("projectDetail.tabBooks")</button>
+        <button type="button" class="project-tab @(_activeTab == "files" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "files" ? "true" : "false")" @onclick="@(() => _activeTab = "files")">@I18n.T("projectDetail.tabFiles")</button>
     </div>
 
     @if (_activeTab == "overview")

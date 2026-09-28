@@ -1,8 +1,53 @@
-/* Tab bar under the back link: real spacing above and below instead of
-   sitting flush against both, and it wraps on narrow screens. */
+/* Tabs as a quiet underlined bar (design audit): seven bordered buttons,
+   one of them filled gold, read as seven actions rather than one
+   navigation. The active tab carries a gold underline that sits on the
+   bar's own hairline. On narrow screens the bar scrolls sideways (bar
+   hidden) instead of wrapping into a second row of tabs. */
 .project-tabs {
-    flex-wrap: wrap;
-    margin: var(--space-2) 0 var(--space-3);
+    display: flex;
+    gap: var(--space-1);
+    margin: 0 0 var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.project-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.project-tab {
+    flex-shrink: 0;
+    margin-bottom: -1px;
+    padding: var(--space-1) var(--space-2);
+    min-height: 2.75rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: none;
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: var(--font-size-body);
+    font-weight: 500;
+    cursor: pointer;
+    transition: color var(--motion-micro) var(--ease-standard), border-color var(--motion-micro) var(--ease-standard), background-color var(--motion-micro) var(--ease-standard);
+}
+
+.project-tab:hover {
+    color: var(--color-text-primary);
+    background-color: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+}
+
+.project-tab.is-active {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    border-bottom-color: var(--color-accent-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .project-tab {
+        transition: none;
+    }
 }
 
 .map-wrapper {
@@ -78,7 +123,10 @@
 .timeline-event-date {
     font-family: var(--font-family-display);
     font-weight: 600;
-    color: var(--color-secondary);
+    /* Not --color-secondary: that burgundy read as an error red on the
+       dark theme (design audit F5). Accent text keeps the date distinct
+       from the title while staying in the brass palette. */
+    color: var(--color-accent-text);
     font-size: var(--font-size-small);
     letter-spacing: 0.02em;
     text-transform: uppercase;

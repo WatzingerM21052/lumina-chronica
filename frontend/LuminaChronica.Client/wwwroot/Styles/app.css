@@ -11,20 +11,63 @@ body {
 
 * {
     box-sizing: border-box;
+    /* Thin, quiet scrollbars everywhere (page, dialogs, lists): a slim
+       thumb in a muted tint of the theme's text colour on a transparent
+       track, instead of the OS's wide grey bar. scrollbar-color is
+       inherited from html below; scrollbar-width is not, hence `*`. */
+    scrollbar-width: thin;
+}
+
+html {
+    scrollbar-color: color-mix(in srgb, var(--color-text-muted) 55%, transparent) transparent;
+    /* Reserve the scrollbar's slot even on short pages, so the centred
+       content column doesn't jump sideways when navigating between a page
+       that scrolls and one that doesn't (measured: 5px). */
+    scrollbar-gutter: stable;
+}
+
+/* Safari < 18.2 knows neither property; Chromium ignores these as soon as
+   the standard ones above are set. */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+    background-color: color-mix(in srgb, var(--color-text-muted) 55%, transparent);
+}
+
+/* For horizontal strips that are swiped, not dragged (shelf rows, the
+   reading calendar on a phone): scrolling stays, the bar goes. */
+.scrollbar-hidden {
+    scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+    display: none;
 }
 
 /* Breakpoints (UI/UX plan B1, Material 3 window classes). CSS custom
    properties can't be used inside @media, so these are the literal values
    every media query in the app should use:
-     compact   < 600px   -> @media (max-width: 599.98px)   phone, BottomNav
+     compact   < 600px   -> @media (max-width: 599.98px)   phone
      medium    600-839px -> @media (max-width: 839.98px)   tablet portrait
-     expanded  >= 840px  -> default styles                   top NavMenu
+     expanded  >= 840px  -> default styles
+   Navigation: BottomNav below 840px, top NavMenu from 840px (icon-only
+   logo/profile between 840 and 1199px, see MainLayout.razor.css).
    (Older rules still use 40rem = 640px; move them over when touched.) */
 
-/* Room for the floating phone BottomNav (Layouts/BottomNav.razor): its
+/* Room for the floating BottomNav (Layouts/BottomNav.razor, < 840px): its
    56px items + padding + bottom offset, plus the home-indicator inset,
    so the footer and a page's last row are never hidden underneath it. */
-@media (max-width: 599.98px) {
+@media (max-width: 839.98px) {
     .app-shell:has(.bottom-nav) {
         padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
     }
@@ -455,6 +498,39 @@ textarea {
     padding: var(--space-1) var(--space-2);
 }
 
+/* One control height across the app (UI/UX plan F6): buttons, text
+   fields and selects all sit at 40px, so a row mixing them lines up
+   (the library toolbar measured 39/40/41px). Textareas and file inputs
+   size themselves. */
+.btn,
+select,
+input:where(:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"])) {
+    min-height: 2.5rem;
+    line-height: 1.25;
+}
+
+/* Selects draw their own chevron in the theme's muted text colour instead
+   of the OS arrow (different per browser, and white-on-dark in some). Two
+   gradients form the "v"; no image asset, so it follows the theme. */
+select:not([multiple]) {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: calc(var(--space-2) + 1.25rem);
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+        linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+    background-position:
+        calc(100% - 1.15rem) 50%,
+        calc(100% - 0.8rem) 50%;
+    background-size: 0.35rem 0.35rem;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+select:not([multiple]):hover {
+    border-color: var(--color-primary);
+}
+
 /* App-wide themed checkbox, replacing the native white-box/blue-check
    control (which never matched any theme's palette -- raised directly by
    the user as looking "altmodisch und unprofessionell" next to the
@@ -794,8 +870,11 @@ select:focus-visible,
 
 /* Comments (v3.3, issue #325) -- BookDetail.razor and the project detail
    page's comment list + submit form. */
+/* Capped at a comfortable reading/typing width: at 1440px the textarea
+   and comment cards ran 1360px wide (design audit). */
 .book-comments {
-    margin-top: var(--space-3);
+    margin-top: var(--space-4);
+    max-width: 48rem;
 }
 
 .book-comment-list {
@@ -989,6 +1068,27 @@ select:focus-visible,
 
 .form-success {
     color: var(--color-success);
+}
+
+/* "← Zurück zu …" above a detail page's header (design audit F8): quiet
+   secondary text instead of an underlined link glued to the title, with a
+   fixed gap below it on every page. Underline only on hover/focus. */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: var(--space-2);
+    padding: 0.25rem 0;
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
 }
 
 .form-actions {
@@ -1255,6 +1355,31 @@ select:focus-visible,
     gap: var(--space-2);
 }
 
+/* Home "Weiterlesen": the first card is the large featured one; aligning
+   the row to the bottom puts every card's title and progress bar on one
+   line instead of the small cards floating at the top. */
+.continue-reading-grid {
+    align-items: flex-end;
+}
+
+/* "Ganze Bibliothek ansehen →" under a section: a quiet text link with
+   room above it, not an underlined sentence glued to the grid. */
+.section-more {
+    margin: var(--space-2) 0 0;
+}
+
+.section-more .btn-link {
+    padding: var(--space-1) 0;
+    color: var(--color-accent-text);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.section-more .btn-link:hover,
+.section-more .btn-link:focus-visible {
+    text-decoration: underline;
+}
+
 .dashboard-overview {
     display: flex;
     flex-wrap: wrap;
@@ -1273,12 +1398,24 @@ select:focus-visible,
     background-color: var(--color-bg-card);
 }
 
+/* Fixed-height flex row: a value with an icon ("🔥 1") used to sit a few
+   px taller than a plain number, so the labels below didn't line up
+   across the tiles (design audit). */
 .dashboard-stat-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 1.75rem;
     font-family: var(--font-family-display);
     font-size: 1.75rem;
     font-weight: 600;
     line-height: 1;
     color: var(--color-primary);
+}
+
+.dashboard-stat-value .icon {
+    width: 0.8em;
+    height: 0.8em;
 }
 
 .dashboard-stat-label {
@@ -1315,6 +1452,13 @@ select:focus-visible,
    page's header moved into the hero (Statistics.razor.css, Statistics
    Rework Phase 2) — .stats-header/.stats-subtitle's old plain-page
    styling no longer applies. */
+/* The five tiles share the full row (they filled half of it, leaving a
+   ragged gap to the panels' right edge below). */
+.dashboard-overview.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+}
+
 .stats-overview .dashboard-stat {
     min-width: 8rem;
 }
@@ -1513,6 +1657,8 @@ select:focus-visible,
     display: flex;
     gap: 1px;
     overflow-x: auto;
+    /* Swiped on a phone, never dragged: no bar across the star field. */
+    scrollbar-width: none;
     padding: var(--space-2);
     max-width: 100%;
     background: radial-gradient(
@@ -2407,11 +2553,11 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     border-radius: 0 0 var(--radius-lg, var(--radius)) var(--radius-lg, var(--radius));
 }
 
+/* No top margin: the .back-link above it owns that gap. */
 .book-detail {
     display: flex;
     align-items: flex-start;
     gap: var(--space-3);
-    margin-top: var(--space-2);
 }
 
 .book-detail-cover {
@@ -2447,6 +2593,36 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     .book-detail-cover {
         width: 9rem;
     }
+}
+
+/* Reading progress on the book page (design audit F2): a slim brass bar
+   with the percentage beside it, just above the actions. */
+.book-detail-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 22rem;
+    margin: var(--space-2) 0;
+}
+
+.book-detail-progress-track {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background-color: var(--color-border);
+    overflow: hidden;
+}
+
+.book-detail-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--color-accent-text);
+}
+
+.book-detail-progress-text {
+    flex-shrink: 0;
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
 }
 
 .book-detail-title-row {

@@ -20,7 +20,7 @@
 
 <PageTitle>@(_book?.Title ?? I18n.T("reader.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="@($"library/books/{Id}")">@I18n.T("reader.backLink")</a>
+<a class="back-link" href="@($"library/books/{Id}")">@I18n.T("reader.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {

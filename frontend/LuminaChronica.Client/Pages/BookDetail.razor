@@ -21,7 +21,7 @@
 
 <PageTitle>@(_book?.Title ?? I18n.T("bookDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="library">@I18n.T("bookDetail.backLink")</a>
+<a class="back-link" href="library">@I18n.T("bookDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -146,10 +146,22 @@ else
                     }
                 </dl>
 
+                @if (IsInProgress || IsFinished)
+                {
+                    var percent = (int)Math.Round(_progressPercent!.Value);
+                    <div class="book-detail-progress">
+                        <div class="book-detail-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@percent"
+                             aria-label="@I18n.T("bookDetail.progressAriaLabel")">
+                            <div class="book-detail-progress-fill" style="width: @(percent)%"></div>
+                        </div>
+                        <span class="book-detail-progress-text">@(IsFinished ? I18n.T("bookDetail.finishedLabel") : string.Format(I18n.T("bookDetail.progressLabel"), percent))</span>
+                    </div>
+                }
+
                 <div class="form-actions">
                     @if (_book.File is not null)
                     {
-                        <a class="btn btn-primary" href="@($"library/books/{Id}/read")">@I18n.T("bookDetail.readButton")</a>
+                        <a class="btn btn-primary" href="@($"library/books/{Id}/read")">@(IsInProgress ? I18n.T("bookDetail.continueReadingButton") : I18n.T("bookDetail.readButton"))</a>
                         @if (_isOfflineSaved)
                         {
                             <button type="button" class="btn" disabled="@_isSavingOffline" @onclick="RemoveOfflineAsync">
@@ -528,11 +540,37 @@ else
     protected override async Task OnParametersSetAsync()
     {
         await LoadBookAsync();
+        await LoadProgressAsync();
         await LoadShelvesAsync();
         await LoadOfflineStatusAsync();
         await LoadCurrentUserIdAsync();
         await LoadCommentsAsync();
     }
+
+    // Design audit F2: at 62 % read the page only offered "Lesen". Progress
+    // is supplementary -- a failed request just leaves the plain button.
+    private double? _progressPercent;
+
+    private async Task LoadProgressAsync()
+    {
+        _progressPercent = null;
+        if (_book?.File is null) return;
+        try
+        {
+            var response = await ApiClient.GetAsync<ReadingProgress>($"/api/reading/{Id}");
+            if (response is { Success: true, Data: { } progress } && progress.Percentage > 0)
+            {
+                _progressPercent = Math.Clamp(progress.Percentage, 0, 100);
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private bool IsInProgress => _progressPercent is > 0 and < 99.5;
+
+    private bool IsFinished => _progressPercent is >= 99.5;
 
     private async Task LoadCurrentUserIdAsync()
     {

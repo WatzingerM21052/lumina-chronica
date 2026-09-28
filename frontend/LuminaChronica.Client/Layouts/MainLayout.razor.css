@@ -112,10 +112,31 @@
     color: var(--color-primary);
 }
 
-/* Compact (< 600px, UI/UX plan B1/B2): the links move into BottomNav, so
-   the top bar keeps only the logo and the notification bell. The profile
-   link lives under "Mehr". Logged out there is no bottom bar, so the
-   "Anmelden" link stays. */
+/* Expanded but narrow (840-1199px): the full header row needs ~1116px, so
+   the wordmark and the "Profil" label step back to their icons (both keep
+   an aria-label) instead of the nav wrapping into a second row. */
+@media (min-width: 840px) and (max-width: 1199.98px) {
+    .app-header {
+        gap: var(--space-2);
+    }
+
+    .app-logo-text,
+    .app-profile-text {
+        display: none;
+    }
+}
+
+/* Compact + medium (< 840px, UI/UX plan B2/B3): the links move into
+   BottomNav, so the top bar keeps only the logo and the notification
+   bell. The profile link lives under "Mehr". Logged out there is no bottom
+   bar, so the "Anmelden" link stays. */
+@media (max-width: 839.98px) {
+    .app-header-actions .app-profile {
+        display: none;
+    }
+}
+
+/* Compact (< 600px): tighter chrome and page padding on phones. */
 @media (max-width: 599.98px) {
     .app-header {
         gap: var(--space-2);
@@ -133,10 +154,6 @@
     .app-logo {
         font-size: var(--font-size-body);
         min-width: 0;
-    }
-
-    .app-header-actions .app-profile {
-        display: none;
     }
 
     .app-content {

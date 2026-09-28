@@ -13,7 +13,7 @@
 
 <PageTitle>@(_location?.Name ?? I18n.T("locationDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="@($"projects/{ProjectId}")">@I18n.T("locationDetail.backLink")</a>
+<a class="back-link" href="@($"projects/{ProjectId}")">@I18n.T("locationDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
