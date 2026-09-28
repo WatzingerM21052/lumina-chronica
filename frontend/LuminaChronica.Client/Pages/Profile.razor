@@ -92,8 +92,12 @@ else
             </EditForm>
         </section>
 
-        <section class="profile-card">
-            <h2>@I18n.T("profile.changePasswordTitle")</h2>
+        @* Rarely used: collapsed by default so the page isn't three forms long. *@
+        <details class="profile-card profile-collapsible">
+            <summary>
+                <h2>@I18n.T("profile.changePasswordTitle")</h2>
+                <Icon Name="chevron-down" Class="profile-collapsible-chevron" />
+            </summary>
             <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form profile-form">
                 @if (_passwordErrorMessage is not null)
                 {
@@ -134,7 +138,7 @@ else
                     <PasswordResetDialog IsOpen="_showPasswordResetDialog" InitialIdentifier="@_profile?.Email" OnClose="() => _showPasswordResetDialog = false" />
                 </div>
             }
-        </section>
+        </details>
 
         <section class="profile-card">
             <h2>@I18n.T("profile.linkedAccountsTitle")</h2>
@@ -168,8 +172,11 @@ else
             }
         </section>
 
-        <section class="profile-card profile-danger-zone">
-            <h2>@I18n.T("profile.deleteAccountTitle")</h2>
+        <details class="profile-card profile-danger-zone profile-collapsible">
+            <summary>
+                <h2>@I18n.T("profile.deleteAccountTitle")</h2>
+                <Icon Name="chevron-down" Class="profile-collapsible-chevron" />
+            </summary>
             <p class="text-muted">@I18n.T("profile.deleteAccountWarning")</p>
 
             @if (_deleteAccountErrorMessage is not null)
@@ -201,7 +208,7 @@ else
                     </button>
                 </div>
             }
-        </section>
+        </details>
     </div>
 }
 

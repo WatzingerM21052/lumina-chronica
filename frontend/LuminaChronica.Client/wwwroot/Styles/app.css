@@ -1292,7 +1292,7 @@ select:focus-visible,
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     gap: var(--space-2) var(--space-3);
     margin-bottom: var(--space-3);
 }
@@ -1531,6 +1531,15 @@ select:focus-visible,
    sideways, so each section costs one row of height. `main` in the
    selectors outranks BookCard's own scoped width rule. */
 @media (max-width: 599.98px) {
+    /* Shrink-wrapped and centred, a title nearly as wide as the screen read
+       as sitting 14px off the content edge; full width, the double rule is
+       flush with everything below. */
+    main .chapter-title {
+        width: auto;
+        align-self: stretch;
+        margin-inline: 0;
+    }
+
     main .library-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));

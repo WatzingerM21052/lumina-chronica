@@ -19,6 +19,11 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Profile: "change password" and "delete account" are collapsed cards you open by their heading, so the page is no longer three forms long (on a phone ~1900 → ~1200px).
+- Public profile on phones: a smaller portrait beside the name instead of a large circle on its own row, the follow button on the row below, tighter section gaps; the portrait's gold ring now lines up with the content edge (it stuck out 4px).
+- Empty sections on phones are about a third shorter.
+- Discover: the user search field is a normal height again (it was 60px, with the placeholder far from the edge), less gap under the page header, and on phones the "Bibliotheksregal" title spans the full width instead of looking slightly indented.
+- Page header buttons are vertically centred on the title instead of sitting on its underline.
 - Library, Projects, Shelves and Discover share one page header (title left, actions right, same gap to the content); the Library's dark one-off header card is gone. The project page shows the project name above the tabs on every tab, and its overview counts characters, places, events, lore entries, books and files as tiles that open the matching tab.
 - Detail pages on phones: a small cover with the title and author beside it, everything else full width below, with even spacing between the blocks (titles no longer break mid-word). The shelf page uses the same header as the other detail pages, its books sit three per row, and "remove from shelf" / "place on the map" are small icon buttons.
 - Spacing pass on phones: settings theme/language buttons in an even two-column grid (they had no spacing at all), form cards with less padding, the ISBN lookup button on one line, statistics tiles 3 + 2.

@@ -16,6 +16,9 @@
 
 .profile-hero-portrait-wrap {
     flex-shrink: 0;
+    /* The gold ring (outline + offset) sits 4px outside the box: indent
+       the box so the ring lines up with the content edge. */
+    margin: 4px;
 }
 
 .profile-hero-portrait {
@@ -268,12 +271,36 @@
 }
 
 @media (max-width: 640px) {
+    /* Portrait beside the name instead of a 7rem circle on its own row;
+       the follow button gets the full row below. */
     .profile-hero {
-        flex-direction: column;
-        align-items: flex-start;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: var(--space-2);
+        padding-bottom: var(--space-3);
+        margin-bottom: var(--space-4);
+    }
+
+    .profile-hero-body {
+        min-width: 0;
+    }
+
+    .profile-hero-name {
+        overflow-wrap: anywhere;
+    }
+
+    .profile-hero-portrait {
+        width: 4.5rem;
+        height: 4.5rem;
     }
 
     .profile-hero-actions {
+        grid-column: 1 / -1;
         padding-bottom: 0;
+    }
+
+    .profile-chapter {
+        margin-bottom: var(--space-4);
     }
 }

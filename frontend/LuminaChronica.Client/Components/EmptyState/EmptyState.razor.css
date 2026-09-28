@@ -11,3 +11,11 @@
     color: var(--color-text-secondary);
     max-width: 32rem;
 }
+
+/* An empty section was ~220px of box on a phone. */
+@media (max-width: 599.98px) {
+    .empty-state {
+        gap: var(--space-1);
+        padding: var(--space-3) var(--space-2);
+    }
+}
