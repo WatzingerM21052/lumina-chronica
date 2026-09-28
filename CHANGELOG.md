@@ -19,6 +19,8 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Emails (password reset, security notices) now follow the language you picked in the settings: switching the language while signed in stores it on your account (new `PUT /api/users/me/language`). Before, every email was German.
+- Reading progress and bookmarks reject malformed positions (a non-integer or negative chapter, a percentage outside 0–100, a non-text or oversized position) with a clear error, instead of storing values that later broke the reader.
 - Settings: theme, language and shelf cover text share one "Appearance" card; the themes are preview cards showing each theme's real colours (System shows light and dark side by side); every on/off preference is a switch with its description underneath; in-app notifications and what your public activity log shows are separate "Notifications" and "Privacy" cards.
 - One search field everywhere (library, linked books in a project, sharing a book, Discover, world bible): magnifier inside the field and a ✕ to clear it; "no books found" in the library now has a "reset filters" button right under it.
 - On phones every form dialog (edit, create, avatar, password reset, follower lists) opens as a sheet from the bottom edge, full width and within thumb reach; only short confirmations stay a centred card.

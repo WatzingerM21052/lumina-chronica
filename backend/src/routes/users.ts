@@ -12,6 +12,8 @@ import {
     deleteUser,
     getUserAvatarObject,
     getUserProfile,
+    SUPPORTED_LANGUAGES,
+    setUserLanguage,
     updateUserAvatar,
     updateUserProfile,
 } from "../services/userService";
@@ -100,6 +102,18 @@ usersRoute.get("/me", requireAuth, async (c) => {
     const profile = await getUserProfile(c.env.DB, c.get("userId"), new URL(c.req.url).origin);
     if (!profile) return c.json(failure("NOT_FOUND", "User not found."), 404);
     return c.json(success(profile));
+});
+
+// The UI language, so emails (password reset, security notices) are sent
+// in it. The frontend calls this when a signed-in user switches language.
+usersRoute.put("/me/language", requireAuth, async (c) => {
+    const body = await c.req.json<{ language?: unknown }>().catch(() => null);
+    const language = body?.language;
+    if (typeof language !== "string" || !(SUPPORTED_LANGUAGES as readonly string[]).includes(language)) {
+        return c.json(failure("VALIDATION_ERROR", `language must be one of: ${SUPPORTED_LANGUAGES.join(", ")}.`), 400);
+    }
+    await setUserLanguage(c.env.DB, c.get("userId"), language as (typeof SUPPORTED_LANGUAGES)[number]);
+    return c.json(success({ language }));
 });
 
 usersRoute.put("/me/avatar", requireAuth, async (c) => {

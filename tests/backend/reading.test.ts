@@ -235,3 +235,39 @@ describe("DELETE /api/books/:id with existing reading progress", () => {
         expect(rows?.total).toBe(0);
     });
 });
+
+describe("POST /api/reading/update -- position validation", () => {
+    function update(body: unknown) {
+        return app.request(
+            "/api/reading/update",
+            { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenA}` }, body: JSON.stringify(body) },
+            env
+        );
+    }
+
+    // A string chapter used to be stored as-is and then crashed the
+    // frontend reader when it deserialised the saved progress.
+    it.each([
+        ["a string chapter", { chapter: "3" }],
+        ["a negative chapter", { chapter: -1 }],
+        ["a fractional chapter", { chapter: 1.5 }],
+        ["a percentage over 100", { percentage: 101 }],
+        ["a negative percentage", { percentage: -5 }],
+        ["a numeric position", { position: 12 }],
+        ["an oversized position", { position: "x".repeat(2_001) }],
+    ])("rejects %s", async (_label, override) => {
+        const bookId = await uploadBook(tokenA);
+
+        const res = await update({ bookId, percentage: 10, ...override });
+
+        expect(res.status).toBe(400);
+        expect((await readJson(res)).error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("accepts a valid chapter, a string position and null values", async () => {
+        const bookId = await uploadBook(tokenA);
+
+        expect((await update({ bookId, percentage: 40, chapter: 3, position: "epubcfi(/6/4)" })).status).toBe(200);
+        expect((await update({ bookId, percentage: 0, chapter: null, position: null })).status).toBe(200);
+    });
+});

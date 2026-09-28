@@ -176,6 +176,10 @@ else
     // so the reload lands the user back here with the new language applied.
     private async Task SetLanguageAsync(string language)
     {
+        // Also stored on the account, so emails (password reset, security
+        // notices) are sent in it. Awaited so the reload below can't cut
+        // the request off; best effort, a failure doesn't block the switch.
+        await ApiClient.PutAsync("/api/users/me/language", new { language });
         await I18n.SetLanguageAsync(language);
         NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }

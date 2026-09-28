@@ -384,3 +384,43 @@ describe("PUT /api/users/me -- identity rules (review N-3/N-5/N-6)", () => {
         expect(res.status).toBe(200);
     });
 });
+
+describe("PUT /api/users/me/language", () => {
+    async function storedLanguage(): Promise<string | undefined> {
+        const row = await env.DB.prepare(
+            "SELECT s.language FROM user_settings s JOIN users u ON u.id = s.user_id WHERE u.username = 'alice'"
+        ).first<{ language: string }>();
+        return row?.language;
+    }
+
+    it("requires authentication", async () => {
+        const res = await app.request("/api/users/me/language", jsonRequest("PUT", { language: "en" }), env);
+        expect(res.status).toBe(401);
+    });
+
+    it("stores the language so emails follow it", async () => {
+        expect(await storedLanguage()).toBe("de");
+
+        const res = await app.request("/api/users/me/language", jsonRequest("PUT", { language: "en" }, token), env);
+
+        expect(res.status).toBe(200);
+        expect((await readJson(res)).data.language).toBe("en");
+        expect(await storedLanguage()).toBe("en");
+    });
+
+    it("creates the settings row for an account that has none", async () => {
+        await env.DB.prepare("DELETE FROM user_settings").run();
+
+        const res = await app.request("/api/users/me/language", jsonRequest("PUT", { language: "en" }, token), env);
+
+        expect(res.status).toBe(200);
+        expect(await storedLanguage()).toBe("en");
+    });
+
+    it.each([["fr"], [""], [42], [null]])("rejects %j", async (language) => {
+        const res = await app.request("/api/users/me/language", jsonRequest("PUT", { language }, token), env);
+
+        expect(res.status).toBe(400);
+        expect(await storedLanguage()).toBe("de");
+    });
+});

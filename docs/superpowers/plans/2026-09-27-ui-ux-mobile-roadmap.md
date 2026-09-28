@@ -65,7 +65,7 @@ Quellen: [Material 3 Navigation bar](https://m3.material.io/components/navigatio
 | B1 | Grundlagen: Breakpoint-Tokens (compact <600 / medium 600–839 / expanded ≥840), `viewport-fit=cover`, Safe-Area, `dvh`; kein horizontales Scrollen mehr auf irgendeiner Seite | erledigt 2026-09-28 (Breakpoints als Konvention oben in `app.css`, da Custom Properties in `@media` nicht gehen; alte 40rem-Regeln wandern beim Anfassen um) |
 | B2 | **Schwebende Bottom-Navigationsleiste** unter 600px, oben keine Navbar; Home, Bibliothek, Projekte, Entdecken, Mehr (Statistik, Offline, Einstellungen, Profil, Benachrichtigungen, Impressum); im Reader ausgeblendet; optional Minimieren beim Scrollen | erledigt 2026-09-28 (`Layouts/BottomNav`; „Mehr“ als neues `DialogSize.BottomSheet`; die Glocke bleibt oben, weil ihr Zähler dort ohne Öffnen sichtbar ist; Minimieren beim Scrollen weggelassen) |
 | B3 | Navigation Rail für 600–839px (Tablet hochkant) | erledigt 2026-09-28, **anders gelöst**: statt einer Rail nutzt 600–839px dieselbe schwebende Bottom-Leiste, zentriert und handybreit (iPadOS-Muster) — eine Rail hätte genau dort ~80px Breite gekostet und ein zweites Navigationsmuster eingeführt. 840–1199px: Logo-Schriftzug und „Profil“-Text weg (nur Icons), damit die Navbar einzeilig bleibt |
-| B4 | Seiten-Durchgang bei 390px/412px, jede Seite einzeln (inkl. Tab-Leisten, Werkzeugleisten, Tabellen) | offen |
+| B4 | Seiten-Durchgang bei 390px/412px, jede Seite einzeln (inkl. Tab-Leisten, Werkzeugleisten, Tabellen) | **erledigt 2026-09-28** (#518/#519 + Mess-Skript über 19 Seiten bei 390 und 412px ohne Befund) |
 | B5 | Dialoge auf dem Handy als Bottom-Sheet | **erledigt 2026-09-28**: unter 600px jeder Dialog außer `alertdialog` (Rückfragen) als Bottom-Sheet, reine CSS-Regel in `Dialog.razor.css` |
 
 ### Block C — Statistik (#498)
@@ -79,7 +79,7 @@ D1 3–5 Kandidaten als SVG → D2 Vergleichsseite, der Nutzer wählt → D3 all
 ### Block E — Kleinere offene Punkte
 
 - Reader- und Toast-Meldungen nutzen noch kurze echte Verzögerungen (nicht deploy-blockierend).
-- `user_settings.language` wird nie geschrieben → E-Mails immer Deutsch.
+- ~~`user_settings.language` wird nie geschrieben → E-Mails immer Deutsch~~ erledigt 2026-09-29: `PUT /api/users/me/language`, die Einstellungen rufen es beim Sprachwechsel auf.
 - ~~CI als Pflicht-Check in den Branch-Regeln~~ erledigt (geprüft 2026-09-28: beide Checks sind Pflicht, „strict“).
 - Resend-Domain-Verifizierung für `luminachronica.com` (Stand unbekannt).
 

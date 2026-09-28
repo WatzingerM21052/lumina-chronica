@@ -113,15 +113,27 @@ export type UpdateProfileInput = {
 // D9 (docs/superpowers/specs/2026-09-27-password-reset-modernization-design.md):
 // every user gets a user_settings row at registration (authService.ts), so
 // this always finds one for a real user_id -- the fallback only covers a
-// defensive edge case. Note: as of this writing nothing in the app writes a
-// non-default value into user_settings.language (the frontend's language
-// switch is purely client-side, see I18nService.SetLanguageAsync), so this
-// resolves to "de" for every real user today. That's a pre-existing gap in
-// the language-sync feature; this read starts working automatically once
-// something writes the column.
+// defensive edge case. The column is written by setUserLanguage below when
+// the user switches the UI language while signed in (PUT
+// /api/users/me/language); before that existed, every email went out in
+// German.
 export async function userLanguage(db: D1Database, userId: number): Promise<EmailLanguage> {
     const row = await db.prepare("SELECT language FROM user_settings WHERE user_id = ?").bind(userId).first<{ language: string }>();
     return row?.language === "en" ? "en" : "de";
+}
+
+export const SUPPORTED_LANGUAGES: readonly EmailLanguage[] = ["de", "en"];
+
+// Upsert, not a plain UPDATE: an account from before user_settings rows
+// were created at registration would otherwise silently keep "de".
+export async function setUserLanguage(db: D1Database, userId: number, language: EmailLanguage): Promise<void> {
+    await db
+        .prepare(
+            `INSERT INTO user_settings (user_id, language) VALUES (?, ?)
+             ON CONFLICT(user_id) DO UPDATE SET language = excluded.language, updated_at = CURRENT_TIMESTAMP`
+        )
+        .bind(userId, language)
+        .run();
 }
 
 export async function updateUserProfile(
