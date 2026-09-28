@@ -985,7 +985,7 @@ public class ProjectDetailPageTests : BunitContext
         UseAuthenticatedUser();
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
-        cut.Find(".comment-form textarea").Change("Love this world!");
+        cut.Find(".comment-form textarea").Input("Love this world!");
         cut.Find("form.comment-form").Submit();
 
         Assert.Equal(HttpMethod.Post, postRequest?.Method);

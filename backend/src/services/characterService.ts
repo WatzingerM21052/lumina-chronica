@@ -9,6 +9,7 @@
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 import { NotFoundError } from "./errors";
 import { deleteCharacterRelationshipsForCharacter } from "./characterRelationshipService";
+import { TEXT_LIMITS, assertMaxLengths } from "../utils/textLimits";
 
 export { NotFoundError, ValidationError };
 
@@ -79,6 +80,7 @@ export type CreateCharacterInput = {
 export async function createCharacter(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number, input: CreateCharacterInput): Promise<CharacterSummary> {
     await assertOwnsProject(db, ownerId, projectId);
     if (!input.name.trim()) throw new ValidationError("name is required.");
+    assertMaxLengths(input, { name: TEXT_LIMITS.title, description: TEXT_LIMITS.description, age: TEXT_LIMITS.shortText, origin: TEXT_LIMITS.shortText, personality: TEXT_LIMITS.description, biography: TEXT_LIMITS.longText });
 
     const imageExt = input.image ? validateFile(input.image, ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, "Image") : null;
 
@@ -126,6 +128,7 @@ export async function updateCharacter(db: D1Database, ownerId: number, projectId
     const row = await findCharacterRow(db, projectId, characterId);
     if (!row) throw new NotFoundError();
     if (input.name !== undefined && !input.name.trim()) throw new ValidationError("name cannot be empty.");
+    assertMaxLengths(input, { name: TEXT_LIMITS.title, description: TEXT_LIMITS.description, age: TEXT_LIMITS.shortText, origin: TEXT_LIMITS.shortText, personality: TEXT_LIMITS.description, biography: TEXT_LIMITS.longText });
 
     await db
         .prepare(

@@ -69,7 +69,7 @@ else
                 }
                 @if (!string.IsNullOrWhiteSpace(_book.Description))
                 {
-                    <p>@_book.Description</p>
+                    <p class="user-text">@_book.Description</p>
                 }
 
                 @if (_book.Visibility == "PUBLIC")
@@ -175,6 +175,14 @@ else
                             </button>
                         }
                     }
+                    @if (_book.IsOwner && _shelves is { Count: > 0 })
+                    {
+                        @* A dropdown of checkboxes rather than one inline checkbox per
+                           shelf, which stops scaling after a handful of shelves. *@
+                        <CheckboxDropdown Id="book-shelves-dropdown" Label="@I18n.T("bookDetail.shelvesButton")"
+                                          Options="ShelfOptions" SelectedIds="_shelfIds"
+                                          OnToggle="t => ToggleShelfAsync(t.Id, t.Checked)" />
+                    }
                     @if (_book.IsOwner)
                     {
                         <button type="button" id="edit-button" class="btn" @onclick="StartEditingAsync">@I18n.T("bookDetail.editButton")</button>
@@ -194,21 +202,6 @@ else
                 {
                     <p class="form-error">@_offlineErrorMessage</p>
                 }
-
-                @if (_book.IsOwner && _shelves is { Count: > 0 })
-                {
-                    <div class="book-detail-shelves">
-                        <span class="text-muted">@I18n.T("bookDetail.addToShelfLabel")</span>
-                        @foreach (var shelf in _shelves)
-                        {
-                            <label class="book-detail-shelf-option">
-                                <input type="checkbox" checked="@_shelfIds.Contains(shelf.Id)"
-                                       @onchange="e => ToggleShelfAsync(shelf.Id, (bool)e.Value!)" />
-                                @shelf.Name
-                            </label>
-                        }
-                    </div>
-                }
             }
             else
             {
@@ -224,21 +217,21 @@ else
                     <h3 class="form-section-title">@I18n.T("bookDetail.editSectionGeneral")</h3>
                     <div class="form-group">
                         <label for="edit-title">@I18n.T("bookDetail.titleLabel")</label>
-                        <InputText id="edit-title" @bind-Value="_editForm.Title" />
+                        <InputText id="edit-title" maxlength="@TextLimits.Title" @bind-Value="_editForm.Title" />
                     </div>
                     <div class="form-group">
                         <label for="edit-author">@I18n.T("bookDetail.authorLabel")</label>
-                        <InputText id="edit-author" @bind-Value="_editForm.Author" />
+                        <InputText id="edit-author" maxlength="@TextLimits.ShortText" @bind-Value="_editForm.Author" />
                     </div>
                     <div class="form-group">
                         <label for="edit-description">@I18n.T("bookDetail.descriptionLabel")</label>
-                        <InputTextArea id="edit-description" @bind-Value="_editForm.Description" />
+                        <InputTextArea id="edit-description" maxlength="@TextLimits.Description" @bind-Value="_editForm.Description" />
                     </div>
                     <h3 class="form-section-title">@I18n.T("bookDetail.editSectionDetails")</h3>
                     <div class="form-grid-2">
                         <div class="form-group">
                             <label for="edit-genre">@I18n.T("bookDetail.genreLabel")</label>
-                            <InputText id="edit-genre" @bind-Value="_editForm.Genre" />
+                            <InputText id="edit-genre" maxlength="@TextLimits.ShortText" @bind-Value="_editForm.Genre" />
                         </div>
                         <div class="form-group">
                             <label for="edit-language">@I18n.T("bookDetail.languageLabel")</label>
@@ -248,7 +241,7 @@ else
                     <div class="form-grid-2">
                         <div class="form-group">
                             <label for="edit-publisher">@I18n.T("bookDetail.publisherLabel")</label>
-                            <InputText id="edit-publisher" @bind-Value="_editForm.Publisher" />
+                            <InputText id="edit-publisher" maxlength="@TextLimits.ShortText" @bind-Value="_editForm.Publisher" />
                         </div>
                         <div class="form-group">
                             <label for="edit-releaseDate">@I18n.T("bookDetail.releaseDateLabel")</label>
@@ -262,7 +255,7 @@ else
                         </div>
                         <div class="form-group">
                             <label for="edit-tags">@I18n.T("bookDetail.tagsInputLabel")</label>
-                            <InputText id="edit-tags" @bind-Value="_editForm.Tags" />
+                            <InputText id="edit-tags" maxlength="@TextLimits.TagsInput" @bind-Value="_editForm.Tags" />
                         </div>
                     </div>
                     <h3 class="form-section-title">@I18n.T("bookDetail.editSectionCover")</h3>
@@ -292,7 +285,7 @@ else
                     <div class="form-group">
                         <label for="edit-isbn">ISBN</label>
                         <div class="isbn-enrichment-row">
-                            <InputText id="edit-isbn" @bind-Value="_editForm.Isbn" />
+                            <InputText id="edit-isbn" maxlength="@TextLimits.Code" @bind-Value="_editForm.Isbn" />
                             <button type="button" class="btn" disabled="@(string.IsNullOrWhiteSpace(_editForm.Isbn) || _isLookingUpEnrichment)" @onclick="LookupEnrichmentAsync">
                                 @I18n.T("bookDetail.lookupButton")
                             </button>
@@ -458,7 +451,7 @@ else
                                 <strong>@comment.Username</strong>
                                 <span class="text-muted">@comment.CreatedAt</span>
                             </div>
-                            <p>@comment.Content</p>
+                            <p class="user-text">@comment.Content</p>
                             @if (comment.UserId == _currentUserId)
                             {
                                 <button type="button" class="btn" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)">@I18n.T("bookDetail.deleteButton")</button>
@@ -473,8 +466,14 @@ else
                 {
                     <p class="form-error">@_commentErrorMessage</p>
                 }
-                <InputTextArea @bind-Value="_commentForm.Content" placeholder="@I18n.T("bookDetail.commentPlaceholder")" />
-                <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">@I18n.T("bookDetail.commentSubmitButton")</button>
+                @* Plain textarea bound on every keystroke (InputTextArea only updates on
+                   blur), so the counter below follows the typing. *@
+                <textarea @bind="_commentForm.Content" @bind:event="oninput" maxlength="@TextLimits.Comment" rows="3"
+                          aria-label="@I18n.T("bookDetail.commentPlaceholder")" placeholder="@I18n.T("bookDetail.commentPlaceholder")"></textarea>
+                <div class="comment-form-footer">
+                    <CharCounter Value="@_commentForm.Content" Max="TextLimits.Comment" />
+                    <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingComment || string.IsNullOrWhiteSpace(_commentForm.Content))">@I18n.T("bookDetail.commentSubmitButton")</button>
+                </div>
             </EditForm>
         }
     </section>
@@ -519,6 +518,9 @@ else
 
     private List<Shelf>? _shelves;
     private HashSet<int> _shelfIds = [];
+
+    private IReadOnlyList<CheckboxDropdown.Option> ShelfOptions =>
+        _shelves?.Select(s => new CheckboxDropdown.Option(s.Id, s.Name)).ToList() ?? [];
 
     private bool _isOfflineSaved;
     private long _offlineSizeBytes;

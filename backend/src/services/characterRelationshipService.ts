@@ -6,6 +6,7 @@
 
 import { ValidationError } from "./fileValidation";
 import { NotFoundError } from "./errors";
+import { TEXT_LIMITS, assertMaxLengths } from "../utils/textLimits";
 
 export { NotFoundError, ValidationError };
 
@@ -99,6 +100,7 @@ export async function createCharacterRelationship(
 ): Promise<CharacterRelationshipSummary> {
     await assertOwnsProject(db, ownerId, projectId);
     if (!input.relationshipType?.trim()) throw new ValidationError("relationshipType is required.");
+    assertMaxLengths(input, { relationshipType: TEXT_LIMITS.shortText, description: TEXT_LIMITS.description });
     if (input.characterAId === input.characterBId) throw new ValidationError("A character cannot have a relationship with itself.");
     await assertCharactersInProject(db, projectId, input.characterAId, input.characterBId);
 
@@ -138,6 +140,7 @@ export async function updateCharacterRelationship(
     const row = await findRelationshipRow(db, projectId, relationshipId);
     if (!row) throw new NotFoundError();
     if (input.relationshipType !== undefined && !input.relationshipType.trim()) throw new ValidationError("relationshipType cannot be empty.");
+    assertMaxLengths(input, { relationshipType: TEXT_LIMITS.shortText, description: TEXT_LIMITS.description });
 
     await db
         .prepare("UPDATE character_relationships SET relationship_type = ?, description = ? WHERE id = ?")

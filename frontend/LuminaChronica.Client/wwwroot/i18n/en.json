@@ -625,7 +625,7 @@
   "bookDetail.discardEditCancelButton": "Keep editing",
   "bookDetail.deleteButton": "Delete",
   "bookDetail.deleteConfirmMessage": "Really delete this book?",
-  "bookDetail.addToShelfLabel": "Add to Shelf",
+  "bookDetail.shelvesButton": "Shelves",
   "bookDetail.replaceCoverLabel": "Replace Cover",
   "bookDetail.coverDropzoneLabel": "Drag your cover here or click to select",
   "bookDetail.titleLabel": "Title",

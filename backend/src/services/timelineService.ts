@@ -5,6 +5,7 @@
 
 import { ValidationError } from "./fileValidation";
 import { NotFoundError } from "./errors";
+import { TEXT_LIMITS, assertMaxLengths } from "../utils/textLimits";
 
 export { NotFoundError, ValidationError };
 
@@ -58,6 +59,7 @@ export type CreateTimelineEventInput = {
 export async function createTimelineEvent(db: D1Database, ownerId: number, projectId: number, input: CreateTimelineEventInput): Promise<TimelineEventSummary> {
     await assertOwnsProject(db, ownerId, projectId);
     if (!input.title.trim()) throw new ValidationError("title is required.");
+    assertMaxLengths(input, { title: TEXT_LIMITS.title, description: TEXT_LIMITS.description, date: TEXT_LIMITS.shortText });
 
     const maxOrderRow = await db.prepare("SELECT MAX(order_index) AS max_order FROM timeline_events WHERE project_id = ?").bind(projectId).first<{ max_order: number | null }>();
     const nextOrder = (maxOrderRow?.max_order ?? -1) + 1;
@@ -97,6 +99,7 @@ export async function updateTimelineEvent(db: D1Database, ownerId: number, proje
     const row = await findTimelineEventRow(db, projectId, eventId);
     if (!row) throw new NotFoundError();
     if (input.title !== undefined && !input.title.trim()) throw new ValidationError("title cannot be empty.");
+    assertMaxLengths(input, { title: TEXT_LIMITS.title, description: TEXT_LIMITS.description, date: TEXT_LIMITS.shortText });
 
     await db
         .prepare("UPDATE timeline_events SET title = ?, description = ?, date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")

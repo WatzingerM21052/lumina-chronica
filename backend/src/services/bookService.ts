@@ -4,6 +4,7 @@
 
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 import { recordBookPublicActivity } from "./activityService";
+import { TEXT_LIMITS, assertMaxLengths, assertTagLimits } from "../utils/textLimits";
 
 export class NotFoundError extends Error {}
 export { ValidationError };
@@ -190,6 +191,8 @@ async function findOrCreateTagIds(db: D1Database, tagNames: string[]): Promise<n
 
 export async function createBook(db: D1Database, storage: R2Bucket, ownerId: number, input: CreateBookInput): Promise<BookDetail> {
     if (!input.title.trim()) throw new ValidationError("title is required.");
+    assertMaxLengths(input, { title: TEXT_LIMITS.title, author: TEXT_LIMITS.shortText, description: TEXT_LIMITS.description, genre: TEXT_LIMITS.shortText, language: TEXT_LIMITS.code, isbn: TEXT_LIMITS.code, publisher: TEXT_LIMITS.shortText, releaseDate: TEXT_LIMITS.code });
+    assertTagLimits(input.tags);
 
     const bookExt = validateFile(input.file, ALLOWED_BOOK_EXTENSIONS, BOOK_MIME_HINTS, MAX_BOOK_FILE_BYTES, "Book file");
     const coverExt = input.cover ? validateFile(input.cover, ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, "Cover image") : null;
@@ -467,6 +470,8 @@ export type UpdateBookInput = {
 export async function updateBook(db: D1Database, ownerId: number, bookId: number, input: UpdateBookInput): Promise<BookDetail> {
     const row = await findOwnedBookRow(db, ownerId, bookId);
     if (!row) throw new NotFoundError();
+    assertMaxLengths(input, { title: TEXT_LIMITS.title, author: TEXT_LIMITS.shortText, description: TEXT_LIMITS.description, genre: TEXT_LIMITS.shortText, language: TEXT_LIMITS.code, isbn: TEXT_LIMITS.code, publisher: TEXT_LIMITS.shortText, releaseDate: TEXT_LIMITS.code });
+    assertTagLimits(input.tags);
     if (input.visibility !== undefined && !VISIBILITY_VALUES.includes(input.visibility as (typeof VISIBILITY_VALUES)[number])) {
         throw new ValidationError(`visibility must be one of ${VISIBILITY_VALUES.join(", ")}.`);
     }

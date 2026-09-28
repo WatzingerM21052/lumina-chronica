@@ -1114,7 +1114,7 @@ public class BookDetailPageTests : BunitContext
         UseAuthenticatedUser();
 
         var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
-        cut.Find(".comment-form textarea").Change("Nice read!");
+        cut.Find(".comment-form textarea").Input("Nice read!");
         cut.Find("form.comment-form").Submit();
 
         Assert.Equal(HttpMethod.Post, postRequest?.Method);
@@ -1176,6 +1176,60 @@ public class BookDetailPageTests : BunitContext
         Assert.Equal("62", cut.Find(".book-detail-progress [role=progressbar]").GetAttribute("aria-valuenow"));
         Assert.Equal("62 % gelesen", cut.Find(".book-detail-progress-text").TextContent);
         Assert.Contains(cut.FindAll("a.btn"), a => a.TextContent.Trim() == "Weiterlesen");
+    }
+
+    // User feedback: one inline checkbox per shelf stops scaling; the shelves
+    // are now a dropdown of checkboxes in the action row.
+    [Fact]
+    public void BookDetail_Shelves_AreADropdownOfCheckboxes_ThatAddTheBook()
+    {
+        const string bookJson = """
+            {"success":true,"data":{
+                "id":1,"title":"Dune","author":null,"description":null,
+                "coverUrl":null,"genre":null,"language":null,"visibility":"PRIVATE","createdAt":"2026-01-01","isOwner":true,
+                "isbn":null,"publisher":null,"releaseDate":null,"pages":null,"tags":[],"file":{"format":"EPUB","size":1000}
+            }}
+            """;
+        HttpRequestMessage? addRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .When(r => r.Method == HttpMethod.Post, r => { addRequest = r; return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":null}"""); })
+            .WhenPathEndsWith("/api/books/1/shelves", """{"success":true,"data":[1]}""")
+            .WhenPathEndsWith("/api/shelves", """{"success":true,"data":[{"id":1,"name":"Nebel & Magie","description":null,"coverUrl":null,"bookCount":1,"createdAt":"2026-01-01"},{"id":2,"name":"Für den Winter","description":null,"coverUrl":null,"bookCount":0,"createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/api/reading/1", """{"success":true,"data":{"chapter":null,"position":null,"percentage":0,"lastOpened":null}}""")
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(bookJson));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ToastService>();
+        Services.AddSingleton<OfflineStorageService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        Assert.Empty(cut.FindAll(".book-detail-shelves"));
+        Assert.Equal("Regale (1)", cut.Find("#book-shelves-dropdown span").TextContent.Trim());
+
+        cut.Find("#book-shelves-dropdown").Click();
+        cut.FindAll(".checkbox-dropdown-option input")[1].Change(true);
+
+        Assert.Equal("/api/shelves/2/books/1", addRequest?.RequestUri?.AbsolutePath);
+        Assert.Equal("Regale (2)", cut.Find("#book-shelves-dropdown span").TextContent.Trim());
+    }
+
+    [Fact]
+    public void BookDetail_CommentForm_LimitsLengthAndCountsLive()
+    {
+        UseBookWithProgress("""{"success":true,"data":{"chapter":null,"position":null,"percentage":0,"lastOpened":null}}""");
+
+        var cut = Render<BookDetail>(parameters => parameters.Add(p => p.Id, 1));
+        var textarea = cut.Find(".comment-form textarea");
+        Assert.Equal(TextLimits.Comment.ToString(), textarea.GetAttribute("maxlength"));
+
+        textarea.Input("Schöne Grüße 📚");
+
+        Assert.Equal($"15 / {TextLimits.Comment}", cut.Find(".comment-form .char-counter").TextContent.Trim());
     }
 
     [Fact]

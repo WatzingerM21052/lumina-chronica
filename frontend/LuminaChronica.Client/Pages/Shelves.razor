@@ -28,11 +28,11 @@
             }
             <div class="form-group">
                 <label for="shelf-name">@I18n.T("shelves.nameLabel")</label>
-                <InputText id="shelf-name" @bind-Value="_createForm.Name" />
+                <InputText id="shelf-name" maxlength="@TextLimits.Title" @bind-Value="_createForm.Name" />
             </div>
             <div class="form-group">
                 <label for="shelf-description">@I18n.T("shelves.descriptionLabel")</label>
-                <InputTextArea id="shelf-description" @bind-Value="_createForm.Description" />
+                <InputTextArea id="shelf-description" maxlength="@TextLimits.Description" @bind-Value="_createForm.Description" />
             </div>
             <div class="form-group">
                 <label for="shelf-cover">@I18n.T("shelves.coverLabel")</label>

@@ -1,0 +1,79 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* A button that opens a compact list of checkboxes (e.g. "which shelves is
+   this book on"): scales to many options where a row of inline checkboxes
+   would not. Closes on Escape, a click outside (transparent backdrop) or
+   "Fertig"; each checkbox applies immediately. *@
+<div class="checkbox-dropdown" @onkeydown="HandleKeyDown">
+    <button type="button" id="@ButtonId" class="btn checkbox-dropdown-toggle @(SelectedIds.Count > 0 ? "has-selection" : null)"
+            aria-haspopup="true" aria-expanded="@(_isOpen ? "true" : "false")" aria-controls="@PanelId"
+            @onclick="Toggle">
+        <span>@Label@(SelectedIds.Count > 0 ? $" ({SelectedIds.Count})" : "")</span>
+        <span class="checkbox-dropdown-chevron" aria-hidden="true"></span>
+    </button>
+    @if (_isOpen)
+    {
+        <div class="checkbox-dropdown-backdrop" @onclick="Close"></div>
+        <div class="checkbox-dropdown-panel" id="@PanelId" role="group" aria-labelledby="@ButtonId">
+            @if (Options.Count == 0)
+            {
+                <p class="text-muted">@EmptyText</p>
+            }
+            else
+            {
+                <ul class="checkbox-dropdown-list">
+                    @foreach (var option in Options)
+                    {
+                        <li>
+                            <label class="checkbox-dropdown-option">
+                                <input type="checkbox" checked="@SelectedIds.Contains(option.Id)"
+                                       @onchange="e => OnToggle.InvokeAsync((option.Id, (bool)e.Value!))" />
+                                <span>@option.Label</span>
+                            </label>
+                        </li>
+                    }
+                </ul>
+            }
+            <button type="button" class="btn checkbox-dropdown-done" @onclick="Close">@I18n.T("multiSelectDropdown.doneButton")</button>
+        </div>
+    }
+</div>
+
+@code {
+    public sealed record Option(int Id, string Label);
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Option> Options { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlySet<int> SelectedIds { get; set; } = new HashSet<int>();
+
+    [Parameter]
+    public string? EmptyText { get; set; }
+
+    // (id, isNowChecked) -- the owner does the saving and updates SelectedIds.
+    [Parameter]
+    public EventCallback<(int Id, bool Checked)> OnToggle { get; set; }
+
+    [Parameter]
+    public string Id { get; set; } = $"checkbox-dropdown-{Guid.NewGuid():N}";
+
+    private string ButtonId => Id;
+    private string PanelId => $"{Id}-panel";
+
+    private bool _isOpen;
+
+    private void Toggle() => _isOpen = !_isOpen;
+
+    private void Close() => _isOpen = false;
+
+    private void HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _isOpen = false;
+    }
+}
