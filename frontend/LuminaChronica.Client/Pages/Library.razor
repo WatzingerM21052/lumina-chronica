@@ -22,9 +22,11 @@
 </div>
 
 
-@* UI/UX plan A4: two rows instead of ten equal controls in one. Row 1:
-   the search gets the room, the view settings sit apart on the right.
-   Row 2: what narrows the list (filters) and how it's ordered (sort). *@
+@* Compact toolbar (plan F9, user feedback: fewer controls, icons where a
+   word isn't needed): one row -- search, a "Filter" toggle that folds the
+   genre/tag/favourite filters out underneath, sort, the view as two icon
+   buttons, and the view's size/page setting. Labels that were visible
+   text are now aria-labels/titles. *@
 <div class="library-toolbar">
     <div class="library-toolbar-row">
         <div class="library-search-wrapper">
@@ -49,40 +51,73 @@
             }
         </div>
 
+        <button type="button" id="library-filter-toggle" class="btn library-filter-toggle @(ActiveFilterCount > 0 ? "has-active" : null)"
+                aria-expanded="@(_filtersOpen ? "true" : "false")" aria-controls="library-filter-panel"
+                @onclick="() => _filtersOpen = !_filtersOpen">
+            <Icon Name="filter" />
+            <span>@I18n.T("library.filterGroupLabel")</span>
+            @if (ActiveFilterCount > 0)
+            {
+                <span class="library-filter-count">@ActiveFilterCount</span>
+            }
+        </button>
+
+        <div class="library-sort">
+            <select class="library-sort-field" aria-label="@I18n.T("library.sortLabel")" title="@I18n.T("library.sortLabel")"
+                    @bind="_sort" @bind:after="ApplyFiltersAsync">
+                <option value="createdAt">@I18n.T("library.sortCreatedAt")</option>
+                <option value="title">@I18n.T("library.sortTitle")</option>
+                <option value="author">@I18n.T("library.sortAuthor")</option>
+                <option value="genre">@I18n.T("library.sortGenre")</option>
+            </select>
+            @{
+                var orderLabel = I18n.T(_order == "desc" ? "library.orderDesc" : "library.orderAsc");
+            }
+            <button type="button" class="btn library-sort-order" @onclick="ToggleOrderAsync"
+                    aria-label="@string.Format(I18n.T("library.orderToggleLabel"), orderLabel)" title="@orderLabel">
+                <Icon Name="@(_order == "desc" ? "sort-desc" : "sort-asc")" />
+            </button>
+        </div>
+
         <div class="library-view-settings" role="group" aria-label="@I18n.T("library.viewGroupLabel")">
+            @* Raster first and default (user request); icon buttons, the
+               name lives in aria-label + tooltip. *@
             <div class="library-view-toggle segmented">
-                <button type="button" class="segmented-option @(_viewMode == LibraryViewMode.Grid ? "is-selected" : "")" aria-pressed="@(_viewMode == LibraryViewMode.Grid ? "true" : "false")" @onclick='() => SetViewMode(LibraryViewMode.Grid)'>@I18n.T("library.viewModeShelf")</button>
-                <button type="button" class="segmented-option @(_viewMode == LibraryViewMode.List ? "is-selected" : "")" aria-pressed="@(_viewMode == LibraryViewMode.List ? "true" : "false")" @onclick='() => SetViewMode(LibraryViewMode.List)'>@I18n.T("library.viewModeRaster")</button>
+                <button type="button" id="view-raster" class="segmented-option segmented-option--icon @(_viewMode == LibraryViewMode.List ? "is-selected" : "")"
+                        aria-pressed="@(_viewMode == LibraryViewMode.List ? "true" : "false")"
+                        aria-label="@I18n.T("library.viewModeRaster")" title="@I18n.T("library.viewModeRaster")"
+                        @onclick='() => SetViewMode(LibraryViewMode.List)'><Icon Name="grid" /></button>
+                <button type="button" id="view-shelf" class="segmented-option segmented-option--icon @(_viewMode == LibraryViewMode.Grid ? "is-selected" : "")"
+                        aria-pressed="@(_viewMode == LibraryViewMode.Grid ? "true" : "false")"
+                        aria-label="@I18n.T("library.viewModeShelf")" title="@I18n.T("library.viewModeShelf")"
+                        @onclick='() => SetViewMode(LibraryViewMode.Grid)'><Icon Name="shelf" /></button>
             </div>
             @if (_viewMode == LibraryViewMode.Grid)
             {
-                <label class="library-inline-label">
-                    <span>@I18n.T("library.bookSizeLabel")</span>
-                    <select class="library-shelf-book-zoom" @bind="_shelfBookZoom" @bind:after="OnShelfBookZoomChangedAsync">
-                        @foreach (var zoom in ShelfBookZoomOptions)
-                        {
-                            <option value="@zoom">@ShelfBookZoomLabel(zoom)</option>
-                        }
-                    </select>
-                </label>
+                <select class="library-shelf-book-zoom" aria-label="@I18n.T("library.bookSizeLabel")" title="@I18n.T("library.bookSizeLabel")"
+                        @bind="_shelfBookZoom" @bind:after="OnShelfBookZoomChangedAsync">
+                    @foreach (var zoom in ShelfBookZoomOptions)
+                    {
+                        <option value="@zoom">@ShelfBookZoomLabel(zoom)</option>
+                    }
+                </select>
             }
             @if (_viewMode == LibraryViewMode.List)
             {
-                <label class="library-inline-label">
-                    <span>@I18n.T("library.pageSizeLabel")</span>
-                    <select class="library-raster-page-size" @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
-                        @foreach (var size in RasterPageSizeOptions)
-                        {
-                            <option value="@size">@size</option>
-                        }
-                    </select>
-                </label>
+                <select class="library-raster-page-size" aria-label="@I18n.T("library.pageSizeLabel")" title="@I18n.T("library.pageSizeLabel")"
+                        @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
+                    @foreach (var size in RasterPageSizeOptions)
+                    {
+                        <option value="@size">@string.Format(I18n.T("library.pageSizeOption"), size)</option>
+                    }
+                </select>
             }
         </div>
     </div>
 
-    <div class="library-toolbar-row">
-        <div class="library-filters" role="group" aria-label="@I18n.T("library.filterGroupLabel")">
+    @if (_filtersOpen)
+    {
+        <div class="library-filters" id="library-filter-panel" role="group" aria-label="@I18n.T("library.filterGroupLabel")">
             <MultiSelectDropdown Label="@I18n.T("library.genreLabel")" Options="@(_facets?.Genres ?? [])" SelectedValues="_genreFilters" SelectedValuesChanged="OnGenreFiltersChanged" />
             <MultiSelectDropdown Label="@I18n.T("library.tagLabel")" Options="@(_facets?.Tags ?? [])" SelectedValues="_tagFilters" SelectedValuesChanged="OnTagFiltersChanged" />
             <label class="library-favorite-filter @(_favoritesOnly ? "is-active" : "")">
@@ -94,26 +129,7 @@
                 <button type="button" class="btn-link library-clear-filters" @onclick="ClearFiltersAsync">@I18n.T("library.clearFiltersButton")</button>
             }
         </div>
-
-        <div class="library-sort">
-            <label class="library-inline-label">
-                <span>@I18n.T("library.sortLabel")</span>
-                <select class="library-sort-field" @bind="_sort" @bind:after="ApplyFiltersAsync">
-                    <option value="createdAt">@I18n.T("library.sortCreatedAt")</option>
-                    <option value="title">@I18n.T("library.sortTitle")</option>
-                    <option value="author">@I18n.T("library.sortAuthor")</option>
-                    <option value="genre">@I18n.T("library.sortGenre")</option>
-                </select>
-            </label>
-            @{
-                var orderLabel = I18n.T(_order == "desc" ? "library.orderDesc" : "library.orderAsc");
-            }
-            <button type="button" class="btn library-sort-order" @onclick="ToggleOrderAsync"
-                    aria-label="@string.Format(I18n.T("library.orderToggleLabel"), orderLabel)" title="@orderLabel">
-                <Icon Name="@(_order == "desc" ? "sort-desc" : "sort-asc")" />
-            </button>
-        </div>
-    </div>
+    }
 </div>
 
 @if (_errorMessage is not null)
@@ -189,7 +205,11 @@ else
     private BookFacets? _facets;
     private List<Book>? _suggestions;
     private string? _errorMessage;
-    private LibraryViewMode _viewMode = LibraryViewMode.Grid;
+    // Raster (List) is the default view (user request 2026-09-28); the 3D
+    // shelf (Grid) is one click away. Note the enum names predate the
+    // labels: Grid = "Regal", List = "Raster".
+    private LibraryViewMode _viewMode = LibraryViewMode.List;
+    private bool _filtersOpen;
 
     private string _searchTerm = string.Empty;
     private IReadOnlyList<string> _genreFilters = [];
@@ -234,6 +254,10 @@ else
 
     private bool HasActiveFilters => !string.IsNullOrWhiteSpace(_searchTerm) || _genreFilters.Count > 0 || _tagFilters.Count > 0 || _favoritesOnly;
 
+    // Shown on the collapsed "Filter" button, so active filters are visible
+    // without opening the panel. The search has its own field.
+    private int ActiveFilterCount => _genreFilters.Count + _tagFilters.Count + (_favoritesOnly ? 1 : 0);
+
     private int RasterPageCount => _allItems is null ? 1 : Math.Max(1, (int)Math.Ceiling((double)_allItems.Count / _rasterPageSize));
 
     protected override async Task OnInitializedAsync()
@@ -246,6 +270,8 @@ else
             if (parts[0] == "tag" && parts.Length == 2)
             {
                 _tagFilters = [Uri.UnescapeDataString(parts[1])];
+                // Arriving with a tag filter: show the panel that holds it.
+                _filtersOpen = true;
             }
         }
 

@@ -49,6 +49,53 @@
     height: 60%;
 }
 
+/* A small pill per row. It used PublicProfile's .btn-follow class, whose
+   styles are scoped to that page and never reached this component, so the
+   button fell back to the full-size default button (user report: "viel
+   zu fett"). */
+.follow-list-dialog-toggle {
+    flex-shrink: 0;
+    min-height: 2rem;
+    padding: 0.2rem 0.85rem;
+    border: 1px solid var(--color-primary);
+    border-radius: 999px;
+    background-color: var(--color-primary);
+    color: var(--color-bg-light);
+    font-family: inherit;
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.follow-list-dialog-toggle:hover {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.follow-list-dialog-toggle.is-following {
+    background-color: transparent;
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
+}
+
+.follow-list-dialog-toggle.is-following:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.follow-list-dialog-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.follow-list-dialog-user span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .follow-list-dialog-load-more {
     display: flex;
     justify-content: center;

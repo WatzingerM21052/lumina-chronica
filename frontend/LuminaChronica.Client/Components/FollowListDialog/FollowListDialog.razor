@@ -3,7 +3,7 @@
 @using LuminaChronica.Client.Services
 @inject II18nService I18n
 
-<Dialog IsOpen="IsOpen" Title="@Title" OnClose="() => OnClose.InvokeAsync()">
+<Dialog IsOpen="IsOpen" Size="DialogSize.Medium" Title="@Title" OnClose="() => OnClose.InvokeAsync()">
     <ChildContent>
         @if (_isLoading && _items is null)
         {
@@ -34,7 +34,7 @@
                         </a>
                         @if (item.IsFollowing is { } isFollowing)
                         {
-                            <button type="button" class="btn-follow @(isFollowing ? "is-following" : "")"
+                            <button type="button" class="follow-list-dialog-toggle @(isFollowing ? "is-following" : "")"
                                     disabled="@(_togglingUsername == item.Username)"
                                     @onclick="() => ToggleFollowAsync(item)">
                                 @(isFollowing ? I18n.T("followListDialog.following") : I18n.T("followListDialog.follow"))

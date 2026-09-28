@@ -87,6 +87,7 @@ public class LibraryPageTests : BunitContext
             """);
 
         var cut = Render<Library>();
+        cut.Find("#view-shelf").Click(); // Raster is the default now
 
         Assert.Contains("Dune", cut.Markup);
         Assert.Contains("The Hobbit", cut.Markup);
@@ -104,7 +105,7 @@ public class LibraryPageTests : BunitContext
             """);
 
         var cut = Render<Library>();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#view-raster").Click();
 
         Assert.NotEmpty(cut.FindAll(".library-raster"));
         var cards = cut.FindAll("a.book-card");
@@ -132,6 +133,7 @@ public class LibraryPageTests : BunitContext
             """.Replace("__TODAY__", today));
 
         var cut = Render<Library>();
+        cut.Find("#view-shelf").Click(); // Raster is the default now
 
         // Two distinct recency buckets must produce exactly two shelf-row
         // groups on the page, all living inside the one cabinet -- not just
@@ -176,6 +178,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
+        cut.Find("#library-filter-toggle").Click();
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Tag").Click();
         cut.FindAll(".multiselect-pill").Single(p => p.TextContent.Trim() == "Fantasy").Click();
 
@@ -225,6 +228,7 @@ public class LibraryPageTests : BunitContext
     public void Library_ClearFilters_OnlyShownWhileAFilterIsActive()
     {
         var (cut, _) = RenderLibraryCapturingRequests();
+        cut.Find("#library-filter-toggle").Click();
         Assert.Empty(cut.FindAll(".library-clear-filters"));
 
         cut.Find("input[type=checkbox]").Change(true);
@@ -248,12 +252,16 @@ public class LibraryPageTests : BunitContext
     public void Library_ViewToggle_ExposesPressedState()
     {
         var (cut, _) = RenderLibraryCapturingRequests();
-        Assert.Equal("true", cut.FindAll(".segmented-option").Single(b => b.TextContent.Trim() == "Regal").GetAttribute("aria-pressed"));
+        // Raster is the default view (user request); both buttons are
+        // icon-only, named by aria-label.
+        Assert.Equal("true", cut.Find("#view-raster").GetAttribute("aria-pressed"));
+        Assert.Equal("Raster", cut.Find("#view-raster").GetAttribute("aria-label"));
+        Assert.Equal("Regal", cut.Find("#view-shelf").GetAttribute("aria-label"));
 
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#view-shelf").Click();
 
-        Assert.Equal("true", cut.FindAll(".segmented-option").Single(b => b.TextContent.Trim() == "Raster").GetAttribute("aria-pressed"));
-        Assert.Equal("false", cut.FindAll(".segmented-option").Single(b => b.TextContent.Trim() == "Regal").GetAttribute("aria-pressed"));
+        Assert.Equal("true", cut.Find("#view-shelf").GetAttribute("aria-pressed"));
+        Assert.Equal("false", cut.Find("#view-raster").GetAttribute("aria-pressed"));
     }
 
     [Fact]
@@ -275,6 +283,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
+        cut.Find("#library-filter-toggle").Click(); // favourites live in the folded filter panel
         cut.Find("input[type=checkbox]").Change(true);
         Assert.Contains("favorite=true", capturedRequests[^1].RequestUri?.Query);
 
@@ -336,7 +345,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#view-raster").Click();
 
         Assert.Equal(20, cut.FindAll("a.book-card").Count); // default page size, Task 3 makes this configurable
         Assert.Contains("Book 1", cut.Markup);
@@ -372,7 +381,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#view-raster").Click();
 
         // All 125 must be reachable via client-side raster paging -- proves
         // LoadAllBooksAsync actually followed the second backend page instead
@@ -444,7 +453,8 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#library-filter-toggle").Click(); // favourites live in the folded filter panel
+        cut.Find("#view-raster").Click();
 
         // DefaultRasterPageSize = 20 -> ceil(45/20) = 3 pages. Move away
         // from page 1 before triggering the reload.
@@ -501,6 +511,7 @@ public class LibraryPageTests : BunitContext
 
         // Default view mode is Grid (Regal) -- no click needed.
         var cut = Render<Library>();
+        cut.Find("#view-shelf").Click(); // Raster is the default now
 
         Assert.Single(cut.FindAll(".shelf-row-group"));
         Assert.Equal(25, cut.FindAll("a.shelf-book").Count);
@@ -531,6 +542,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<CoverColorService>();
 
         var cut = Render<Library>();
+        cut.Find("#library-filter-toggle").Click(); // favourites live in the folded filter panel
         Assert.Contains("Dune", cut.Markup);
 
         // Any reload path works here; the favorites checkbox is the
@@ -564,6 +576,7 @@ public class LibraryPageTests : BunitContext
         UseApiResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":60,"page":1,"pageSize":100}}""");
 
         var cut = Render<Library>();
+        cut.Find("#view-shelf").Click(); // Raster is the default now
 
         var initialCount = cut.FindAll("a.shelf-book").Count;
         Assert.True(initialCount < 60, $"expected fewer than 60 books rendered initially, got {initialCount}");
@@ -578,6 +591,7 @@ public class LibraryPageTests : BunitContext
         UseApiResponse($$$"""{"success":true,"data":{"items":[{{{books}}}],"total":60,"page":1,"pageSize":100}}""");
 
         var cut = Render<Library>();
+        cut.Find("#view-shelf").Click(); // Raster is the default now
 
         for (var i = 0; i < 10; i++) // generous upper bound; the loop below stops early once everything is shown
         {
@@ -619,7 +633,7 @@ public class LibraryPageTests : BunitContext
         var setSizeHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setRasterPageSize", _ => true);
 
         var cut = Render<Library>();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#view-raster").Click();
         Assert.Equal(20, cut.FindAll("a.book-card").Count);
 
         var requestCountBeforeChange = capturedRequests.Count;
@@ -641,7 +655,7 @@ public class LibraryPageTests : BunitContext
             .SetResult(40);
 
         var cut = Render<Library>();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#view-raster").Click();
 
         Assert.Equal("40", cut.Find("select.library-raster-page-size").GetAttribute("value"));
     }
@@ -656,7 +670,7 @@ public class LibraryPageTests : BunitContext
             .SetResult(99); // not one of RasterPageSizeOptions -- stale/tampered value
 
         var cut = Render<Library>();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#view-raster").Click();
 
         Assert.Equal("20", cut.Find("select.library-raster-page-size").GetAttribute("value"));
     }
@@ -667,11 +681,13 @@ public class LibraryPageTests : BunitContext
         UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":100}}""");
         JSInterop.Mode = JSRuntimeMode.Loose;
 
-        var cut = Render<Library>(); // Grid is the default view mode
+        var cut = Render<Library>(); // Raster is the default view mode
+        Assert.Empty(cut.FindAll("select.library-shelf-book-zoom"));
+        cut.Find("#view-shelf").Click();
         Assert.Single(cut.FindAll("select.library-shelf-book-zoom"));
         Assert.Empty(cut.FindAll("select.library-raster-page-size"));
 
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Raster").Click();
+        cut.Find("#view-raster").Click();
         Assert.Empty(cut.FindAll("select.library-shelf-book-zoom"));
     }
 
@@ -689,6 +705,7 @@ public class LibraryPageTests : BunitContext
         var setZoomHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setShelfBookZoom", _ => true);
 
         var cut = Render<Library>();
+        cut.Find("#view-shelf").Click(); // Raster is the default now
         Assert.Contains("--shelf-book-zoom: 1", cut.Find("div.shelf-cabinet").GetAttribute("style"));
 
         cut.Find("select.library-shelf-book-zoom").Change("1.5");
@@ -709,6 +726,7 @@ public class LibraryPageTests : BunitContext
             .SetResult("1.25");
 
         var cut = Render<Library>();
+        cut.Find("#view-shelf").Click(); // Raster is the default now
 
         Assert.Equal("1.25", cut.Find("select.library-shelf-book-zoom").GetAttribute("value"));
         Assert.Contains("--shelf-book-zoom: 1.25", cut.Find("div.shelf-cabinet").GetAttribute("style"));
@@ -724,6 +742,7 @@ public class LibraryPageTests : BunitContext
             .SetResult("2"); // not one of ShelfBookZoomOptions -- stale/tampered value
 
         var cut = Render<Library>();
+        cut.Find("#view-shelf").Click(); // Raster is the default now
 
         Assert.Equal("1", cut.Find("select.library-shelf-book-zoom").GetAttribute("value"));
         Assert.Contains("--shelf-book-zoom: 1", cut.Find("div.shelf-cabinet").GetAttribute("style"));
