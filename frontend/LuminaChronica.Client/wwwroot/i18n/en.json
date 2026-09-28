@@ -346,6 +346,7 @@
   "characterDetail.editDialogTitle": "Edit character",
   "characterDetail.deleteButton": "Delete",
   "characterDetail.deleteConfirmMessage": "Really delete this character?",
+  "characterDetail.deleteRelationshipConfirmMessage": "Really delete this relationship?",
   "characterDetail.replaceImageLabel": "Replace Image",
   "characterDetail.dropzoneLabel": "Drag your image here or click to select",
   "characterDetail.nameLabel": "Name",

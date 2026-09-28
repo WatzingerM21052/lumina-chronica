@@ -1,7 +1,24 @@
+.lore-header {
+    margin: var(--space-2) 0 var(--space-3);
+}
+
+/* The entry reads like a page from a codex: a card with a comfortable
+   line length, set apart from the app chrome around it. */
 .lore-content {
     font-family: var(--font-family-reader);
     line-height: 1.7;
     max-width: 70ch;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 40rem) {
+    .lore-content {
+        padding: var(--space-2);
+    }
 }
 
 /* MarkupString-injected HTML bypasses Blazor's scoped-CSS attribute (it's
@@ -12,6 +29,33 @@
 .lore-content ::deep h3 {
     font-family: var(--font-family-display);
     margin-top: var(--space-3);
+}
+
+/* A "# Heading" inside the entry is a section of it, not a second page
+   title: one step smaller than the page's h1 and without its double rule. */
+.lore-content ::deep h1 {
+    font-size: var(--font-size-h2);
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.lore-content ::deep h2 {
+    font-size: var(--font-size-h3);
+}
+
+.lore-content ::deep h3 {
+    font-size: var(--font-size-body);
+}
+
+/* No extra gap at the card's top/bottom edge from the first heading or
+   the last paragraph. (::deep can't be followed by a child combinator, so
+   these match by element + position.) */
+.lore-content ::deep :is(h1, h2, h3, p):first-child {
+    margin-top: 0;
+}
+
+.lore-content ::deep :is(p, ul, ol, blockquote):last-child {
+    margin-bottom: 0;
 }
 
 .lore-content ::deep p {

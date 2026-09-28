@@ -354,6 +354,7 @@ public class FakeI18nService : II18nService
         ["characterDetail.editDialogTitle"] = "Charakter bearbeiten",
         ["characterDetail.deleteButton"] = "Löschen",
         ["characterDetail.deleteConfirmMessage"] = "Charakter wirklich löschen?",
+        ["characterDetail.deleteRelationshipConfirmMessage"] = "Beziehung wirklich löschen?",
         ["characterDetail.replaceImageLabel"] = "Bild ersetzen",
         ["characterDetail.dropzoneLabel"] = "Bild hierher ziehen oder klicken zum Auswählen",
         ["characterDetail.nameLabel"] = "Name",

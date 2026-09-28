@@ -23,15 +23,19 @@ else if (_entry is null)
 }
 else
 {
-    <h1>@_entry.Title</h1>
+    @* Title and actions first, like the other detail pages -- a long entry
+       would otherwise push "Bearbeiten" far below the fold. *@
+    <header class="lore-header">
+        <h1>@_entry.Title</h1>
+        <div class="form-actions">
+            <button type="button" id="lore-edit-button" class="btn" @onclick="StartEditing">@I18n.T("loreEntryDetail.editButton")</button>
+            <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("loreEntryDetail.deleteButton")</button>
+        </div>
+    </header>
     @if (!string.IsNullOrWhiteSpace(_entry.Content))
     {
-        <div class="lore-content">@((MarkupString)Markdown.ToHtml(_entry.Content, MarkdownPipeline))</div>
+        <article class="lore-content">@((MarkupString)Markdown.ToHtml(_entry.Content, MarkdownPipeline))</article>
     }
-    <div class="form-actions">
-        <button type="button" id="lore-edit-button" class="btn" @onclick="StartEditing">@I18n.T("loreEntryDetail.editButton")</button>
-        <button type="button" class="btn" @onclick="() => _confirmingDelete = true">@I18n.T("loreEntryDetail.deleteButton")</button>
-    </div>
     <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("loreEntryDetail.deleteConfirmMessage")"
                    OnConfirm="DeleteEntryAsync" OnCancel="() => _confirmingDelete = false" />
 

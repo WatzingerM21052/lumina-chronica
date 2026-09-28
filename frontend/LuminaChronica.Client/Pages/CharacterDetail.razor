@@ -178,6 +178,10 @@ else
                 {
                     <p class="form-error">@_editRelationshipErrorMessage</p>
                 }
+                @if (_relationships?.FirstOrDefault(r => r.Id == _editingRelationshipId) is { } editing)
+                {
+                    <p class="text-muted" id="relationship-edit-pair">@editing.CharacterAName → @editing.CharacterBName</p>
+                }
                 <div class="form-group">
                     <label for="relationship-edit-type">@I18n.T("characterDetail.relationshipLabel")</label>
                     <InputText id="relationship-edit-type" @bind-Value="_editRelationshipForm.RelationshipType" />
@@ -208,21 +212,29 @@ else
     }
     else
     {
-        @foreach (var relationship in _relationships)
-        {
-            <div class="book-form-card">
-                <p><strong>@relationship.CharacterAName</strong> — @relationship.RelationshipType — <strong>@relationship.CharacterBName</strong></p>
-                @if (!string.IsNullOrWhiteSpace(relationship.Description))
-                {
-                    <p>@relationship.Description</p>
-                }
-                <div class="form-actions">
-                    <button type="button" class="btn" @onclick="() => StartEditingRelationship(relationship)">@I18n.T("characterDetail.editButton")</button>
-                    <button type="button" class="btn" @onclick="() => DeleteRelationshipAsync(relationship.Id)">@I18n.T("characterDetail.deleteButton")</button>
-                </div>
-            </div>
-        }
+        @* A plain list, not the centered upload-form card: rows span the
+           content width with the text left and the actions right. *@
+        <ul class="relationship-list">
+            @foreach (var relationship in _relationships)
+            {
+                <li class="relationship-item">
+                    <div class="relationship-text">
+                        <p class="relationship-pair"><strong>@relationship.CharacterAName</strong> <span class="relationship-type">@relationship.RelationshipType</span> <strong>@relationship.CharacterBName</strong></p>
+                        @if (!string.IsNullOrWhiteSpace(relationship.Description))
+                        {
+                            <p class="text-secondary">@relationship.Description</p>
+                        }
+                    </div>
+                    <div class="relationship-actions">
+                        <button type="button" class="btn" @onclick="() => StartEditingRelationship(relationship)">@I18n.T("characterDetail.editButton")</button>
+                        <button type="button" class="btn" @onclick="() => _confirmingRelationshipDeleteId = relationship.Id">@I18n.T("characterDetail.deleteButton")</button>
+                    </div>
+                </li>
+            }
+        </ul>
     }
+    <ConfirmDialog IsOpen="_confirmingRelationshipDeleteId is not null" Message="@I18n.T("characterDetail.deleteRelationshipConfirmMessage")"
+                   OnConfirm="DeleteRelationshipAsync" OnCancel="() => _confirmingRelationshipDeleteId = null" />
 
     <ConfirmDialog IsOpen="_guard.IsConfirmingDiscard" Message="@I18n.T("dialog.discardChangesMessage")"
                    ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
@@ -248,6 +260,7 @@ else
     private EditFormModel _editFormSnapshot = new();
     private readonly DialogGuard _guard = new();
     private bool _confirmingDelete;
+    private int? _confirmingRelationshipDeleteId;
 
     private List<CharacterRelationship>? _relationships;
     private string? _relationshipsErrorMessage;
@@ -480,8 +493,10 @@ else
         }
     }
 
-    private async Task DeleteRelationshipAsync(int relationshipId)
+    private async Task DeleteRelationshipAsync()
     {
+        if (_confirmingRelationshipDeleteId is not { } relationshipId) return;
+        _confirmingRelationshipDeleteId = null;
         var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/relationships/{relationshipId}");
         if (succeeded)
         {
