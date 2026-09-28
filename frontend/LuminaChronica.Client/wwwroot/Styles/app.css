@@ -3846,21 +3846,98 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     font-size: var(--font-size-small);
 }
 
-/* Notification preferences (v3.3 Phase 3, issue #326) -- Settings.razor's
-   per-type enable/disable toggles. */
+/* Preference rows (settings; plan A7): label and description on the
+   left, a switch on the right, a hairline between rows. The whole row is
+   the <label>, so it's one big tap target. */
 .notification-preferences {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
-    margin: var(--space-2) 0;
 }
 
-.notification-preference-row,
-.library-preference-row {
+.preference-row {
     display: flex;
-    align-items: baseline;
-    gap: var(--space-1);
-    padding: var(--space-1) 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
     cursor: pointer;
+}
+
+.preference-row + .preference-row {
+    border-top: 1px solid var(--color-border);
+}
+
+.notification-preferences .preference-row:first-child {
+    padding-top: 0;
+}
+
+.notification-preferences .preference-row:last-child {
+    padding-bottom: 0;
+}
+
+.preference-row-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.preference-row-text .text-muted {
+    font-size: var(--font-size-small);
+}
+
+/* Switch: a styled checkbox (role="switch"), so forms, bUnit tests and
+   assistive tech still see a plain checkbox. */
+input[type="checkbox"].switch {
+    -webkit-appearance: none;
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 1.5rem;
+    margin: 0;
+    /* text-muted, as the plain checkbox above: --color-border is ~1.3:1 on
+       the card, an "off" switch would all but vanish. */
+    border: 1.5px solid var(--color-text-muted);
+    border-radius: 999px;
+    background-color: var(--color-bg-card);
+    cursor: pointer;
+    transition: background-color var(--motion-micro) var(--ease-standard), border-color var(--motion-micro) var(--ease-standard);
+}
+
+input[type="checkbox"].switch::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 50%;
+    background-color: var(--color-text-muted);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transform: translateY(-50%);
+    transition: transform var(--motion-micro) var(--ease-standard), background-color var(--motion-micro) var(--ease-standard);
+}
+
+input[type="checkbox"].switch:checked {
+    border-color: var(--color-primary);
+    background-color: var(--color-primary);
+}
+
+input[type="checkbox"].switch:checked::before {
+    background-color: var(--color-bg-light);
+    transform: translate(1.25rem, -50%);
+}
+
+input[type="checkbox"].switch:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    input[type="checkbox"].switch,
+    input[type="checkbox"].switch::before {
+        transition: none;
+    }
 }
 

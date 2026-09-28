@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Settings: theme, language and shelf cover text share one "Appearance" card; the themes are preview cards showing each theme's real colours (System shows light and dark side by side); every on/off preference is a switch with its description underneath; in-app notifications and what your public activity log shows are separate "Notifications" and "Privacy" cards.
 - One search field everywhere (library, linked books in a project, sharing a book, Discover, world bible): magnifier inside the field and a ✕ to clear it; "no books found" in the library now has a "reset filters" button right under it.
 - On phones every form dialog (edit, create, avatar, password reset, follower lists) opens as a sheet from the bottom edge, full width and within thumb reach; only short confirmations stay a centred card.
 - Book page: only "Read" and "Shelves" stay visible; save offline, edit and delete are in a "⋯" menu (new `OverflowMenu` component, closes on Escape or a click outside).

@@ -58,6 +58,136 @@
     gap: var(--space-1);
 }
 
+.settings-subheading {
+    margin: var(--space-3) 0 var(--space-1);
+    font-family: var(--font-family-body, inherit);
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+}
+
+.settings-card h2 + .settings-subheading {
+    margin-top: 0;
+}
+
+/* Theme previews (plan A7): each card is a miniature page painted by its
+   own theme's tokens (data-theme on the preview), the label below. */
+.theme-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+    gap: var(--space-2);
+}
+
+.theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: none;
+    color: var(--color-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--motion-micro) var(--ease-standard), box-shadow var(--motion-micro) var(--ease-standard);
+}
+
+.theme-card:hover {
+    border-color: var(--color-text-muted);
+}
+
+.theme-card.is-active {
+    border-color: var(--color-accent-text);
+    box-shadow: 0 0 0 1px var(--color-accent-text);
+}
+
+.theme-card-label {
+    padding: 0 0.15rem;
+    font-size: var(--font-size-small);
+    font-weight: 600;
+}
+
+.theme-card.is-active .theme-card-label::after {
+    content: " ✓";
+    color: var(--color-accent-text);
+}
+
+.theme-card-preview,
+.theme-card-half {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 8px;
+    background-color: var(--color-bg-paper);
+}
+
+.theme-card-preview {
+    height: 4.75rem;
+    overflow: hidden;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--color-text-muted) 35%, transparent);
+}
+
+.theme-card-preview--split {
+    flex-direction: row;
+    gap: 0;
+    padding: 0;
+}
+
+.theme-card-half {
+    flex: 1;
+    min-width: 0;
+}
+
+.tp-bar {
+    height: 12px;
+    flex-shrink: 0;
+    background-color: var(--color-bg-dark);
+    border-bottom: 1px solid var(--color-gold-accent);
+}
+
+.tp-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    margin: 0 8px;
+    padding: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background-color: var(--color-bg-card);
+}
+
+.tp-line {
+    height: 4px;
+    width: 80%;
+    border-radius: 2px;
+    background-color: var(--color-text-primary);
+    opacity: 0.8;
+}
+
+.tp-line--short {
+    width: 50%;
+    background-color: var(--color-text-secondary);
+}
+
+.tp-button {
+    width: 34%;
+    height: 7px;
+    margin-top: auto;
+    border-radius: 2px;
+    background-color: var(--color-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .theme-card {
+        transition: none;
+    }
+}
+
 @media (max-width: 599.98px) {
     .settings-card {
         padding: var(--space-2);

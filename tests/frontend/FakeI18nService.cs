@@ -147,6 +147,8 @@ public class FakeI18nService : II18nService
 
         ["settings.title"] = "Einstellungen",
         ["settings.themeTitle"] = "Theme",
+        ["settings.appearanceTitle"] = "Darstellung",
+        ["settings.privacyTitle"] = "Privatsphäre",
         ["settings.languageTitle"] = "Sprache",
         ["settings.languageGerman"] = "Deutsch",
         ["settings.languageEnglish"] = "English",

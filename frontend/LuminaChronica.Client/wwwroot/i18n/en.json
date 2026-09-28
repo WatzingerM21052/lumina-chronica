@@ -133,6 +133,8 @@
 
   "settings.title": "Settings",
   "settings.themeTitle": "Theme",
+  "settings.appearanceTitle": "Appearance",
+  "settings.privacyTitle": "Privacy",
   "settings.languageTitle": "Language",
   "settings.languageGerman": "Deutsch",
   "settings.languageEnglish": "English",
