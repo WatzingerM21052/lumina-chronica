@@ -1456,6 +1456,26 @@ First of the three additional Profile functions the user asked about while revie
 
 Backend: 360/360 tests passing (354 existing + 6 new, all in `users.test.ts`: upload requires auth, uploads and serves via the public route, replaces and cleans up the old R2 object, rejects a disallowed file type, 404s for a user/username with no avatar set). Frontend: 400/400 tests passing (396 existing + 4 new: placeholder-vs-image rendering, immediate upload on file selection, disallowed-file-type error handling).
 
+## Profile functions, i18n, custom domain (complete, 2026-09-25 – 09-27)
+
+*(Added 2026-09-28 in a documentation catch-up: these PRs shipped without their own Roadmap entry. Details live in the PR descriptions and the linked specs.)*
+
+**Account deletion + restore, OAuth account linking (PR #468)**: the remaining two of the three profile functions. Deleting the account is a soft delete (`deleted_at`, username/email moved aside so they are free again, see `Database.md` `0023`); registering again with the same email offers to restore the account with a new password (`POST /api/auth/restore`), and an OAuth login with a matching email restores it automatically. Profile gains a "Verknüpfte Konten" section to link and unlink Google/GitHub (`0024`, `oauth_states.linking_user_id`). Found in the final review: a deleted account with a linked OAuth identity could still sign in through it; `deleteUser` now removes the identities. Spec/plan: `docs/superpowers/specs|plans/2026-09-25-account-deletion-oauth-linking*.md`. Follow-ups in #477: atomic `deleteUser` writes (`db.batch()`, fixed a false 500 after a successful delete), double-submit guard on the delete button, `hasPassword` on the profile so OAuth-only accounts get the right delete/password UI.
+
+**Avatar upload dialog (PR #470)** and **follower/following lists (PR #471)**: "Profilbild ändern" opens a dialog with preview and an explicit "Hochladen" instead of uploading on file selection; the follower/following counts on a public profile open a paginated list (`GET /api/users/:username/followers|following`, public like the counts) with a follow toggle per row.
+
+**Forgot password via emailed link (PR #474)**: first version of the reset flow (Resend as email provider, SHA-256-hashed single-use tokens, `0025`). Superseded in large parts by the modernization below (code + link, dialog), and moved from Settings to Profile in #476.
+
+**German/English UI (PRs #472, #476, #477)**: `I18nService` with JSON dictionaries (`wwwroot/i18n/de.json`/`en.json`, German as fallback), language picker in Settings; Phase 1 migrated the shell, Login and Register, #476 Profile/Settings (plus `[Authorize]` on Settings and a nav bar that hides its links while logged out), #477 Batches 2–5 (all remaining pages). Emails are localized from the user's language too. See `Architecture.md` "Internationalization". Spec: `docs/superpowers/specs/2026-09-26-i18n-phase-1-design.md`.
+
+**Custom domain `luminachronica.com` (PRs #473, #475)**: GitHub Pages serves the app from the custom domain; the github.io project URL redirects there. `<base href>` is chosen at runtime in `index.html` instead of a build-time `sed`, so one build works from both origins. #475 fixed the follow-up bug that broke every API call (and showed up as a failed OAuth login): the CORS allow-list only knew the github.io origin; `FRONTEND_URL` points at the custom domain now.
+
+## CI and deterministic tests (complete, 2026-09-27)
+
+**CI (PR #489, review M-8)**: until then nothing ran the tests. `ci.yml` runs bUnit, the backend typecheck and Vitest on every PR and push to `main`; both deploy workflows run the same checks first. Both checks are required status checks in the branch protection for `main`, so a red PR cannot be merged.
+
+**Deterministic frontend tests (PR #494)**: every debounce/delay/timer goes through an injected `TimeProvider`; tests drive a `FakeTimeProvider` instead of racing real timers, which had made CI fail at random. See `CHANGELOG.md` for the affected components.
+
 ## Password-reset modernization + app-wide dialog convention (complete)
 
 Design doc: `docs/superpowers/specs/2026-09-27-password-reset-modernization-design.md`. Multi-phase effort: hybrid backend reset flow (code + link), a shared `Dialog` primitive, the actual reset popup built on it, then an app-wide dialog rollout and aesthetic pass.
