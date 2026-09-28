@@ -1,10 +1,15 @@
-/* Breakpoints (UI/UX plan B1, see tokens.css): compact < 600px gets this
-   bar; medium/expanded keep the top NavMenu. */
+/* Breakpoints (UI/UX plan B1, see the top of app.css): compact and medium
+   (< 840px) get this bar; expanded keeps the top NavMenu. On a tablet in
+   portrait (600-839px) the bar floats centred and stays phone-sized
+   instead of stretching -- the iPadOS floating tab bar pattern. It
+   replaces the plan's navigation rail (B3): a rail would take ~80px of
+   width from every page at exactly the sizes where width is scarce, and a
+   second navigation pattern to learn. */
 .bottom-nav {
     display: none;
 }
 
-@media (max-width: 599.98px) {
+@media (max-width: 839.98px) {
     /* Floating: inset from the edges and lifted above the home indicator
        (env(safe-area-inset-*) needs viewport-fit=cover, index.html). */
     .bottom-nav {
@@ -26,6 +31,16 @@
         .bottom-nav {
             backdrop-filter: blur(10px);
         }
+    }
+}
+
+@media (min-width: 600px) and (max-width: 839.98px) {
+    .bottom-nav {
+        left: 50%;
+        right: auto;
+        width: min(30rem, calc(100% - 2 * var(--space-3)));
+        transform: translateX(-50%);
+        bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
     }
 }
 

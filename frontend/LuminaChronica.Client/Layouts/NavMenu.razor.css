@@ -20,8 +20,8 @@
     color: var(--color-text-on-dark);
 }
 
-/* Compact (< 600px): BottomNav takes over (UI/UX plan B2). */
-@media (max-width: 599.98px) {
+/* Compact + medium (< 840px): BottomNav takes over (UI/UX plan B2/B3). */
+@media (max-width: 839.98px) {
     .nav-menu {
         display: none;
     }

@@ -22,171 +22,186 @@
 }
 else
 {
-    <p><a href="@($"u/{_profile.Username}")">@I18n.T("profile.viewPublicProfile")</a></p>
-
-    <div class="profile-avatar-row">
-        @if (_profile.AvatarUrl is { } avatarUrl)
-        {
-            <img src="@avatarUrl" alt="" class="profile-avatar-preview" />
-        }
-        else
-        {
-            <div class="profile-avatar-preview profile-avatar-placeholder" aria-hidden="true">
-                <Icon Name="person" Class="profile-avatar-placeholder-icon" />
+    @* One centred column of equal-width cards under the centred seal
+       (design audit F7): before, the header was centred, the forms hugged
+       the left edge at 32rem and the linked-account rows spanned the full
+       page, so nothing shared an axis. *@
+    <div class="profile-layout">
+        <section class="profile-card profile-identity">
+            <div class="profile-avatar-row">
+                @if (_profile.AvatarUrl is { } avatarUrl)
+                {
+                    <img src="@avatarUrl" alt="" class="profile-avatar-preview" />
+                }
+                else
+                {
+                    <div class="profile-avatar-preview profile-avatar-placeholder" aria-hidden="true">
+                        <Icon Name="person" Class="profile-avatar-placeholder-icon" />
+                    </div>
+                }
+                <div class="profile-identity-text">
+                    <strong>@_profile.Username</strong>
+                    <a href="@($"u/{_profile.Username}")">@I18n.T("profile.viewPublicProfile")</a>
+                </div>
             </div>
-        }
-        <button type="button" id="changeAvatarButton" class="btn" @onclick="() => _isAvatarDialogOpen = true">@I18n.T("profile.changeAvatarButton")</button>
-    </div>
-
-    <AvatarUploadDialog IsOpen="_isAvatarDialogOpen" OnUploaded="OnAvatarUploaded" OnClose="() => _isAvatarDialogOpen = false" />
-
-    <h2>@I18n.T("profile.accountTitle")</h2>
-    <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form profile-form">
-        @if (_profileErrorMessage is not null)
-        {
-            <p class="form-error">@_profileErrorMessage</p>
-        }
-
-        <div class="form-group">
-            <label for="username">@I18n.T("profile.usernameLabel")</label>
-            <InputText id="username" @bind-Value="_profileForm.Username" />
-        </div>
-
-        <div class="form-group">
-            <label for="email">@I18n.T("profile.emailLabel")</label>
-            @* Plain input bound on every keystroke (not InputText, which only
-               updates on blur) so the password field below appears as soon
-               as the address actually differs. *@
-            <input id="email" type="email" @bind="_profileForm.Email" @bind:event="oninput" />
-        </div>
-
-        @if (RequiresPasswordForEmailChange)
-        {
-            @* Review M-6: the backend refuses an email change without the
-               current password -- the email is the account's recovery channel. *@
-            <div class="form-group">
-                <label for="emailChangePassword">@I18n.T("profile.emailChangePasswordLabel")</label>
-                <input id="emailChangePassword" type="password" autocomplete="current-password" @bind="_profileForm.CurrentPassword" @bind:event="oninput" />
-                <p class="text-muted">@I18n.T("profile.emailChangeHint")</p>
+            <div class="form-actions">
+                <button type="button" id="changeAvatarButton" class="btn" @onclick="() => _isAvatarDialogOpen = true">@I18n.T("profile.changeAvatarButton")</button>
+                <button type="button" class="btn" @onclick="LogoutAsync">@I18n.T("profile.logoutButton")</button>
             </div>
-        }
+        </section>
 
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary" disabled="@(_saveProfileState != ButtonBusyState.Idle)" style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("profile.saveButton"), null, I18n.T("profile.saveSuccess")))ch">
-                <AsyncButtonContent State="_saveProfileState" IdleText="@I18n.T("profile.saveButton")" SuccessText="@I18n.T("profile.saveSuccess")" />
-            </button>
-        </div>
-    </EditForm>
+        <AvatarUploadDialog IsOpen="_isAvatarDialogOpen" OnUploaded="OnAvatarUploaded" OnClose="() => _isAvatarDialogOpen = false" />
 
-    <h2>@I18n.T("profile.changePasswordTitle")</h2>
-    <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form profile-form">
-        @if (_passwordErrorMessage is not null)
-        {
-            <p class="form-error">@_passwordErrorMessage</p>
-        }
-        @if (_passwordSuccessMessage is not null)
-        {
-            <p class="form-success">@_passwordSuccessMessage</p>
-        }
+        <section class="profile-card">
+            <h2>@I18n.T("profile.accountTitle")</h2>
+            <EditForm Model="_profileForm" OnValidSubmit="SaveProfileAsync" class="auth-form profile-form">
+                @if (_profileErrorMessage is not null)
+                {
+                    <p class="form-error">@_profileErrorMessage</p>
+                }
 
-        <div class="form-group">
-            <label for="currentPassword">@I18n.T("profile.currentPasswordLabel")</label>
-            <InputText id="currentPassword" type="password" @bind-Value="_passwordForm.CurrentPassword" />
-        </div>
+                <div class="form-group">
+                    <label for="username">@I18n.T("profile.usernameLabel")</label>
+                    <InputText id="username" @bind-Value="_profileForm.Username" />
+                </div>
 
-        <div class="form-group">
-            <label for="newPassword">@I18n.T("profile.newPasswordLabel")</label>
-            <InputText id="newPassword" type="password" @bind-Value="_passwordForm.NewPassword" />
-        </div>
+                <div class="form-group">
+                    <label for="email">@I18n.T("profile.emailLabel")</label>
+                    @* Plain input bound on every keystroke (not InputText, which only
+                       updates on blur) so the password field below appears as soon
+                       as the address actually differs. *@
+                    <input id="email" type="email" @bind="_profileForm.Email" @bind:event="oninput" />
+                </div>
 
-        <div class="form-group">
-            <label for="confirmNewPassword">@I18n.T("profile.confirmNewPasswordLabel")</label>
-            <InputText id="confirmNewPassword" type="password" @bind-Value="_passwordForm.ConfirmNewPassword" />
-        </div>
+                @if (RequiresPasswordForEmailChange)
+                {
+                    @* Review M-6: the backend refuses an email change without the
+                       current password -- the email is the account's recovery channel. *@
+                    <div class="form-group">
+                        <label for="emailChangePassword">@I18n.T("profile.emailChangePasswordLabel")</label>
+                        <input id="emailChangePassword" type="password" autocomplete="current-password" @bind="_profileForm.CurrentPassword" @bind:event="oninput" />
+                        <p class="text-muted">@I18n.T("profile.emailChangeHint")</p>
+                    </div>
+                }
 
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary" disabled="@_isSavingPassword">@I18n.T("profile.changePasswordButton")</button>
-        </div>
-    </EditForm>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" disabled="@(_saveProfileState != ButtonBusyState.Idle)" style="min-width: @(AsyncButtonContent.MinWidthCh(I18n.T("profile.saveButton"), null, I18n.T("profile.saveSuccess")))ch">
+                        <AsyncButtonContent State="_saveProfileState" IdleText="@I18n.T("profile.saveButton")" SuccessText="@I18n.T("profile.saveSuccess")" />
+                    </button>
+                </div>
+            </EditForm>
+        </section>
 
-    @if (_hasRealPassword)
-    {
-        <div class="profile-password-reset">
-            <p class="text-muted">@I18n.T("profile.passwordResetHint")</p>
-            <button type="button" class="btn" disabled="@(_profile is null)" @onclick="() => _showPasswordResetDialog = true">
-                @I18n.T("profile.passwordResetButton")
-            </button>
-            <PasswordResetDialog IsOpen="_showPasswordResetDialog" InitialIdentifier="@_profile?.Email" OnClose="() => _showPasswordResetDialog = false" />
-        </div>
-    }
+        <section class="profile-card">
+            <h2>@I18n.T("profile.changePasswordTitle")</h2>
+            <EditForm Model="_passwordForm" OnValidSubmit="ChangePasswordAsync" class="auth-form profile-form">
+                @if (_passwordErrorMessage is not null)
+                {
+                    <p class="form-error">@_passwordErrorMessage</p>
+                }
+                @if (_passwordSuccessMessage is not null)
+                {
+                    <p class="form-success">@_passwordSuccessMessage</p>
+                }
 
-    <h2>@I18n.T("profile.linkedAccountsTitle")</h2>
-    @if (_linkBanner is not null)
-    {
-        <p class="@(_linkBannerIsError ? "form-error" : "form-success")">@_linkBanner</p>
-    }
-    @if (_linkedProviders is null)
-    {
-        <p class="text-muted">@I18n.T("profile.loadingLinkedAccounts")</p>
-    }
-    else
-    {
-        <div class="linked-accounts-list">
-            @foreach (var (providerKey, label) in OAuthProviders)
+                <div class="form-group">
+                    <label for="currentPassword">@I18n.T("profile.currentPasswordLabel")</label>
+                    <InputText id="currentPassword" type="password" @bind-Value="_passwordForm.CurrentPassword" />
+                </div>
+
+                <div class="form-group">
+                    <label for="newPassword">@I18n.T("profile.newPasswordLabel")</label>
+                    <InputText id="newPassword" type="password" @bind-Value="_passwordForm.NewPassword" />
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmNewPassword">@I18n.T("profile.confirmNewPasswordLabel")</label>
+                    <InputText id="confirmNewPassword" type="password" @bind-Value="_passwordForm.ConfirmNewPassword" />
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" disabled="@_isSavingPassword">@I18n.T("profile.changePasswordButton")</button>
+                </div>
+            </EditForm>
+
+            @if (_hasRealPassword)
             {
-                var linked = _linkedProviders.FirstOrDefault(p => p.Provider == providerKey);
-                <div class="linked-account-row">
-                    <span>@label@(linked is not null ? $" — {linked.Email}" : "")</span>
-                    @if (linked is not null)
+                <div class="profile-password-reset">
+                    <p class="text-muted">@I18n.T("profile.passwordResetHint")</p>
+                    <button type="button" class="btn" disabled="@(_profile is null)" @onclick="() => _showPasswordResetDialog = true">
+                        @I18n.T("profile.passwordResetButton")
+                    </button>
+                    <PasswordResetDialog IsOpen="_showPasswordResetDialog" InitialIdentifier="@_profile?.Email" OnClose="() => _showPasswordResetDialog = false" />
+                </div>
+            }
+        </section>
+
+        <section class="profile-card">
+            <h2>@I18n.T("profile.linkedAccountsTitle")</h2>
+            @if (_linkBanner is not null)
+            {
+                <p class="@(_linkBannerIsError ? "form-error" : "form-success")">@_linkBanner</p>
+            }
+            @if (_linkedProviders is null)
+            {
+                <p class="text-muted">@I18n.T("profile.loadingLinkedAccounts")</p>
+            }
+            else
+            {
+                <div class="linked-accounts-list">
+                    @foreach (var (providerKey, label) in OAuthProviders)
                     {
-                        <button type="button" class="btn" @onclick="() => UnlinkProviderAsync(providerKey)">@I18n.T("profile.unlinkButton")</button>
-                    }
-                    else
-                    {
-                        <button type="button" class="btn" @onclick="() => LinkProviderAsync(providerKey)">@I18n.T("profile.linkButton")</button>
+                        var linked = _linkedProviders.FirstOrDefault(p => p.Provider == providerKey);
+                        <div class="linked-account-row">
+                            <span>@label@(linked is not null ? $" — {linked.Email}" : "")</span>
+                            @if (linked is not null)
+                            {
+                                <button type="button" class="btn" @onclick="() => UnlinkProviderAsync(providerKey)">@I18n.T("profile.unlinkButton")</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn" @onclick="() => LinkProviderAsync(providerKey)">@I18n.T("profile.linkButton")</button>
+                            }
+                        </div>
                     }
                 </div>
             }
-        </div>
-    }
+        </section>
 
-    <div class="form-actions">
-        <button type="button" class="btn" @onclick="LogoutAsync">@I18n.T("profile.logoutButton")</button>
-    </div>
+        <section class="profile-card profile-danger-zone">
+            <h2>@I18n.T("profile.deleteAccountTitle")</h2>
+            <p class="text-muted">@I18n.T("profile.deleteAccountWarning")</p>
 
-    <div class="profile-danger-zone">
-        <h2>@I18n.T("profile.deleteAccountTitle")</h2>
-        <p class="text-muted">@I18n.T("profile.deleteAccountWarning")</p>
+            @if (_deleteAccountErrorMessage is not null)
+            {
+                <p class="form-error">@_deleteAccountErrorMessage</p>
+            }
 
-        @if (_deleteAccountErrorMessage is not null)
-        {
-            <p class="form-error">@_deleteAccountErrorMessage</p>
-        }
+            @if (_hasRealPassword)
+            {
+                <div class="form-group">
+                    <label for="deleteAccountPassword">@I18n.T("profile.currentPasswordLabel")</label>
+                    <input id="deleteAccountPassword" type="password" @bind="_deleteAccountPassword" @bind:event="oninput" />
+                </div>
+            }
 
-        @if (_hasRealPassword)
-        {
-            <div class="form-group">
-                <label for="deleteAccountPassword">@I18n.T("profile.currentPasswordLabel")</label>
-                <input id="deleteAccountPassword" type="password" @bind="_deleteAccountPassword" @bind:event="oninput" />
-            </div>
-        }
-
-        @if (!_isConfirmingDelete)
-        {
-            <div class="form-actions">
-                <button type="button" id="confirmDeleteAccount" class="btn btn-danger" @onclick="() => _isConfirmingDelete = true">@I18n.T("profile.deleteAccountButton")</button>
-            </div>
-        }
-        else
-        {
-            <p class="form-error">@I18n.T("profile.deleteConfirmWarning")</p>
-            <div class="form-actions">
-                <button type="button" class="btn" @onclick="() => _isConfirmingDelete = false">@I18n.T("profile.deleteCancelButton")</button>
-                <button type="button" id="deleteAccountButton" class="btn btn-danger" disabled="@(_isDeletingAccount || (_hasRealPassword && string.IsNullOrEmpty(_deleteAccountPassword)))" @onclick="DeleteAccountAsync">
-                    @I18n.T("profile.deleteConfirmButton")
-                </button>
-            </div>
-        }
+            @if (!_isConfirmingDelete)
+            {
+                <div class="form-actions">
+                    <button type="button" id="confirmDeleteAccount" class="btn btn-danger" @onclick="() => _isConfirmingDelete = true">@I18n.T("profile.deleteAccountButton")</button>
+                </div>
+            }
+            else
+            {
+                <p class="form-error">@I18n.T("profile.deleteConfirmWarning")</p>
+                <div class="form-actions">
+                    <button type="button" class="btn" @onclick="() => _isConfirmingDelete = false">@I18n.T("profile.deleteCancelButton")</button>
+                    <button type="button" id="deleteAccountButton" class="btn btn-danger" disabled="@(_isDeletingAccount || (_hasRealPassword && string.IsNullOrEmpty(_deleteAccountPassword)))" @onclick="DeleteAccountAsync">
+                        @I18n.T("profile.deleteConfirmButton")
+                    </button>
+                </div>
+            }
+        </section>
     </div>
 }
 

@@ -11,7 +11,7 @@
 
 <PageTitle>@(_entry?.Title ?? I18n.T("loreEntryDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 
-<a href="@($"projects/{ProjectId}")">@I18n.T("loreEntryDetail.backLink")</a>
+<a class="back-link" href="@($"projects/{ProjectId}")">@I18n.T("loreEntryDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {

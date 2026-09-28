@@ -64,7 +64,7 @@ Quellen: [Material 3 Navigation bar](https://m3.material.io/components/navigatio
 |---|---|---|
 | B1 | Grundlagen: Breakpoint-Tokens (compact <600 / medium 600–839 / expanded ≥840), `viewport-fit=cover`, Safe-Area, `dvh`; kein horizontales Scrollen mehr auf irgendeiner Seite | erledigt 2026-09-28 (Breakpoints als Konvention oben in `app.css`, da Custom Properties in `@media` nicht gehen; alte 40rem-Regeln wandern beim Anfassen um) |
 | B2 | **Schwebende Bottom-Navigationsleiste** unter 600px, oben keine Navbar; Home, Bibliothek, Projekte, Entdecken, Mehr (Statistik, Offline, Einstellungen, Profil, Benachrichtigungen, Impressum); im Reader ausgeblendet; optional Minimieren beim Scrollen | erledigt 2026-09-28 (`Layouts/BottomNav`; „Mehr“ als neues `DialogSize.BottomSheet`; die Glocke bleibt oben, weil ihr Zähler dort ohne Öffnen sichtbar ist; Minimieren beim Scrollen weggelassen) |
-| B3 | Navigation Rail für 600–839px (Tablet hochkant) | offen |
+| B3 | Navigation Rail für 600–839px (Tablet hochkant) | erledigt 2026-09-28, **anders gelöst**: statt einer Rail nutzt 600–839px dieselbe schwebende Bottom-Leiste, zentriert und handybreit (iPadOS-Muster) — eine Rail hätte genau dort ~80px Breite gekostet und ein zweites Navigationsmuster eingeführt. 840–1199px: Logo-Schriftzug und „Profil“-Text weg (nur Icons), damit die Navbar einzeilig bleibt |
 | B4 | Seiten-Durchgang bei 390px/412px, jede Seite einzeln (inkl. Tab-Leisten, Werkzeugleisten, Tabellen) | offen |
 | B5 | Dialoge auf dem Handy als Bottom-Sheet | offen |
 
@@ -117,6 +117,36 @@ Themes; die Sprachwahl nennt jede Sprache in sich selbst („Deutsch“, „Engl
 
 Reihenfolge-Vorschlag: B1/B2 (Handy) zuerst, weil jede Seite betroffen ist; dann F5, F6, F8, F2 (klein, sichtbar);
 dann F1 + F4 zusammen (Seitenköpfe und Raster teilen sich Layout-Regeln); F3 und F7 gemeinsam mit A8.
+
+**Stand 2026-09-28 abends (PR „layout polish“):** B1–B3 erledigt; F2, F5, F6, F8 erledigt; F7 zur Hälfte (Layout: eine
+zentrierte Kartenspalte, „Abmelden“ in der Identitätskarte, Gefahrenzone als eigene Karte — die Aufteilung in ein
+Konto-Menü bleibt A8). Dazu aus einem zweiten Durchgang mit Messskript (Button-Abstände, Randabstände, versetzte
+Kanten, Raster-Abstände) und ganzseitigen Screenshots bei 1440/700/390px:
+- schmale, ruhige Scrollleisten überall (`scrollbar-width: thin`, Farbe aus dem Theme, transparente Spur); in Dialogen
+  liegt die Leiste mit `--space-3` Abstand zu den Feldern im Kartenrand; waagerechte Streifen (Lesekalender,
+  Projekt-Tabs) ohne sichtbare Leiste
+- `scrollbar-gutter: stable`: der zentrierte Inhalt sprang beim Wechsel zwischen kurzen und langen Seiten 5px seitwärts
+- einheitliche Bedienelement-Höhe 40px (Buttons, Felder, Selects)
+- Projekt-Tabs als Unterstrich-Leiste statt sieben Einzelknöpfen, wischbar auf schmalen Schirmen
+- Kommentare auf 48rem begrenzt (liefen bei 1440px 1360px breit)
+- Startseite: „Weiterlesen“-Karten unten bündig, „Ganze Bibliothek ansehen →“ als ruhiger Link
+- Statistik: Kennzahlen füllen die Zeile, Beschriftungen auf einer Höhe (Icons machten Werte höher)
+
+Das Messskript meldet danach auf 18 Seiten keine Button-Abstände < 8px, keine Inhalte < 8px am Kartenrand und keine
+Kanten, die 1–7px versetzt sind (die drei Treffer sind gewollt: Segment-Knöpfe füllen ihren Rahmen, versteckte
+Datei-Inputs, 1px beim Hero-Titel).
+
+**Noch offen und geplant (größer, eigene PRs):**
+
+| # | Was | Vorschlag |
+|---|---|---|
+| F1 | Seitenköpfe | `PageHeader`-Komponente: Titel + optionaler Untertitel links, Aktionen rechts; Seiten mit Foto-Hero (Startseite, Statistik, Offline, Einstellungen) behalten den Hero, aber gleiche Titelposition/-größe; Bibliothek verliert die dunkle Sonderkarte zugunsten des Standards |
+| F3 | Projekt-Übersicht | Projekttitel (klein) immer über den Tabs, damit auch „Charaktere“/„Karte“ zeigen, wo man ist; Übersicht mit Kennzahl-Kacheln (Charaktere, Orte, Lore, Ereignisse, Bücher), die zum Tab springen |
+| F4 | Karten-Raster | Projekt-, Charakter- und Ortskarten hochkant wie Buchkarten, Raster `repeat(auto-fill, minmax(10rem, 1fr))`; Platzhalter mit Initialen |
+| F7/A8 | Profil/Konto-Menü | Avatar-Menü oben rechts (Profil, Einstellungen, Sicherheit, Abmelden); „Sicherheit“ bündelt Passwort, E-Mail, verknüpfte Konten — Aufteilung mit dem Nutzer abstimmen |
+| A7 | Einstellungen | Checkboxen → Schalter; Theme als Vorschaukarten |
+| C | Statistik | Jahresübersicht + Genres in Karten im selben Raster wie Jahresziel/Kalender; Jahresziel-Formular kompakter (Stepper statt Vollbreite-Feld) — Richtung mit dem Nutzer abstimmen (C2) |
+| B4/B5 | Handy | Seiten-Durchgang bei 390/412px mit Blick auf Dichte; Formular-Dialoge als `BottomSheet` |
 
 ### Danach (Backlog, nicht in diesem Plan)
 

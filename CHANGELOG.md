@@ -19,6 +19,10 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Tablets in portrait (600–839px) use the same floating bottom bar as phones, centred and phone-sized; on 840–1199px wide windows the header shows the logo mark and profile icon without their labels, so the navigation stays on one line instead of wrapping into two or three rows.
+- Scrollbars are thin and quiet everywhere (page, dialogs, lists) and keep a clear gap from form fields in dialogs; horizontal strips such as the reading calendar and the project tabs scroll without a visible bar. The page no longer shifts sideways when moving between short and long pages.
+- A started book's page shows how far you are ("62 % gelesen") and offers "Weiterlesen".
+- Project tabs are an underlined tab bar instead of seven separate buttons; comment sections are limited to a comfortable width; the profile page is one centred column of cards (with "Abmelden" next to the avatar and the delete section as its own card); reading progress bars and timeline dates use brass instead of a red that looked like an error; selects share the height and look of the other controls; "Zurück" links above detail pages are quieter and evenly spaced; the statistics tiles fill their row with aligned labels; on the home page the "Weiterlesen" cards line up at the bottom.
 - Phones (narrower than 600px): the navigation moved into a floating bar at the bottom of the screen (Home, Bibliothek, Projekte, Entdecken, Mehr); "Mehr" opens a sheet with Statistik, Offline, Einstellungen, Profil and Impressum. The top bar keeps only the logo and notifications. Before, the seven links stacked in the header and took up half the screen, and every page could be scrolled sideways. Layout respects notches and the home indicator.
 - The library toolbar is two calmer rows: search and view settings on top, filters and sorting below; "Filter zurücksetzen" only appears while a filter is active.
 - Minimum password length is 6 characters (was 8). New usernames may only use letters, digits, `_`, `.` and `-` (3–32 characters); existing usernames keep working.
