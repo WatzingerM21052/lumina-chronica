@@ -13,6 +13,28 @@ body {
     box-sizing: border-box;
 }
 
+/* Breakpoints (UI/UX plan B1, Material 3 window classes). CSS custom
+   properties can't be used inside @media, so these are the literal values
+   every media query in the app should use:
+     compact   < 600px   -> @media (max-width: 599.98px)   phone, BottomNav
+     medium    600-839px -> @media (max-width: 839.98px)   tablet portrait
+     expanded  >= 840px  -> default styles                   top NavMenu
+   (Older rules still use 40rem = 640px; move them over when touched.) */
+
+/* Room for the floating phone BottomNav (Layouts/BottomNav.razor): its
+   56px items + padding + bottom offset, plus the home-indicator inset,
+   so the footer and a page's last row are never hidden underneath it. */
+@media (max-width: 599.98px) {
+    .app-shell:has(.bottom-nav) {
+        padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Toasts sit just above the bar instead of on top of it. */
+    body:has(.bottom-nav) .toast-host {
+        bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 a {
     color: var(--color-primary);
     transition: color var(--motion-micro) var(--ease-standard);
@@ -1044,6 +1066,10 @@ select:focus-visible,
    above, real visual design lands with the dedicated frontend-design pass. */
 .library-header {
     display: flex;
+    /* Title and actions share a row where they fit; on a phone the actions
+       wrap below the title instead of pushing the page sideways (the
+       Library header overflowed a 390px screen by 28px). */
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     gap: var(--space-2);
@@ -1063,6 +1089,12 @@ select:focus-visible,
 
 .library-header-shelf h1 {
     color: inherit;
+}
+
+@media (max-width: 599.98px) {
+    .library-header-shelf {
+        padding: var(--space-2) var(--space-3);
+    }
 }
 
 .library-shelf {

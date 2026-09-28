@@ -73,6 +73,32 @@
     justify-content: flex-end;
 }
 
+/* Bottom sheet: full width, flush with the bottom edge, top corners
+   rounded; the safe-area inset keeps its last row clear of the phone's
+   home indicator. Slides up instead of the card's small rise. */
+.dialog--bottomsheet {
+    max-width: 40rem;
+    max-height: 85dvh;
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    border-bottom: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    animation-name: dialog-sheet-enter;
+}
+
+.dialog-overlay:has(.dialog--bottomsheet) {
+    padding: 0;
+    align-items: flex-end;
+}
+
+@keyframes dialog-sheet-enter {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: none;
+    }
+}
+
 .dialog-header {
     display: flex;
     align-items: flex-start;
@@ -171,8 +197,16 @@
         padding: var(--space-2);
     }
 
+    .dialog-overlay:has(.dialog--bottomsheet) {
+        padding: 0;
+    }
+
     .dialog {
         padding: var(--space-3);
+    }
+
+    .dialog--bottomsheet {
+        padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
     }
 
     .dialog-actions ::deep .btn {

@@ -1,0 +1,72 @@
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@implements IDisposable
+@inject II18nService I18n
+@inject NavigationManager Navigation
+
+@* Phone navigation (UI/UX plan B2): a floating bar at the bottom edge
+   below 600px, replacing the top NavMenu there (MainLayout/NavMenu CSS
+   hide one or the other by breakpoint; both are always rendered so no
+   JS width check is needed). The four most-used destinations sit in the
+   bar, everything else behind "Mehr" in a bottom sheet. *@
+<nav class="bottom-nav" aria-label="@I18n.T("nav.primaryLabel")">
+    <NavLink href="" Match="NavLinkMatch.All" class="bottom-nav-item"><Icon Name="home" /><span>@I18n.T("nav.home")</span></NavLink>
+    <NavLink href="library" class="bottom-nav-item"><Icon Name="book" /><span>@I18n.T("nav.library")</span></NavLink>
+    <NavLink href="projects" class="bottom-nav-item"><Icon Name="project" /><span>@I18n.T("nav.projects")</span></NavLink>
+    <NavLink href="discover" class="bottom-nav-item"><Icon Name="discover" /><span>@I18n.T("nav.discover")</span></NavLink>
+    <button type="button" id="bottom-nav-more" class="bottom-nav-item @(IsMoreSectionActive ? "active" : null)"
+            aria-haspopup="dialog" aria-expanded="@(_moreOpen ? "true" : "false")" @onclick="() => _moreOpen = true">
+        <Icon Name="more" /><span>@I18n.T("nav.more")</span>
+    </button>
+</nav>
+
+<Dialog IsOpen="_moreOpen" Size="DialogSize.BottomSheet" Title="@I18n.T("nav.more")" OnClose="() => _moreOpen = false">
+    <ul class="bottom-nav-more-list">
+        @foreach (var item in MoreItems)
+        {
+            <li>
+                <NavLink href="@item.Href" class="bottom-nav-more-link" @onclick="() => _moreOpen = false">
+                    <Icon Name="@item.Icon" /><span>@I18n.T(item.LabelKey)</span>
+                </NavLink>
+            </li>
+        }
+    </ul>
+</Dialog>
+
+@code {
+    private sealed record MoreItem(string Href, string Icon, string LabelKey);
+
+    // Notifications stay in the top bar (NotificationBell), where the
+    // unread badge is visible without opening anything.
+    private static readonly MoreItem[] MoreItems =
+    [
+        new("statistics", "chart", "nav.statistics"),
+        new("offline", "box", "nav.offline"),
+        new("settings", "settings", "nav.settings"),
+        new("profile", "person", "nav.profile"),
+        new("impressum", "info", "nav.impressum"),
+    ];
+
+    private bool _moreOpen;
+
+    // "Mehr" is highlighted while one of its pages is showing, so the bar
+    // always tells you where you are.
+    private bool IsMoreSectionActive
+    {
+        get
+        {
+            var path = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0];
+            return MoreItems.Any(i => path == i.Href || path.StartsWith(i.Href + "/"));
+        }
+    }
+
+    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _moreOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}
