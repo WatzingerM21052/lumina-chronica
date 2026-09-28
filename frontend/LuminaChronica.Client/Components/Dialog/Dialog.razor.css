@@ -231,3 +231,29 @@
         max-width: none;
     }
 }
+
+/* Plan B5: on a phone every form dialog is a bottom sheet -- full width,
+   rising from the bottom edge, within thumb reach -- instead of a card
+   floating in a 16px frame. Only confirmations (alertdialog: one sentence
+   and two buttons) stay a centred card. */
+@media (max-width: 599.98px) {
+    .dialog-overlay:has(.dialog:not([role="alertdialog"]):not(.dialog--sheet)) {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .dialog:not([role="alertdialog"]):not(.dialog--sheet) {
+        max-width: none;
+        max-height: 92dvh;
+        padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+        border-bottom: none;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        animation-name: dialog-sheet-enter;
+    }
+}
+
+@media (max-width: 599.98px) and (prefers-reduced-motion: reduce) {
+    .dialog:not([role="alertdialog"]):not(.dialog--sheet) {
+        animation-name: dialog-scrim-enter;
+    }
+}

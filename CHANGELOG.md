@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- On phones every form dialog (edit, create, avatar, password reset, follower lists) opens as a sheet from the bottom edge, full width and within thumb reach; only short confirmations stay a centred card.
 - Book page: only "Read" and "Shelves" stay visible; save offline, edit and delete are in a "⋯" menu (new `OverflowMenu` component, closes on Escape or a click outside).
 - Profile: "change password" and "delete account" are collapsed cards you open by their heading, so the page is no longer three forms long (on a phone ~1900 → ~1200px).
 - Public profile on phones: a smaller portrait beside the name instead of a large circle on its own row, the follow button on the row below, tighter section gaps; the portrait's gold ring now lines up with the content edge (it stuck out 4px).
