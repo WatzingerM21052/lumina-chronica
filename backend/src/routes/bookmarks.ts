@@ -11,6 +11,7 @@ import {
     type CreateBookmarkInput,
 } from "../services/bookmarkService";
 import { TEXT_LIMITS } from "../utils/textLimits";
+import { parseReadingPosition } from "../utils/readingPosition";
 
 export const bookmarksRoute = new Hono<AppEnv>();
 
@@ -30,17 +31,14 @@ bookmarksRoute.get("/:bookId", requireAuth, async (c) => {
 
 bookmarksRoute.post("/", requireAuth, async (c) => {
     const body = await c.req.json<Partial<CreateBookmarkInput>>().catch(() => null);
-    if (!body || typeof body.bookId !== "number" || typeof body.percentage !== "number") {
-        return c.json(failure("VALIDATION_ERROR", "bookId and percentage are required."), 400);
-    }
+    if (!body) return c.json(failure("VALIDATION_ERROR", "bookId and percentage are required."), 400);
+    const parsed = parseReadingPosition(body);
+    if ("error" in parsed) return c.json(failure("VALIDATION_ERROR", parsed.error), 400);
     if (noteTooLong(body.note)) return c.json(failure("VALIDATION_ERROR", NOTE_TOO_LONG), 400);
 
     try {
         const bookmark = await createBookmark(c.env.DB, c.get("userId"), {
-            bookId: body.bookId,
-            chapter: body.chapter ?? null,
-            position: body.position ?? null,
-            percentage: body.percentage,
+            ...parsed.value,
             note: body.note ?? null,
         });
         return c.json(success(bookmark), 201);

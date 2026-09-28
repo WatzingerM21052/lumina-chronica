@@ -195,4 +195,22 @@ public class SettingsPageTests : BunitContext
         var headings = cut.FindAll(".settings-card h2").Select(h => h.TextContent).ToList();
         Assert.Equal(["Darstellung", "Benachrichtigungen", "Privatsphäre"], headings);
     }
+
+    [Fact]
+    public async Task Settings_SwitchingLanguage_StoresItOnTheAccount()
+    {
+        string? sentBody = null;
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/preferences", AllEnabledPreferencesJson)
+            .When(r => r.Method == HttpMethod.Put && r.RequestUri!.AbsolutePath.EndsWith("/api/users/me/language"), r =>
+            {
+                sentBody = r.Content!.ReadAsStringAsync().Result;
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"language":"en"}}""");
+            }));
+
+        var cut = Render<Settings>();
+        await cut.InvokeAsync(() => cut.FindAll(".theme-picker button").Single(b => b.TextContent == "English").Click());
+
+        Assert.Equal("""{"language":"en"}""", sentBody);
+    }
 }
