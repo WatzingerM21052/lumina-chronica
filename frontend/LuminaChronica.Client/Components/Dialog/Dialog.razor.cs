@@ -10,6 +10,10 @@ public enum DialogSize
     Medium,
     Large,
     Sheet,
+    // Anchored to the bottom edge, full width, rounded top corners: the
+    // phone pattern for a short list of choices (UI/UX plan B2's "Mehr"
+    // menu; B5 can reuse it for form dialogs on phones).
+    BottomSheet,
 }
 
 // Shared overlay/card primitive (design doc

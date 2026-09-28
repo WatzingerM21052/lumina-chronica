@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Phones (narrower than 600px): the navigation moved into a floating bar at the bottom of the screen (Home, Bibliothek, Projekte, Entdecken, Mehr); "Mehr" opens a sheet with Statistik, Offline, Einstellungen, Profil and Impressum. The top bar keeps only the logo and notifications. Before, the seven links stacked in the header and took up half the screen, and every page could be scrolled sideways. Layout respects notches and the home indicator.
 - The library toolbar is two calmer rows: search and view settings on top, filters and sorting below; "Filter zurücksetzen" only appears while a filter is active.
 - Minimum password length is 6 characters (was 8). New usernames may only use letters, digits, `_`, `.` and `-` (3–32 characters); existing usernames keep working.
 

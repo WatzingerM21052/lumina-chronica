@@ -9,6 +9,8 @@
   "nav.profile": "Profile",
   "nav.login": "Sign In",
   "nav.impressum": "Legal Notice",
+  "nav.more": "More",
+  "nav.primaryLabel": "Main navigation",
 
   "login.title": "Sign In",
   "login.identifierLabel": "Email or Username",

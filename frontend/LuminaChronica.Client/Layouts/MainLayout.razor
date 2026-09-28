@@ -44,6 +44,17 @@
         <span class="text-muted">Lumina Chronica — Where stories become knowledge and knowledge becomes worlds.</span>
         <a class="app-footer-link" href="impressum">@I18n.T("nav.impressum")</a>
     </footer>
+
+    @* Phones only (CSS decides, UI/UX plan B2); hidden in the reader, where
+       the page itself is the whole screen. *@
+    @if (!IsReaderRoute)
+    {
+        <AuthorizeView>
+            <Authorized>
+                <BottomNav />
+            </Authorized>
+        </AuthorizeView>
+    }
 </div>
 
 <ToastHost />
@@ -60,7 +71,9 @@
     // client-side navigations (only @Body swaps), so this needs an explicit
     // LocationChanged subscription -- @Body changing alone doesn't re-render
     // this component's own markup.
-    private string ContentClass => Navigation.Uri.EndsWith("/read") ? "app-content app-content--reader" : "app-content";
+    private bool IsReaderRoute => PathOf(Navigation.Uri).EndsWith("/read");
+
+    private string ContentClass => IsReaderRoute ? "app-content app-content--reader" : "app-content";
 
     private ElementReference _headerRef;
     private ElementReference _sentinelRef;

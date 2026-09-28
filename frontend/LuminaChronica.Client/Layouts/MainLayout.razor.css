@@ -2,6 +2,9 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    /* dvh follows the phone's collapsing address bar; 100vh above stays as
+       the fallback for browsers without it (UI/UX plan B1). */
+    min-height: 100dvh;
 }
 
 /* Sticky so the scroll-compaction below (issue #341) is ever visible --
@@ -107,6 +110,42 @@
 
 .app-footer-link:hover {
     color: var(--color-primary);
+}
+
+/* Compact (< 600px, UI/UX plan B1/B2): the links move into BottomNav, so
+   the top bar keeps only the logo and the notification bell. The profile
+   link lives under "Mehr". Logged out there is no bottom bar, so the
+   "Anmelden" link stays. */
+@media (max-width: 599.98px) {
+    .app-header {
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-2);
+        padding-left: calc(var(--space-2) + env(safe-area-inset-left, 0px));
+        padding-right: calc(var(--space-2) + env(safe-area-inset-right, 0px));
+        padding-top: calc(var(--space-1) + env(safe-area-inset-top, 0px));
+    }
+
+    .app-header.is-compact {
+        padding-top: calc(var(--space-1) * 0.5 + env(safe-area-inset-top, 0px));
+        padding-bottom: calc(var(--space-1) * 0.5);
+    }
+
+    .app-logo {
+        font-size: var(--font-size-body);
+        min-width: 0;
+    }
+
+    .app-header-actions .app-profile {
+        display: none;
+    }
+
+    .app-content {
+        padding: var(--space-2);
+    }
+
+    /* The room reserved for the floating BottomNav is in app.css: the
+       `:has(.bottom-nav)` check reaches into another component, which
+       scoped CSS can't express reliably. */
 }
 
 /* Page-enter fade (issue #341) -- replayed on every client-side navigation

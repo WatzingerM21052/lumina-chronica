@@ -23,6 +23,8 @@ public class FakeI18nService : II18nService
         ["nav.profile"] = "Profil",
         ["nav.login"] = "Anmelden",
         ["nav.impressum"] = "Impressum",
+        ["nav.more"] = "Mehr",
+        ["nav.primaryLabel"] = "Hauptnavigation",
 
         ["login.title"] = "Anmelden",
         ["login.identifierLabel"] = "E-Mail oder Benutzername",

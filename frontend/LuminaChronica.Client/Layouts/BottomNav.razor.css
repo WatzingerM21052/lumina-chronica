@@ -1,0 +1,114 @@
+/* Breakpoints (UI/UX plan B1, see tokens.css): compact < 600px gets this
+   bar; medium/expanded keep the top NavMenu. */
+.bottom-nav {
+    display: none;
+}
+
+@media (max-width: 599.98px) {
+    /* Floating: inset from the edges and lifted above the home indicator
+       (env(safe-area-inset-*) needs viewport-fit=cover, index.html). */
+    .bottom-nav {
+        position: fixed;
+        z-index: 20;
+        left: calc(var(--space-1) + env(safe-area-inset-left, 0px));
+        right: calc(var(--space-1) + env(safe-area-inset-right, 0px));
+        bottom: calc(var(--space-1) + env(safe-area-inset-bottom, 0px));
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        padding: 0.25rem;
+        border: 1px solid color-mix(in srgb, var(--color-gold-accent) 45%, transparent);
+        border-radius: 1.25rem;
+        background-color: color-mix(in srgb, var(--color-bg-dark) 92%, transparent);
+        box-shadow: var(--shadow-overlay, 0 12px 28px rgba(30, 20, 10, 0.3));
+    }
+
+    @supports (backdrop-filter: blur(1px)) {
+        .bottom-nav {
+            backdrop-filter: blur(10px);
+        }
+    }
+}
+
+/* Each item is a 56px-tall target: icon over a short label. */
+.bottom-nav ::deep .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    min-height: 3.5rem;
+    padding: 0.25rem 0;
+    border: none;
+    border-radius: 1rem;
+    background: none;
+    color: var(--color-text-on-dark);
+    opacity: 0.72;
+    font: inherit;
+    font-size: var(--font-size-caption);
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity var(--motion-micro) var(--ease-standard), background-color var(--motion-micro) var(--ease-standard);
+}
+
+.bottom-nav ::deep .bottom-nav-item .icon {
+    width: 1.4rem;
+    height: 1.4rem;
+}
+
+.bottom-nav ::deep .bottom-nav-item:hover {
+    opacity: 1;
+    color: var(--color-text-on-dark);
+}
+
+/* The active destination gets a soft gold pill behind its icon + label,
+   plus full opacity and weight -- readable without relying on colour
+   alone. */
+.bottom-nav ::deep .bottom-nav-item.active {
+    opacity: 1;
+    font-weight: 600;
+    color: var(--color-gold-accent);
+    background-color: color-mix(in srgb, var(--color-gold-accent) 16%, transparent);
+}
+
+.bottom-nav-more-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.bottom-nav-more-list ::deep .bottom-nav-more-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 3rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius);
+    color: var(--color-text-primary);
+    text-decoration: none;
+}
+
+.bottom-nav-more-list ::deep .bottom-nav-more-link:hover {
+    /* --color-bg-light equals the card colour in the light themes, so a
+       tint of the text colour is the hover that shows up everywhere. */
+    background-color: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+    color: var(--color-text-primary);
+}
+
+.bottom-nav-more-list ::deep .bottom-nav-more-link.active {
+    font-weight: 600;
+    color: var(--color-accent-text);
+}
+
+.bottom-nav-more-list ::deep .bottom-nav-more-link .icon {
+    width: 1.3rem;
+    height: 1.3rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bottom-nav ::deep .bottom-nav-item {
+        transition: none;
+    }
+}
