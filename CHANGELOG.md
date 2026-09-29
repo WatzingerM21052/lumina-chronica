@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Account menu: your avatar and name at the top right open a small menu showing who is signed in (avatar, name, e-mail) with your public profile, settings, "Account & security" (the profile page) and sign out. On phones the avatar sits next to the bell. Settings left the top navigation and the "More" sheet, and the sign-out button left the middle of the profile page.
 - Offline books are compact rows (icon, title, author, format and size, then "Read" and a remove icon), two per line on wide screens, instead of tall cards.
 - Project page fixes (user report: overlaps in the project area):
   - Places no longer overlap: a place card is landscape and stuck 64px into its neighbour.

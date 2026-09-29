@@ -41,7 +41,7 @@ public class BottomNavTests : BunitContext
         Assert.NotNull(cut.Find(".dialog.dialog--bottomsheet"));
         Assert.Equal("true", cut.Find("#bottom-nav-more").GetAttribute("aria-expanded"));
         var hrefs = cut.FindAll(".bottom-nav-more-list a").Select(a => a.GetAttribute("href")).ToList();
-        Assert.Equal(new[] { "statistics", "offline", "settings", "profile", "impressum" }, hrefs);
+        Assert.Equal(new[] { "statistics", "offline", "impressum" }, hrefs);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class BottomNavTests : BunitContext
     [Fact]
     public void BottomNav_More_IsMarkedActiveOnOneOfItsPages()
     {
-        Services.GetRequiredService<NavigationManager>().NavigateTo("settings");
+        Services.GetRequiredService<NavigationManager>().NavigateTo("statistics");
 
         var cut = Render<BottomNav>();
 

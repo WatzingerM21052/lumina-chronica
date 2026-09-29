@@ -127,14 +127,8 @@
 }
 
 /* Compact + medium (< 840px, UI/UX plan B2/B3): the links move into
-   BottomNav, so the top bar keeps only the logo and the notification
-   bell. The profile link lives under "Mehr". Logged out there is no bottom
-   bar, so the "Anmelden" link stays. */
-@media (max-width: 839.98px) {
-    .app-header-actions .app-profile {
-        display: none;
-    }
-}
+   BottomNav; the top bar keeps the logo, the notification bell and the
+   account menu (A8: avatar top right on phones too). */
 
 /* Compact (< 600px): tighter chrome and page padding on phones. */
 @media (max-width: 599.98px) {

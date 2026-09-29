@@ -28,14 +28,15 @@ public class NavMenuTests : BunitContext
     }
 
     [Fact]
-    public void NavMenu_Authenticated_RendersAllSevenLinks()
+    public void NavMenu_Authenticated_RendersAllSixLinks_SettingsLiveInTheAccountMenu()
     {
         Services.AddSingleton<II18nService, FakeI18nService>();
         SetAuthenticated(true);
 
         var cut = Render<NavMenu>();
 
-        Assert.Equal(7, cut.FindAll("nav.nav-menu a").Count);
+        Assert.Equal(6, cut.FindAll("nav.nav-menu a").Count);
+        Assert.DoesNotContain(cut.FindAll("nav.nav-menu a"), a => a.GetAttribute("href") == "settings");
     }
 
     [Fact]
