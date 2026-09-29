@@ -14,13 +14,17 @@ public partial class NotificationBell : ComponentBase
     [Inject]
     private ApiClient ApiClient { get; set; } = null!;
 
-    private static readonly (string? Value, string Label)[] Filters =
+    [Inject]
+    private II18nService I18n { get; set; } = null!;
+
+    // (type filter, i18n key of its label)
+    private static readonly (string? Value, string LabelKey)[] Filters =
     [
-        (null, "Alle"),
-        ("FOLLOW", "Follower"),
-        ("COMMENT", "Kommentare"),
-        ("RATING", "Bewertungen"),
-        ("SHARE", "Freigaben"),
+        (null, "notifications.filterAll"),
+        ("FOLLOW", "notifications.filterFollow"),
+        ("COMMENT", "notifications.filterComment"),
+        ("RATING", "notifications.filterRating"),
+        ("SHARE", "notifications.filterShare"),
     ];
 
     private bool _isOpen;
@@ -79,13 +83,13 @@ public partial class NotificationBell : ComponentBase
         _ => $"u/{n.ActorUsername}",
     };
 
-    private static string NotificationText(NotificationItem n) => n.Type switch
+    private string NotificationText(NotificationItem n) => n.Type switch
     {
-        "FOLLOW" => $"{n.ActorUsername} folgt dir jetzt",
-        "COMMENT" => $"{n.ActorUsername} hat kommentiert",
-        "RATING" => $"{n.ActorUsername} hat dein Buch bewertet",
-        "SHARE" => $"{n.ActorUsername} hat ein Buch mit dir geteilt",
-        _ => $"{n.ActorUsername}",
+        "FOLLOW" => string.Format(I18n.T("notifications.textFollow"), n.ActorUsername),
+        "COMMENT" => string.Format(I18n.T("notifications.textComment"), n.ActorUsername),
+        "RATING" => string.Format(I18n.T("notifications.textRating"), n.ActorUsername),
+        "SHARE" => string.Format(I18n.T("notifications.textShare"), n.ActorUsername),
+        _ => n.ActorUsername,
     };
 
     private static string FormatNotificationDate(string createdAt)
