@@ -46,7 +46,6 @@ else
             </div>
             <div class="form-actions">
                 <button type="button" id="changeAvatarButton" class="btn" @onclick="() => _isAvatarDialogOpen = true">@I18n.T("profile.changeAvatarButton")</button>
-                <button type="button" class="btn" @onclick="LogoutAsync">@I18n.T("profile.logoutButton")</button>
             </div>
         </section>
 
@@ -407,13 +406,6 @@ else
     // already knows who's asking. Lives here rather than on Settings
     // because it's the alternative for a user who doesn't know their
     // *current* password -- the "Passwort ändern" form above requires it.
-
-    private async Task LogoutAsync()
-    {
-        await ApiClient.PostAsync("/api/auth/logout");
-        await AuthStateProvider.MarkUserAsLoggedOutAsync();
-        NavigationManager.NavigateTo("");
-    }
 
     private async Task DeleteAccountAsync()
     {

@@ -1,0 +1,121 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject LuminaAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject II18nService I18n
+
+@* Account menu (UI/UX plan A8, decided with the user 2026-09-29): avatar +
+   name in the top bar open a small panel with who is signed in (avatar,
+   name, e-mail), the public profile, settings, "Konto & Sicherheit" (the
+   existing /profile page) and sign-out. Same on phones, next to the bell.
+   The profile is fetched again on every open, so a changed name or avatar
+   shows without a reload. *@
+<div class="account-menu" @onkeydown="HandleKeyDown">
+    <button type="button" id="account-menu-button" class="account-menu-toggle"
+            aria-haspopup="true" aria-expanded="@(_isOpen ? "true" : "false")" aria-controls="account-menu-panel"
+            aria-label="@I18n.T("accountMenu.label")" @onclick="ToggleAsync">
+        <span class="account-avatar" aria-hidden="true">
+            @if (_profile?.AvatarUrl is { } avatarUrl)
+            {
+                <img src="@avatarUrl" alt="" />
+            }
+            else if (_profile is not null)
+            {
+                @Initial
+            }
+            else
+            {
+                <Icon Name="person" />
+            }
+        </span>
+        <span class="account-menu-name">@(_profile?.Username ?? I18n.T("nav.profile"))</span>
+        <span class="account-menu-chevron" aria-hidden="true"></span>
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="account-menu-backdrop" @onclick="Close"></div>
+        <div class="account-menu-panel" id="account-menu-panel">
+            @if (_profile is not null)
+            {
+                <div class="account-menu-head">
+                    <span class="account-avatar account-avatar--large" aria-hidden="true">
+                        @if (_profile.AvatarUrl is { } headAvatar)
+                        {
+                            <img src="@headAvatar" alt="" />
+                        }
+                        else
+                        {
+                            @Initial
+                        }
+                    </span>
+                    <span class="account-menu-identity">
+                        <strong>@_profile.Username</strong>
+                        <span>@_profile.Email</span>
+                    </span>
+                </div>
+            }
+            <nav class="account-menu-items" aria-label="@I18n.T("accountMenu.label")">
+                @if (_profile is not null)
+                {
+                    <a class="account-menu-item" href="@($"u/{Uri.EscapeDataString(_profile.Username)}")" @onclick="Close"><Icon Name="person" /><span>@I18n.T("accountMenu.publicProfile")</span></a>
+                }
+                <a class="account-menu-item" href="settings" @onclick="Close"><Icon Name="settings" /><span>@I18n.T("nav.settings")</span></a>
+                <a class="account-menu-item" href="profile" @onclick="Close"><Icon Name="lock" /><span>@I18n.T("accountMenu.accountSecurity")</span></a>
+            </nav>
+            <button type="button" id="account-menu-logout" class="account-menu-item account-menu-logout" @onclick="LogoutAsync"><Icon Name="logout" /><span>@I18n.T("profile.logoutButton")</span></button>
+        </div>
+    }
+</div>
+
+@code {
+    private UserProfile? _profile;
+    private bool _isOpen;
+
+    private string Initial => string.IsNullOrEmpty(_profile?.Username) ? "?" : _profile.Username[..1].ToUpperInvariant();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        await LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        var response = await ApiClient.GetAsync<UserProfile>("/api/users/me");
+        if (response is { Success: true, Data: not null }) _profile = response.Data;
+    }
+
+    private async Task ToggleAsync()
+    {
+        _isOpen = !_isOpen;
+        if (_isOpen) await LoadProfileAsync();
+    }
+
+    private void Close() => _isOpen = false;
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _isOpen = false;
+    }
+
+    private async Task LogoutAsync()
+    {
+        _isOpen = false;
+        await ApiClient.PostAsync("/api/auth/logout");
+        await AuthStateProvider.MarkUserAsLoggedOutAsync();
+        Navigation.NavigateTo("");
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        if (!_isOpen) return;
+        _isOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}

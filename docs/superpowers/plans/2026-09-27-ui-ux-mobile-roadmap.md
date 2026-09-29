@@ -56,7 +56,7 @@ Quellen: [Material 3 Navigation bar](https://m3.material.io/components/navigatio
 | A5 | **Worldbuilding-Formulare** (Charakter, Ort, Lore, Zeitleiste, Dateien): Screenshot-Befund, gleiche Muster (Dialog statt Inline, wo sinnvoll; Dropzones; Abschnitte) | Erledigt 2026-09-28: Teil 1 (Projekt-Tabs, #508), Teil 2 (Detailseiten Charakter/Ort/Lore, `DialogGuard`) |
 | A6 | **Suche vereinheitlichen** (Bibliothek, Entdecken, Metadaten): Löschen-Button im Feld, Debounce, leere Zustände | **erledigt 2026-09-28**: Komponente `SearchInput` (Lupe, ✕, maxlength) in Bibliothek, Projekt-Buchsuche, Teilen, Entdecken, Bibel; Debounce war schon überall; „Keine Bücher gefunden“ mit „Filter zurücksetzen“. Metadaten-Suche (ISBN/Titel beim Hochladen) bleibt ein Formularfeld mit Knopf, weil sie eine externe API abfragt. |
 | A7 | **Einstellungen** (Rest aus #358): Theme-Vorschau-Karten, Benachrichtigungen gruppiert | **erledigt 2026-09-28**: Karte „Darstellung“ (Theme-Vorschaukarten mit eigenem `data-theme`, Sprache, Cover-Text), Schalter `input.switch[role=switch]` (global in app.css), Gruppen „Benachrichtigungen“ und „Privatsphäre“ |
-| A8 | **Konto-Menü** (Nutzerwunsch 2026-09-27): Klick auf Avatar + Name öffnet ein kompaktes Dropdown mit Profil, Einstellungen, Sicherheit, Abmelden (Vorbild recipemaster.at, nicht 1:1). „Sicherheit“ bündelt Passwort, E-Mail-Änderung (M-6) und OAuth-Verknüpfungen, die heute auf Profil/Einstellungen verteilt sind. Auf dem Handy landen dieselben Einträge unter „Mehr“ (B2). | offen, Aufteilung mit dem Nutzer abstimmen |
+| A8 | **Konto-Menü** (Nutzerwunsch 2026-09-27): Klick auf Avatar + Name öffnet ein kompaktes Dropdown mit Profil, Einstellungen, Sicherheit, Abmelden (Vorbild recipemaster.at, nicht 1:1). „Sicherheit“ bündelt Passwort, E-Mail-Änderung (M-6) und OAuth-Verknüpfungen, die heute auf Profil/Einstellungen verteilt sind. Auf dem Handy landen dieselben Einträge unter „Mehr“ (B2). | **entschieden 2026-09-29**: Dropdown mit Kopfbereich (Avatar, Name, E-Mail) → Öffentliches Profil, Einstellungen, Konto & Sicherheit (= die bestehende Profilseite, bleibt wie sie ist), Abmelden; am Handy sitzt der Avatar ebenfalls oben rechts neben der Glocke und öffnet dasselbe Menü |
 
 ### Block B — Handy (#493)
 
@@ -71,6 +71,13 @@ Quellen: [Material 3 Navigation bar](https://m3.material.io/components/navigatio
 ### Block C — Statistik (#498)
 
 C1 Befund per Screenshots in allen Themes → C2 Richtung mit dem Nutzer abstimmen → C3 Umsetzung.
+
+**C2 entschieden (2026-09-29, mit dem Nutzer):**
+- Richtung **Dashboard-Raster**: Kennzahlen oben, dann Karten im Raster (Jahresziel | Lesekalender, Verlauf | Genres), unten „Zuletzt gelesen“; am Handy eine Spalte.
+- Jahresziel: Ring zeigt Fortschritt, **Stift-Icon klappt einen Stepper (− 12 +) mit Speichern auf**; im Normalzustand kein Formular.
+- Diagramme: **Lesekalender** über die volle Kartenbreite mit Monatsnamen und Jahr-Auswahl; **Lesetempo** (Seiten pro Lesetag, Tage pro Buch); **Genres als Kreis-/Donut-Diagramm**, damit alles auf einer Karte Platz hat; generell mehr Diagramme, z. B. ein **Liniendiagramm** für den Verlauf (Seiten pro Monat).
+- Hero bleibt, aber **flacher (~100 px)**.
+- Nutzerwunsch dazu (eigener Punkt, später): **Jahresrückblick à la Spotify Wrapped**.
 
 ### Block D — Logo & Favicon (#497)
 

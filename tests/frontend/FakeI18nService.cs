@@ -25,6 +25,9 @@ public class FakeI18nService : II18nService
         ["nav.impressum"] = "Impressum",
         ["nav.more"] = "Mehr",
         ["nav.primaryLabel"] = "Hauptnavigation",
+        ["accountMenu.label"] = "Konto",
+        ["accountMenu.publicProfile"] = "Öffentliches Profil",
+        ["accountMenu.accountSecurity"] = "Konto & Sicherheit",
 
         ["login.title"] = "Anmelden",
         ["login.identifierLabel"] = "E-Mail oder Benutzername",

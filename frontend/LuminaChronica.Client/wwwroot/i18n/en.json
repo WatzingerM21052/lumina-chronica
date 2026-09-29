@@ -11,6 +11,9 @@
   "nav.impressum": "Legal Notice",
   "nav.more": "More",
   "nav.primaryLabel": "Main navigation",
+  "accountMenu.label": "Account",
+  "accountMenu.publicProfile": "Public profile",
+  "accountMenu.accountSecurity": "Account & security",
 
   "login.title": "Sign In",
   "login.identifierLabel": "Email or Username",

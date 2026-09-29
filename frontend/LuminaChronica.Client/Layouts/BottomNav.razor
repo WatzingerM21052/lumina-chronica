@@ -37,13 +37,12 @@
     private sealed record MoreItem(string Href, string Icon, string LabelKey);
 
     // Notifications stay in the top bar (NotificationBell), where the
-    // unread badge is visible without opening anything.
+    // unread badge is visible without opening anything; settings and the
+    // account live in the account menu next to it (A8).
     private static readonly MoreItem[] MoreItems =
     [
         new("statistics", "chart", "nav.statistics"),
         new("offline", "box", "nav.offline"),
-        new("settings", "settings", "nav.settings"),
-        new("profile", "person", "nav.profile"),
         new("impressum", "info", "nav.impressum"),
     ];
 
