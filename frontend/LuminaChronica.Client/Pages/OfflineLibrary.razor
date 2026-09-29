@@ -62,9 +62,11 @@ else
                     }
                     <div class="text-muted">@book.Format · @FormatSize(book.SizeBytes)</div>
                 </div>
+                @* A compact row (icon | info | actions), still a card: reading
+                   is the one labelled action, removing is an icon. *@
                 <div class="form-actions">
                     <a class="btn btn-primary" href="@($"library/books/{book.Id}/read")">@I18n.T("offlineLibrary.readButton")</a>
-                    <button type="button" class="btn" @onclick="() => RemoveAsync(book.Id)">@I18n.T("offlineLibrary.removeButton")</button>
+                    <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => RemoveAsync(book.Id)" title="@I18n.T("offlineLibrary.removeButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("offlineLibrary.removeButton")</span></button>
                 </div>
             </div>
         }
