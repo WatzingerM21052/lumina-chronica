@@ -19,6 +19,14 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Project page fixes (user report: overlaps in the project area):
+  - Places no longer overlap: a place card is landscape and stuck 64px into its neighbour.
+  - The map is capped at 70% of the screen height so the places below stay in view.
+  - Pins are larger and dark-filled, so they stay visible on light maps.
+  - "Replace map" is a small button next to the heading instead of the browser's raw file field.
+  - Timeline: the move, edit and delete controls sit in one row top right, and the move arrows only show when there is more than one event. On phones the title and text use the full width (they were squeezed into a narrow column), and the timeline dots now sit on the line (they were 17px beside it).
+  - Deleting a timeline event or a project file now asks first, like every other delete.
+  - Files: uploading happens in a dialog behind an "Upload file" button, like the other tabs; download is an icon button.
 - Emails (password reset, security notices) now follow the language you picked in the settings: switching the language while signed in stores it on your account (new `PUT /api/users/me/language`). Before, every email was German.
 - Reading progress and bookmarks reject malformed positions (a non-integer or negative chapter, a percentage outside 0–100, a non-text or oversized position) with a clear error, instead of storing values that later broke the reader.
 - Settings: theme, language and shelf cover text share one "Appearance" card; the themes are preview cards showing each theme's real colours (System shows light and dark side by side); every on/off preference is a switch with its description underneath; in-app notifications and what your public activity log shows are separate "Notifications" and "Privacy" cards.

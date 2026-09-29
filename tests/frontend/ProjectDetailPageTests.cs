@@ -487,6 +487,46 @@ public class ProjectDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void ProjectDetail_TimelineEvent_Delete_AsksFirst_AndSingleEventHasNoMoveButtons()
+    {
+        HttpRequestMessage? deleteRequest = null;
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .When(r => r.Method == HttpMethod.Delete, r =>
+            {
+                deleteRequest = r;
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":null}""");
+            })
+            .WhenPathEndsWith(
+                "/timeline",
+                """{"success":true,"data":[{"id":5,"projectId":1,"title":"The Sundering","description":null,"date":null,"order":0,"createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
+
+        Assert.Empty(cut.FindAll(".timeline-move-button")); // nothing to reorder
+        cut.Find(".timeline-event-controls .btn-icon-danger").Click();
+        Assert.Contains("Dieses Ereignis wirklich löschen?", cut.Markup);
+        Assert.Null(deleteRequest);
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Ja, löschen").Click();
+
+        Assert.Equal("/api/projects/1/timeline/5", deleteRequest?.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
     public void ProjectDetail_TimelineTab_RendersEventsInOrder()
     {
         var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
@@ -519,7 +559,7 @@ public class ProjectDetailPageTests : BunitContext
         Assert.Equal(["The Sundering", "The Reckoning"], titles);
         Assert.Contains("Jahr 1247", cut.Markup);
 
-        var moveButtons = cut.FindAll(".timeline-move-buttons button");
+        var moveButtons = cut.FindAll(".timeline-move-button");
         Assert.True(moveButtons[0].HasAttribute("disabled")); // first event can't move up
         Assert.False(moveButtons[1].HasAttribute("disabled")); // first event can move down
     }
@@ -643,7 +683,7 @@ public class ProjectDetailPageTests : BunitContext
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Zeitleiste").Click();
-        cut.FindAll(".timeline-move-buttons button")[2].Click(); // second event's "up" button
+        cut.FindAll(".timeline-move-button")[2].Click(); // second event's "up" button
 
         Assert.Equal(HttpMethod.Put, moveRequest?.Method);
         var titlesAfterMove = cut.FindAll(".timeline-event-title").Select(e => e.TextContent).ToList();
@@ -795,6 +835,11 @@ public class ProjectDetailPageTests : BunitContext
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
+
+        // Asks first; nothing is deleted until confirmed.
+        Assert.Contains("Diese Datei wirklich löschen?", cut.Markup);
+        Assert.Null(deleteRequest);
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Ja, löschen").Click();
 
         Assert.Equal(HttpMethod.Delete, deleteRequest?.Method);
         Assert.Equal("/api/projects/1/files/7", deleteRequest?.RequestUri?.AbsolutePath);
