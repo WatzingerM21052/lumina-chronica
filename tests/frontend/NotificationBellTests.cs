@@ -27,6 +27,7 @@ public class NotificationBellTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
         return handler;
     }
 

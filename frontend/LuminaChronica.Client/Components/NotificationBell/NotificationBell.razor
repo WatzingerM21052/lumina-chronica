@@ -1,7 +1,7 @@
 @namespace LuminaChronica.Client.Components
 
 <div class="notification-bell">
-    <button type="button" class="notification-bell-toggle" @onclick="ToggleOpenAsync" aria-label="Benachrichtigungen">
+    <button type="button" class="notification-bell-toggle" @onclick="ToggleOpenAsync" aria-label="@I18n.T("notifications.title")" aria-expanded="@(_isOpen ? "true" : "false")">
         <Icon Name="bell" />
         @if (UnreadCount > 0)
         {
@@ -11,29 +11,36 @@
 
     @if (_isOpen)
     {
+        @* Transparent layer: a click anywhere else closes the panel. *@
+        <div class="notification-backdrop" @onclick="() => _isOpen = false"></div>
         <div class="notification-popover">
             <div class="notification-popover-header">
+                <div class="notification-popover-title">
+                    <strong>@I18n.T("notifications.title")</strong>
+                    @if (UnreadCount > 0)
+                    {
+                        <button type="button" class="notification-mark-all" @onclick="MarkAllReadAsync">@I18n.T("notifications.markAllRead")</button>
+                    }
+                </div>
+                @* One row that scrolls sideways on a narrow screen instead of
+                   wrapping into two rows of chips. *@
                 <div class="notification-filter-pills">
-                    @foreach (var (value, label) in Filters)
+                    @foreach (var (value, labelKey) in Filters)
                     {
                         <button type="button" class="notification-pill @(_activeFilter == value ? "is-selected" : "")" @onclick="() => SetFilter(value)">
-                            @label
+                            @I18n.T(labelKey)
                         </button>
                     }
                 </div>
-                @if (UnreadCount > 0)
-                {
-                    <button type="button" class="btn notification-mark-all" @onclick="MarkAllReadAsync">Alle als gelesen markieren</button>
-                }
             </div>
 
             @if (_notifications is null)
             {
-                <p class="text-muted">Lade …</p>
+                <p class="text-muted">@I18n.T("notifications.loading")</p>
             }
             else if (FilteredNotifications.Count == 0)
             {
-                <p class="text-muted">Keine Benachrichtigungen@(_activeFilter is null ? "." : " dieses Typs.")</p>
+                <p class="text-muted">@I18n.T(_activeFilter is null ? "notifications.empty" : "notifications.emptyFiltered")</p>
             }
             else
             {
