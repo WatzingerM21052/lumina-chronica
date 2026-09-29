@@ -45,6 +45,24 @@ export type Streaks = {
     longestStreak: number;
 };
 
+// Plan C3 (statistics dashboard): the last 12 months for the line chart,
+// zero-filled so the chart always has twelve points. "Finished" uses the
+// same rule as the yearly overview (progress reached 100%, dated by
+// last_opened); active days come from the reading_activity log.
+export type MonthlyOverviewItem = {
+    month: string; // YYYY-MM
+    booksFinished: number;
+    pagesFinished: number;
+    activeDays: number;
+};
+
+// Estimates from the activity log -- real reading time isn't tracked (see
+// the header comment), so the UI labels these as approximate.
+export type ReadingPace = {
+    pagesPerActiveDay: number | null;
+    activeDaysPerBook: number | null;
+};
+
 export type ReadingGoal = {
     targetBooks: number | null;
     booksFinishedThisYear: number;
@@ -60,6 +78,8 @@ export type Statistics = {
     readingCalendar: CalendarDay[];
     streaks: Streaks;
     goal: ReadingGoal;
+    monthlyOverview: MonthlyOverviewItem[];
+    readingPace: ReadingPace;
 };
 
 type ProgressRow = { book_id: number; percentage: number; last_opened: string };
@@ -166,6 +186,51 @@ async function getYearlyOverview(db: D1Database, userId: number): Promise<Yearly
         }));
 }
 
+const MONTHS = 12;
+
+export function lastMonths(count: number, now: Date = new Date()): string[] {
+    const months: string[] = [];
+    for (let i = count - 1; i >= 0; i--) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+        months.push(d.toISOString().slice(0, 7));
+    }
+    return months;
+}
+
+async function getMonthlyOverview(db: D1Database, userId: number): Promise<MonthlyOverviewItem[]> {
+    const months = lastMonths(MONTHS);
+    const from = `${months[0]}-01`;
+    const [finishedRows, activeRows] = await Promise.all([
+        db
+            .prepare(
+                `SELECT strftime('%Y-%m', rp.last_opened) AS month, COUNT(*) AS books, SUM(COALESCE(bm.pages, 0)) AS pages
+                 FROM reading_progress rp LEFT JOIN book_metadata bm ON bm.book_id = rp.book_id
+                 WHERE rp.user_id = ? AND rp.percentage >= 100 AND rp.last_opened >= ? GROUP BY month`
+            )
+            .bind(userId, from)
+            .all<{ month: string; books: number; pages: number | null }>(),
+        db
+            .prepare("SELECT strftime('%Y-%m', activity_date) AS month, COUNT(*) AS days FROM reading_activity WHERE user_id = ? AND activity_date >= ? GROUP BY month")
+            .bind(userId, from)
+            .all<{ month: string; days: number }>(),
+    ]);
+    const finished = new Map(finishedRows.results.map((r) => [r.month, r]));
+    const active = new Map(activeRows.results.map((r) => [r.month, r.days]));
+    return months.map((month) => ({
+        month,
+        booksFinished: finished.get(month)?.books ?? 0,
+        pagesFinished: finished.get(month)?.pages ?? 0,
+        activeDays: active.get(month) ?? 0,
+    }));
+}
+
+export function computeReadingPace(pagesRead: number, booksRead: number, activeDays: number): ReadingPace {
+    return {
+        pagesPerActiveDay: activeDays > 0 ? Math.round(pagesRead / activeDays) : null,
+        activeDaysPerBook: booksRead > 0 && activeDays > 0 ? Math.round((activeDays / booksRead) * 10) / 10 : null,
+    };
+}
+
 async function getReadingCalendar(db: D1Database, userId: number): Promise<CalendarDay[]> {
     const rows = await db
         .prepare("SELECT activity_date, event_count FROM reading_activity WHERE user_id = ? AND activity_date >= date('now', ?) ORDER BY activity_date ASC")
@@ -197,7 +262,7 @@ export async function setReadingGoal(db: D1Database, userId: number, targetBooks
 }
 
 export async function getStatistics(db: D1Database, userId: number): Promise<Statistics> {
-    const [booksReadRow, booksInProgressRow, allProgress, recentProgress, yearlyOverview, readingCalendar, goal] = await Promise.all([
+    const [booksReadRow, booksInProgressRow, allProgress, recentProgress, yearlyOverview, readingCalendar, goal, monthlyOverview] = await Promise.all([
         db
             .prepare("SELECT COUNT(*) AS total FROM reading_progress WHERE user_id = ? AND percentage >= 100")
             .bind(userId)
@@ -211,6 +276,7 @@ export async function getStatistics(db: D1Database, userId: number): Promise<Sta
         getYearlyOverview(db, userId),
         getReadingCalendar(db, userId),
         getReadingGoal(db, userId),
+        getMonthlyOverview(db, userId),
     ]);
 
     const activityDatesRow = await db.prepare("SELECT activity_date FROM reading_activity WHERE user_id = ? ORDER BY activity_date ASC").bind(userId).all<{ activity_date: string }>();
@@ -245,8 +311,9 @@ export async function getStatistics(db: D1Database, userId: number): Promise<Sta
         lastOpened: row.last_opened,
     }));
 
+    const booksRead = booksReadRow?.total ?? 0;
     return {
-        booksRead: booksReadRow?.total ?? 0,
+        booksRead,
         booksInProgress: booksInProgressRow?.total ?? 0,
         pagesRead,
         genreBreakdown,
@@ -255,5 +322,7 @@ export async function getStatistics(db: D1Database, userId: number): Promise<Sta
         readingCalendar,
         streaks,
         goal,
+        monthlyOverview,
+        readingPace: computeReadingPace(pagesRead, booksRead, activityDatesRow.results.length),
     };
 }
