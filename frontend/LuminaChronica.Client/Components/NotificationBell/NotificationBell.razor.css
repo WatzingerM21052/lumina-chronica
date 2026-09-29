@@ -41,16 +41,23 @@
     text-align: center;
 }
 
+.notification-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 49;
+}
+
 .notification-popover {
     position: absolute;
     top: calc(100% + var(--space-1));
     right: 0;
-    z-index: 20;
+    z-index: 50;
     width: 22rem;
     max-width: 90vw;
     max-height: 28rem;
     overflow-y: auto;
-    padding: var(--space-2);
+    padding: var(--space-1) var(--space-2) var(--space-2);
+    color: var(--color-text-primary);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg, var(--radius));
     background-color: var(--color-bg-card);
@@ -61,16 +68,38 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-1);
 }
 
+.notification-popover-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-height: 2.25rem;
+}
+
+.notification-popover-title strong {
+    font-family: var(--font-family-display);
+}
+
+/* One row of chips; on a narrow screen it scrolls sideways (bar hidden)
+   instead of wrapping into two rows. */
 .notification-filter-pills {
     display: flex;
-    flex-wrap: wrap;
-    gap: calc(var(--space-1) / 2);
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * var(--space-2));
+    padding-inline: var(--space-2);
+}
+
+.notification-filter-pills::-webkit-scrollbar {
+    display: none;
 }
 
 .notification-pill {
+    flex-shrink: 0;
     border: 1px solid var(--color-border);
     border-radius: 999px;
     background-color: var(--color-bg-light);
@@ -86,9 +115,19 @@
     color: var(--color-bg-light);
 }
 
+/* A quiet text action in the title row, not a full button. */
 .notification-mark-all {
-    align-self: flex-start;
+    padding: 0.25rem 0;
+    border: none;
+    background: none;
+    color: var(--color-accent-text);
+    font: inherit;
     font-size: var(--font-size-small);
+    cursor: pointer;
+}
+
+.notification-mark-all:hover {
+    text-decoration: underline;
 }
 
 .notification-list {
@@ -116,4 +155,19 @@
 
 .notification-date {
     font-size: var(--font-size-small);
+}
+
+/* Phones: the bell sits near the right edge, so a right-anchored 22rem
+   panel ran off the left side of the screen. Pin it between the screen
+   edges under the header instead, clear of the bottom bar. */
+@media (max-width: 599.98px) {
+    .notification-popover {
+        position: fixed;
+        top: calc(3.5rem + env(safe-area-inset-top, 0px));
+        left: var(--space-2);
+        right: var(--space-2);
+        width: auto;
+        max-width: none;
+        max-height: calc(100dvh - 3.5rem - 7rem - env(safe-area-inset-top, 0px));
+    }
 }
