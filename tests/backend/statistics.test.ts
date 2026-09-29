@@ -3,6 +3,7 @@ import app from "../../backend/src/index";
 import { createFakeD1 } from "./fakeD1";
 import { createFakeR2 } from "./fakeR2";
 import { readJson } from "./testUtils";
+import { computeReadingPace, lastMonths } from "../../backend/src/services/statisticsService";
 
 let env: { DB: D1Database; STORAGE: R2Bucket; JWT_SECRET: string };
 let tokenA: string;
@@ -81,6 +82,8 @@ describe("GET /api/statistics", () => {
             readingCalendar: [],
             streaks: { currentStreak: 0, longestStreak: 0 },
             goal: { targetBooks: null, booksFinishedThisYear: 0 },
+            monthlyOverview: expect.any(Array),
+            readingPace: { pagesPerActiveDay: null, activeDaysPerBook: null },
         });
     });
 
@@ -234,6 +237,48 @@ describe("GET /api/statistics", () => {
 
         const currentYear = new Date().getUTCFullYear().toString();
         expect(json.data.yearlyOverview).toEqual([{ year: currentYear, booksFinished: 1, activeDays: 1, pagesRead: 150 }]);
+    });
+});
+
+describe("GET /api/statistics -- dashboard data (plan C3)", () => {
+    it("returns the last 12 months zero-filled, ending with the current month", async () => {
+        const res = await app.request("/api/statistics", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        const months = json.data.monthlyOverview;
+        expect(months).toHaveLength(12);
+        expect(months[11].month).toBe(new Date().toISOString().slice(0, 7));
+        expect(months.every((m: { booksFinished: number; activeDays: number }) => m.booksFinished === 0 && m.activeDays === 0)).toBe(true);
+    });
+
+    it("counts a finished book, its pages and the active day in the current month", async () => {
+        const bookId = await uploadBook(tokenA, "Finished Now");
+        await setPages(tokenA, bookId, 200);
+        await saveProgress(tokenA, bookId, 100);
+
+        const res = await app.request("/api/statistics", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.monthlyOverview[11]).toMatchObject({ booksFinished: 1, pagesFinished: 200, activeDays: 1 });
+        expect(json.data.readingPace).toEqual({ pagesPerActiveDay: 200, activeDaysPerBook: 1 });
+    });
+
+    it("has no reading pace without any activity", async () => {
+        const res = await app.request("/api/statistics", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.readingPace).toEqual({ pagesPerActiveDay: null, activeDaysPerBook: null });
+    });
+});
+
+describe("statistics helpers", () => {
+    it("lastMonths spans year boundaries", () => {
+        expect(lastMonths(3, new Date(Date.UTC(2026, 0, 15)))).toEqual(["2025-11", "2025-12", "2026-01"]);
+    });
+
+    it("computeReadingPace rounds pages per day and days per book", () => {
+        expect(computeReadingPace(1000, 3, 7)).toEqual({ pagesPerActiveDay: 143, activeDaysPerBook: 2.3 });
+        expect(computeReadingPace(500, 0, 4)).toEqual({ pagesPerActiveDay: 125, activeDaysPerBook: null });
     });
 });
 
