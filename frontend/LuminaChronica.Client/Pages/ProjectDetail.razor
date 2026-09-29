@@ -260,7 +260,19 @@ else
     }
     else if (_activeTab == "map")
     {
-        <h2>@I18n.T("projectDetail.mapTitle")</h2>
+        <div class="library-header">
+            <h2>@I18n.T("projectDetail.mapTitle")</h2>
+            @if (_mapObjectUrl is not null)
+            {
+                @* A button, not the browser's raw "choose file" bar across the
+                   page: the (invisible) file input covers the button, so a
+                   click or a dropped file lands on it directly. *@
+                <span class="btn file-button">
+                    <Icon Name="image" />@I18n.T("projectDetail.replaceMapLabel")
+                    <InputFile id="map-replace" OnChange="OnMapSelected" aria-label="@I18n.T("projectDetail.replaceMapLabel")" accept="image/*" />
+                </span>
+            }
+        </div>
 
         @if (_mapObjectUrl is not null)
         {
@@ -283,10 +295,6 @@ else
             {
                 <p class="form-error">@_positionErrorMessage</p>
             }
-            <div class="form-group">
-                <label for="map-replace">@I18n.T("projectDetail.replaceMapLabel")</label>
-                <InputFile id="map-replace" OnChange="OnMapSelected" />
-            </div>
         }
         else
         {
@@ -454,18 +462,23 @@ else
                             {
                                 <p class="user-text">@timelineEvent.Description</p>
                             }
+                            @* One row, top right: reorder (only when there is something
+                               to reorder), edit, delete. *@
                             <div class="timeline-event-controls">
-                                <div class="timeline-move-buttons">
-                                    <button type="button" class="btn btn-icon btn-icon-sm" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="@I18n.T("projectDetail.moveUpTitle")"><Icon Name="chevron-up" /><span class="visually-hidden">@I18n.T("projectDetail.moveUpTitle")</span></button>
-                                    <button type="button" class="btn btn-icon btn-icon-sm" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="@I18n.T("projectDetail.moveDownTitle")"><Icon Name="chevron-down" /><span class="visually-hidden">@I18n.T("projectDetail.moveDownTitle")</span></button>
-                                </div>
+                                @if (_events.Count > 1)
+                                {
+                                    <button type="button" class="btn btn-icon btn-icon-sm timeline-move-button" disabled="@(index == 0)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "up")' title="@I18n.T("projectDetail.moveUpTitle")"><Icon Name="chevron-up" /><span class="visually-hidden">@I18n.T("projectDetail.moveUpTitle")</span></button>
+                                    <button type="button" class="btn btn-icon btn-icon-sm timeline-move-button" disabled="@(index == _events.Count - 1)" @onclick='() => MoveTimelineEventAsync(timelineEvent.Id, "down")' title="@I18n.T("projectDetail.moveDownTitle")"><Icon Name="chevron-down" /><span class="visually-hidden">@I18n.T("projectDetail.moveDownTitle")</span></button>
+                                }
                                 <button type="button" class="btn btn-icon btn-icon-sm" @onclick="() => StartEditingEvent(timelineEvent)" title="@I18n.T("projectDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("projectDetail.editButton")</span></button>
-                                <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => DeleteTimelineEventAsync(timelineEvent.Id)" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
+                                <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => _confirmingEventDeleteId = timelineEvent.Id" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
                             </div>
                         </div>
                     </li>
                 }
             </ol>
+            <ConfirmDialog IsOpen="_confirmingEventDeleteId is not null" Message="@I18n.T("projectDetail.deleteEventConfirmMessage")"
+                           OnConfirm="DeleteTimelineEventAsync" OnCancel="() => _confirmingEventDeleteId = null" />
         }
     }
     else if (_activeTab == "lore")
@@ -578,31 +591,39 @@ else
     }
     else
     {
+        @* Same shape as the other tabs (heading left, action right, form in
+           a dialog) instead of a centred form card above the gallery. *@
         <div class="library-header">
             <h2>@I18n.T("projectDetail.filesTitle")</h2>
+            <button type="button" id="add-file-button" class="btn btn-primary" @onclick="() => _showCreateFileForm = true">@I18n.T("projectDetail.addFileButton")</button>
         </div>
 
-        <EditForm Model="_createFileForm" OnValidSubmit="CreateProjectFileAsync" class="book-form-card">
-            @if (_createFileErrorMessage is not null)
-            {
-                <p class="form-error">@_createFileErrorMessage</p>
-            }
-            <div class="form-group">
-                <label for="file-category">@I18n.T("projectDetail.typeLabel")</label>
-                <InputSelect id="file-category" @bind-Value="_createFileForm.Category">
-                    <option value="IMAGE">@I18n.T("projectDetail.categoryImage")</option>
-                    <option value="DOCUMENT">@I18n.T("projectDetail.categoryDocument")</option>
-                </InputSelect>
-            </div>
-            <div class="form-group">
-                <label for="file-upload">@I18n.T("projectDetail.fileLabel")</label>
-                <FileDropzone Id="file-upload" Label="@I18n.T("projectDetail.fileDropzoneLabel")"
-                              SelectedFileName="@_selectedProjectFile?.Name" OnChange="OnProjectFileSelected" />
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">@I18n.T("projectDetail.uploadButton")</button>
-            </div>
-        </EditForm>
+        <Dialog IsOpen="_showCreateFileForm" Title="@I18n.T("projectDetail.addFileButton")" OnClose="CloseCreateFile">
+            <ChildContent>
+                <EditForm id="create-file-form" Model="_createFileForm" OnValidSubmit="CreateProjectFileAsync" class="auth-form">
+                    @if (_createFileErrorMessage is not null)
+                    {
+                        <p class="form-error">@_createFileErrorMessage</p>
+                    }
+                    <div class="form-group">
+                        <label for="file-category">@I18n.T("projectDetail.typeLabel")</label>
+                        <InputSelect id="file-category" @bind-Value="_createFileForm.Category">
+                            <option value="IMAGE">@I18n.T("projectDetail.categoryImage")</option>
+                            <option value="DOCUMENT">@I18n.T("projectDetail.categoryDocument")</option>
+                        </InputSelect>
+                    </div>
+                    <div class="form-group">
+                        <label for="file-upload">@I18n.T("projectDetail.fileLabel")</label>
+                        <FileDropzone Id="file-upload" Label="@I18n.T("projectDetail.fileDropzoneLabel")"
+                                      SelectedFileName="@_selectedProjectFile?.Name" OnChange="OnProjectFileSelected" />
+                    </div>
+                </EditForm>
+            </ChildContent>
+            <Footer>
+                <button type="button" class="btn" @onclick="CloseCreateFile">@I18n.T("projectDetail.cancelButton")</button>
+                <button type="submit" form="create-file-form" class="btn btn-primary">@I18n.T("projectDetail.uploadButton")</button>
+            </Footer>
+        </Dialog>
 
         @if (_filesErrorMessage is not null)
         {
@@ -637,12 +658,14 @@ else
                             <div class="project-card-type">@FormatFileSize(file.Size)</div>
                         </div>
                         <div class="form-actions">
-                            <button type="button" class="btn" @onclick="() => DownloadProjectFileAsync(file)">@I18n.T("projectDetail.downloadButton")</button>
-                            <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => DeleteProjectFileAsync(file.Id)" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
+                            <button type="button" class="btn btn-icon btn-icon-sm" @onclick="() => DownloadProjectFileAsync(file)" title="@I18n.T("projectDetail.downloadButton")"><Icon Name="download" /><span class="visually-hidden">@I18n.T("projectDetail.downloadButton")</span></button>
+                            <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => _confirmingFileDeleteId = file.Id" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
                         </div>
                     </div>
                 }
             </div>
+            <ConfirmDialog IsOpen="_confirmingFileDeleteId is not null" Message="@I18n.T("projectDetail.deleteFileConfirmMessage")"
+                           OnConfirm="DeleteProjectFileAsync" OnCancel="() => _confirmingFileDeleteId = null" />
         }
     }
 }
@@ -1268,8 +1291,21 @@ else
         }
     }
 
-    private async Task DeleteTimelineEventAsync(int eventId)
+    // Deletes ask first, like every other delete in the app (plan A5).
+    private int? _confirmingEventDeleteId;
+    private int? _confirmingFileDeleteId;
+    private bool _showCreateFileForm;
+
+    private void CloseCreateFile()
     {
+        _showCreateFileForm = false;
+        _createFileErrorMessage = null;
+    }
+
+    private async Task DeleteTimelineEventAsync()
+    {
+        if (_confirmingEventDeleteId is not { } eventId) return;
+        _confirmingEventDeleteId = null;
         var succeeded = await ApiClient.DeleteAsync($"/api/projects/{Id}/timeline/{eventId}");
         if (succeeded)
         {
@@ -1458,6 +1494,7 @@ else
         {
             _createFileForm = new CreateProjectFileFormModel();
             _selectedProjectFile = null;
+            _showCreateFileForm = false;
             await LoadProjectFilesAsync();
         }
         else
@@ -1476,8 +1513,10 @@ else
         await BlobUrlService.RevokeObjectUrlAsync(objectUrl);
     }
 
-    private async Task DeleteProjectFileAsync(int fileId)
+    private async Task DeleteProjectFileAsync()
     {
+        if (_confirmingFileDeleteId is not { } fileId) return;
+        _confirmingFileDeleteId = null;
         var succeeded = await ApiClient.DeleteAsync($"/api/projects/{Id}/files/{fileId}");
         if (succeeded)
         {

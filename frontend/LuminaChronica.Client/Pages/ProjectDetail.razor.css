@@ -102,6 +102,20 @@
 }
 
 @media (max-width: 599.98px) {
+    /* .timeline prefix: the base rules come later in this file. The
+       line and card were indented 56px, a sixth of the screen. */
+    ol.timeline {
+        --timeline-indent: var(--space-3);
+    }
+
+    .timeline .timeline-event {
+        padding-left: var(--space-2);
+    }
+
+    .timeline .timeline-event-card {
+        padding: var(--space-2);
+    }
+
     .project-stats {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: var(--space-1);
@@ -133,8 +147,12 @@
     max-width: 100%;
 }
 
+/* Capped in height: a tall map pushed the places list below it off the
+   screen. The wrapper shrinks to the image, so the %-positioned pins still
+   line up. */
 .map-image {
     max-width: 100%;
+    max-height: 70vh;
     display: block;
     border-radius: var(--radius, 4px);
     border: 1px solid var(--color-border);
@@ -155,11 +173,40 @@
     transform: translate(-50%, -100%) scale(1.15);
 }
 
+/* The pin is an Icon (child component, hence ::deep); at the default icon
+   size it was a ~16px target on a large image. */
+.map-pin ::deep .icon {
+    display: block;
+    width: 1.75rem;
+    height: 1.75rem;
+    stroke-width: 1.8;
+    /* Dark body, gold outline: readable on light and dark map images. */
+    fill: var(--color-bg-dark);
+}
+
+.map-wrapper + .text-muted,
+.map-wrapper ~ .form-group {
+    margin-top: var(--space-2);
+}
+
+/* File gallery: download and delete are a pair of small icon buttons,
+   spaced like the other icon pairs (the generic form-actions gap is
+   meant for full buttons). */
+.file-gallery-item .form-actions {
+    gap: 4px;
+    margin-top: var(--space-1);
+}
+
+/* --timeline-indent: the list's left padding; the line sits at
+   --space-1 inside it and each dot is placed from the same two values, so
+   dot and line stay centred on each other at any indent. (The dots used
+   to sit 17px right of the line.) */
 .timeline {
+    --timeline-indent: var(--space-4);
     position: relative;
     list-style: none;
     margin: var(--space-4) 0 0 0;
-    padding: 0 0 0 var(--space-4);
+    padding: 0 0 0 var(--timeline-indent);
 }
 
 .timeline::before {
@@ -180,21 +227,45 @@
 .timeline-event::before {
     content: "";
     position: absolute;
-    left: calc(var(--space-1) * -1 - 5px);
+    left: calc(var(--space-1) - var(--timeline-indent) - 6px);
     top: 0.3rem;
     width: 12px;
     height: 12px;
     border-radius: 50%;
     background: var(--color-gold-accent);
-    box-shadow: 0 0 0 3px var(--color-bg-card);
+    /* Page colour, so the ring reads as a gap in the line. */
+    box-shadow: 0 0 0 3px var(--color-bg-paper);
 }
 
+/* The action row sits top right beside the first line (the date, or the
+   title when there is none); everything below spans the full width. A
+   whole column for the actions squeezed title and text to ~86px on a
+   phone. */
 .timeline-event-card {
+    display: grid;
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-2);
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-card);
     padding: var(--space-2) var(--space-3);
+}
+
+.timeline-event-card > :not(.timeline-event-controls) {
+    grid-column: 1 / -1;
+}
+
+.timeline-event-card > :first-child {
+    grid-column: 1;
+    align-self: center;
+}
+
+/* The description is the last text: its own bottom margin doubled the
+   card padding under it. */
+.timeline-event-card .user-text {
+    margin-bottom: 0;
 }
 
 .timeline-event-date {
@@ -217,19 +288,9 @@
 }
 
 .timeline-event-controls {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
     display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    margin-top: var(--space-2);
-}
-
-.timeline-move-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.timeline-move-buttons button {
-    line-height: 1;
-    padding: 2px 8px;
+    gap: 4px;
 }
