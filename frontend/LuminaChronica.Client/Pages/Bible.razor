@@ -116,7 +116,7 @@
     {
         <article class="bible-chapter" @key="_chapter.Id" tabindex="0" @ref="_articleElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
             <h2>@_chapter.Reference</h2>
-            <div id="bible-chapter-content" class="bible-chapter-content">@((MarkupString)_chapter.Content)</div>
+            <div id="bible-chapter-content" class="bible-chapter-content">@((MarkupString)BibleDropCap.Apply(_chapter.Content))</div>
         </article>
 
         <footer class="bible-attribution">

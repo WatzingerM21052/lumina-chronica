@@ -90,7 +90,7 @@ public class BiblePageTests : BunitContext
         var cut = Render<Bible>();
 
         Assert.Contains("Phil. 2", cut.Markup);
-        Assert.Contains("Do everything without grumbling", cut.Markup);
+        Assert.Contains("Do everything without grumbling", cut.Find("#bible-chapter-content").TextContent); // drop cap splits the markup
 
         // The component awaits a short (80ms) delay before scrolling (lets
         // the browser apply the DOM patch first) -- advance the fake clock
@@ -127,7 +127,7 @@ public class BiblePageTests : BunitContext
         var cut = Render<Bible>();
         cut.Find("select").Change(WebId);
 
-        Assert.Contains("Do all things without murmurings", cut.Markup);
+        Assert.Contains("Do all things without murmurings", cut.Find("#bible-chapter-content").TextContent); // drop cap splits the markup
         Assert.DoesNotContain("Biblica", cut.Markup);
 
         var invocation = Assert.Single(setTranslationHandler.Invocations);
@@ -152,7 +152,7 @@ public class BiblePageTests : BunitContext
         cut.FindAll("button").Single(b => b.TextContent.Contains("Nächstes Kapitel")).Click();
 
         Assert.Contains("Phil. 3", cut.Markup);
-        Assert.Contains("Finally, my brothers", cut.Markup);
+        Assert.Contains("Finally, my brothers", cut.Find("#bible-chapter-content").TextContent); // drop cap splits the markup
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class BiblePageTests : BunitContext
         cut.Find("article.bible-chapter").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "ArrowRight" });
 
         Assert.Contains("Phil. 3", cut.Markup);
-        Assert.Contains("Finally, my brothers", cut.Markup);
+        Assert.Contains("Finally, my brothers", cut.Find("#bible-chapter-content").TextContent); // drop cap splits the markup
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public class BiblePageTests : BunitContext
         await cut.InvokeAsync(() => cut.Find("button.bible-search-result").Click());
 
         Assert.Contains("Phil. 4", cut.Markup);
-        Assert.Contains("Rejoice in the Lord always", cut.Markup);
+        Assert.Contains("Rejoice in the Lord always", cut.Find("#bible-chapter-content").TextContent); // drop cap splits the markup
     }
 
     [Fact]
