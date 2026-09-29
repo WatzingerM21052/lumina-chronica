@@ -21,6 +21,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 - Notifications panel: on phones it ran off the left edge of the screen; it now sits between the screen edges under the header. It is also more compact everywhere (title row with a small "mark all read", one row of filter chips that scrolls sideways) and closes on a click outside. Its texts were hard-coded German and are now translated too.
 - Account menu: your avatar and name at the top right open a small menu showing who is signed in (avatar, name, e-mail) with your public profile, settings, "Account & security" (the profile page) and sign out. On phones the avatar sits next to the bell. Settings left the top navigation and the "More" sheet, and the sign-out button left the middle of the profile page.
+- World bible: the drop cap is now the first letter of the chapter text (it used to enlarge the first letter of the section heading, e.g. the "I" of "Imitating Christ's Humility", in every look), and verse 1's number no longer sits between the big letter and the rest of the word. The hero quote is readable again in the Standard look (it had turned near-black in dark app themes).
 - Offline books are compact rows (icon, title, author, format and size, then "Read" and a remove icon), two per line on wide screens, instead of tall cards.
 - Project page fixes (user report: overlaps in the project area):
   - Places no longer overlap: a place card is landscape and stuck 64px into its neighbour.
