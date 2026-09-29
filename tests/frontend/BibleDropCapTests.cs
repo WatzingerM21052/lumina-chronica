@@ -23,12 +23,12 @@ public class BibleDropCapTests
     }
 
     [Fact]
-    public void Verse1Number_IsMarked_ButKeepsItsSidForVerseLinks()
+    public void Verse1Number_StaysAsItIs()
     {
         var html = BibleDropCap.Apply(Philippians2);
 
-        Assert.Contains("data-sid=\"PHP 2:1\" class=\"v bible-verse-at-drop-cap\">1</span>", html);
-        Assert.Contains("data-sid=\"PHP 2:2\" class=\"v\">2</span>", html); // later verses untouched
+        // User feedback: verse 1's number must stay visible.
+        Assert.Contains("data-sid=\"PHP 2:1\" class=\"v\">1</span><span class=\"bible-drop-cap\">T</span>", html);
     }
 
     [Fact]
