@@ -257,29 +257,18 @@
     margin-right: 2px;
 }
 
-/* Drop cap on the first letter of the chapter's text -- an illuminated-
-   manuscript touch that reads as baroque/ornate without leaning gothic.
-   Marked by BibleDropCap.cs: p:first-of-type::first-letter hit the section
-   heading ("Imitating ...") instead of the text, in every look. */
+/* Raised initial on the first letter of the chapter's text (marked by
+   BibleDropCap.cs; p:first-of-type::first-letter hit the section heading).
+   User feedback 2026-09-29: a two-line drop cap in its own colour, with
+   verse 1's number hidden, didn't sit smoothly in the text -- so it stays
+   on the first line, in the text colour and the display face, a little
+   larger, without changing the line height; verse 1 keeps its number. */
 .bible-chapter-content ::deep .bible-drop-cap {
     font-family: var(--font-family-display);
-    font-size: 3.4em;
-    font-weight: 700;
-    color: var(--bible-burgundy);
-    float: left;
-    line-height: 0.8;
-    margin: 0.05em 0.08em 0 0;
-}
-
-/* Verse 1's number next to the drop cap: zero width in the text flow, so
-   it stays a scroll target exactly where the verse starts and is still
-   read out, but doesn't sit between the big letter and the word. */
-.bible-chapter-content ::deep .bible-verse-at-drop-cap {
-    display: inline-block;
-    width: 0;
-    overflow: hidden;
-    vertical-align: top;
-    margin: 0;
+    font-size: 1.75em;
+    font-weight: 600;
+    line-height: 0;
+    color: inherit;
 }
 
 .bible-chapter-content ::deep .bible-verse-highlight {
@@ -464,10 +453,6 @@
 
 .bible-page--dark-academia .bible-chapter-content ::deep span.v {
     color: var(--ba-gold);
-}
-
-.bible-page--dark-academia .bible-chapter-content ::deep .bible-drop-cap {
-    color: var(--ba-gold-bright);
 }
 
 .bible-page--dark-academia .bible-chapter-content ::deep .bible-verse-highlight {

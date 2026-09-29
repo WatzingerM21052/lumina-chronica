@@ -8,7 +8,7 @@ namespace LuminaChronica.Client.Services;
 // number (<span class="v">1</span>), so p:first-of-type::first-letter
 // enlarged the heading's first letter (and would otherwise hit the "1").
 // This wraps the first letter of the first text paragraph -- after its
-// verse number -- in <span class="bible-drop-cap">.
+// verse number, which stays as it is -- in <span class="bible-drop-cap">.
 public static partial class BibleDropCap
 {
     // USFM paragraph styles that are headings/titles, not running text.
@@ -38,17 +38,7 @@ public static partial class BibleDropCap
             var letter = FirstTextLetter(html, start, end);
             if (letter < 0) continue;
 
-            // The drop cap marks where verse 1 starts, as in printed
-            // bibles: its number would otherwise sit between the big letter
-            // and the rest of the word ("T 1herefore"). Kept in the DOM for
-            // verse links and screen readers, hidden visually by CSS.
-            var head = html[start..letter];
-            var verseClass = head.IndexOf("class=\"v\"", StringComparison.Ordinal);
-            if (verseClass >= 0)
-            {
-                head = head[..verseClass] + "class=\"v bible-verse-at-drop-cap\"" + head[(verseClass + "class=\"v\"".Length)..];
-            }
-            return html[..start] + head + "<span class=\"bible-drop-cap\">" + html[letter] + "</span>" + html[(letter + 1)..];
+            return html[..letter] + "<span class=\"bible-drop-cap\">" + html[letter] + "</span>" + html[(letter + 1)..];
         }
         return html;
     }
