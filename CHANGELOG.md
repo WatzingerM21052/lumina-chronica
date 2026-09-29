@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Offline books are compact rows (icon, title, author, format and size, then "Read" and a remove icon), two per line on wide screens, instead of tall cards.
 - Project page fixes (user report: overlaps in the project area):
   - Places no longer overlap: a place card is landscape and stuck 64px into its neighbour.
   - The map is capped at 70% of the screen height so the places below stay in view.

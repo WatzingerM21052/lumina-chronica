@@ -42,17 +42,19 @@
     margin-top: 0;
 }
 
+/* Compact rows (user request: less scrolling): two per line on a wide
+   screen, one on a phone; each is still a card (issue #455's design). */
 .offline-book-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
     gap: var(--space-2);
     margin: var(--space-2) 0;
 }
 
 .offline-book-card {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+    align-items: center;
+    gap: var(--space-2);
     padding: var(--space-2);
     border-radius: var(--radius-lg);
     background-color: var(--color-bg-card);
@@ -60,9 +62,20 @@
 }
 
 .offline-book-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
     color: var(--color-text-disabled);
+}
+
+.offline-book-info {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.offline-book-info .text-muted {
+    font-size: var(--font-size-small);
 }
 
 .offline-book-icon svg {
@@ -75,8 +88,10 @@
 }
 
 .offline-book-card .form-actions {
-    margin-top: auto;
-    padding-top: var(--space-1);
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin: 0;
 }
 
 .offline-empty-icon {
