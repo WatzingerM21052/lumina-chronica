@@ -38,4 +38,20 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: backend
-          command: deploy
+          # The SHA shows up as "version" in GET /api/status (review §3.3).
+          command: deploy --var APP_VERSION:${{ github.sha }}
+
+      # Fails the run if the live Worker doesn't report the SHA just deployed
+      # (a few retries: the new version needs a moment to reach every edge).
+      - name: Smoke test /api/status
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            version=$(curl -fsS https://lumina-chronica-api.svhofkirchen-api.workers.dev/api/status | jq -r .data.version || true)
+            if [ "$version" = "$GITHUB_SHA" ]; then
+              echo "Live version $version"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Live version '$version' is not the deployed $GITHUB_SHA"
+          exit 1
