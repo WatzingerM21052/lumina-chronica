@@ -149,7 +149,7 @@ public class BiblePageTests : BunitContext
         UseHandler(handler);
 
         var cut = Render<Bible>();
-        cut.FindAll(".bible-nav-buttons button").Single(b => b.TextContent.Contains("Nächstes Kapitel")).Click();
+        cut.Find(".bible-chapter-arrow--next").Click();
 
         Assert.Contains("Phil. 3", cut.Markup);
         Assert.Contains("Finally, my brothers", cut.Find("#bible-chapter-content").TextContent); // drop cap splits the markup
@@ -259,6 +259,25 @@ public class BiblePageTests : BunitContext
         Assert.Contains("bible-hero", cut.Markup);
         Assert.DoesNotContain("bible-page--dark-academia", cut.Markup);
         Assert.DoesNotContain("bible-atmosphere", cut.Markup);
+        var options = cut.FindAll(".bible-theme-toggle .bible-theme-option");
+        Assert.Equal(["true", "false"], options.Select(o => o.GetAttribute("aria-pressed")));
+    }
+
+    [Fact]
+    public void Bible_Toolbar_LabelsChapterOptions_AndHeadingArrowsFollowTheChapterRefs()
+    {
+        UseHandler(DefaultHandler());
+
+        var cut = Render<Bible>();
+
+        var chapterOptions = cut.FindAll(".bible-control--chapter option").Select(o => o.TextContent).ToList();
+        Assert.Equal(["Kapitel 1", "Kapitel 2"], chapterOptions);
+        // The search sits in the same toolbar as the selects now.
+        Assert.NotNull(cut.Find(".bible-controls .bible-search input[type=search]"));
+        // Phil. 2 has both neighbours in the fixture.
+        Assert.False(cut.Find(".bible-chapter-arrow--previous").HasAttribute("disabled"));
+        Assert.False(cut.Find(".bible-chapter-arrow--next").HasAttribute("disabled"));
+        Assert.Equal("Vorheriges Kapitel", cut.Find(".bible-chapter-arrow--previous").GetAttribute("aria-label")!.TrimStart('←', ' '));
     }
 
     [Fact]
@@ -312,7 +331,7 @@ public class BiblePageTests : BunitContext
         UseHandler(handler);
 
         var cut = Render<Bible>();
-        cut.FindAll(".bible-nav-buttons button").Single(b => b.TextContent.Contains("Nächstes Kapitel")).Click();
+        cut.Find(".bible-chapter-arrow--next").Click();
 
         Assert.Contains("Phil. 3", cut.Markup);
         Assert.Contains("bible-page--dark-academia", cut.Markup);

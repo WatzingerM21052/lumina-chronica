@@ -420,6 +420,8 @@ public class FakeI18nService : II18nService
         ["bible.chapterLabel"] = "Kapitel",
         ["bible.previousChapter"] = "← Vorheriges Kapitel",
         ["bible.nextChapter"] = "Nächstes Kapitel →",
+        ["bible.themeLabel"] = "Look der Seite",
+        ["bible.chapterOption"] = "Kapitel {0}",
         ["bible.chapterNavLabel"] = "Kapitel blättern",
         ["bible.searchPlaceholder"] = "Bibel durchsuchen...",
         ["bible.searchButton"] = "Suchen",

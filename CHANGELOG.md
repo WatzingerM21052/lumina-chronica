@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- World bible: the look (Standard / Dark Academia) is one switch that shows which is active; translation, book, chapter and search share one bar; previous/next chapter are arrows beside the chapter title (and still below the text). In Dark Academia the page title is centred again.
 - Security and operations (from the September review, #544–#548):
   - Profile → "Signed-in devices": "Sign out on all other devices". A password reset and deleting the account also sign out every existing session.
   - "Forgot password" answers equally fast whether or not the account exists.
