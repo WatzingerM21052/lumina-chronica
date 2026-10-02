@@ -1,0 +1,79 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* Project images full size (file viewer, user decision 2026-10-02): the
+   picture on a dark scrim, ‹ › / arrow keys / swipe to the neighbours,
+   download, Esc or the ✕ closes. Built on Dialog for its focus trap,
+   scroll lock and Escape handling (DialogSize.Lightbox drops the card). *@
+<Dialog IsOpen="IsOpen && Current is not null" Size="DialogSize.Lightbox" Title="@Current?.Name"
+        InitialFocusSelector=".lightbox-stage" OnClose="OnClose">
+    @if (Current is { } image)
+    {
+        <div class="lightbox-stage" tabindex="0" @onkeydown="OnKeyDownAsync"
+             @ontouchstart="OnTouchStart" @ontouchend="OnTouchEndAsync">
+            <img src="@image.Url" alt="@image.Name" />
+            @if (Images.Count > 1)
+            {
+                <button type="button" class="lightbox-arrow lightbox-arrow--previous" aria-label="@I18n.T("lightbox.previous")" @onclick="() => StepAsync(-1)">‹</button>
+                <button type="button" class="lightbox-arrow lightbox-arrow--next" aria-label="@I18n.T("lightbox.next")" @onclick="() => StepAsync(1)">›</button>
+            }
+        </div>
+        <div class="lightbox-bar">
+            @if (Images.Count > 1)
+            {
+                <span class="lightbox-counter">@string.Format(I18n.T("lightbox.counter"), Index + 1, Images.Count)</span>
+            }
+            <button type="button" class="btn lightbox-download" @onclick="() => OnDownload.InvokeAsync(image)">
+                <Icon Name="download" /> @I18n.T("lightbox.download")
+            </button>
+        </div>
+    }
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<LightboxImage> Images { get; set; } = [];
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public int Index { get; set; }
+
+    [Parameter]
+    public EventCallback<int> IndexChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<LightboxImage> OnDownload { get; set; }
+
+    // A horizontal swipe longer than this (px) flips the image.
+    private const double SwipeThreshold = 50;
+    private double? _touchStartX;
+
+    private LightboxImage? Current => Index >= 0 && Index < Images.Count ? Images[Index] : null;
+
+    // Wraps around: after the last image comes the first again.
+    private Task StepAsync(int delta) =>
+        Images.Count == 0 ? Task.CompletedTask : IndexChanged.InvokeAsync(((Index + delta) % Images.Count + Images.Count) % Images.Count);
+
+    private Task OnKeyDownAsync(KeyboardEventArgs e) => e.Key switch
+    {
+        "ArrowLeft" => StepAsync(-1),
+        "ArrowRight" => StepAsync(1),
+        _ => Task.CompletedTask,
+    };
+
+    private void OnTouchStart(TouchEventArgs e) => _touchStartX = e.ChangedTouches.FirstOrDefault()?.ClientX;
+
+    private Task OnTouchEndAsync(TouchEventArgs e)
+    {
+        if (_touchStartX is not { } start || e.ChangedTouches.FirstOrDefault() is not { } end) return Task.CompletedTask;
+        _touchStartX = null;
+        var dx = end.ClientX - start;
+        return Math.Abs(dx) < SwipeThreshold ? Task.CompletedTask : StepAsync(dx < 0 ? 1 : -1);
+    }
+}

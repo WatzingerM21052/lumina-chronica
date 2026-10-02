@@ -90,6 +90,60 @@
     align-items: flex-end;
 }
 
+.dialog--viewer {
+    max-width: 64rem;
+    height: calc(100dvh - var(--space-6));
+}
+
+.dialog--viewer .dialog-body {
+    flex: 1;
+    min-height: 0;
+}
+
+/* The lightbox is the image on a near-black scrim: no card, no border,
+   the whole viewport is the stage. */
+.dialog--lightbox {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    padding: var(--space-2);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #f3ece0;
+}
+
+.dialog-overlay:has(.dialog--lightbox) {
+    padding: 0;
+    background-color: rgba(8, 6, 4, 0.92);
+}
+
+.dialog--lightbox .dialog-title {
+    color: #f3ece0;
+    font-size: var(--font-size-body);
+    font-family: var(--font-family-ui);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dialog--lightbox .dialog-close {
+    color: #f3ece0;
+}
+
+.dialog--lightbox .dialog-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    margin-right: 0;
+    padding-right: 0;
+}
+
 @keyframes dialog-sheet-enter {
     from {
         transform: translateY(100%);
@@ -237,12 +291,12 @@
    floating in a 16px frame. Only confirmations (alertdialog: one sentence
    and two buttons) stay a centred card. */
 @media (max-width: 599.98px) {
-    .dialog-overlay:has(.dialog:not([role="alertdialog"]):not(.dialog--sheet)) {
+    .dialog-overlay:has(.dialog:not([role="alertdialog"]):not(.dialog--sheet):not(.dialog--lightbox)) {
         padding: 0;
         align-items: flex-end;
     }
 
-    .dialog:not([role="alertdialog"]):not(.dialog--sheet) {
+    .dialog:not([role="alertdialog"]):not(.dialog--sheet):not(.dialog--lightbox) {
         max-width: none;
         max-height: 92dvh;
         padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
@@ -253,7 +307,7 @@
 }
 
 @media (max-width: 599.98px) and (prefers-reduced-motion: reduce) {
-    .dialog:not([role="alertdialog"]):not(.dialog--sheet) {
+    .dialog:not([role="alertdialog"]):not(.dialog--sheet):not(.dialog--lightbox) {
         animation-name: dialog-scrim-enter;
     }
 }

@@ -14,6 +14,11 @@ public enum DialogSize
     // phone pattern for a short list of choices (UI/UX plan B2's "Mehr"
     // menu; B5 can reuse it for form dialogs on phones).
     BottomSheet,
+    // Wide and tall, for reading a document (project file viewer).
+    Viewer,
+    // Full screen on a dark scrim, no card: an image and its controls
+    // (ImageLightbox). Never turned into a bottom sheet on phones.
+    Lightbox,
 }
 
 // Shared overlay/card primitive (design doc
