@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Statistics page is a dashboard: a flat banner instead of the tall hero, then cards in a grid (one column on phones). The yearly goal shows its ring; the pencil opens a "− 12 +" stepper. The reading calendar spans its card with month names and can show a single past year. New: a line chart of reading days or finished books per month, genres as a donut (four biggest, the rest as "Other"), and the reading pace (≈ pages per reading day, ≈ reading days per book).
 - Statistics API: `GET /api/statistics` also returns the last 12 months (books and pages finished, active reading days) and an estimated reading pace, for the upcoming statistics dashboard.
 - Notifications panel: on phones it ran off the left edge of the screen; it now sits between the screen edges under the header. It is also more compact everywhere (title row with a small "mark all read", one row of filter chips that scrolls sideways) and closes on a click outside. Its texts were hard-coded German and are now translated too.
 - Account menu: your avatar and name at the top right open a small menu showing who is signed in (avatar, name, e-mail) with your public profile, settings, "Account & security" (the profile page) and sign out. On phones the avatar sits next to the bell. Settings left the top navigation and the "More" sheet, and the sign-out button left the middle of the profile page.

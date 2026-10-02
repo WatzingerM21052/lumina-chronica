@@ -1986,7 +1986,9 @@ select:focus-visible,
 
 .calendar-heatmap {
     --weeks: 53;
-    flex: 1 0 auto;
+    /* Basis 0: fill the card, never grow to the cells' max-content; only
+       the min-width (a readable cell size) makes it overflow and swipe. */
+    flex: 1 0 0%;
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
