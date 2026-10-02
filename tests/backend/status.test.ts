@@ -14,7 +14,7 @@ describe("GET /api/status", () => {
                 version: "dev",
                 schema: null,
                 config: { passwordCodeSecret: false, resend: false, bibleApi: false, googleOAuth: false, githubOAuth: false },
-                capabilities: ["resetCode", "statisticsCalendarYears"],
+                capabilities: ["resetCode", "statisticsCalendarYears", "logoutAll"],
             },
         });
     });

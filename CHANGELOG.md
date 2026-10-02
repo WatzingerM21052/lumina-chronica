@@ -19,6 +19,12 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Security and operations (from the September review, #544–#548):
+  - Profile → "Signed-in devices": "Sign out on all other devices". A password reset and deleting the account also sign out every existing session.
+  - "Forgot password" answers equally fast whether or not the account exists.
+  - Expired sign-in states and codes from Google/GitHub sign-in were accepted until midnight UTC; now they expire on time.
+  - Expired security entries are cleaned up daily.
+  - `GET /api/status` shows the deployed version, the database migration state and which features the server offers.
 - World bible on phones: the text gets most of the screen width (it had ~250 of 390 pixels), the hero is flat, book and chapter sit side by side, poetry lines sit closer together, and "previous/next chapter" also appear below the text (they jump to the new chapter's start). Tablets get a flatter hero too.
 - Statistics page is a dashboard: a flat banner instead of the tall hero, then cards in a grid (one column on phones). The yearly goal shows its ring; the pencil opens a "− 12 +" stepper. The reading calendar spans its card with month names and can show a single past year. New: a line chart of reading days or finished books per month, genres as a donut (four biggest, the rest as "Other"), and the reading pace (≈ pages per reading day, ≈ reading days per book).
 - Statistics API: `GET /api/statistics` also returns the last 12 months (books and pages finished, active reading days) and an estimated reading pace, for the upcoming statistics dashboard.

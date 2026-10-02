@@ -712,4 +712,74 @@ public class ProfilePageTests : BunitContext
         cut.Find("#email").Input("alice.new@example.org");
         Assert.Empty(cut.FindAll("#emailChangePassword"));
     }
+
+    private void UseSessionsHandler(RoutedFakeHttpMessageHandler handler)
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<TokenStore>();
+        Services.AddSingleton<LuminaAuthStateProvider>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<ToastService>();
+    }
+
+    private static RoutedFakeHttpMessageHandler StatusHandler(string capabilitiesJson) =>
+        new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/api/status"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse($$$"""{"success":true,"data":{"status":"online","capabilities":{{{capabilitiesJson}}}}}"""))
+            .When(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/linked"),
+                _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":[]}"""))
+            .When(r => r.Method == HttpMethod.Get, _ => RoutedFakeHttpMessageHandler.JsonResponse(ProfileJson));
+
+    [Fact]
+    public void Profile_LogoutOtherDevices_HiddenWhenTheBackendDoesNotOfferIt()
+    {
+        UseSessionsHandler(StatusHandler("""["resetCode"]"""));
+
+        var cut = Render<Profile>();
+
+        Assert.Empty(cut.FindAll(".profile-sessions"));
+    }
+
+    [Fact]
+    public void Profile_LogoutOtherDevices_PostsAndStoresTheFreshToken()
+    {
+        var authModule = JSInterop.SetupModule("./js/auth.js");
+        var setToken = authModule.SetupVoid("setToken", _ => true);
+        setToken.SetVoidResult();
+        var posted = false;
+        var handler = StatusHandler("""["resetCode","logoutAll"]""")
+            .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath.EndsWith("/api/auth/logout-all"), _ =>
+            {
+                posted = true;
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"token":"fresh-token","userId":1}}""");
+            });
+        UseSessionsHandler(handler);
+
+        var cut = Render<Profile>();
+        cut.Find(".profile-sessions button").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(posted);
+            var invocation = Assert.Single(setToken.Invocations);
+            Assert.Equal("fresh-token", invocation.Arguments[0]);
+        });
+        Assert.Empty(cut.FindAll(".profile-sessions .form-error"));
+    }
+
+    [Fact]
+    public void Profile_LogoutOtherDevices_ShowsAnErrorWhenItFails()
+    {
+        var handler = StatusHandler("""["logoutAll"]""")
+            .When(r => r.Method == HttpMethod.Post, _ => RoutedFakeHttpMessageHandler.JsonResponse("""{"success":false,"error":{"code":"UNAUTHORIZED","message":"x"}}"""));
+        UseSessionsHandler(handler);
+
+        var cut = Render<Profile>();
+        cut.Find(".profile-sessions button").Click();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".profile-sessions .form-error")));
+    }
 }

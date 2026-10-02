@@ -11,6 +11,7 @@ import {
     NoDeletedAccountError,
     UsernameTakenError,
     loginUser,
+    logoutOtherSessions,
     registerUser,
     restoreUser,
 } from "../services/authService";
@@ -281,10 +282,17 @@ authRoute.post("/login", async (c) => {
     }
 });
 
-// Stateless JWT: nothing to invalidate server-side. Logout is a client-side
-// token discard; this endpoint exists mainly to require a valid token before
-// confirming the session is over. See documentation/Architecture.md.
+// Logging out this one device is a client-side token discard; this endpoint
+// exists mainly to require a valid token before confirming the session is
+// over. See documentation/Architecture.md.
 authRoute.post("/logout", requireAuth, (c) => c.body(null, 204));
+
+// Review N-7: signs out every other device by bumping token_version; the
+// response carries a fresh token so the calling device stays signed in.
+authRoute.post("/logout-all", requireAuth, async (c) => {
+    const result = await logoutOtherSessions(c.env.DB, c.env.JWT_SECRET, c.get("userId"));
+    return c.json(success(result));
+});
 
 // --- OAuth (issue #40) ---------------------------------------------------
 // Google/GitHub sign-in alongside the password flow above, never replacing

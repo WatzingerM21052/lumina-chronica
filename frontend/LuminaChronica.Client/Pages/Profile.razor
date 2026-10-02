@@ -171,6 +171,24 @@ else
             }
         </section>
 
+        @if (_canLogoutOtherDevices)
+        {
+            @* Review N-7: revokes every other session (token_version); this
+               device gets a fresh token and stays signed in. Only shown once
+               the backend lists "logoutAll" in GET /api/status. *@
+            <section class="profile-card profile-sessions">
+                <h2>@I18n.T("profile.sessionsTitle")</h2>
+                <p class="text-muted">@I18n.T("profile.sessionsHint")</p>
+                @if (_sessionsErrorMessage is not null)
+                {
+                    <p class="form-error">@_sessionsErrorMessage</p>
+                }
+                <div class="form-actions">
+                    <button type="button" class="btn" disabled="@_isLoggingOutOthers" @onclick="LogoutOtherDevicesAsync">@I18n.T("profile.logoutOthersButton")</button>
+                </div>
+            </section>
+        }
+
         <details class="profile-card profile-danger-zone profile-collapsible">
             <summary>
                 <h2>@I18n.T("profile.deleteAccountTitle")</h2>
@@ -258,6 +276,9 @@ else
 
         var linkedResponse = await ApiClient.GetAsync<List<LinkedOAuthProvider>>("/api/auth/oauth/linked");
         _linkedProviders = linkedResponse is { Success: true, Data: not null } ? linkedResponse.Data : [];
+
+        var statusResponse = await ApiClient.GetAsync<StatusResult>("/api/status");
+        _canLogoutOtherDevices = statusResponse is { Success: true, Data: { } status } && status.Capabilities.Contains("logoutAll");
 
         var query = new Uri(NavigationManager.Uri).Query.TrimStart('?');
         foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
@@ -358,6 +379,30 @@ else
 
         _profileErrorMessage = response?.Error?.Message ?? I18n.T("profile.saveError");
         return false;
+    }
+
+    private bool _canLogoutOtherDevices;
+    private bool _isLoggingOutOthers;
+    private string? _sessionsErrorMessage;
+
+    private async Task LogoutOtherDevicesAsync()
+    {
+        _sessionsErrorMessage = null;
+        _isLoggingOutOthers = true;
+
+        var response = await ApiClient.PostAsync<object, AuthResult>("/api/auth/logout-all", new { });
+        if (response is { Success: true, Data: { Token.Length: > 0 } result })
+        {
+            // The old token on this device is revoked too -- swap in the new one.
+            await AuthStateProvider.MarkUserAsAuthenticatedAsync(result.Token);
+            ToastService.Show(I18n.T("profile.logoutOthersSuccess"), ToastKind.Success);
+        }
+        else
+        {
+            _sessionsErrorMessage = I18n.T("profile.logoutOthersError");
+        }
+
+        _isLoggingOutOthers = false;
     }
 
     private async Task ChangePasswordAsync()

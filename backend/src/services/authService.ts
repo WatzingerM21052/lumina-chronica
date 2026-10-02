@@ -100,7 +100,34 @@ export async function registerUser(
         throw err;
     }
 
-    const token = await signJwt({ sub: userId, role: "USER" }, jwtSecret, TOKEN_EXPIRY_SECONDS);
+    const token = await signJwt({ sub: userId, role: "USER", tv: 0 }, jwtSecret, TOKEN_EXPIRY_SECONDS);
+    return { token, userId };
+}
+
+// Review N-7: the session generation every new JWT is signed with. A token
+// whose "tv" claim is behind this is rejected by requireAuth.
+export async function tokenVersion(db: D1Database, userId: number): Promise<number> {
+    const row = await db.prepare("SELECT token_version FROM users WHERE id = ?").bind(userId).first<{ token_version: number }>();
+    return row?.token_version ?? 0;
+}
+
+// Invalidates every token issued so far; returns the new version, which is
+// what any token issued right after must be signed with.
+export async function bumpTokenVersion(db: D1Database, userId: number): Promise<number> {
+    const row = await db
+        .prepare("UPDATE users SET token_version = token_version + 1 WHERE id = ? RETURNING token_version")
+        .bind(userId)
+        .first<{ token_version: number }>();
+    return row?.token_version ?? 0;
+}
+
+// "Log out all other devices": bumps the version and hands the calling
+// device a fresh token for the new one, so only the others are signed out.
+export async function logoutOtherSessions(db: D1Database, jwtSecret: string, userId: number): Promise<AuthResult> {
+    const tv = await bumpTokenVersion(db, userId);
+    const user = await db.prepare("SELECT role_id FROM users WHERE id = ?").bind(userId).first<{ role_id: number }>();
+    const role = user ? await roleName(db, user.role_id) : "USER";
+    const token = await signJwt({ sub: userId, role, tv }, jwtSecret, TOKEN_EXPIRY_SECONDS);
     return { token, userId };
 }
 
@@ -120,7 +147,7 @@ export async function loginUser(
     await db.prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?").bind(user.id).run();
 
     const role = await roleName(db, user.role_id);
-    const token = await signJwt({ sub: user.id, role }, jwtSecret, TOKEN_EXPIRY_SECONDS);
+    const token = await signJwt({ sub: user.id, role, tv: await tokenVersion(db, user.id) }, jwtSecret, TOKEN_EXPIRY_SECONDS);
     return { token, userId: user.id };
 }
 
@@ -169,6 +196,6 @@ export async function restoreUser(
         .run();
 
     const role = await roleName(db, deletedMatch.role_id);
-    const token = await signJwt({ sub: deletedMatch.id, role }, jwtSecret, TOKEN_EXPIRY_SECONDS);
+    const token = await signJwt({ sub: deletedMatch.id, role, tv: await tokenVersion(db, deletedMatch.id) }, jwtSecret, TOKEN_EXPIRY_SECONDS);
     return { token, userId: deletedMatch.id };
 }

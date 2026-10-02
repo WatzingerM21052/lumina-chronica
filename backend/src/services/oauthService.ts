@@ -266,9 +266,9 @@ export async function redeemExchangeCode(db: D1Database, jwtSecret: string, rawC
         .first<{ user_id: number }>();
     if (!row) return null;
 
-    const user = await db.prepare("SELECT role_id FROM users WHERE id = ?").bind(row.user_id).first<{ role_id: number }>();
+    const user = await db.prepare("SELECT role_id, token_version FROM users WHERE id = ?").bind(row.user_id).first<{ role_id: number; token_version: number }>();
     const role = user ? await roleName(db, user.role_id) : "USER";
-    const token = await signJwt({ sub: row.user_id, role }, jwtSecret, TOKEN_EXPIRY_SECONDS);
+    const token = await signJwt({ sub: row.user_id, role, tv: user?.token_version ?? 0 }, jwtSecret, TOKEN_EXPIRY_SECONDS);
     return { token, userId: row.user_id };
 }
 

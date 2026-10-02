@@ -169,6 +169,10 @@ Registration, login, logout, profile view/edit, and password change (PR #33/#34)
 - Additive only: the pre-0026 Worker keeps working against the new schema, so applying the migration **before** deploying the code is safe (the reverse is not). Applied to production 2026-09-27.
 - The per-account email cap (review H-1, #490) needs no schema change: it reuses `auth_rate_limits` with `route = 'forgot-password-account'`, `ip = ''`, `identifier = <user id>`.
 
+### `0027_token_version.sql` (review N-7, "log out all other devices")
+- **`users.token_version`** — `INTEGER NOT NULL DEFAULT 0`. Every JWT carries it as the `tv` claim; `requireAuth`/`optionalAuth` (`middleware/auth.ts`) reject a token whose `tv` differs or whose account is soft-deleted (one read per authenticated request). Bumped by `POST /api/auth/logout-all` (which returns a fresh token for the calling device), by a password reset, and by account deletion (so tokens from before a deletion stay dead after a restore). Tokens from before this migration have no `tv` and count as 0, so applying it signs nobody out.
+- **Apply before deploying the code that reads it.** If the column is missing, the middleware logs an error and falls back to "account exists" for that one error only (`no such column: token_version`).
+
 ## Planned schema (not yet migrated)
 
 The rest of the full schema from Teil 4 (§49–§51) — Highlights (§48.3, explicitly "Spätere Version"), `project_members` (deferred to v3.0 Community, not built this pass — see epic #9), `user_statistics` (extended v1.5 statistics reuse the existing `GET /api/statistics` shape rather than this table — see `Architecture.md`) — will be migrated incrementally as each phase needs them, per the project's phase-gating rule. See `documentation/master-project-bible/extracted-spec-summary.md` for the full extracted column list, and `Technical-Standards.md` for the R2 file-key structure used alongside these tables.

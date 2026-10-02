@@ -84,6 +84,9 @@ export async function verifyPassword(plain: string, stored: string | null): Prom
 export type JwtPayload = {
     sub: number;
     role: string;
+    // users.token_version at signing time (review N-7). Missing in tokens
+    // issued before migration 0027 -- read as 0.
+    tv?: number;
     iat: number;
     exp: number;
 };
@@ -98,10 +101,10 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
     );
 }
 
-export async function signJwt(claims: { sub: number; role: string }, secret: string, expiresInSeconds: number): Promise<string> {
+export async function signJwt(claims: { sub: number; role: string; tv: number }, secret: string, expiresInSeconds: number): Promise<string> {
     const header = { alg: "HS256", typ: "JWT" };
     const now = Math.floor(Date.now() / 1000);
-    const payload: JwtPayload = { sub: claims.sub, role: claims.role, iat: now, exp: now + expiresInSeconds };
+    const payload: JwtPayload = { sub: claims.sub, role: claims.role, tv: claims.tv, iat: now, exp: now + expiresInSeconds };
 
     const encodedHeader = toBase64Url(textEncoder.encode(JSON.stringify(header)));
     const encodedPayload = toBase64Url(textEncoder.encode(JSON.stringify(payload)));
