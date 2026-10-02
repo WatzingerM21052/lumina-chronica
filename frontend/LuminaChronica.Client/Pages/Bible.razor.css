@@ -353,14 +353,16 @@
    preference. Same structure, candlelit instead of daylit, mirroring the
    app's own Classic Library / Dark Library relationship. */
 
-[data-theme="dark-library"] .bible-page {
+[data-theme="dark-library"] .bible-page,
+[data-theme="babylon"] .bible-page {
     --bible-ink: #ece0c4;
     --bible-parchment: #241a12;
     --bible-parchment-panel: #2c2015;
     --bible-burgundy: #d98a9a;
 }
 
-[data-theme="dark-library"] .bible-hero {
+[data-theme="dark-library"] .bible-hero,
+[data-theme="babylon"] .bible-hero {
     box-shadow: 0 0 0 1px var(--bible-gold), 0 20px 60px rgba(0, 0, 0, 0.7);
 }
 

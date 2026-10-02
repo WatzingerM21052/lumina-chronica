@@ -1,0 +1,103 @@
+/*
+  Babylon theme -- "the hanging gardens". Glazed cobalt bricks and gold from
+  the Ishtar Gate's processional way, the deep green of the gardens below.
+  Reference design: the theme studio of 2026-10-03 (v4). Image sources:
+  images/themes/CREDITS.md.
+
+  Tokens below apply wherever data-theme="babylon" is set, including the
+  small preview cards in Settings. Everything decorative (textures, bands,
+  card glass) is scoped to html[data-theme="babylon"] so those previews
+  stay plain and no image loads unless the theme is really active.
+*/
+
+[data-theme="babylon"] {
+    color-scheme: dark;
+    --color-primary: #d9b052;
+    --color-primary-hover: #c99a3c;
+    --color-primary-active: #b3862f;
+
+    --color-secondary: #2f9fb0;
+    --color-secondary-hover: #278896;
+
+    --color-gold-accent: #d9b052;
+    --color-accent-text: #e0bd6a;
+    --color-info: #4fb8c6;
+    --color-success: #6fae7a;
+    /* Genre donut (statistics): four categorical hues, CVD-checked
+       against this theme's card surface; a fifth slice is "other". */
+    --color-chart-1: #d6ad4f;
+    --color-chart-2: #3fb3a3;
+    --color-chart-3: #6b93e0;
+    --color-chart-4: #c8734f;
+    --color-warning: #d9a441;
+    --color-error: #e07a6a;
+
+    --color-bg-paper: #0b1716;
+    --color-bg-light: #102220;
+    --color-bg-dark: #081311;
+    --color-overlay-scrim: rgba(2, 8, 7, 0.66);
+    --color-bg-card: #132522;
+    --color-bg-reader: #0f1d1b;
+
+    --color-text-primary: #eee7d3;
+    --color-text-secondary: #b9c5b6;
+    --color-text-muted: #8b9b8e;
+    --color-text-disabled: #5b6a62;
+    --color-text-on-dark: #f3ead2;
+
+    --color-border: #24403a;
+
+    --font-family-display: "Marcellus", Georgia, "Times New Roman", serif;
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 14px 30px -18px rgba(0, 0, 0, 0.8);
+    --shadow-card-hover: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 18px 36px -18px rgba(0, 0, 0, 0.85);
+    --shadow-overlay: 0 24px 60px rgba(0, 0, 0, 0.6), 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* The garden at night: a faint turquoise glow from the pools below. */
+html[data-theme="babylon"] body {
+    background:
+        radial-gradient(120% 60% at 50% 120%, rgba(47, 159, 176, 0.14), transparent 60%),
+        radial-gradient(80% 40% at 100% 0%, rgba(217, 176, 82, 0.06), transparent 70%),
+        var(--color-bg-paper);
+    background-attachment: fixed;
+}
+
+/* The bar is a strip of the gate itself: the photographed glazed bricks,
+   darkened for the navigation on top, closed by the gate's yellow band. */
+html[data-theme="babylon"] .app-header {
+    background:
+        linear-gradient(180deg, rgba(5, 18, 36, 0.38), rgba(5, 18, 36, 0.66)),
+        url("../../images/themes/babylon/glazed_bricks.webp") center 35% / 640px auto,
+        #10305a;
+    border-bottom: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="babylon"] .app-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -8px;
+    height: 8px;
+    pointer-events: none;
+    background: url("../../images/themes/babylon/gold_band.webp") center / auto 100% repeat-x;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="babylon"] .app-logo-text {
+    color: #e8c977;
+    letter-spacing: 0.04em;
+}
+
+/* Cards are dark glass over the garden, rimmed with a little gold. */
+html[data-theme="babylon"] .dashboard-stat,
+html[data-theme="babylon"] .stats-card,
+html[data-theme="babylon"] .settings-card,
+html[data-theme="babylon"] .profile-card,
+html[data-theme="babylon"] .project-card,
+html[data-theme="babylon"] .book-card {
+    background-color: rgba(19, 37, 34, 0.82);
+    border-color: rgba(217, 176, 82, 0.2);
+    box-shadow: var(--shadow-card);
+}
