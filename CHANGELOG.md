@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- World bible on phones: the text gets most of the screen width (it had ~250 of 390 pixels), the hero is flat, book and chapter sit side by side, poetry lines sit closer together, and "previous/next chapter" also appear below the text (they jump to the new chapter's start). Tablets get a flatter hero too.
 - Statistics page is a dashboard: a flat banner instead of the tall hero, then cards in a grid (one column on phones). The yearly goal shows its ring; the pencil opens a "− 12 +" stepper. The reading calendar spans its card with month names and can show a single past year. New: a line chart of reading days or finished books per month, genres as a donut (four biggest, the rest as "Other"), and the reading pace (≈ pages per reading day, ≈ reading days per book).
 - Statistics API: `GET /api/statistics` also returns the last 12 months (books and pages finished, active reading days) and an estimated reading pace, for the upcoming statistics dashboard.
 - Notifications panel: on phones it ran off the left edge of the screen; it now sits between the screen edges under the header. It is also more compact everywhere (title row with a small "mark all read", one row of filter chips that scrolls sideways) and closes on a click outside. Its texts were hard-coded German and are now translated too.

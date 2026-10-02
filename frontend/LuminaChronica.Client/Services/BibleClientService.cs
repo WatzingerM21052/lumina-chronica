@@ -38,6 +38,14 @@ public class BibleClientService(IJSRuntime jsRuntime)
         await module.InvokeVoidAsync("scrollToVerse", containerId, sid);
     }
 
+    // Brings the chapter heading back into view after the end-of-chapter
+    // buttons load the next/previous chapter.
+    public async Task ScrollToChapterStartAsync(string containerId)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("scrollToChapterStart", containerId);
+    }
+
     public async Task<string> GetBibleThemeAsync()
     {
         var module = await _moduleTask.Value;

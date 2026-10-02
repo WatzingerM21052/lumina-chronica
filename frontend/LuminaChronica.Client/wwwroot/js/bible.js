@@ -60,6 +60,11 @@ export function trackView(fumsToken) {
     window.fums("trackView", fumsToken);
 }
 
+export function scrollToChapterStart(containerId) {
+    const article = document.getElementById(containerId)?.closest("article");
+    article?.scrollIntoView({ block: "start" });
+}
+
 export function scrollToVerse(containerId, sid) {
     const container = document.getElementById(containerId);
     if (!container) return;

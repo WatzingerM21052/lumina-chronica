@@ -277,6 +277,24 @@
     transition: background-color 2s ease;
 }
 
+/* Previous/next again below the text (see Bible.razor). */
+.bible-chapter-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.bible-chapter-nav .btn {
+    border-color: var(--bible-gold);
+}
+
+/* The end-of-chapter buttons scroll the new chapter's frame into view;
+   leave room for the sticky app header above it. */
+.bible-chapter {
+    scroll-margin-top: 5rem;
+}
+
 .bible-attribution {
     max-width: 62ch;
     margin: var(--space-3) auto 0;
@@ -481,6 +499,142 @@
 @keyframes ba-chapter-rise {
     from { opacity: 0; transform: translateY(14px); }
     to { opacity: 1; transform: none; }
+}
+
+.bible-page--dark-academia .bible-chapter-nav .btn {
+    background: var(--ba-panel);
+    border-color: var(--ba-border);
+    color: var(--ba-ink);
+}
+
+/* Tablets portrait (600-839px): a flatter hero and a slimmer frame;
+   the controls keep their wrapping row. */
+@media (max-width: 839.98px) {
+    .bible-hero {
+        height: 16rem;
+        min-height: 0;
+    }
+
+    .bible-chapter {
+        padding: var(--space-4) var(--space-3);
+    }
+}
+
+/* ============================================================
+   Phones (< 600px, #493): the reading text gets the width. Before,
+   48px padding plus the double frame left ~246px of a 390px screen
+   for the text, the hero filled the first screen, and the three
+   selects each took a full row.
+   ============================================================ */
+@media (max-width: 599.98px) {
+    .bible-hero {
+        height: 13rem;
+        min-height: 0;
+        margin-bottom: var(--space-3);
+    }
+
+    /* Bottom padding keeps the quote clear of the photo credit, which
+       has to stay visible (CC BY-SA). */
+    .bible-hero-content {
+        padding: var(--space-2) var(--space-2) 1.75rem;
+    }
+
+    .bible-hero-content h1 {
+        font-size: 1.75rem;
+        margin-bottom: var(--space-1);
+    }
+
+    .bible-hero-credit {
+        left: var(--space-2);
+        text-align: center;
+        font-size: 0.7rem;
+    }
+
+    .bible-hero-subtitle {
+        font-size: var(--font-size-body);
+    }
+
+    .bible-theme-toggle {
+        justify-content: center;
+        padding-top: 0;
+    }
+
+    .bible-title-immersive {
+        font-size: 1.85rem;
+    }
+
+    .bible-title-rule {
+        margin-bottom: var(--space-3);
+    }
+
+    /* Translation on its own row, book and chapter side by side, then
+       the two chapter buttons sharing a row. */
+    .bible-controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-2);
+        padding: var(--space-2);
+    }
+
+    .bible-control--translation,
+    .bible-nav-buttons {
+        grid-column: 1 / -1;
+    }
+
+    .bible-control select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .bible-nav-buttons {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-2);
+        margin-left: 0;
+    }
+
+    .bible-nav-buttons .btn,
+    .bible-chapter-nav .btn {
+        flex: 1;
+        padding-left: var(--space-1);
+        padding-right: var(--space-1);
+        white-space: nowrap;
+        font-size: var(--font-size-small);
+    }
+
+    .bible-chapter {
+        padding: var(--space-3) var(--space-2);
+    }
+
+    .bible-chapter-content {
+        font-size: 1.05rem;
+        line-height: 1.75;
+    }
+
+    .bible-chapter-content ::deep p.s1 {
+        font-size: 1.15rem;
+        margin-top: var(--space-3);
+    }
+
+    /* Poetry keeps its stepped indents, just narrower, and its lines sit
+       closer together than prose paragraphs (each line is its own <p>). */
+    .bible-chapter-content ::deep p.q1,
+    .bible-chapter-content ::deep p.q2,
+    .bible-chapter-content ::deep p.q3 {
+        margin-bottom: var(--space-1);
+    }
+
+    .bible-chapter-content ::deep p.q1 {
+        margin-left: 0.75rem;
+    }
+
+    .bible-chapter-content ::deep p.q2 {
+        margin-left: 1.25rem;
+    }
+
+    .bible-chapter-content ::deep p.q3 {
+        margin-left: 1.75rem;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

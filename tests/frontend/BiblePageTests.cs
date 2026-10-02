@@ -149,10 +149,41 @@ public class BiblePageTests : BunitContext
         UseHandler(handler);
 
         var cut = Render<Bible>();
-        cut.FindAll("button").Single(b => b.TextContent.Contains("Nächstes Kapitel")).Click();
+        cut.FindAll(".bible-nav-buttons button").Single(b => b.TextContent.Contains("Nächstes Kapitel")).Click();
 
         Assert.Contains("Phil. 3", cut.Markup);
         Assert.Contains("Finally, my brothers", cut.Find("#bible-chapter-content").TextContent); // drop cap splits the markup
+    }
+
+    [Fact]
+    public void Bible_EndOfChapterNextButton_LoadsNextChapter_AndScrollsToItsStart()
+    {
+        const string chapter3Json = """
+            {"success":true,"data":{
+                "id":"PHP.3","reference":"Phil. 3","content":"<p>Finally, my brothers...</p>",
+                "copyright":"NIV copyright text","next":null,"previous":{"id":"PHP.2","number":"2"},
+                "fumsToken":"tok-niv-3"
+            }}
+            """;
+        var scrollStart = JSInterop.SetupVoid("scrollToChapterStart", _ => true);
+        scrollStart.SetVoidResult();
+        var handler = DefaultHandler()
+            .When(r => r.RequestUri!.AbsolutePath == $"/api/bible/chapters/{NivId}/PHP.3", _ => RoutedFakeHttpMessageHandler.JsonResponse(chapter3Json));
+        UseHandler(handler);
+
+        var cut = Render<Bible>();
+        Assert.False(cut.Find(".bible-chapter-nav-previous").HasAttribute("disabled"));
+        cut.Find(".bible-chapter-nav-next").Click();
+
+        Assert.Contains("Phil. 3", cut.Markup);
+        // Phil. 3 has no next chapter in this fixture: the bottom button disables too.
+        Assert.True(cut.Find(".bible-chapter-nav-next").HasAttribute("disabled"));
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(80));
+        cut.WaitForAssertion(() =>
+        {
+            var invocation = Assert.Single(scrollStart.Invocations);
+            Assert.Equal("bible-chapter-content", invocation.Arguments[0]);
+        }, TimeSpan.FromSeconds(2));
     }
 
     [Fact]
@@ -281,7 +312,7 @@ public class BiblePageTests : BunitContext
         UseHandler(handler);
 
         var cut = Render<Bible>();
-        cut.FindAll("button").Single(b => b.TextContent.Contains("Nächstes Kapitel")).Click();
+        cut.FindAll(".bible-nav-buttons button").Single(b => b.TextContent.Contains("Nächstes Kapitel")).Click();
 
         Assert.Contains("Phil. 3", cut.Markup);
         Assert.Contains("bible-page--dark-academia", cut.Markup);

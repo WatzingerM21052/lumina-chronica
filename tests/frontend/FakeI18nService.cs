@@ -415,6 +415,7 @@ public class FakeI18nService : II18nService
         ["bible.chapterLabel"] = "Kapitel",
         ["bible.previousChapter"] = "← Vorheriges Kapitel",
         ["bible.nextChapter"] = "Nächstes Kapitel →",
+        ["bible.chapterNavLabel"] = "Kapitel blättern",
         ["bible.searchPlaceholder"] = "Bibel durchsuchen...",
         ["bible.searchButton"] = "Suchen",
         ["bible.noResultsMessage"] = "Keine Treffer gefunden.",
