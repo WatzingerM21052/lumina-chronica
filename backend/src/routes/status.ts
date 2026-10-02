@@ -7,7 +7,7 @@ export const statusRoute = new Hono<{ Bindings: Bindings }>();
 // Features a frontend can check for before relying on them (review §3.3):
 // a new frontend against an older Worker can hide what isn't there yet
 // instead of hitting NOT_FOUND. Add an entry with the change that ships it.
-export const CAPABILITIES = ["resetCode", "statisticsCalendarYears"] as const;
+export const CAPABILITIES = ["resetCode", "statisticsCalendarYears", "logoutAll"] as const;
 
 // Latest applied D1 migration (wrangler's own d1_migrations table), so a
 // deploy that forgot `wrangler d1 migrations apply` is visible from outside.

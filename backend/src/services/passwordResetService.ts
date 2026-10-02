@@ -155,13 +155,19 @@ export async function resetPassword(
     const user = await db.prepare("SELECT role_id FROM users WHERE id = ? AND deleted_at IS NULL").bind(row.user_id).first<{ role_id: number }>();
     if (!user) throw new InvalidResetTokenError();
 
+    // Review N-7: a reset is how a locked-out owner takes the account back,
+    // so it also signs out every session from before it -- the new token
+    // below is signed with the bumped version.
     const passwordHash = await hashPassword(newPassword);
-    await db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(passwordHash, row.user_id).run();
+    const updated = await db
+        .prepare("UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ? RETURNING token_version")
+        .bind(passwordHash, row.user_id)
+        .first<{ token_version: number }>();
 
     await sendPasswordChangedEmail(db, env, row.user_id);
 
     const role = await roleName(db, user.role_id);
-    const token = await signJwt({ sub: row.user_id, role }, env.JWT_SECRET, JWT_EXPIRY_SECONDS);
+    const token = await signJwt({ sub: row.user_id, role, tv: updated?.token_version ?? 0 }, env.JWT_SECRET, JWT_EXPIRY_SECONDS);
     return { token, userId: row.user_id };
 }
 

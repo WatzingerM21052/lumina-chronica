@@ -304,8 +304,10 @@ describe("DELETE /api/users/me", () => {
         expect(res.status).toBe(200);
         expect((await readJson(res)).success).toBe(true);
 
+        // Review N-7: the deleted account's token is rejected outright
+        // (it used to get through requireAuth and 404 on the profile).
         const meRes = await app.request("/api/users/me", { headers: { Authorization: `Bearer ${token}` } }, env);
-        expect(meRes.status).toBe(404);
+        expect(meRes.status).toBe(401);
 
         const loginRes = await app.request(
             "/api/auth/login",

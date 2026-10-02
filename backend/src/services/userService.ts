@@ -321,7 +321,8 @@ export async function deleteUser(db: D1Database, storage: R2Bucket, userId: numb
             .prepare(
                 `UPDATE users SET deleted_username = username, deleted_email = email,
                  username = 'deleted-user-' || id, email = 'deleted-' || id || '@deleted.invalid',
-                 avatar_key = NULL, deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                 avatar_key = NULL, deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
+                 token_version = token_version + 1
                  WHERE id = ?`
             )
             .bind(userId),
