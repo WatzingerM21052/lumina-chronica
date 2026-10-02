@@ -218,3 +218,44 @@ html[data-theme="alexandria"] .book-card-title,
 html[data-theme="alexandria"] .shelf-book-cover-title {
     font-family: var(--font-family-reader);
 }
+
+
+/* ---------- Reading calendar: a mosaic of hand-set tesserae ---------- */
+html[data-theme="alexandria"] .calendar-heatmap {
+    background: #ddd0b3;
+    box-shadow: inset 0 0 0 1px rgba(150, 112, 40, 0.25), inset 0 4px 10px rgba(80, 56, 18, 0.25);
+}
+
+html[data-theme="alexandria"] .calendar-cell {
+    border-radius: 2px 4px 3px 2px;
+    background: #ece5d5;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+html[data-theme="alexandria"] .calendar-cell:nth-child(2n) {
+    border-radius: 4px 2px 2px 3px;
+}
+
+html[data-theme="alexandria"] .calendar-cell::before {
+    display: none;
+}
+
+html[data-theme="alexandria"] .calendar-cell--level-1 { background: linear-gradient(160deg, #d6dfee, #c2cfe5); }
+html[data-theme="alexandria"] .calendar-cell--level-2 { background: linear-gradient(160deg, #9fb5d8, #839dc8); }
+html[data-theme="alexandria"] .calendar-cell--level-3 { background: linear-gradient(160deg, #4e78b5, #36609e); }
+html[data-theme="alexandria"] .calendar-cell--level-4 { background: linear-gradient(160deg, #e7c66f, #a6802c); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 0 1px rgba(166, 128, 44, 0.25); }
+
+html[data-theme="alexandria"] .calendar-months span {
+    color: #5d4a22;
+}
+
+/* ---------- Progress: a gilded thread ---------- */
+html[data-theme="alexandria"] .book-card-progress,
+html[data-theme="alexandria"] .book-detail-progress-track {
+    background: #e2d7bd;
+}
+
+html[data-theme="alexandria"] .book-card-progress-bar,
+html[data-theme="alexandria"] .book-detail-progress-fill {
+    background: linear-gradient(90deg, #8f6c22, #d2ad55);
+}
