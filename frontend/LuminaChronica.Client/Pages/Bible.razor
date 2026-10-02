@@ -44,7 +44,7 @@
     }
 
     <div class="bible-controls">
-        <label class="bible-control">
+        <label class="bible-control bible-control--translation">
             <span>@I18n.T("bible.translationLabel")</span>
             <select value="@_selectedTranslationId" @onchange="OnTranslationChangedAsync">
                 @foreach (var translation in _translations)
@@ -75,8 +75,8 @@
         </label>
 
         <div class="bible-nav-buttons">
-            <button type="button" class="btn" disabled="@(_chapter?.Previous is null)" @onclick="GoToPreviousChapterAsync">@I18n.T("bible.previousChapter")</button>
-            <button type="button" class="btn" disabled="@(_chapter?.Next is null)" @onclick="GoToNextChapterAsync">@I18n.T("bible.nextChapter")</button>
+            <button type="button" class="btn" disabled="@(_chapter?.Previous is null)" @onclick="() => GoToPreviousChapterAsync()">@I18n.T("bible.previousChapter")</button>
+            <button type="button" class="btn" disabled="@(_chapter?.Next is null)" @onclick="() => GoToNextChapterAsync()">@I18n.T("bible.nextChapter")</button>
         </div>
     </div>
 
@@ -118,6 +118,14 @@
             <h2>@_chapter.Reference</h2>
             <div id="bible-chapter-content" class="bible-chapter-content">@((MarkupString)BibleDropCap.Apply(_chapter.Content))</div>
         </article>
+
+        @* Same buttons as in the controls bar, at the end of the text: on a
+           phone a chapter is many screens long, and the way on shouldn't be
+           back at the top. These jump to the new chapter's start. *@
+        <nav class="bible-chapter-nav" aria-label="@I18n.T("bible.chapterNavLabel")">
+            <button type="button" class="btn bible-chapter-nav-previous" disabled="@(_chapter.Previous is null)" @onclick="() => GoToPreviousChapterAsync(scrollToTop: true)">@I18n.T("bible.previousChapter")</button>
+            <button type="button" class="btn bible-chapter-nav-next" disabled="@(_chapter.Next is null)" @onclick="() => GoToNextChapterAsync(scrollToTop: true)">@I18n.T("bible.nextChapter")</button>
+        </nav>
 
         <footer class="bible-attribution">
             <p>
@@ -208,7 +216,7 @@
         _chapters = response is { Success: true, Data: not null } ? response.Data : [];
     }
 
-    private async Task LoadChapterAsync(string bibleId, string chapterId, string? highlightSid = null)
+    private async Task LoadChapterAsync(string bibleId, string chapterId, string? highlightSid = null, bool scrollToTop = false)
     {
         _isLoadingChapter = true;
         _errorMessage = null;
@@ -241,6 +249,10 @@
             if (highlightSid is not null)
             {
                 await BibleClient.ScrollToVerseAsync("bible-chapter-content", highlightSid);
+            }
+            else if (scrollToTop)
+            {
+                await BibleClient.ScrollToChapterStartAsync("bible-chapter-content");
             }
         }
     }
@@ -279,11 +291,11 @@
         return string.IsNullOrWhiteSpace(chapterId) ? Task.CompletedTask : LoadChapterAsync(_selectedTranslationId, chapterId);
     }
 
-    private Task GoToPreviousChapterAsync() =>
-        _chapter?.Previous is { } previous ? LoadChapterAsync(_selectedTranslationId, previous.Id) : Task.CompletedTask;
+    private Task GoToPreviousChapterAsync(bool scrollToTop = false) =>
+        _chapter?.Previous is { } previous ? LoadChapterAsync(_selectedTranslationId, previous.Id, scrollToTop: scrollToTop) : Task.CompletedTask;
 
-    private Task GoToNextChapterAsync() =>
-        _chapter?.Next is { } next ? LoadChapterAsync(_selectedTranslationId, next.Id) : Task.CompletedTask;
+    private Task GoToNextChapterAsync(bool scrollToTop = false) =>
+        _chapter?.Next is { } next ? LoadChapterAsync(_selectedTranslationId, next.Id, scrollToTop: scrollToTop) : Task.CompletedTask;
 
     // Scoped to .bible-chapter specifically (issue #144, point 2) -- not the
     // whole page, so arrow keys keep their native behavior in the
