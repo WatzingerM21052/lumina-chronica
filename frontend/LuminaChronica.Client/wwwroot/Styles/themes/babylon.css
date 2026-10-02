@@ -101,3 +101,107 @@ html[data-theme="babylon"] .book-card {
     border-color: rgba(217, 176, 82, 0.2);
     box-shadow: var(--shadow-card);
 }
+
+
+/* ---------- Home hero: the lion of the processional way ---------- */
+html[data-theme="babylon"] .home-hero-layer,
+html[data-theme="babylon"] .home-hero-scrim {
+    display: none;
+}
+
+html[data-theme="babylon"] .home-hero-world {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+/* Mirrored so the lion strides into the open right half. */
+html[data-theme="babylon"] .home-hero-world-image {
+    position: absolute;
+    inset: -4%;
+    background: url("../../images/themes/babylon/lion_panel.webp") 62% 55% / cover;
+    transform: scaleX(-1);
+    filter: saturate(1.08) contrast(1.04);
+}
+
+html[data-theme="babylon"] .home-hero-world-shade {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(8, 22, 21, 0.94) 0%, rgba(8, 22, 21, 0.7) 32%, rgba(8, 22, 21, 0.05) 62%),
+        linear-gradient(0deg, rgba(8, 22, 21, 0.7) 0%, rgba(8, 22, 21, 0) 40%);
+}
+
+html[data-theme="babylon"] .home-hero-motes {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Wisteria hangs over the right half only, never over the heading, and
+   sways at its own pace (plates from Witte, "Flora", 1868). */
+html[data-theme="babylon"] .home-hero-flora {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+html[data-theme="babylon"] .home-hero-wisteria {
+    position: absolute;
+    top: -6px;
+    aspect-ratio: 560 / 1455;
+    background: url("../../images/themes/babylon/wisteria_purple.webp") top center / contain no-repeat;
+    transform-origin: 50% 0;
+    filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.45));
+    animation: babylon-sway 11s ease-in-out infinite;
+}
+
+html[data-theme="babylon"] .home-hero-wisteria--a { right: 3%; width: 128px; }
+html[data-theme="babylon"] .home-hero-wisteria--b { right: 15%; width: 84px; opacity: 0.92; transform: scaleX(-1); animation-duration: 8.5s; animation-delay: -3s; }
+html[data-theme="babylon"] .home-hero-wisteria--c { right: 26%; width: 104px; transform: scaleX(-1); animation-duration: 12.5s; animation-delay: -6s; }
+html[data-theme="babylon"] .home-hero-wisteria--d { right: 36%; width: 64px; opacity: 0.85; animation-duration: 9.6s; animation-delay: -1.5s; }
+
+@keyframes babylon-sway {
+    0%, 100% { rotate: -1.4deg; }
+    50% { rotate: 1.6deg; }
+}
+
+html[data-theme="babylon"] .home-hero-content {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: var(--space-1);
+}
+
+html[data-theme="babylon"] .home-hero-content h1 {
+    color: #f3ead2;
+}
+
+html[data-theme="babylon"] .home-hero-eyebrow--babylon {
+    display: block;
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-gold-accent);
+}
+
+@media (max-width: 599.98px) {
+    html[data-theme="babylon"] .home-hero-wisteria--a { right: -6px; width: 84px; }
+    html[data-theme="babylon"] .home-hero-wisteria--b { right: 22%; width: 56px; }
+    html[data-theme="babylon"] .home-hero-wisteria--c,
+    html[data-theme="babylon"] .home-hero-wisteria--d { display: none; }
+    html[data-theme="babylon"] .home-hero-world-shade {
+        background: linear-gradient(0deg, rgba(8, 22, 21, 0.92) 8%, rgba(8, 22, 21, 0.55) 55%, rgba(8, 22, 21, 0.15));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-theme="babylon"] .home-hero-wisteria,
+    html[data-theme="babylon"] .home-hero-rays {
+        animation: none;
+    }
+}
