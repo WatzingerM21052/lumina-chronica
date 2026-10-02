@@ -100,13 +100,15 @@
 
 /* Controls */
 
+/* One row: the three selects take their natural width, search fills the
+   rest; below ~16rem left for the search it wraps onto its own row. */
 .bible-controls {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
-    gap: var(--space-3);
-    padding: var(--space-3);
-    margin-bottom: var(--space-2);
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    margin-bottom: var(--space-3);
     background: var(--bible-parchment);
     border: 1px solid var(--bible-gold);
     border-radius: var(--radius-lg);
@@ -114,8 +116,6 @@
 
 .bible-control {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
     font-size: var(--font-size-small);
     color: var(--bible-ink);
 }
@@ -127,19 +127,14 @@
     border-radius: var(--radius);
     background: var(--bible-parchment-panel);
     color: var(--bible-ink);
-    min-width: 12rem;
-}
-
-.bible-nav-buttons {
-    display: flex;
-    gap: var(--space-2);
-    margin-left: auto;
+    max-width: 22rem;
 }
 
 .bible-search {
     display: flex;
     gap: var(--space-2);
-    margin-bottom: var(--space-3);
+    flex: 1 1 16rem;
+    min-width: 0;
 }
 
 /* The field is the shared SearchInput (plan A6); its own padding makes
@@ -212,6 +207,48 @@
     margin-left: auto;
     margin-right: auto;
     padding-bottom: var(--space-1);
+}
+
+/* "‹ Phil. 2 ›": the chapter arrows flank the heading. */
+.bible-chapter-heading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.bible-chapter-heading h2 {
+    margin: 0;
+}
+
+.bible-chapter-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 0 0.15rem;
+    border: 1px solid var(--bible-gold);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--bible-gold);
+    font-family: var(--font-family-display);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.bible-chapter-arrow:hover:not(:disabled) {
+    background: var(--bible-gold);
+    color: #1e140c;
+}
+
+.bible-chapter-arrow:disabled {
+    opacity: 0.3;
+    cursor: default;
 }
 
 .bible-chapter-content {
@@ -368,24 +405,53 @@
     color: var(--ba-ink);
 }
 
-/* Theme toggle -- top-right pill, visible/reachable in both themes so
-   switching back is always one click away. */
+/* Theme toggle -- one segmented pill top right, the active look filled
+   gold; visible in both looks so switching back is one click away. */
 .bible-theme-toggle {
     display: flex;
-    justify-content: flex-end;
-    gap: var(--space-1);
-    padding: var(--space-2) 0 var(--space-1);
+    width: fit-content;
+    margin: var(--space-2) 0 var(--space-2) auto;
+    padding: 3px;
+    border: 1px solid var(--bible-gold);
+    border-radius: 999px;
+    background: var(--bible-parchment);
 }
 
-.bible-page--dark-academia .bible-theme-toggle .btn {
+.bible-theme-option {
+    padding: 0.35rem 0.95rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--bible-ink);
+    font: inherit;
+    font-size: var(--font-size-small);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.bible-theme-option:hover:not(.is-active) {
+    background: color-mix(in srgb, var(--bible-gold) 18%, transparent);
+}
+
+.bible-theme-option.is-active {
+    background: var(--bible-gold);
+    color: #1e140c;
+    font-weight: 600;
+}
+
+.bible-page--dark-academia .bible-theme-toggle {
     background: var(--ba-panel);
-    border: 1px solid var(--ba-border);
+    border-color: var(--ba-border);
+    backdrop-filter: blur(6px);
+}
+
+.bible-page--dark-academia .bible-theme-option {
     color: var(--ba-ink-muted);
 }
 
-.bible-page--dark-academia .bible-theme-toggle .btn.is-active {
-    color: var(--ba-gold-bright);
-    border-color: var(--ba-gold);
+.bible-page--dark-academia .bible-theme-option.is-active {
+    background: var(--ba-gold);
+    color: #140e09;
 }
 
 .bible-title-immersive {
@@ -395,7 +461,11 @@
     letter-spacing: 0.04em;
     color: var(--ba-gold-bright);
     text-shadow: 0 2px 20px rgba(0, 0, 0, 0.7);
-    margin: var(--space-2) 0 var(--space-1);
+    /* The global h1 is fit-content with a double rule underneath; here it
+       is centred and the animated .bible-title-rule below is the rule. */
+    margin: var(--space-2) auto var(--space-1);
+    padding-bottom: 0;
+    border-bottom: 0;
 }
 
 /* Draws itself in on entrance (bibleAtmosphere.js's playEntrance, GSAP
@@ -449,6 +519,16 @@
     background: var(--ba-panel-strong);
     border-color: var(--ba-gold);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.bible-page--dark-academia .bible-chapter-arrow {
+    border-color: var(--ba-gold);
+    color: var(--ba-gold-bright);
+}
+
+.bible-page--dark-academia .bible-chapter-arrow:hover:not(:disabled) {
+    background: var(--ba-gold);
+    color: #140e09;
 }
 
 .bible-page--dark-academia .bible-chapter h2 {
@@ -555,8 +635,7 @@
     }
 
     .bible-theme-toggle {
-        justify-content: center;
-        padding-top: 0;
+        margin: 0 auto var(--space-2);
     }
 
     .bible-title-immersive {
@@ -568,32 +647,22 @@
     }
 
     /* Translation on its own row, book and chapter side by side, then
-       the two chapter buttons sharing a row. */
+       the search. */
     .bible-controls {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: var(--space-2);
-        padding: var(--space-2);
     }
 
     .bible-control--translation,
-    .bible-nav-buttons {
+    .bible-search {
         grid-column: 1 / -1;
     }
 
     .bible-control select {
-        min-width: 0;
         width: 100%;
+        max-width: none;
     }
 
-    .bible-nav-buttons {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: var(--space-2);
-        margin-left: 0;
-    }
-
-    .bible-nav-buttons .btn,
     .bible-chapter-nav .btn {
         flex: 1;
         padding-left: var(--space-1);
@@ -642,7 +711,7 @@
         animation: none;
     }
 
-    .bible-page--dark-academia .bible-theme-toggle .btn {
+    .bible-theme-option {
         transition: none;
     }
 }

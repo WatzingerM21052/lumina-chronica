@@ -16,9 +16,11 @@
 }
 
 <div class="bible-page @(_bibleTheme == DarkAcademiaTheme ? "bible-page--dark-academia" : "")">
-    <div class="bible-theme-toggle">
-        <button type="button" class="btn @(_bibleTheme == DefaultTheme ? "is-active" : "")" @onclick='() => SetBibleThemeAsync(DefaultTheme)'>@I18n.T("bible.themeDefault")</button>
-        <button type="button" class="btn @(_bibleTheme == DarkAcademiaTheme ? "is-active" : "")" @onclick='() => SetBibleThemeAsync(DarkAcademiaTheme)'>@I18n.T("bible.themeDarkAcademia")</button>
+    @* One segmented switch (user decision 2026-10-02): the active look is
+       filled, so it reads as a choice between two, not two loose buttons. *@
+    <div class="bible-theme-toggle" role="group" aria-label="@I18n.T("bible.themeLabel")">
+        <button type="button" class="bible-theme-option @(_bibleTheme == DefaultTheme ? "is-active" : "")" aria-pressed="@(_bibleTheme == DefaultTheme ? "true" : "false")" @onclick='() => SetBibleThemeAsync(DefaultTheme)'>@I18n.T("bible.themeDefault")</button>
+        <button type="button" class="bible-theme-option @(_bibleTheme == DarkAcademiaTheme ? "is-active" : "")" aria-pressed="@(_bibleTheme == DarkAcademiaTheme ? "true" : "false")" @onclick='() => SetBibleThemeAsync(DarkAcademiaTheme)'>@I18n.T("bible.themeDarkAcademia")</button>
     </div>
 
     @if (_bibleTheme == DefaultTheme)
@@ -43,9 +45,12 @@
         <span class="bible-title-rule" aria-hidden="true"></span>
     }
 
+    @* One toolbar (user decision 2026-10-02): translation, book, chapter and
+       search in a row, wrapping to two rows when there isn't room. The field
+       labels are for screen readers; the chapter option says "Kapitel 2". *@
     <div class="bible-controls">
         <label class="bible-control bible-control--translation">
-            <span>@I18n.T("bible.translationLabel")</span>
+            <span class="visually-hidden">@I18n.T("bible.translationLabel")</span>
             <select value="@_selectedTranslationId" @onchange="OnTranslationChangedAsync">
                 @foreach (var translation in _translations)
                 {
@@ -54,8 +59,8 @@
             </select>
         </label>
 
-        <label class="bible-control">
-            <span>@I18n.T("bible.bookLabel")</span>
+        <label class="bible-control bible-control--book">
+            <span class="visually-hidden">@I18n.T("bible.bookLabel")</span>
             <select value="@_selectedBookId" @onchange="OnBookChangedAsync" disabled="@(_books.Count == 0)">
                 @foreach (var book in _books)
                 {
@@ -64,25 +69,20 @@
             </select>
         </label>
 
-        <label class="bible-control">
-            <span>@I18n.T("bible.chapterLabel")</span>
+        <label class="bible-control bible-control--chapter">
+            <span class="visually-hidden">@I18n.T("bible.chapterLabel")</span>
             <select value="@_chapter?.Id" @onchange="OnChapterChangedAsync" disabled="@(_chapters.Count == 0)">
                 @foreach (var chapterRef in _chapters)
                 {
-                    <option value="@chapterRef.Id">@chapterRef.Number</option>
+                    <option value="@chapterRef.Id">@string.Format(I18n.T("bible.chapterOption"), chapterRef.Number)</option>
                 }
             </select>
         </label>
 
-        <div class="bible-nav-buttons">
-            <button type="button" class="btn" disabled="@(_chapter?.Previous is null)" @onclick="() => GoToPreviousChapterAsync()">@I18n.T("bible.previousChapter")</button>
-            <button type="button" class="btn" disabled="@(_chapter?.Next is null)" @onclick="() => GoToNextChapterAsync()">@I18n.T("bible.nextChapter")</button>
+        <div class="bible-search">
+            <SearchInput Placeholder="@I18n.T("bible.searchPlaceholder")" Value="@_searchQuery" OnInput="e => _searchQuery = e.Value?.ToString()" OnKeyDown="OnSearchKeyDownAsync" />
+            <button type="button" class="btn" disabled="@string.IsNullOrWhiteSpace(_searchQuery)" @onclick="SearchAsync">@I18n.T("bible.searchButton")</button>
         </div>
-    </div>
-
-    <div class="bible-search">
-        <SearchInput Placeholder="@I18n.T("bible.searchPlaceholder")" Value="@_searchQuery" OnInput="e => _searchQuery = e.Value?.ToString()" OnKeyDown="OnSearchKeyDownAsync" />
-        <button type="button" class="btn" disabled="@string.IsNullOrWhiteSpace(_searchQuery)" @onclick="SearchAsync">@I18n.T("bible.searchButton")</button>
     </div>
 
     @if (_searchResults is { Count: > 0 })
@@ -115,11 +115,19 @@
     else if (_chapter is not null)
     {
         <article class="bible-chapter" @key="_chapter.Id" tabindex="0" @ref="_articleElement" @onkeydown="HandleKeyDownAsync" @onkeydown:preventDefault="true">
-            <h2>@_chapter.Reference</h2>
+            @* Previous/next sit at the heading, where the reader is (user
+               decision 2026-10-02). stopPropagation keeps Enter/Space on
+               them away from the article's own arrow-key handler, which
+               prevents the default action. *@
+            <div class="bible-chapter-heading">
+                <button type="button" class="bible-chapter-arrow bible-chapter-arrow--previous" aria-label="@I18n.T("bible.previousChapter")" title="@I18n.T("bible.previousChapter")" disabled="@(_chapter.Previous is null)" @onclick="() => GoToPreviousChapterAsync()" @onkeydown:stopPropagation="true">‹</button>
+                <h2>@_chapter.Reference</h2>
+                <button type="button" class="bible-chapter-arrow bible-chapter-arrow--next" aria-label="@I18n.T("bible.nextChapter")" title="@I18n.T("bible.nextChapter")" disabled="@(_chapter.Next is null)" @onclick="() => GoToNextChapterAsync()" @onkeydown:stopPropagation="true">›</button>
+            </div>
             <div id="bible-chapter-content" class="bible-chapter-content">@((MarkupString)BibleDropCap.Apply(_chapter.Content))</div>
         </article>
 
-        @* Same buttons as in the controls bar, at the end of the text: on a
+        @* Same as the heading arrows, at the end of the text: on a
            phone a chapter is many screens long, and the way on shouldn't be
            back at the top. These jump to the new chapter's start. *@
         <nav class="bible-chapter-nav" aria-label="@I18n.T("bible.chapterNavLabel")">

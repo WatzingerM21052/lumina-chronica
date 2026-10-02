@@ -413,6 +413,8 @@
   "bible.chapterLabel": "Chapter",
   "bible.previousChapter": "← Previous Chapter",
   "bible.nextChapter": "Next Chapter →",
+  "bible.themeLabel": "Page look",
+  "bible.chapterOption": "Chapter {0}",
   "bible.chapterNavLabel": "Chapter navigation",
   "bible.searchPlaceholder": "Search the Bible...",
   "bible.searchButton": "Search",
