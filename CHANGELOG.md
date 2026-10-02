@@ -6,6 +6,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Added
 
+- In Babylon the reading calendar is a wall of glazed tiles (the busiest days in gold) and reading progress runs like water; in Alexandria the calendar is a mosaic and progress a gilded thread.
 - Babylon and Alexandria now have their own home banner: the striding lion of Babylon's processional way with hanging wisteria and fireflies, or the reading hall of Alexandria in lapis and papyrus with drifting sunlight and dust. The motion stops in a background tab and with "reduce motion".
 - Two new themes, Babylon (the hanging gardens: glazed-brick header with the gate's gold band, a dark garden ground, Marcellus headings) and Alexandria (the great library: a lapis-marble cornice with a gilded egg-and-dart frieze, a sunlit marble ground, papyrus cards, Cinzel headings). Pick them in Settings → Appearance. The images are public-domain or CC0 museum and texture photos.
 - Dashboard and Statistics reworked with parallax hero images; statistics use dials and a star-chart reading calendar.
