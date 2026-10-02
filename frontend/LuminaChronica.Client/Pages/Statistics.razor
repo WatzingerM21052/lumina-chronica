@@ -1,19 +1,16 @@
 @page "/statistics"
 @attribute [Authorize]
-@implements IAsyncDisposable
 @using System.Globalization
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
-@inject IJSRuntime JsRuntime
 @inject II18nService I18n
 
 <PageTitle>@I18n.T("statistics.pageTitle") — Lumina Chronica</PageTitle>
 
-<div class="stats-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
-<div class="stats-hero" @ref="_heroRef">
+<div class="stats-hero">
     <img src="images/statistics-hero-layer1-background.webp" alt="" class="stats-hero-layer stats-hero-layer-1" fetchpriority="high" />
     <img src="images/statistics-hero-layer2-moonlight.webp" alt="" class="stats-hero-layer stats-hero-layer-2" fetchpriority="low" decoding="async" />
     <img src="images/statistics-hero-layer3-armillary.webp" alt="" class="stats-hero-layer stats-hero-layer-3" fetchpriority="low" decoding="async" />
@@ -42,9 +39,19 @@ else
         <StatCard Value="@_stats.Streaks.LongestStreak.ToString()" Label="@I18n.T("statistics.statLongestStreak")" IconName="trophy" />
     </div>
 
-    <div class="stats-panels">
-        <section class="stats-panel goal-card">
-            <h2><Icon Name="target" /> @I18n.T("statistics.goalTitle")</h2>
+    @* Dashboard grid (plan C2/C3): three columns on a wide screen, the
+       calendar, trend and yearly cards spanning two; one column on a phone. *@
+    <div class="stats-grid">
+        <section class="stats-card goal-card">
+            <div class="stats-card-head">
+                <h2><Icon Name="target" /> @I18n.T("statistics.goalTitle")</h2>
+                @if (!_editingGoal)
+                {
+                    <button type="button" class="btn btn-icon btn-icon-sm goal-edit" aria-label="@I18n.T("statistics.goalEditLabel")" title="@I18n.T("statistics.goalEditLabel")" @onclick="StartEditingGoal">
+                        <Icon Name="edit" />
+                    </button>
+                }
+            </div>
             @if (_stats.Goal.TargetBooks is { } target && target > 0)
             {
                 var pct = Math.Clamp(_stats.Goal.BooksFinishedThisYear * 100.0 / target, 0, 100);
@@ -54,43 +61,82 @@ else
                         <span class="goal-ring-of">@string.Format(I18n.T("statistics.goalOfLabel"), target)</span>
                     </div>
                 </div>
-                <p class="goal-status">
-                    @if (_stats.Goal.BooksFinishedThisYear >= target)
-                    {
-                        <text>@I18n.T("statistics.goalReached")</text>
-                    }
-                    else
-                    {
-                        <text>@string.Format(I18n.T("statistics.goalRemaining"), target - _stats.Goal.BooksFinishedThisYear)</text>
-                    }
-                </p>
-            }
-            else
-            {
-                <p class="text-muted">@I18n.T("statistics.goalSetPrompt")</p>
-            }
-            <form class="goal-form" @onsubmit="SaveGoalAsync" @onsubmit:preventDefault="true">
-                <input type="number" min="1" placeholder="@I18n.T("statistics.goalInputPlaceholder")" @bind="_goalInput" @bind:event="oninput" />
-                <button type="submit" class="btn btn-primary">@I18n.T("statistics.goalSaveButton")</button>
-                @if (_stats.Goal.TargetBooks is not null)
+                @if (!_editingGoal)
                 {
-                    <button type="button" class="btn" @onclick="ClearGoalAsync">@I18n.T("statistics.goalRemoveButton")</button>
-                }
-            </form>
-        </section>
-
-        <section class="stats-panel calendar-card">
-            <h2><Icon Name="calendar" /> @I18n.T("statistics.calendarTitle")</h2>
-            <div class="calendar-heatmap">
-                @foreach (var week in _calendarWeeks)
-                {
-                    <div class="calendar-week">
-                        @foreach (var day in week)
+                    <p class="goal-status">
+                        @if (_stats.Goal.BooksFinishedThisYear >= target)
                         {
-                            <div class="calendar-cell calendar-cell--level-@day.Level" title="@day.Tooltip" role="@(day.Count > 0 ? "img" : null)" aria-label="@(day.Count > 0 ? day.Tooltip : null)"></div>
+                            <text>@I18n.T("statistics.goalReached")</text>
+                        }
+                        else
+                        {
+                            <text>@string.Format(I18n.T("statistics.goalRemaining"), target - _stats.Goal.BooksFinishedThisYear)</text>
+                        }
+                    </p>
+                }
+            }
+            else if (!_editingGoal)
+            {
+                <p class="text-muted goal-status">@I18n.T("statistics.goalSetPrompt")</p>
+                <button type="button" class="btn btn-primary goal-set" @onclick="StartEditingGoal">@I18n.T("statistics.goalSetButton")</button>
+            }
+            @if (_editingGoal)
+            {
+                <form class="goal-form" @onsubmit="SaveGoalAsync" @onsubmit:preventDefault="true">
+                    <div class="goal-stepper">
+                        <button type="button" class="btn btn-icon goal-stepper-minus" aria-label="@I18n.T("statistics.goalDecrease")" disabled="@(_goalDraft <= MinGoal)" @onclick="() => StepGoal(-1)">−</button>
+                        <output class="goal-stepper-value" aria-live="polite">@_goalDraft <span>@I18n.T("statistics.goalStepperUnit")</span></output>
+                        <button type="button" class="btn btn-icon goal-stepper-plus" aria-label="@I18n.T("statistics.goalIncrease")" disabled="@(_goalDraft >= MaxGoal)" @onclick="() => StepGoal(1)">+</button>
+                    </div>
+                    <div class="goal-form-actions">
+                        <button type="submit" class="btn btn-primary">@I18n.T("statistics.goalSaveButton")</button>
+                        <button type="button" class="btn goal-cancel" @onclick="CancelEditingGoal">@I18n.T("statistics.goalCancelButton")</button>
+                        @if (_stats.Goal.TargetBooks is not null)
+                        {
+                            <button type="button" class="btn goal-remove" @onclick="ClearGoalAsync">@I18n.T("statistics.goalRemoveButton")</button>
                         }
                     </div>
+                </form>
+            }
+        </section>
+
+        <section class="stats-card stats-card--wide calendar-card">
+            <div class="stats-card-head">
+                <h2><Icon Name="calendar" /> @I18n.T("statistics.calendarTitle")</h2>
+                @if (_stats.CalendarYears.Count > 1)
+                {
+                    <select class="calendar-year-select" aria-label="@I18n.T("statistics.calendarYearLabel")" value="@(_calendarYear?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="OnCalendarYearChanged">
+                        <option value="">@I18n.T("statistics.calendarLast12")</option>
+                        @foreach (var year in _stats.CalendarYears)
+                        {
+                            <option value="@year.ToString(CultureInfo.InvariantCulture)">@year</option>
+                        }
+                    </select>
                 }
+            </div>
+            @* .calendar-scroll is a row-reverse flex box, so on a phone the
+               swipeable heatmap starts scrolled to its right end -- the most
+               recent weeks -- instead of last year's. *@
+            <div class="calendar-scroll">
+                <div class="calendar-heatmap" style="--weeks: @_calendarWeeks.Count">
+                    <div class="calendar-months" aria-hidden="true">
+                        @foreach (var (column, label) in _monthLabels)
+                        {
+                            <span style="grid-column: @column">@label</span>
+                        }
+                    </div>
+                    <div class="calendar-weeks">
+                        @foreach (var week in _calendarWeeks)
+                        {
+                            <div class="calendar-week">
+                                @foreach (var day in week)
+                                {
+                                    <div class="calendar-cell calendar-cell--level-@day.Level" title="@day.Tooltip" role="@(day.Count > 0 ? "img" : null)" aria-label="@(day.Count > 0 ? day.Tooltip : null)"></div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
             <div class="calendar-legend">
                 <span class="calendar-legend-label">@I18n.T("statistics.calendarLegendLess")</span>
@@ -102,42 +148,68 @@ else
                 <span class="calendar-legend-label">@I18n.T("statistics.calendarLegendMore")</span>
             </div>
         </section>
+
+        @if (_stats.MonthlyOverview.Count > 0)
+        {
+            <section class="stats-card stats-card--wide trend-card">
+                <div class="stats-card-head">
+                    <h2><Icon Name="chart" /> @I18n.T("statistics.trendTitle")</h2>
+                    <div class="trend-toggle" role="group" aria-label="@I18n.T("statistics.trendTitle")">
+                        <button type="button" class="trend-toggle-option" aria-pressed="@(_trendShowsBooks ? "false" : "true")" @onclick="() => _trendShowsBooks = false">@I18n.T("statistics.trendActiveDays")</button>
+                        <button type="button" class="trend-toggle-option" aria-pressed="@(_trendShowsBooks ? "true" : "false")" @onclick="() => _trendShowsBooks = true">@I18n.T("statistics.trendBooksFinished")</button>
+                    </div>
+                </div>
+                <LineChart Points="@TrendPoints()" AriaLabel="@I18n.T(_trendShowsBooks ? "statistics.trendChartLabelBooks" : "statistics.trendChartLabelActiveDays")" />
+            </section>
+        }
+
+        @if (_stats.GenreBreakdown.Count > 0)
+        {
+            <section class="stats-card genre-card">
+                <div class="stats-card-head">
+                    <h2>@I18n.T("statistics.genresTitle")</h2>
+                </div>
+                <GenreDonut Genres="@_stats.GenreBreakdown" OtherLabel="@I18n.T("statistics.genresOther")" CenterLabel="@I18n.T("statistics.genresCenter")" AriaLabel="@I18n.T("statistics.genresChartLabel")" />
+            </section>
+        }
+
+        <section class="stats-card pace-card">
+            <div class="stats-card-head">
+                <h2>@I18n.T("statistics.paceTitle")</h2>
+            </div>
+            <dl class="pace-figures">
+                <div>
+                    <dt>@I18n.T("statistics.pacePagesPerDay")</dt>
+                    <dd>@Approx(_stats.ReadingPace.PagesPerActiveDay)</dd>
+                </div>
+                <div>
+                    <dt>@I18n.T("statistics.paceDaysPerBook")</dt>
+                    <dd>@Approx(_stats.ReadingPace.ActiveDaysPerBook)</dd>
+                </div>
+            </dl>
+            <p class="pace-note">@I18n.T("statistics.paceNote")</p>
+        </section>
+
+        @if (_stats.YearlyOverview.Count > 0)
+        {
+            var maxBooksPerYear = Math.Max(1, _stats.YearlyOverview.Max(y => y.BooksFinished));
+            <section class="stats-card stats-card--wide yearly-card">
+                <div class="stats-card-head">
+                    <h2>@I18n.T("statistics.yearlyOverviewTitle")</h2>
+                </div>
+                <ul class="yearly-rows">
+                    @foreach (var year in _stats.YearlyOverview)
+                    {
+                        <li class="yearly-row">
+                            <span class="yearly-row-year">@year.Year</span>
+                            <span class="yearly-row-bar" aria-hidden="true"><span style="width: @((year.BooksFinished * 100.0 / maxBooksPerYear).ToString("F0", CultureInfo.InvariantCulture))%"></span></span>
+                            <span class="yearly-row-detail">@string.Format(I18n.T("statistics.yearlyOverviewDetail"), year.BooksFinished, year.PagesRead, year.ActiveDays)</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
     </div>
-
-    @if (_stats.YearlyOverview.Count > 0)
-    {
-        <h2><Icon Name="chart" /> @I18n.T("statistics.yearlyOverviewTitle")</h2>
-        <div class="yearly-overview-list">
-            @{
-                var maxBooksPerYear = Math.Max(1, _stats.YearlyOverview.Max(y => y.BooksFinished));
-            }
-            @foreach (var year in _stats.YearlyOverview)
-            {
-                <div class="yearly-overview-row">
-                    <span class="yearly-overview-year">@year.Year</span>
-                    <MiniDial Value="@year.BooksFinished" Percentage="@(year.BooksFinished * 100.0 / maxBooksPerYear)" aria-hidden="true" />
-                    <span class="yearly-overview-detail">@string.Format(I18n.T("statistics.yearlyOverviewDetail"), year.BooksFinished, year.PagesRead, year.ActiveDays)</span>
-                </div>
-            }
-        </div>
-    }
-
-    @if (_stats.GenreBreakdown.Count > 0)
-    {
-        <h2>@I18n.T("statistics.genresTitle")</h2>
-        <div class="statistics-genre-list">
-            @{
-                var maxGenreCount = _stats.GenreBreakdown.Max(g => g.Count);
-            }
-            @foreach (var genre in _stats.GenreBreakdown)
-            {
-                <div class="statistics-genre-row">
-                    <span class="statistics-genre-label">@genre.Genre</span>
-                    <MiniDial Value="@genre.Count" Percentage="@(genre.Count * 100.0 / maxGenreCount)" />
-                </div>
-            }
-        </div>
-    }
 
     @if (_stats.RecentActivity.Count > 0)
     {
@@ -152,71 +224,63 @@ else
 }
 
 @code {
-    private ElementReference _heroRef;
-    private ElementReference _heroSentinelRef;
-    private IJSObjectReference? _motionModule;
+    private const int MinGoal = 1;
+    private const int MaxGoal = 999;
+    private const int DefaultGoal = 12;
 
     private StatisticsResponse? _stats;
-    private int? _goalInput;
+    private bool _editingGoal;
+    private int _goalDraft = DefaultGoal;
+    private bool _trendShowsBooks;
+    private int? _calendarYear;
+    private List<CalendarDay> _calendarDays = [];
     private List<List<CalendarCell>> _calendarWeeks = [];
+    private List<(int Column, string Label)> _monthLabels = [];
 
     protected override async Task OnInitializedAsync()
     {
         var response = await ApiClient.GetAsync<StatisticsResponse>("/api/statistics");
         _stats = response is { Success: true, Data: not null } ? response.Data : new StatisticsResponse();
-        _goalInput = _stats.Goal.TargetBooks;
+        _calendarDays = _stats.ReadingCalendar;
         BuildCalendarWeeks();
     }
 
-    // Reuses motion.js's initHeaderCompact for the hero itself (already
-    // generic over any header/sentinel element pair, not app-header- or
-    // Home-page-specific). Wrapped in try/catch matching every other
-    // motion.js call site in this codebase — a blocked/failed module load
-    // just leaves the hero uncompacted, same "progressive enhancement"
-    // shape as everywhere else this module is used.
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
+    private string[] MonthNames() => I18n.T("statistics.monthsShort").Split(',');
 
-        try
-        {
-            _motionModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/motion.js");
-            await _motionModule.InvokeVoidAsync("initHeaderCompact", _heroRef, _heroSentinelRef);
-        }
-        catch (Exception)
-        {
-        }
-    }
-
-    // Builds a full Monday-start grid covering the last 52 weeks, even for
-    // days with zero activity -- the API only returns days that actually
-    // have a reading_activity row (sparse), but a heatmap needs every cell.
+    // Default: a Monday-start grid over the last 52 weeks. With a year
+    // picked: 1 January to 31 December of that year. Either way every day
+    // gets a cell, since the API only returns days that had activity.
     private void BuildCalendarWeeks()
     {
-        if (_stats is null)
-        {
-            _calendarWeeks = [];
-            return;
-        }
-
-        var countByDate = _stats.ReadingCalendar.ToDictionary(d => d.Date, d => d.Count);
+        var countByDate = _calendarDays.ToDictionary(d => d.Date, d => d.Count);
         var maxCount = countByDate.Count > 0 ? countByDate.Values.Max() : 0;
 
         var today = DateTime.UtcNow.Date;
-        var mondayOffset = ((int)today.AddDays(-364).DayOfWeek + 6) % 7;
-        var start = today.AddDays(-364).AddDays(-mondayOffset);
+        var (first, last) = _calendarYear is { } year
+            ? (new DateTime(year, 1, 1), new DateTime(year, 12, 31))
+            : (today.AddDays(-364), today);
+        var start = first.AddDays(-(((int)first.DayOfWeek + 6) % 7));
+        var months = MonthNames();
 
         var weeks = new List<List<CalendarCell>>();
-        for (var current = start; current <= today; current = current.AddDays(7))
+        var labels = new List<(int Column, string Label)>();
+        for (var current = start; current <= last; current = current.AddDays(7))
         {
             var week = new List<CalendarCell>();
             for (var offset = 0; offset < 7; offset++)
             {
                 var date = current.AddDays(offset);
-                if (date > today)
+                if (date < first || date > last || date > today)
                 {
                     week.Add(new CalendarCell(0, 0, ""));
                     continue;
+                }
+
+                // A month's name sits above the week holding its 1st (and
+                // above the first column for the month the range starts in).
+                if ((date.Day == 1 || date == first) && months.Length == 12)
+                {
+                    labels.Add((weeks.Count + 1, months[date.Month - 1]));
                 }
 
                 var dateKey = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -227,17 +291,77 @@ else
             }
             weeks.Add(week);
         }
+
+        // The partial month the rolling range starts in would overlap the
+        // next month's label when it's only a week or two long: drop it.
+        if (labels.Count > 1 && labels[1].Column - labels[0].Column < 3)
+        {
+            labels.RemoveAt(0);
+        }
+
         _calendarWeeks = weeks;
+        _monthLabels = labels;
     }
+
+    private async Task OnCalendarYearChanged(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var year))
+        {
+            _calendarYear = null;
+            _calendarDays = _stats?.ReadingCalendar ?? [];
+            BuildCalendarWeeks();
+            return;
+        }
+
+        var response = await ApiClient.GetAsync<List<CalendarDay>>($"/api/statistics/calendar?year={year}");
+        if (response is { Success: true, Data: { } days })
+        {
+            _calendarYear = year;
+            _calendarDays = days;
+            BuildCalendarWeeks();
+        }
+    }
+
+    private List<LineChartPoint> TrendPoints()
+    {
+        var months = MonthNames();
+        return _stats!.MonthlyOverview.Select(m =>
+        {
+            var monthIndex = m.Month.Length >= 7 && int.TryParse(m.Month.AsSpan(5, 2), NumberStyles.Integer, CultureInfo.InvariantCulture, out var mm) ? mm : 0;
+            var label = monthIndex is >= 1 and <= 12 && months.Length == 12 ? months[monthIndex - 1] : m.Month;
+            var value = _trendShowsBooks ? m.BooksFinished : m.ActiveDays;
+            var text = string.Format(I18n.T(_trendShowsBooks ? "statistics.trendValueBooks" : "statistics.trendValueDays"), value);
+            return new LineChartPoint(label, value, text);
+        }).ToList();
+    }
+
+    // "≈ 6,5" in German, "≈ 6.5" in English; "–" while there's no data yet.
+    private string Approx(double? value)
+    {
+        if (value is not { } v) return "–";
+        var separator = I18n.CurrentLanguage == "en" ? "." : ",";
+        return "≈ " + v.ToString("0.#", CultureInfo.InvariantCulture).Replace(".", separator);
+    }
+
+    private void StartEditingGoal()
+    {
+        _goalDraft = _stats?.Goal.TargetBooks is { } target and > 0 ? target : DefaultGoal;
+        _editingGoal = true;
+    }
+
+    private void CancelEditingGoal() => _editingGoal = false;
+
+    private void StepGoal(int delta) => _goalDraft = Math.Clamp(_goalDraft + delta, MinGoal, MaxGoal);
 
     private async Task SaveGoalAsync()
     {
-        if (_goalInput is not { } target || target <= 0 || _stats is null) return;
+        if (_stats is null) return;
 
-        var response = await ApiClient.PutAsync<SetReadingGoalRequest, ReadingGoal>("/api/statistics/goal", new SetReadingGoalRequest { TargetBooks = target });
+        var response = await ApiClient.PutAsync<SetReadingGoalRequest, ReadingGoal>("/api/statistics/goal", new SetReadingGoalRequest { TargetBooks = _goalDraft });
         if (response is { Success: true, Data: { } goal })
         {
             _stats.Goal = goal;
+            _editingGoal = false;
         }
     }
 
@@ -249,23 +373,9 @@ else
         if (response is { Success: true, Data: { } goal })
         {
             _stats.Goal = goal;
-            _goalInput = null;
+            _editingGoal = false;
         }
     }
 
     private record CalendarCell(int Count, int Level, string Tooltip);
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_motionModule is not null)
-        {
-            try
-            {
-                await _motionModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-        }
-    }
 }

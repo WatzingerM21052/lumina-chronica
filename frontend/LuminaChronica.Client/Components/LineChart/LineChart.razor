@@ -1,0 +1,92 @@
+@namespace LuminaChronica.Client.Components
+@using System.Globalization
+
+@* Single-series line chart (statistics C3). The line and area are an SVG
+   stretched to the plot box (preserveAspectRatio="none" + non-scaling
+   strokes); dots, labels and tooltips are positioned HTML on top, so text
+   keeps its real size on a phone instead of shrinking with a viewBox. Every
+   number written into a coordinate or style goes through Invariant --
+   German culture would write "33,3" and silently break the path. *@
+<figure class="line-chart">
+    <div class="line-chart-plot" role="img" aria-label="@AriaLabel">
+        <div class="line-chart-grid" aria-hidden="true">
+            <span class="line-chart-gridline" style="bottom: 100%"><span>@_yMax</span></span>
+            <span class="line-chart-gridline" style="bottom: 50%"><span>@FormatHalf(_yMax)</span></span>
+            <span class="line-chart-gridline line-chart-baseline" style="bottom: 0%"><span>0</span></span>
+        </div>
+        <svg class="line-chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <path class="line-chart-area" d="@_areaPath" />
+            <path class="line-chart-line" d="@_linePath" />
+        </svg>
+        @for (var i = 0; i < Points.Count; i++)
+        {
+            var point = Points[i];
+            var pointClass = i == 0 ? "line-chart-point is-first" : i == Points.Count - 1 ? "line-chart-point is-last" : "line-chart-point";
+            <div class="@pointClass" style="left: @Pct(X(i)); --y: @Pct(Y(point.Value))" aria-hidden="true">
+                <span class="line-chart-guide"></span>
+                <span class="line-chart-dot"></span>
+                <span class="line-chart-tip"><strong>@point.ValueText</strong> @point.Label</span>
+            </div>
+        }
+    </div>
+    <div class="line-chart-xlabels" aria-hidden="true">
+        @for (var i = 0; i < Points.Count; i++)
+        {
+            <span style="left: @Pct(X(i))">@Points[i].Label</span>
+        }
+    </div>
+    <table class="visually-hidden">
+        <caption>@AriaLabel</caption>
+        <tbody>
+            @foreach (var point in Points)
+            {
+                <tr><th scope="row">@point.Label</th><td>@point.ValueText</td></tr>
+            }
+        </tbody>
+    </table>
+</figure>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<LineChartPoint> Points { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    private int _yMax = 1;
+    private string _linePath = string.Empty;
+    private string _areaPath = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        // Rounded up to an even number so the middle gridline stays whole;
+        // at least 2 so an all-zero year still draws a flat baseline, never NaN.
+        var max = Points.Count > 0 ? Points.Max(p => p.Value) : 0;
+        _yMax = Math.Max(2, (int)Math.Ceiling(max / 2.0) * 2);
+
+        if (Points.Count == 0)
+        {
+            _linePath = _areaPath = string.Empty;
+            return;
+        }
+
+        var coords = Points.Select((p, i) => $"{Num(X(i))},{Num(100 - Y(p.Value))}").ToList();
+        _linePath = "M" + string.Join(" L", coords);
+        _areaPath = $"{_linePath} L{Num(X(Points.Count - 1))},100 L{Num(X(0))},100 Z";
+    }
+
+    // Points sit inside a small horizontal inset so the first/last dot and
+    // label aren't clipped by the plot edge.
+    private const double Inset = 4;
+
+    private double X(int index) =>
+        Points.Count <= 1 ? 50 : Inset + index * (100 - 2 * Inset) / (Points.Count - 1);
+
+    private double Y(double value) => Math.Clamp(value / _yMax * 100, 0, 100);
+
+    private static string Num(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string Pct(double value) => Num(value) + "%";
+
+    private static string FormatHalf(int max) => (max / 2).ToString(CultureInfo.InvariantCulture);
+}

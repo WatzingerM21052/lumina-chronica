@@ -16,6 +16,12 @@
         --color-accent-text: #8c6a24;
         --color-info: #3b82c4;
         --color-success: #2f8f4e;
+        /* Genre donut (statistics): four categorical hues, CVD-checked
+           against this theme's card surface; a fifth slice is "other". */
+        --color-chart-1: #3b6fe0;
+        --color-chart-2: #c4761f;
+        --color-chart-3: #b0457a;
+        --color-chart-4: #2f8f4e;
         --color-warning: #c48a1f;
         --color-error: #c0392b;
         --color-bg-paper: #f4f5f7;
@@ -45,6 +51,12 @@
         --color-accent-text: #d9b04c;
         --color-info: #6fa8c9;
         --color-success: #6fae6f;
+        /* Genre donut (statistics): four categorical hues, CVD-checked
+           against this theme's card surface; a fifth slice is "other". */
+        --color-chart-1: #d9b04c;
+        --color-chart-2: #6fa8c9;
+        --color-chart-3: #b24b54;
+        --color-chart-4: #6fae6f;
         --color-warning: #d9a441;
         --color-error: #d9695c;
         --color-bg-paper: #1c1510;

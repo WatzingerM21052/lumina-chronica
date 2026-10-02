@@ -28,6 +28,12 @@
     --color-accent-text: var(--color-primary);
     --color-info: #3e7a93;
     --color-success: #4f7942;
+    /* Genre donut (statistics): four categorical hues, CVD-checked
+       against this theme's card surface; a fifth slice is "other". */
+    --color-chart-1: #8c6a24;
+    --color-chart-2: #3e7a93;
+    --color-chart-3: #8a3a42;
+    --color-chart-4: #4f7942;
     --color-warning: #b8862b;
     --color-error: #a23b2e;
 

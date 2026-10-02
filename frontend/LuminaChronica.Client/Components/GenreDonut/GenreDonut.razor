@@ -1,0 +1,87 @@
+@namespace LuminaChronica.Client.Components
+@using System.Globalization
+@using LuminaChronica.Client.Models
+
+@* Genre share as a donut (statistics C3): the four biggest genres get the
+   theme's --color-chart-1..4, everything after folds into one muted
+   "other" slice -- never a generated fifth hue. The legend with counts
+   carries the meaning; colour is only the link between slice and row.
+   The ring is a circle with circumference 100 (r = 15.915), so each
+   slice's dash length is simply its percentage. *@
+<div class="genre-donut">
+    <div class="genre-donut-ring">
+        <svg viewBox="0 0 42 42" role="img" aria-label="@AriaLabel">
+            <circle class="genre-donut-track" cx="21" cy="21" r="15.915" />
+            @foreach (var slice in _slices)
+            {
+                <circle class="genre-donut-slice genre-donut-slice--@slice.ColorIndex" cx="21" cy="21" r="15.915"
+                        stroke-dasharray="@Num(slice.Length) @Num(100 - slice.Length)"
+                        stroke-dashoffset="@Num(25 - slice.Start)">
+                    <title>@slice.Label: @slice.Count</title>
+                </circle>
+            }
+        </svg>
+        <div class="genre-donut-center" aria-hidden="true">
+            <span class="genre-donut-total">@_total</span>
+            <span class="genre-donut-caption">@CenterLabel</span>
+        </div>
+    </div>
+    <ul class="genre-donut-legend">
+        @foreach (var slice in _slices)
+        {
+            <li>
+                <span class="genre-donut-swatch genre-donut-slice--@slice.ColorIndex" aria-hidden="true"></span>
+                <span class="genre-donut-name">@slice.Label</span>
+                <span class="genre-donut-count">@slice.Count</span>
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<GenreCount> Genres { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public string OtherLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string CenterLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    private const int ColoredSlices = 4;
+    // Gap between slices in ring units (1 unit = 1% of the circumference),
+    // the "2px surface gap" between adjacent fills at the rendered size.
+    private const double Gap = 0.8;
+
+    private List<Slice> _slices = [];
+    private int _total;
+
+    protected override void OnParametersSet()
+    {
+        var sorted = Genres.Where(g => g.Count > 0).OrderByDescending(g => g.Count).ToList();
+        _total = sorted.Sum(g => g.Count);
+        var groups = sorted.Take(ColoredSlices).Select((g, i) => (g.Genre, g.Count, Color: i + 1)).ToList();
+        var rest = sorted.Skip(ColoredSlices).ToList();
+        if (rest.Count > 0)
+        {
+            groups.Add((rest.Count == 1 ? rest[0].Genre : OtherLabel, rest.Sum(g => g.Count), 0));
+        }
+
+        _slices = [];
+        var start = 0.0;
+        foreach (var (label, count, color) in groups)
+        {
+            var share = _total > 0 ? count * 100.0 / _total : 0;
+            var length = groups.Count > 1 ? Math.Max(0.1, share - Gap) : share;
+            _slices.Add(new Slice(label, count, color, start + (groups.Count > 1 ? Gap / 2 : 0), length));
+            start += share;
+        }
+    }
+
+    private static string Num(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+
+    private record Slice(string Label, int Count, int ColorIndex, double Start, double Length);
+}
