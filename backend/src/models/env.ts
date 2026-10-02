@@ -17,6 +17,8 @@ export type Bindings = {
     // never invalidates the other.
     PASSWORD_CODE_SECRET: string;
     FRONTEND_URL: string;
+    // The deployed git SHA, injected by backend-deploy.yml; unset locally.
+    APP_VERSION?: string;
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;
     GITHUB_CLIENT_ID: string;
