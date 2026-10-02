@@ -7,6 +7,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using LuminaChronica.Client.Components
+@using Markdig
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
@@ -639,31 +640,90 @@ else
         }
         else
         {
-            <div class="library-grid">
-                @foreach (var file in _files)
-                {
-                    <div class="project-card file-gallery-item">
-                        <div class="project-card-cover">
-                            @if (file.Category == "IMAGE" && _fileThumbnails.TryGetValue(file.Id, out var thumbnailUrl))
+            @* File viewer (user decisions 2026-10-02): images as a compact
+               square grid that opens a lightbox, documents as slim rows;
+               PDF/TXT/MD open in a viewer dialog, DOC/DOCX download. *@
+            var imageFiles = _files.Where(f => f.Category == "IMAGE").ToList();
+            var documentFiles = _files.Where(f => f.Category != "IMAGE").ToList();
+            @if (imageFiles.Count > 0)
+            {
+                <section class="file-section" aria-labelledby="file-images-heading">
+                    <h3 id="file-images-heading">@I18n.T("projectDetail.imagesHeading")</h3>
+                    <ul class="file-image-grid">
+                        @for (var i = 0; i < imageFiles.Count; i++)
+                        {
+                            var file = imageFiles[i];
+                            var index = i;
+                            <li class="file-image-tile">
+                                <button type="button" class="file-image-open" @onclick="() => OpenLightbox(index)" title="@file.Name">
+                                    @if (_fileThumbnails.TryGetValue(file.Id, out var thumbnailUrl))
+                                    {
+                                        <img src="@thumbnailUrl" alt="@file.Name" />
+                                    }
+                                    else
+                                    {
+                                        <span class="file-image-placeholder" aria-hidden="true"><Icon Name="image" /></span>
+                                        <span class="visually-hidden">@file.Name</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger file-image-delete" @onclick="() => _confirmingFileDeleteId = file.Id" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton") @file.Name</span></button>
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
+            @if (documentFiles.Count > 0)
+            {
+                <section class="file-section" aria-labelledby="file-documents-heading">
+                    <h3 id="file-documents-heading">@I18n.T("projectDetail.documentsHeading")</h3>
+                    <ul class="file-document-list">
+                        @foreach (var file in documentFiles)
+                        {
+                            var kind = DocumentKind(file);
+                            <li class="file-document-row">
+                                <button type="button" class="file-document-open" @onclick="() => OpenDocumentAsync(file)"
+                                        title="@(kind == DocumentViewKind.None ? I18n.T("projectDetail.downloadButton") : I18n.T("projectDetail.openFileButton"))">
+                                    <Icon Name="document" />
+                                    <span class="file-document-name">@file.Name</span>
+                                    <span class="file-document-meta">@FileExtension(file).ToUpperInvariant() · @FormatFileSize(file.Size)</span>
+                                </button>
+                                <button type="button" class="btn btn-icon btn-icon-sm" @onclick="() => DownloadProjectFileAsync(file)" title="@I18n.T("projectDetail.downloadButton")"><Icon Name="download" /><span class="visually-hidden">@I18n.T("projectDetail.downloadButton") @file.Name</span></button>
+                                <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => _confirmingFileDeleteId = file.Id" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton") @file.Name</span></button>
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
+
+            <ImageLightbox Images="@LightboxImages(imageFiles)" IsOpen="_lightboxOpen" @bind-Index="_lightboxIndex"
+                           OnClose="() => _lightboxOpen = false" OnDownload="DownloadLightboxImageAsync" />
+
+            <Dialog IsOpen="_viewedDocument is not null" Size="DialogSize.Viewer" Title="@_viewedDocument?.File.Name" OnClose="CloseDocument">
+                <ChildContent>
+                    <div class="file-viewer">
+                        @if (_viewedDocument is { } doc)
+                        {
+                            @if (doc.Kind == DocumentViewKind.Pdf)
                             {
-                                <img src="@thumbnailUrl" alt="@file.Name" />
+                                <PdfReader Bytes="doc.Bytes" ReaderMode="scroll" />
+                            }
+                            else if (doc.Kind == DocumentViewKind.Markdown)
+                            {
+                                <article class="file-viewer-text file-viewer-markdown">@((MarkupString)Markdown.ToHtml(doc.Text, FileMarkdownPipeline))</article>
                             }
                             else
                             {
-                                <div class="project-card-cover-placeholder" aria-hidden="true"><Icon Name="@(file.Category == "IMAGE" ? "image" : "document")" /></div>
+                                <pre class="file-viewer-text">@doc.Text</pre>
                             }
-                        </div>
-                        <div class="project-card-info">
-                            <div class="project-card-title">@file.Name</div>
-                            <div class="project-card-type">@FormatFileSize(file.Size)</div>
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-icon btn-icon-sm" @onclick="() => DownloadProjectFileAsync(file)" title="@I18n.T("projectDetail.downloadButton")"><Icon Name="download" /><span class="visually-hidden">@I18n.T("projectDetail.downloadButton")</span></button>
-                            <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" @onclick="() => _confirmingFileDeleteId = file.Id" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
-                        </div>
+                        }
                     </div>
-                }
-            </div>
+                </ChildContent>
+                <Footer>
+                    <button type="button" class="btn" @onclick="CloseDocument">@I18n.T("projectDetail.closeButton")</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => DownloadProjectFileAsync(_viewedDocument!.File)">@I18n.T("projectDetail.downloadButton")</button>
+                </Footer>
+            </Dialog>
+
             <ConfirmDialog IsOpen="_confirmingFileDeleteId is not null" Message="@I18n.T("projectDetail.deleteFileConfirmMessage")"
                            OnConfirm="DeleteProjectFileAsync" OnCancel="() => _confirmingFileDeleteId = null" />
         }
@@ -1503,6 +1563,66 @@ else
         }
     }
 
+    private enum DocumentViewKind { None, Pdf, Text, Markdown }
+
+    private sealed record ViewedDocument(ProjectFile File, DocumentViewKind Kind, byte[] Bytes, string Text);
+
+    // HTML in a user's .md is shown as text, never run (same as lore entries).
+    private static readonly MarkdownPipeline FileMarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().Build();
+
+    private bool _lightboxOpen;
+    private int _lightboxIndex;
+    private ViewedDocument? _viewedDocument;
+
+    private static string FileExtension(ProjectFile file)
+    {
+        var dot = file.Name.LastIndexOf('.');
+        return dot >= 0 && dot < file.Name.Length - 1 ? file.Name[(dot + 1)..].ToLowerInvariant() : "";
+    }
+
+    private static DocumentViewKind DocumentKind(ProjectFile file) => FileExtension(file) switch
+    {
+        "pdf" => DocumentViewKind.Pdf,
+        "txt" => DocumentViewKind.Text,
+        "md" => DocumentViewKind.Markdown,
+        _ => DocumentViewKind.None,
+    };
+
+    private List<LightboxImage> LightboxImages(List<ProjectFile> imageFiles) =>
+        imageFiles.Where(f => _fileThumbnails.ContainsKey(f.Id)).Select(f => new LightboxImage(f.Id, _fileThumbnails[f.Id], f.Name)).ToList();
+
+    // The grid's index counts every image; the lightbox only gets those
+    // whose blob loaded, so map by id.
+    private void OpenLightbox(int gridIndex)
+    {
+        var imageFiles = _files?.Where(f => f.Category == "IMAGE").ToList() ?? [];
+        if (gridIndex >= imageFiles.Count) return;
+        var index = LightboxImages(imageFiles).FindIndex(i => i.Id == imageFiles[gridIndex].Id);
+        if (index < 0) return;
+        _lightboxIndex = index;
+        _lightboxOpen = true;
+    }
+
+    private Task DownloadLightboxImageAsync(LightboxImage image) =>
+        _files?.FirstOrDefault(f => f.Id == image.Id) is { } file ? DownloadProjectFileAsync(file) : Task.CompletedTask;
+
+    private async Task OpenDocumentAsync(ProjectFile file)
+    {
+        var kind = DocumentKind(file);
+        if (kind == DocumentViewKind.None)
+        {
+            await DownloadProjectFileAsync(file);
+            return;
+        }
+
+        var result = await ApiClient.GetBytesAsync(file.Url);
+        if (result is not { } content) return;
+        var text = kind == DocumentViewKind.Pdf ? "" : System.Text.Encoding.UTF8.GetString(content.Bytes);
+        _viewedDocument = new ViewedDocument(file, kind, content.Bytes, text);
+    }
+
+    private void CloseDocument() => _viewedDocument = null;
+
     private async Task DownloadProjectFileAsync(ProjectFile file)
     {
         var result = await ApiClient.GetBytesAsync(file.Url);
@@ -1526,6 +1646,7 @@ else
 
     private static string FormatFileSize(long bytes)
     {
+        if (bytes < 1024) return bytes.ToString(CultureInfo.InvariantCulture) + " B";
         var mb = bytes / 1024.0 / 1024.0;
         return mb >= 1
             ? mb.ToString("F1", CultureInfo.InvariantCulture) + " MB"

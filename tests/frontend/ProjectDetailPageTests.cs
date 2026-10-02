@@ -801,8 +801,106 @@ public class ProjectDetailPageTests : BunitContext
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
 
-        Assert.Contains("concept-art.jpg", cut.Markup);
-        Assert.Contains("200 KB", cut.Markup);
+        // Images are a square grid of thumbnails (name as title/alt), no size row.
+        var tile = cut.Find(".file-image-grid .file-image-open");
+        Assert.Equal("concept-art.jpg", tile.GetAttribute("title"));
+        Assert.Empty(cut.FindAll(".file-document-row"));
+    }
+
+    private RoutedFakeHttpMessageHandler FileRoutes(string filesJson, params (string Suffix, string Content, string ContentType)[] contents)
+    {
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson);
+        foreach (var (suffix, content, contentType) in contents)
+        {
+            handler = handler.WhenPathEndsWith(suffix, content, contentType);
+        }
+        return handler
+            .WhenPathEndsWith("/files", filesJson)
+            .WhenPathEndsWith("/characters", EmptyCharactersJson)
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+    }
+
+    private void UseFileHandler(RoutedFakeHttpMessageHandler handler)
+    {
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
+    }
+
+    [Fact]
+    public void ProjectDetail_ImageClick_OpensLightbox_AndArrowsFlipThroughImages()
+    {
+        var blobs = JSInterop.SetupModule("./js/blobUrl.js");
+        blobs.Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-image");
+        const string filesJson = """
+            {"success":true,"data":[
+              {"id":7,"projectId":1,"name":"north.jpg","category":"IMAGE","size":2048,"url":"/api/projects/1/files/7/content","createdAt":"2026-01-01"},
+              {"id":8,"projectId":1,"name":"south.jpg","category":"IMAGE","size":2048,"url":"/api/projects/1/files/8/content","createdAt":"2026-01-01"}
+            ]}
+            """;
+        UseFileHandler(FileRoutes(filesJson, ("/files/7/content", "a", "image/jpeg"), ("/files/8/content", "b", "image/jpeg")));
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".file-image-open img").Count));
+
+        cut.FindAll(".file-image-open")[1].Click();
+        Assert.Equal("south.jpg", cut.Find(".dialog--lightbox .lightbox-stage img").GetAttribute("alt"));
+        Assert.Equal("2 / 2", cut.Find(".lightbox-counter").TextContent);
+
+        // Wraps around from the last image to the first.
+        cut.Find(".lightbox-arrow--next").Click();
+        Assert.Equal("north.jpg", cut.Find(".lightbox-stage img").GetAttribute("alt"));
+        cut.Find(".lightbox-stage").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "ArrowLeft" });
+        Assert.Equal("south.jpg", cut.Find(".lightbox-stage img").GetAttribute("alt"));
+    }
+
+    [Fact]
+    public void ProjectDetail_MarkdownDocument_OpensInTheViewer_WithHtmlShownAsText()
+    {
+        const string filesJson = """
+            {"success":true,"data":[{"id":9,"projectId":1,"name":"magic.md","category":"DOCUMENT","size":64,"url":"/api/projects/1/files/9/content","createdAt":"2026-01-01"}]}
+            """;
+        UseFileHandler(FileRoutes(filesJson, ("/files/9/content", "# Magie\n\nDas **Siegel** <script>alert(1)</script>", "text/markdown")));
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
+        Assert.Contains("MD · 64 B", cut.Find(".file-document-meta").TextContent);
+
+        cut.Find(".file-document-open").Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".dialog--viewer .file-viewer-markdown")));
+        var article = cut.Find(".file-viewer-markdown");
+        Assert.Equal("Magie", article.QuerySelector("h1")!.TextContent);
+        Assert.Equal("Siegel", article.QuerySelector("strong")!.TextContent);
+        Assert.Null(article.QuerySelector("script"));
+    }
+
+    [Fact]
+    public void ProjectDetail_WordDocument_ClickDownloadsInsteadOfOpeningTheViewer()
+    {
+        var blobs = JSInterop.SetupModule("./js/blobUrl.js");
+        blobs.Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-docx");
+        var download = blobs.SetupVoid("triggerDownload", _ => true);
+        download.SetVoidResult();
+        const string filesJson = """
+            {"success":true,"data":[{"id":10,"projectId":1,"name":"plot.docx","category":"DOCUMENT","size":4096,"url":"/api/projects/1/files/10/content","createdAt":"2026-01-01"}]}
+            """;
+        UseFileHandler(FileRoutes(filesJson, ("/files/10/content", "docx-bytes", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")));
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
+        cut.Find(".file-document-open").Click();
+
+        cut.WaitForAssertion(() => Assert.Single(download.Invocations));
+        Assert.Empty(cut.FindAll(".dialog--viewer"));
     }
 
     [Fact]
@@ -834,7 +932,7 @@ public class ProjectDetailPageTests : BunitContext
 
         var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Löschen").Click();
+        cut.Find(".file-document-row .btn-icon-danger").Click();
 
         // Asks first; nothing is deleted until confirmed.
         Assert.Contains("Diese Datei wirklich löschen?", cut.Markup);

@@ -19,6 +19,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Project files: images are a compact thumbnail grid and open full size (browse with the arrows, arrow keys or a swipe); documents are slim rows, and PDF, TXT and Markdown files open right in the app instead of only downloading.
 - World bible: the look (Standard / Dark Academia) is one switch that shows which is active; translation, book, chapter and search share one bar; previous/next chapter are arrows beside the chapter title (and still below the text). In Dark Academia the page title is centred again.
 - Security and operations (from the September review, #544–#548):
   - Profile → "Signed-in devices": "Sign out on all other devices". A password reset and deleting the account also sign out every existing session.
