@@ -84,6 +84,7 @@ describe("GET /api/statistics", () => {
             goal: { targetBooks: null, booksFinishedThisYear: 0 },
             monthlyOverview: expect.any(Array),
             readingPace: { pagesPerActiveDay: null, activeDaysPerBook: null },
+            calendarYears: [],
         });
     });
 
@@ -268,6 +269,49 @@ describe("GET /api/statistics -- dashboard data (plan C3)", () => {
         const json = await readJson(res);
 
         expect(json.data.readingPace).toEqual({ pagesPerActiveDay: null, activeDaysPerBook: null });
+    });
+});
+
+describe("GET /api/statistics/calendar (plan C3 year picker)", () => {
+    async function seedActivity(username: string, dates: string[]): Promise<void> {
+        const user = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(username).first<{ id: number }>();
+        for (const date of dates) {
+            await env.DB.prepare("INSERT INTO reading_activity (user_id, activity_date, event_count) VALUES (?, ?, 2)").bind(user!.id, date).run();
+        }
+    }
+
+    it("requires authentication", async () => {
+        const res = await app.request("/api/statistics/calendar?year=2025", {}, env);
+        expect(res.status).toBe(401);
+    });
+
+    it("returns only the requested year's days, for the caller only", async () => {
+        await seedActivity("alice", ["2024-12-31", "2025-01-01", "2025-07-14", "2025-12-31", "2026-01-01"]);
+        await seedActivity("bob", ["2025-03-03"]);
+
+        const res = await app.request("/api/statistics/calendar?year=2025", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(res.status).toBe(200);
+        expect(json.data).toEqual([
+            { date: "2025-01-01", count: 2 },
+            { date: "2025-07-14", count: 2 },
+            { date: "2025-12-31", count: 2 },
+        ]);
+    });
+
+    it.each(["", "abc", "1999", "2025.5", String(new Date().getUTCFullYear() + 1)])("rejects year=%s", async (year) => {
+        const res = await app.request(`/api/statistics/calendar?year=${year}`, { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(res.status).toBe(400);
+    });
+
+    it("lists the years with activity, newest first, in GET /api/statistics", async () => {
+        await seedActivity("alice", ["2024-05-01", "2025-01-01", "2025-02-01"]);
+
+        const res = await app.request("/api/statistics", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.calendarYears).toEqual([2025, 2024]);
     });
 });
 
