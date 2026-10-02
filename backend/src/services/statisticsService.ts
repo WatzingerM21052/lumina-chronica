@@ -80,6 +80,7 @@ export type Statistics = {
     goal: ReadingGoal;
     monthlyOverview: MonthlyOverviewItem[];
     readingPace: ReadingPace;
+    calendarYears: number[];
 };
 
 type ProgressRow = { book_id: number; percentage: number; last_opened: string };
@@ -239,6 +240,22 @@ async function getReadingCalendar(db: D1Database, userId: number): Promise<Calen
     return rows.results.map((row) => ({ date: row.activity_date, count: row.event_count }));
 }
 
+// Plan C3: the statistics page's year picker shows one calendar year
+// (1 January to 31 December) instead of the rolling last 365 days.
+export async function getReadingCalendarForYear(db: D1Database, userId: number, year: number): Promise<CalendarDay[]> {
+    const rows = await db
+        .prepare("SELECT activity_date, event_count FROM reading_activity WHERE user_id = ? AND activity_date BETWEEN ? AND ? ORDER BY activity_date ASC")
+        .bind(userId, `${year}-01-01`, `${year}-12-31`)
+        .all<{ activity_date: string; event_count: number }>();
+    return rows.results.map((row) => ({ date: row.activity_date, count: row.event_count }));
+}
+
+// Years that have any reading activity, newest first -- the year picker's
+// options. Derived from the sorted activity dates getStatistics already loads.
+export function activityYears(sortedDates: string[]): number[] {
+    return [...new Set(sortedDates.map((date) => Number(date.slice(0, 4))))].filter((year) => Number.isInteger(year)).sort((a, b) => b - a);
+}
+
 async function getBooksFinishedInYear(db: D1Database, userId: number, year: string): Promise<number> {
     const row = await db
         .prepare("SELECT COUNT(*) AS total FROM reading_progress WHERE user_id = ? AND percentage >= 100 AND strftime('%Y', last_opened) = ?")
@@ -324,5 +341,6 @@ export async function getStatistics(db: D1Database, userId: number): Promise<Sta
         goal,
         monthlyOverview,
         readingPace: computeReadingPace(pagesRead, booksRead, activityDatesRow.results.length),
+        calendarYears: activityYears(activityDatesRow.results.map((r) => r.activity_date)),
     };
 }
