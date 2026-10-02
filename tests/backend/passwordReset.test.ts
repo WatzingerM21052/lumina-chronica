@@ -299,6 +299,42 @@ describe("POST /api/auth/forgot-password", () => {
         expect(res.status).toBe(200);
         expect((await readJson(res)).success).toBe(true);
     });
+
+    it("answers before the reset email is sent when the Worker can finish work in the background (review M-5)", async () => {
+        await app.request("/api/auth/register", jsonRequest({ username: "alice", email: "alice@example.com", password: "correct horse" }), env);
+
+        let releaseEmail!: () => void;
+        const emailGate = new Promise<void>((resolve) => (releaseEmail = resolve));
+        const fetchMock = vi.fn(async () => {
+            await emailGate;
+            return new Response(JSON.stringify({ id: "email-id" }), { status: 200 });
+        });
+        vi.stubGlobal("fetch", fetchMock);
+        const background: Promise<unknown>[] = [];
+        const executionCtx = { waitUntil: (p: Promise<unknown>) => background.push(p), passThroughOnException: () => {}, props: {} } as unknown as ExecutionContext;
+
+        const res = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "alice@example.com" }), env, executionCtx);
+
+        // The response is already there while the Resend call is still pending.
+        expect(res.status).toBe(200);
+        expect(background).toHaveLength(1);
+        releaseEmail();
+        await Promise.all(background);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM password_reset_tokens").first<{ n: number }>();
+        expect(row!.n).toBe(1);
+    });
+
+    it("an unknown identifier also goes through the background path, with an identical response", async () => {
+        const background: Promise<unknown>[] = [];
+        const executionCtx = { waitUntil: (p: Promise<unknown>) => background.push(p), passThroughOnException: () => {}, props: {} } as unknown as ExecutionContext;
+
+        const res = await app.request("/api/auth/forgot-password", jsonRequest({ identifier: "nobody@example.com" }), env, executionCtx);
+
+        expect(res.status).toBe(200);
+        expect(background).toHaveLength(1);
+        expect(await readJson(res)).toEqual({ success: true, data: { message: "If an account exists, a reset email has been sent." } });
+    });
 });
 
 async function requestResetAndGetRawToken(identifier: string): Promise<string> {

@@ -31,6 +31,7 @@ import {
 import type { ResetPasswordCredential } from "../services/passwordResetService";
 import { InvalidResetTokenError, requestPasswordReset, resetPassword, verifyResetCode } from "../services/passwordResetService";
 import { RateLimitedError, assertNotRateLimited, clearRateLimit, consumeRateLimit, consumeResendCooldown, recordFailedAttempt } from "../services/rateLimitService";
+import { runAfterResponse } from "../utils/background";
 import { EMAIL_PATTERN, MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, USERNAME_RULE_MESSAGE, isBoundedString, normalizeIdentifier } from "../utils/identity";
 
 export const authRoute = new Hono<AppEnv>();
@@ -164,15 +165,13 @@ authRoute.post("/forgot-password", async (c) => {
         throw err;
     }
 
-    try {
-        await requestPasswordReset(c.env.DB, c.env, body.identifier);
-    } catch (err) {
-        // A failure anywhere in requestPasswordReset (DB lookup, token
-        // insert, or the email send itself) shouldn't leak through as a
-        // distinguishable response, or 500 the request -- whatever token
-        // row was created (if any) already exists by this point regardless.
-        console.error("forgot-password: requestPasswordReset failed", err);
-    }
+    // Review M-5 (timing): the lookup, token write and Resend call run after
+    // the response is sent. Awaited, a real account answered noticeably
+    // slower (one HTTP round trip to Resend) than an unknown identifier,
+    // which returns at the first query. A failure anywhere in there is only
+    // logged -- it must never become a distinguishable response.
+    const identifierAsTyped = body.identifier;
+    await runAfterResponse(c, "forgot-password: requestPasswordReset", () => requestPasswordReset(c.env.DB, c.env, identifierAsTyped));
 
     return c.json(success({ message: "If an account exists, a reset email has been sent." }));
 });
