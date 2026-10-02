@@ -118,6 +118,18 @@ describe("GET /api/auth/oauth/:provider/callback", () => {
         expect(extractQueryParam(location, "error")).toBe("invalid_state");
     });
 
+    // expires_at is stored as ISO ("...T...Z"); compared as text against
+    // CURRENT_TIMESTAMP ("... ...") a state expired a minute ago still
+    // passed until midnight UTC, since 'T' sorts after ' '.
+    it("rejects a state that expired a minute ago (same day)", async () => {
+        const state = await getGoogleState();
+        await env.DB.prepare("UPDATE oauth_states SET expires_at = ? WHERE state = ?").bind(new Date(Date.now() - 60_000).toISOString(), state).run();
+
+        const res = await app.request(`/api/auth/oauth/google/callback?code=abc&state=${state}`, { redirect: "manual" } as RequestInit, env);
+
+        expect(extractQueryParam(res.headers.get("location")!, "error")).toBe("invalid_state");
+    });
+
     it("creates a new user on first Google sign-in and redirects with an exchange code", async () => {
         const state = await getGoogleState();
         stubFetchQueue([
@@ -256,6 +268,15 @@ describe("POST /api/auth/oauth/exchange", () => {
 
         const replay = await app.request("/api/auth/oauth/exchange", jsonRequest({ code }), env);
         expect(replay.status).toBe(401);
+    });
+
+    it("rejects an exchange code that expired a minute ago (same day)", async () => {
+        const code = await signInViaGoogle("expired@example.com", "google-expired-1");
+        await env.DB.prepare("UPDATE oauth_exchange_codes SET expires_at = ?").bind(new Date(Date.now() - 60_000).toISOString()).run();
+
+        const res = await app.request("/api/auth/oauth/exchange", jsonRequest({ code }), env);
+
+        expect(res.status).toBe(401);
     });
 
     it("rejects an unknown code", async () => {
