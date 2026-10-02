@@ -106,3 +106,115 @@ html[data-theme="alexandria"] .project-card {
     border-color: rgba(150, 112, 40, 0.32);
     box-shadow: var(--shadow-card);
 }
+
+
+/* ---------- Home hero: the reading hall, in lapis and papyrus ---------- */
+html[data-theme="alexandria"] .home-hero-layer,
+html[data-theme="alexandria"] .home-hero-scrim {
+    display: none;
+}
+
+html[data-theme="alexandria"] .home-hero {
+    background-color: #f1e9d6;
+}
+
+html[data-theme="alexandria"] .home-hero-world {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+/* After O. von Corven's 19th-century engraving (public domain), tinted. */
+html[data-theme="alexandria"] .home-hero-world-image {
+    position: absolute;
+    inset: -4%;
+    background: url("../../images/themes/alexandria/library_duotone.webp") center 30% / cover;
+    filter: sepia(0.12) contrast(0.98);
+}
+
+html[data-theme="alexandria"] .home-hero-world-shade {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(241, 233, 214, 0.96) 0%, rgba(241, 233, 214, 0.82) 36%, rgba(241, 233, 214, 0.04) 72%),
+        linear-gradient(0deg, rgba(239, 231, 214, 0.7) 0%, rgba(239, 231, 214, 0) 42%);
+}
+
+/* Afternoon light falling through high windows, drifting slowly. */
+html[data-theme="alexandria"] .home-hero-rays {
+    position: absolute;
+    inset: -30% -10% 0 30%;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    background:
+        linear-gradient(112deg, transparent 18%, rgba(255, 231, 170, 0.55) 22%, transparent 27%),
+        linear-gradient(108deg, transparent 38%, rgba(255, 236, 190, 0.45) 41%, transparent 47%),
+        linear-gradient(115deg, transparent 58%, rgba(255, 228, 160, 0.38) 62%, transparent 68%);
+    filter: blur(14px);
+    animation: alexandria-rays 16s ease-in-out infinite alternate;
+}
+
+@keyframes alexandria-rays {
+    from { transform: translateX(-2%) skewX(-2deg); opacity: 0.75; }
+    to { transform: translateX(3%) skewX(2deg); opacity: 1; }
+}
+
+html[data-theme="alexandria"] .home-hero-motes {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+html[data-theme="alexandria"] .home-hero-content {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: var(--space-1);
+}
+
+html[data-theme="alexandria"] .home-hero-content h1 {
+    color: var(--color-bg-dark);
+    text-shadow: none;
+    border-bottom-color: var(--color-gold-accent);
+}
+
+html[data-theme="alexandria"] .home-hero-eyebrow--alexandria {
+    display: block;
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #8f6c22;
+}
+
+html[data-theme="alexandria"] .home-hero-greek {
+    display: block;
+    margin: 0;
+    font-family: "Cinzel", Georgia, serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.32em;
+    color: #8f6c22;
+}
+
+@media (max-width: 599.98px) {
+    html[data-theme="alexandria"] .home-hero-world-shade {
+        background: linear-gradient(0deg, rgba(239, 231, 214, 0.95) 10%, rgba(241, 233, 214, 0.8) 55%, rgba(241, 233, 214, 0.3));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-theme="alexandria"] .home-hero-wisteria,
+    html[data-theme="alexandria"] .home-hero-rays {
+        animation: none;
+    }
+}
+
+/* Cinzel is all capitals: right for headings, too wide for the one-line
+   book titles under covers, which use the reading serif instead. */
+html[data-theme="alexandria"] .book-card-title,
+html[data-theme="alexandria"] .shelf-book-cover-title {
+    font-family: var(--font-family-reader);
+}

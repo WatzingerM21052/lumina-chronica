@@ -18,8 +18,27 @@
     <img src="images/dashboard-hero-layer2-lights.webp" alt="" class="home-hero-layer home-hero-layer-2" fetchpriority="low" decoding="async" />
     <img src="images/dashboard-hero-layer3-foreground.webp" alt="" class="home-hero-layer home-hero-layer-3" fetchpriority="low" decoding="async" />
     <div class="home-hero-scrim"></div>
+    @* Themed worlds (Babylon, Alexandria): their own picture, light and
+       plants. Hidden for every other theme; the pictures are CSS
+       backgrounds in the theme files, so nothing loads unless one of those
+       themes is active. *@
+    <div class="home-hero-world" aria-hidden="true">
+        <div class="home-hero-world-image"></div>
+        <div class="home-hero-world-shade"></div>
+        <div class="home-hero-rays"></div>
+        <canvas class="home-hero-motes" @ref="_motesRef"></canvas>
+        <div class="home-hero-flora">
+            <span class="home-hero-wisteria home-hero-wisteria--a"></span>
+            <span class="home-hero-wisteria home-hero-wisteria--b"></span>
+            <span class="home-hero-wisteria home-hero-wisteria--c"></span>
+            <span class="home-hero-wisteria home-hero-wisteria--d"></span>
+        </div>
+    </div>
     <div class="home-hero-content">
+        <p class="home-hero-eyebrow home-hero-eyebrow--babylon">@I18n.T("home.eyebrowBabylon")</p>
+        <p class="home-hero-eyebrow home-hero-eyebrow--alexandria">@I18n.T("home.eyebrowAlexandria")</p>
         <h1>@I18n.T("home.welcomeBack")</h1>
+        <p class="home-hero-greek" lang="grc">ΒΙΒΛΙΟΘΗΚΗ ΑΛΕΞΑΝΔΡΕΙΑΣ</p>
     </div>
 </div>
 
@@ -119,6 +138,9 @@ else
     private ElementReference _heroRef;
     private ElementReference _heroSentinelRef;
     private IJSObjectReference? _motionModule;
+    private ElementReference _motesRef;
+    private IJSObjectReference? _atmosphereModule;
+    private IJSObjectReference? _atmosphereHandle;
 
     private List<Book>? _books;
     private int _totalBooks;
@@ -167,10 +189,34 @@ else
         catch (Exception)
         {
         }
+
+        // Fireflies (Babylon) or dust in the light (Alexandria); the module
+        // itself idles under every other theme and wakes on a theme switch.
+        try
+        {
+            _atmosphereModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/themeAtmosphere.js");
+            _atmosphereHandle = await _atmosphereModule.InvokeAsync<IJSObjectReference>("start", _motesRef);
+        }
+        catch (Exception)
+        {
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
+        try
+        {
+            if (_atmosphereModule is not null && _atmosphereHandle is not null)
+            {
+                await _atmosphereModule.InvokeVoidAsync("stop", _atmosphereHandle);
+            }
+            if (_atmosphereHandle is not null) await _atmosphereHandle.DisposeAsync();
+            if (_atmosphereModule is not null) await _atmosphereModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
         if (_motionModule is not null)
         {
             try

@@ -733,6 +733,8 @@
   "oauthCallback.exchangeFailedError": "Sign-in with the provider failed. Please try again.",
   "oauthCallback.genericError": "Sign-in failed. Please try again.",
 
+  "home.eyebrowBabylon": "The hanging gardens",
+  "home.eyebrowAlexandria": "The great library · reading hall",
   "home.welcomeBack": "Welcome back",
   "statusWidget.unreachable": "The server can't be reached right now. You can still read your offline books.",
   "home.continueReadingTitle": "Continue reading",

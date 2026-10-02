@@ -730,6 +730,8 @@ public class FakeI18nService : II18nService
         ["oauthCallback.invalidStateError"] = "Die Anmeldeanfrage ist abgelaufen. Bitte versuche es erneut.",
         ["oauthCallback.exchangeFailedError"] = "Die Anmeldung beim Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
         ["oauthCallback.genericError"] = "Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.",
+        ["home.eyebrowBabylon"] = "Die hängenden Gärten",
+        ["home.eyebrowAlexandria"] = "Die große Bibliothek · Lesesaal",
         ["home.welcomeBack"] = "Willkommen zurück",
         ["statusWidget.unreachable"] = "Der Server ist gerade nicht erreichbar. Deine Offline-Bücher kannst du trotzdem lesen.",
         ["home.continueReadingTitle"] = "Weiterlesen",

@@ -159,3 +159,12 @@
         transition: none;
     }
 }
+
+/* Themed hero (Babylon, Alexandria): hidden by default. The theme files
+   (Styles/themes/babylon.css, alexandria.css) show it and paint it; the
+   eyebrow and the Greek line only appear there too. */
+.home-hero-world,
+.home-hero-eyebrow,
+.home-hero-greek {
+    display: none;
+}
