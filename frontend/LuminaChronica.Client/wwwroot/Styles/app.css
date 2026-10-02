@@ -1742,37 +1742,15 @@ select:focus-visible,
     color: var(--color-text-muted);
 }
 
-.statistics-genre-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    margin: var(--space-2) 0 var(--space-3);
-}
-
-.statistics-genre-row {
-    display: grid;
-    grid-template-columns: 8rem auto;
-    align-items: center;
-    gap: var(--space-2);
-}
-
-.statistics-genre-label {
-    font-size: 0.9rem;
-    color: var(--color-text-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Statistics page (v1.5 extended stats): stat-tile row reuses
-   .dashboard-overview/.dashboard-stat as-is, then two side-by-side panels
-   (goal ring + reading calendar), then a yearly-overview list reusing the
-   same Mini Brass Dial visual as the genre breakdown below it. The
-   page's header moved into the hero (Statistics.razor.css, Statistics
-   Rework Phase 2) — .stats-header/.stats-subtitle's old plain-page
-   styling no longer applies. */
+/* Statistics page (plan C3, dashboard grid): the stat-tile row reuses
+   .dashboard-overview/.dashboard-stat as-is; below it every section is a
+   .stats-card in one grid -- three columns from 1200px (calendar, trend
+   and yearly cards span two), two from 840px, one below. The card's own
+   layout (head row, charts) lives here rather than in
+   Statistics.razor.css because the goal ring and calendar rules it
+   builds on are global. */
 /* The five tiles share the full row (they filled half of it, leaving a
-   ragged gap to the panels' right edge below). */
+   ragged gap to the cards' right edge below). */
 .dashboard-overview.stats-overview {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
@@ -1782,44 +1760,81 @@ select:focus-visible,
     min-width: 8rem;
 }
 
-.stats-panels {
+.stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-3);
     margin: var(--space-3) 0;
 }
 
-.stats-panel {
+.stats-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-2);
+    min-width: 0;
     padding: var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg, var(--radius));
     background-color: var(--color-bg-card);
 }
 
+.stats-card--wide {
+    grid-column: span 2;
+}
+
+@media (max-width: 1199.98px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 839.98px) {
+    .stats-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-2);
+    }
+
+    .stats-card--wide {
+        grid-column: auto;
+    }
+
+    .stats-card {
+        padding: var(--space-2);
+    }
+}
+
+/* Title left, the card's one control (pencil, year, metric toggle) right. */
+.stats-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    align-self: stretch;
+}
+
+.stats-card-head h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-size: 1.15rem;
+}
+
 /* "Illuminated Reading Calendar" (Statistics Rework Phase 1): the same
-   low-opacity brass-texture technique as the Goal Ring (Task 3), applied
-   once to the whole calendar panel rather than per-cell (364+ repeated
-   background images would be wasteful). position: relative + overflow:
-   hidden keep the texture inside the panel's own rounded corners.
-   isolation: isolate makes this panel establish its own stacking context;
-   combined with z-index: -1 on the ::before below, the texture paints
-   after the panel's own background but before its non-positioned in-flow
-   children (h2, .calendar-heatmap, .calendar-legend) -- per CSS painting
-   order, a positioned box with negative z-index paints earlier than
-   non-positioned in-flow descendants regardless of DOM order, so without
-   isolation + z-index the texture would incorrectly paint on top of the
-   content instead of behind it. */
-.stats-panel.calendar-card {
+   low-opacity brass-texture technique as the Goal Ring, applied once to
+   the whole calendar card rather than per-cell. isolation: isolate +
+   z-index: -1 on the ::before paint the texture after the card's own
+   background but before its in-flow children -- without them it would
+   paint on top of the content (CSS painting order). */
+.stats-card.calendar-card {
     position: relative;
     overflow: hidden;
     isolation: isolate;
 }
 
-.stats-panel.calendar-card::before {
+.stats-card.calendar-card::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -1830,18 +1845,11 @@ select:focus-visible,
     pointer-events: none;
 }
 
-.stats-panel h2 {
-    align-self: flex-start;
-    margin: 0;
-}
-
 /* "Brass Reading Dial" (Statistics Rework Phase 1): the conic-gradient
-   mechanism above is untouched -- it still carries 100% of the actual
-   data meaning. This adds a metallic bevel (box-shadow) and a low-opacity
-   brass texture on a ::before pseudo-element, since CSS opacity applies to
-   a whole element and can't fade just one layer of a multi-background
-   stack -- the pseudo-element is the only way to fade only the texture
-   while the conic-gradient stays at full strength. */
+   carries 100% of the data meaning; the bevel (box-shadow) and the faded
+   brass texture on ::before are decoration -- a pseudo-element is the
+   only way to fade just the texture while the gradient stays at full
+   strength. */
 .goal-ring {
     --goal-pct: 0;
     position: relative;
@@ -1895,104 +1903,124 @@ select:focus-visible,
     color: var(--color-text-muted);
 }
 
-/* Mini Brass Dial: the Goal Ring's conic-gradient technique (see
-   .goal-ring above) at a much smaller scale for Genre Breakdown and
-   Yearly Overview rows. No brass-texture overlay and no dual inset/
-   outset shadow -- at ~2.5rem those effects are imperceptible/muddy,
-   so this carries only what still reads at that size. */
-.mini-dial {
-    --mini-dial-pct: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 50%;
-    background: conic-gradient(var(--color-primary) calc(var(--mini-dial-pct) * 1%), var(--color-border) 0);
-}
-
-.mini-dial-inner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.1rem;
-    height: 2.1rem;
-    border-radius: 50%;
-    background-color: var(--color-bg-card);
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-}
-
 .goal-status {
+    margin: 0;
     text-align: center;
     color: var(--color-text-secondary);
 }
 
+/* Goal editing: only shown after the pencil -- "− 12 +" plus actions. */
 .goal-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+}
+
+.goal-stepper {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.goal-stepper .btn.btn-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.goal-stepper-value {
+    min-width: 5rem;
+    text-align: center;
+    font-family: var(--font-family-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-primary);
+}
+
+.goal-stepper-value span {
+    display: block;
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-caption);
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+
+.goal-form-actions {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: var(--space-1);
-    width: 100%;
 }
 
-.goal-form input[type="number"] {
-    flex: 1;
-    min-width: 8rem;
+.calendar-year-select {
+    width: auto;
+    min-width: 0;
 }
 
-/* GitHub-contribution-style heatmap: one column per week, 7 rows, rendered
-   at a 0-4 intensity level scaled against the user's own busiest day
-   (computed in Statistics.razor's BuildCalendarWeeks, not here).
+/* Reading calendar over the full card width (plan C3): the week columns
+   share the width via a grid (--weeks columns, set inline), each cell a
+   square. Below ~840px the grid's minimum cell size makes it wider than
+   the card, and .calendar-scroll swipes instead; its row-reverse makes
+   the scroll start at the right end, where the most recent weeks are.
 
-   "Sternenkarte" (Statistics Polish Phase C): star-point reskin of the
-   reading calendar. Each .calendar-cell keeps the same fixed footprint at
-   every activity level -- the grid must stay pixel-aligned -- so "size"
-   differences between levels come from an inner ::before dot sized as a
-   percentage of that fixed box, never from resizing the cell itself.
-   Every cell (including the legend swatches, which reuse these same
-   classes outside .calendar-heatmap) always paints its own small dark
-   circular base, so the star-point stays legible whether it's sitting on
-   the heatmap's night-sky background or directly on the panel's normal
-   background in the legend row.
-
-   The night-sky background on .calendar-heatmap intentionally paints over
-   the Phase 1 brass-texture panel background (.stats-panel.calendar-card
-   ::before) within the heatmap's own bounds -- this is a brass-framed
-   window onto a starfield, not the texture being disabled. The texture
-   remains visible in the surrounding header/padding/legend area.
-
-   Compact density (Statistics Visuals Round 2, Task 3): the cell footprint
-   was tightened from 0.7rem/3px gap (14.2px pitch) to 0.58rem/1px gap
-   (10.28px pitch) so all 53 week columns fit inside the panel's column
-   width without horizontal scrolling, at both ~1366px and ~1920px
-   viewport widths -- see task-3-report.md for the live-measured
-   clientWidth/scrollWidth numbers behind this value. The level
-   percentages and glow box-shadows below were kept as-is; live-browser
-   verification across three themes at normal viewing size confirmed
-   they still read as a distinguishable 0-4 progression. */
-.calendar-heatmap {
+   "Sternenkarte" (Statistics Polish Phase C): each .calendar-cell keeps
+   one fixed footprint at every activity level -- the grid must stay
+   aligned -- so "size" differences come from an inner ::before dot sized
+   as a percentage of that box. Every cell (including the legend swatches,
+   which reuse these classes outside the heatmap) paints its own small
+   dark circular base, so the star-point stays legible on the night-sky
+   background and on the card background alike. The night sky
+   intentionally paints over the brass texture within the heatmap's own
+   bounds: a brass-framed window onto a starfield. */
+.calendar-scroll {
     display: flex;
-    gap: 1px;
+    flex-direction: row-reverse;
+    align-self: stretch;
     overflow-x: auto;
     /* Swiped on a phone, never dragged: no bar across the star field. */
     scrollbar-width: none;
+    border-radius: var(--radius);
+}
+
+.calendar-heatmap {
+    --weeks: 53;
+    /* Basis 0: fill the card, never grow to the cells' max-content; only
+       the min-width (a readable cell size) makes it overflow and swipe. */
+    flex: 1 0 0%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: calc(var(--weeks) * 0.7rem);
     padding: var(--space-2);
-    max-width: 100%;
     background: radial-gradient(
         ellipse at center,
         color-mix(in srgb, var(--color-bg-dark) 85%, black 15%) 0%,
         var(--color-bg-dark) 100%
     );
-    border-radius: var(--radius);
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.45);
 }
 
+.calendar-months,
+.calendar-weeks {
+    display: grid;
+    grid-template-columns: repeat(var(--weeks), minmax(0, 1fr));
+    column-gap: 2px;
+}
+
+.calendar-months span {
+    grid-row: 1;
+    font-size: var(--font-size-caption);
+    line-height: 1;
+    color: color-mix(in srgb, var(--color-text-on-dark) 75%, transparent);
+    white-space: nowrap;
+}
+
 .calendar-week {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
+    display: grid;
+    grid-template-rows: repeat(7, auto);
+    row-gap: 2px;
 }
 
 .calendar-cell {
@@ -2001,6 +2029,16 @@ select:focus-visible,
     height: 0.58rem;
     border-radius: 50%;
     background-color: color-mix(in srgb, var(--color-bg-dark) 65%, transparent);
+}
+
+/* Inside the heatmap a cell fills its grid column (square, capped so a
+   very wide card doesn't turn the stars into coins). */
+.calendar-weeks .calendar-cell {
+    width: 100%;
+    max-width: 1.1rem;
+    height: auto;
+    aspect-ratio: 1;
+    justify-self: center;
 }
 
 .calendar-cell::before {
@@ -2053,6 +2091,7 @@ select:focus-visible,
 .calendar-legend {
     display: flex;
     align-items: center;
+    align-self: flex-end;
     gap: 4px;
 }
 
@@ -2061,30 +2100,126 @@ select:focus-visible,
     color: var(--color-text-muted);
 }
 
-.yearly-overview-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    margin: var(--space-2) 0 var(--space-3);
+/* Trend card: metric toggle as a two-option segmented control. */
+.trend-toggle {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background-color: var(--color-bg-paper);
 }
 
-.yearly-overview-row {
+.trend-toggle-option {
+    padding: 0.25rem 0.75rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.trend-toggle-option[aria-pressed="true"] {
+    background-color: var(--color-primary);
+    color: var(--color-bg-light);
+}
+
+.trend-card .line-chart,
+.genre-card .genre-donut {
+    align-self: stretch;
+}
+
+/* Reading pace: two headline figures. */
+.pace-figures {
     display: grid;
-    grid-template-columns: 4rem 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+    align-self: stretch;
+    margin: 0;
+}
+
+.pace-figures div {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    text-align: center;
+}
+
+.pace-figures dd {
+    margin: 0;
+    font-family: var(--font-family-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.pace-figures dt {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.pace-note {
+    margin: 0;
+    font-size: var(--font-size-caption);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+/* Yearly overview: year, a thin bar (books relative to the best year),
+   then the numbers in words. */
+.yearly-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    align-self: stretch;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.yearly-row {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(4rem, 1fr) auto;
     align-items: center;
     gap: var(--space-2);
 }
 
-.yearly-overview-year {
+.yearly-row-year {
     font-family: var(--font-family-display);
     font-weight: 600;
     color: var(--color-text-primary);
 }
 
-.yearly-overview-detail {
-    grid-column: 1 / -1;
+.yearly-row-bar {
+    height: 0.4rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+    overflow: hidden;
+}
+
+.yearly-row-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background-color: var(--color-primary);
+}
+
+.yearly-row-detail {
     font-size: 0.85rem;
     color: var(--color-text-muted);
+}
+
+@media (max-width: 599.98px) {
+    .yearly-row {
+        grid-template-columns: 3rem minmax(0, 1fr);
+        row-gap: 0.15rem;
+    }
+
+    .yearly-row-detail {
+        grid-column: 2;
+    }
 }
 
 .shelf-book-entry {

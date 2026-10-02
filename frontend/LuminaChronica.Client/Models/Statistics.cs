@@ -67,6 +67,34 @@ public class ReadingGoal
     public int BooksFinishedThisYear { get; set; }
 }
 
+// Plan C3 (#531): last 12 months, zero-filled; "finished" counts are dated
+// by last_opened, active days come from the reading activity log.
+public class MonthlyOverviewItem
+{
+    [JsonPropertyName("month")]
+    public string Month { get; set; } = string.Empty; // YYYY-MM
+
+    [JsonPropertyName("booksFinished")]
+    public int BooksFinished { get; set; }
+
+    [JsonPropertyName("pagesFinished")]
+    public int PagesFinished { get; set; }
+
+    [JsonPropertyName("activeDays")]
+    public int ActiveDays { get; set; }
+}
+
+// Estimates from the activity log (no real reading time is tracked), so
+// the UI prefixes them with "≈"; null when there isn't enough data.
+public class ReadingPace
+{
+    [JsonPropertyName("pagesPerActiveDay")]
+    public int? PagesPerActiveDay { get; set; }
+
+    [JsonPropertyName("activeDaysPerBook")]
+    public double? ActiveDaysPerBook { get; set; }
+}
+
 public class SetReadingGoalRequest
 {
     [JsonPropertyName("targetBooks")]
@@ -101,4 +129,16 @@ public class StatisticsResponse
 
     [JsonPropertyName("goal")]
     public ReadingGoal Goal { get; set; } = new();
+
+    [JsonPropertyName("monthlyOverview")]
+    public List<MonthlyOverviewItem> MonthlyOverview { get; set; } = [];
+
+    [JsonPropertyName("readingPace")]
+    public ReadingPace ReadingPace { get; set; } = new();
+
+    // Years with reading activity, newest first. Only sent by backends that
+    // support GET /api/statistics/calendar?year=; the year picker stays
+    // hidden until it lists more than one year.
+    [JsonPropertyName("calendarYears")]
+    public List<int> CalendarYears { get; set; } = [];
 }

@@ -1,0 +1,144 @@
+.line-chart {
+    margin: 0;
+    width: 100%;
+}
+
+/* Left padding leaves room for the y-axis numbers, which sit inside the
+   gridlines' own boxes (see .line-chart-gridline span). */
+.line-chart-plot {
+    position: relative;
+    height: 10rem;
+    margin-left: 1.75rem;
+}
+
+.line-chart-grid {
+    position: absolute;
+    inset: 0;
+}
+
+.line-chart-gridline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.line-chart-baseline {
+    border-top-style: solid;
+    border-top-color: var(--color-border);
+}
+
+.line-chart-gridline span {
+    position: absolute;
+    right: calc(100% + 0.4rem);
+    top: 0;
+    transform: translateY(-50%);
+    font-size: var(--font-size-caption, 0.75rem);
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.line-chart-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.line-chart-area {
+    fill: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.line-chart-line {
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 2px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+}
+
+/* One hover column per month: wider than the dot, so the tooltip is easy
+   to hit with a mouse; the guide line and value only show on hover. */
+.line-chart-point {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2rem;
+    transform: translateX(-50%);
+}
+
+.line-chart-guide {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid var(--color-text-muted);
+    opacity: 0;
+}
+
+.line-chart-dot {
+    position: absolute;
+    left: 50%;
+    bottom: var(--y);
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    transform: translate(-50%, 50%);
+    background-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-bg-card);
+}
+
+.line-chart-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--y) + 0.75rem);
+    transform: translateX(-50%);
+    padding: 0.2rem 0.45rem;
+    border-radius: var(--radius);
+    background-color: var(--color-bg-dark, #1f1a14);
+    color: var(--color-text-on-dark, #fff);
+    font-size: var(--font-size-caption, 0.75rem);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 1;
+}
+
+.line-chart-point:hover .line-chart-guide,
+.line-chart-point:hover .line-chart-tip {
+    opacity: 1;
+}
+
+.line-chart-point:hover .line-chart-dot {
+    width: 0.7rem;
+    height: 0.7rem;
+}
+
+/* Edge months: keep the tooltip inside the card. */
+.line-chart-point.is-first .line-chart-tip {
+    transform: none;
+    left: 0;
+}
+
+.line-chart-point.is-last .line-chart-tip {
+    transform: none;
+    left: auto;
+    right: 0;
+}
+
+.line-chart-xlabels {
+    position: relative;
+    height: 1.25rem;
+    margin: 0.35rem 0 0 1.75rem;
+}
+
+.line-chart-xlabels span {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-size: var(--font-size-caption, 0.75rem);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}

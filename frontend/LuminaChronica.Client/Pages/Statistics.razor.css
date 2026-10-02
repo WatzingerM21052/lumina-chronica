@@ -6,10 +6,12 @@
        fully opaque and covers the whole box), but guards against future
        bleed-through if layer-1 ever gains transparency or .stats-hero
        gains a semi-transparent overlay -- same defensive pattern as
-       .stats-panel.calendar-card and .goal-ring in app.css. */
+       .stats-card.calendar-card and .goal-ring in app.css. */
     isolation: isolate;
-    height: 38vh;
-    min-height: 260px;
+    /* Flat banner (plan C2/C3, ~100px): the numbers below are the page's
+       content, the hero only sets the mood. It no longer compacts on
+       scroll -- at this height there is nothing left to save. */
+    height: 6.5rem;
     border-radius: var(--radius-lg);
     /* overflow: clip, not hidden -- hidden makes this element a scroll
        container, which makes it the source of the layers' animation-timeline:
@@ -18,7 +20,6 @@
     margin-bottom: var(--space-3);
     box-shadow: var(--shadow-card);
     background-color: var(--color-bg-dark);
-    transition: height var(--motion-standard) var(--ease-standard);
 }
 
 /* Three depth layers (Statistics Rework Phase 2), same technique as the
@@ -128,13 +129,15 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
-    padding: var(--space-3);
+    justify-content: center;
+    padding: 0 var(--space-3);
     z-index: 5;
 }
 
 .stats-hero-content h1 {
     font-family: var(--font-family-display);
+    font-size: 1.75rem;
+    line-height: 1.15;
     color: var(--color-text-on-dark);
     text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
     margin: 0;
@@ -147,32 +150,16 @@
     margin: 0;
 }
 
-/* Sentinel for Task 3's motion.js initHeaderCompact call — placed BEFORE
-   .stats-hero in Statistics.razor, not after. .stats-hero is a normal,
-   non-sticky block; a sentinel placed after it would only leave the
-   viewport once the hero itself had already fully scrolled away — the
-   compaction would apply to an element the user can no longer see (the
-   bug the Dashboard hero shipped and only caught via its final review).
-   Placing the sentinel first means it clears the viewport (just below
-   the app header) while the hero is still mostly on screen. */
-.stats-hero-sentinel {
-    height: 1px;
-}
-
-/* Toggled by motion.js's initHeaderCompact once .stats-hero-sentinel
-   scrolls out of view — same mechanism, transition tokens, and compact
-   dimensions as the Dashboard hero's .home-hero.is-compact.
-   .stats-hero's base rule has min-height: 260px, which would otherwise
-   clamp this compact state's height: 22vh on typical viewport heights —
-   this second, more specific min-height overrides that floor for the
-   compact state only. */
-.stats-hero.is-compact {
-    height: 22vh;
-    min-height: 160px;
-}
-
-@media (prefers-reduced-motion: reduce) {
+@media (max-width: 599.98px) {
     .stats-hero {
-        transition: none;
+        height: 5.5rem;
+    }
+
+    .stats-hero-content {
+        padding: 0 var(--space-2);
+    }
+
+    .stats-hero-content h1 {
+        font-size: 1.4rem;
     }
 }

@@ -46,17 +46,16 @@ public class StatisticsPageTests : BunitContext
     }
 
     [Fact]
-    public void Statistics_Hero_SentinelRendersBeforeHero()
+    public void Statistics_Hero_IsAFlatBannerWithoutScrollCompaction()
     {
         UseApiResponse(EmptyStatisticsJson);
 
         var cut = Render<Statistics>();
 
-        var sentinelIndex = cut.Markup.IndexOf("stats-hero-sentinel", StringComparison.Ordinal);
-        var heroIndex = cut.Markup.IndexOf("\"stats-hero\"", StringComparison.Ordinal);
-        Assert.True(sentinelIndex >= 0, "Sentinel element not found in markup.");
-        Assert.True(heroIndex >= 0, "Hero element not found in markup.");
-        Assert.True(sentinelIndex < heroIndex, "Sentinel must render before .stats-hero in document order.");
+        // Plan C3: the ~100px hero no longer shrinks on scroll, so the
+        // motion.js sentinel it needed is gone.
+        Assert.Empty(cut.FindAll(".stats-hero-sentinel"));
+        Assert.Single(cut.FindAll(".stats-hero"));
     }
 
     [Fact]
@@ -78,16 +77,39 @@ public class StatisticsPageTests : BunitContext
     {
         const string json = """
             {"success":true,"data":{"booksRead":1,"booksInProgress":1,"pagesRead":100,
-             "genreBreakdown":[{"genre":"Fantasy","count":2},{"genre":"Unbekannt","count":1}],
+             "genreBreakdown":[{"genre":"Krimi","count":1},{"genre":"Fantasy","count":6},{"genre":"Sachbuch","count":3},
+                {"genre":"Romance","count":2},{"genre":"Lyrik","count":1},{"genre":"Unbekannt","count":2}],
              "recentActivity":[]}}
             """;
         UseApiResponse(json);
 
         var cut = Render<Statistics>();
 
-        Assert.Contains("Fantasy", cut.Markup);
-        Assert.Contains("Unbekannt", cut.Markup);
-        Assert.Contains("--mini-dial-pct: 100", cut.Markup);
+        // Four biggest genres get their own slice (largest first); the two
+        // smallest fold into one muted "Andere" slice -- 5 slices for 6 genres.
+        var names = cut.FindAll(".genre-donut-name").Select(n => n.TextContent).ToList();
+        Assert.Equal(["Fantasy", "Sachbuch", "Romance", "Unbekannt", "Andere"], names);
+        Assert.Equal(5, cut.FindAll("circle.genre-donut-slice").Count);
+        Assert.Single(cut.FindAll("circle.genre-donut-slice--0"));
+        Assert.Equal("2", cut.FindAll(".genre-donut-count")[4].TextContent);
+        Assert.Equal("15", cut.Find(".genre-donut-total").TextContent);
+        // Ring coordinates are culture-invariant (no "33,3" in an SVG attribute).
+        Assert.All(cut.FindAll("circle.genre-donut-slice"), c => Assert.DoesNotContain(",", c.GetAttribute("stroke-dasharray")));
+    }
+
+    [Fact]
+    public void Statistics_GenreDonut_SingleGenre_FillsTheRingWithoutGap()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":100,
+             "genreBreakdown":[{"genre":"Fantasy","count":3}],"recentActivity":[]}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Equal("100 0", cut.Find("circle.genre-donut-slice").GetAttribute("stroke-dasharray"));
+        Assert.Empty(cut.FindAll("circle.genre-donut-slice--0"));
     }
 
     [Fact]
@@ -99,7 +121,7 @@ public class StatisticsPageTests : BunitContext
 
         var cut = Render<Statistics>();
 
-        Assert.DoesNotContain("statistics-genre-list", cut.Markup);
+        Assert.DoesNotContain("genre-donut", cut.Markup);
     }
 
     [Fact]
@@ -253,29 +275,176 @@ public class StatisticsPageTests : BunitContext
     }
 
     [Fact]
-    public void Statistics_SavingGoal_PutsToGoalEndpoint_AndShowsUpdatedRing()
+    public void Statistics_SavingGoal_StepperStartsAtTwelve_PutsDraft_AndShowsUpdatedRing()
     {
         const string initialJson = """
             {"success":true,"data":{"booksRead":2,"booksInProgress":0,"pagesRead":50,"genreBreakdown":[],
              "recentActivity":[],"goal":{"targetBooks":null,"booksFinishedThisYear":2}}}
             """;
         const string savedGoalJson = """{"success":true,"data":{"targetBooks":5,"booksFinishedThisYear":2}}""";
+        string? sentBody = null;
         var handler = new RoutedFakeHttpMessageHandler()
-            .WhenPathEndsWith("/api/statistics/goal", savedGoalJson)
+            .When(r => r.RequestUri!.AbsolutePath.EndsWith("/api/statistics/goal"), r =>
+            {
+                sentBody = r.Content!.ReadAsStringAsync().Result;
+                return RoutedFakeHttpMessageHandler.JsonResponse(savedGoalJson);
+            })
             .WhenPathEndsWith("/api/statistics", initialJson);
+        UseHandler(handler);
+
+        var cut = Render<Statistics>();
+        Assert.Contains("Setz dir ein Leseziel", cut.Markup);
+        Assert.Empty(cut.FindAll("form.goal-form"));
+
+        cut.Find("button.goal-set").Click();
+        cut.Find("button.goal-stepper-minus").Click();
+        cut.Find("form.goal-form").Submit();
+
+        Assert.Equal("""{"targetBooks":11}""", sentBody);
+        Assert.Contains("goal-ring", cut.Markup);
+        Assert.Contains("von 5", cut.Markup);
+        Assert.Empty(cut.FindAll("form.goal-form"));
+    }
+
+    [Fact]
+    public void Statistics_GoalStepper_StartsAtCurrentTarget_StopsAtOne_AndCancels()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":50,"genreBreakdown":[],
+             "recentActivity":[],"goal":{"targetBooks":2,"booksFinishedThisYear":1}}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+        cut.Find("button.goal-edit").Click();
+
+        Assert.StartsWith("2", cut.Find(".goal-stepper-value").TextContent.Trim());
+        cut.Find("button.goal-stepper-minus").Click();
+        Assert.StartsWith("1", cut.Find(".goal-stepper-value").TextContent.Trim());
+        Assert.True(cut.Find("button.goal-stepper-minus").HasAttribute("disabled"));
+        Assert.Single(cut.FindAll("button.goal-remove"));
+
+        cut.Find("button.goal-cancel").Click();
+        Assert.Empty(cut.FindAll("form.goal-form"));
+        Assert.Contains("von 2", cut.Markup);
+    }
+
+    [Fact]
+    public void Statistics_TrendChart_PlotsTwelveMonths_AndAllZeroYearHasNoNaN()
+    {
+        UseApiResponse(MonthlyJson(activeDaysInLastMonth: 0));
+
+        var cut = Render<Statistics>();
+
+        Assert.Equal(12, cut.FindAll(".line-chart-point").Count);
+        Assert.Equal(12, cut.FindAll(".line-chart-xlabels span").Count);
+        var path = cut.Find("path.line-chart-line").GetAttribute("d")!;
+        Assert.DoesNotContain("NaN", path);
+        Assert.Equal(12, path.Split('L').Length);
+    }
+
+    [Fact]
+    public void Statistics_TrendChart_TogglesBetweenReadingDaysAndFinishedBooks()
+    {
+        UseApiResponse(MonthlyJson(activeDaysInLastMonth: 9));
+
+        var cut = Render<Statistics>();
+
+        Assert.Contains("9 Tage", cut.Find(".line-chart-point.is-last .line-chart-tip").TextContent);
+        cut.FindAll(".trend-toggle-option")[1].Click();
+        Assert.Contains("2 Bücher", cut.Find(".line-chart-point.is-last .line-chart-tip").TextContent);
+        Assert.Equal("true", cut.FindAll(".trend-toggle-option")[1].GetAttribute("aria-pressed"));
+    }
+
+    private static string MonthlyJson(int activeDaysInLastMonth)
+    {
+        var months = Enumerable.Range(0, 12)
+            .Select(i => new DateTime(2026, 1, 1).AddMonths(i - 2).ToString("yyyy-MM"))
+            .Select((m, i) => i == 11
+                ? $$"""{"month":"{{m}}","booksFinished":2,"pagesFinished":500,"activeDays":{{activeDaysInLastMonth}}}"""
+                : $$"""{"month":"{{m}}","booksFinished":0,"pagesFinished":0,"activeDays":0}""");
+        return $$$"""
+            {"success":true,"data":{"booksRead":2,"booksInProgress":0,"pagesRead":500,"genreBreakdown":[],
+             "recentActivity":[],"monthlyOverview":[{{{string.Join(",", months)}}}]}}
+            """;
+    }
+
+    [Fact]
+    public void Statistics_ReadingPace_ShowsApproximateValues()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":2,"booksInProgress":0,"pagesRead":500,"genreBreakdown":[],
+             "recentActivity":[],"readingPace":{"pagesPerActiveDay":42,"activeDaysPerBook":6.5}}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        var figures = cut.FindAll(".pace-figures dd").Select(d => d.TextContent).ToList();
+        Assert.Equal(["≈ 42", "≈ 6,5"], figures);
+    }
+
+    [Fact]
+    public void Statistics_ReadingPace_NullValues_ShowDash()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":0,"booksInProgress":1,"pagesRead":0,"genreBreakdown":[],
+             "recentActivity":[],"readingPace":{"pagesPerActiveDay":null,"activeDaysPerBook":null}}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.All(cut.FindAll(".pace-figures dd"), d => Assert.Equal("–", d.TextContent));
+    }
+
+    [Fact]
+    public void Statistics_CalendarYearPicker_HiddenUntilBackendListsSeveralYears()
+    {
+        const string json = """
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":10,"genreBreakdown":[],
+             "recentActivity":[],"calendarYears":[2026]}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        Assert.Empty(cut.FindAll("select.calendar-year-select"));
+    }
+
+    [Fact]
+    public void Statistics_CalendarYearPicker_LoadsThatYear_WithAllTwelveMonthLabels()
+    {
+        const string initialJson = """
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":10,"genreBreakdown":[],
+             "recentActivity":[],"calendarYears":[2026,2025]}}
+            """;
+        const string yearJson = """{"success":true,"data":[{"date":"2025-03-01","count":2}]}""";
+        string? requestedQuery = null;
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.RequestUri!.AbsolutePath.EndsWith("/api/statistics/calendar"), r =>
+            {
+                requestedQuery = r.RequestUri!.Query;
+                return RoutedFakeHttpMessageHandler.JsonResponse(yearJson);
+            })
+            .WhenPathEndsWith("/api/statistics", initialJson);
+        UseHandler(handler);
+
+        var cut = Render<Statistics>();
+        cut.Find("select.calendar-year-select").Change("2025");
+
+        Assert.Equal("?year=2025", requestedQuery);
+        var months = cut.FindAll(".calendar-months span").Select(m => m.TextContent).ToList();
+        Assert.Equal(["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"], months);
+        Assert.Contains("aria-label=\"01.03.2025: 2 Aktivität(en)\"", cut.Markup);
+    }
+
+    private void UseHandler(HttpMessageHandler handler)
+    {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
-
-        var cut = Render<Statistics>();
-        Assert.Contains("Setz dir ein Leseziel", cut.Markup);
-
-        cut.Find("input[type=number]").Input("5");
-        cut.Find("form.goal-form").Submit();
-
-        Assert.Contains("goal-ring", cut.Markup);
-        Assert.Contains("von 5", cut.Markup);
     }
 }

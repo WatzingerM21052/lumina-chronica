@@ -79,7 +79,7 @@ C1 Befund per Screenshots in allen Themes → C2 Richtung mit dem Nutzer abstimm
 - Hero bleibt, aber **flacher (~100 px)**.
 - Nutzerwunsch dazu (eigener Punkt, später): **Jahresrückblick à la Spotify Wrapped**.
 
-**C3 Stand:** Backend-Daten erledigt (#531, deployt: `monthlyOverview`, `readingPace`). Offen: das Frontend (Statistics.razor).
+**C3 erledigt (2026-10-02):** Backend-Daten #531; Frontend (Raster, Stepper, Kalender mit Monaten + Jahr-Auswahl, Liniendiagramm, Genre-Donut, Lesetempo, flacher Hero) und `GET /api/statistics/calendar?year=` in eigenen PRs. Die Jahresübersicht blieb als eigene Karte (Balken).
 
 ### Block D — Logo & Favicon (#497)
 
