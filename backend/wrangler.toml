@@ -1,6 +1,11 @@
 name = "lumina-chronica-api"
-main = "src/index.ts"
+main = "src/worker.ts"
 compatibility_date = "2026-07-29"
+
+# Daily cleanup of expired auth rows (src/services/cleanupService.ts),
+# at a quiet hour UTC.
+[triggers]
+crons = ["17 3 * * *"]
 
 # Not secret -- where OAuth callbacks (issue #40) redirect the browser back
 # to after issuing an exchange code, and where password-reset emails link
