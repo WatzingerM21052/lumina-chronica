@@ -68,7 +68,7 @@ export async function completeOAuthCallback(
     // Single-use: delete on read, not just check-then-ignore, so a replayed
     // callback URL (e.g. from browser history) can't be replayed too.
     const stateRow = await db
-        .prepare("DELETE FROM oauth_states WHERE state = ? AND provider = ? AND expires_at > CURRENT_TIMESTAMP RETURNING state, linking_user_id")
+        .prepare("DELETE FROM oauth_states WHERE state = ? AND provider = ? AND julianday(expires_at) > julianday('now') RETURNING state, linking_user_id")
         .bind(state, provider)
         .first<{ state: string; linking_user_id: number | null }>();
     if (!stateRow) throw new InvalidStateError();
@@ -259,7 +259,7 @@ export async function redeemExchangeCode(db: D1Database, jwtSecret: string, rawC
     const row = await db
         .prepare(
             "UPDATE oauth_exchange_codes SET consumed_at = CURRENT_TIMESTAMP " +
-                "WHERE code_hash = ? AND consumed_at IS NULL AND expires_at > CURRENT_TIMESTAMP " +
+                "WHERE code_hash = ? AND consumed_at IS NULL AND julianday(expires_at) > julianday('now') " +
                 "RETURNING user_id"
         )
         .bind(codeHash)
