@@ -57,3 +57,38 @@
     font-display: swap;
     src: url("../fonts/literata-latin-600-normal.woff2") format("woff2");
 }
+
+/* Display faces of the Babylon (Marcellus) and Alexandria (Cinzel) themes,
+   same self-hosting as above (OFL, see fonts/*-LICENSE.txt). Only fetched
+   when one of those themes sets --font-family-display to them. */
+@font-face {
+    font-family: "Marcellus";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/marcellus-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Cinzel";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("../fonts/cinzel-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Cinzel";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("../fonts/cinzel-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Cinzel";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../fonts/cinzel-latin-700-normal.woff2") format("woff2");
+}
