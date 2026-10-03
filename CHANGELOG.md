@@ -6,6 +6,12 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Added
 
+- Babylon and Alexandria: the home page is a journey in chapters (#570–#574) -- the book you are reading as a bound 3D volume with its spine, page count and the other books in progress; the yearly goal as a rosette (Babylon) or a ring around an astrolabe (Alexandria), one field per book with an info card; the last 34 weeks of reading as a sky of stars with constellations; your newest books, your newest project with its picture and latest timeline entry, and the ways into the app. It greets you by name. Settings → "Immersive theme" switches back to the calmer card dashboard.
+- Discover searches books, projects and readers in one field (#564); a dropdown next to it picks the kind and shows how many there are, and also works without a search term: it then lists every public book or project, or the readers who share something (#567).
+- Reading calendar: hovering or tapping a day shows its pages and the books read that day (#558, #559).
+- Alexandria: the library can be shown as papyrus scrolls, on the home page and as the "Rollen" view in the library (#556, #557).
+- Project files: upload up to ten at once; the formats allowed are named in the upload (#565).
+- Character and place pages are profiles: picture and facts on the left, the text in sections on the right; a place on the map shows a section of the map around its pin (#569).
 - In Babylon the reading calendar is a wall of glazed tiles (the busiest days in gold) and reading progress runs like water; in Alexandria the calendar is a mosaic and progress a gilded thread.
 - Babylon and Alexandria now have their own home banner: the striding lion of Babylon's processional way with hanging wisteria and fireflies, or the reading hall of Alexandria in lapis and papyrus with drifting sunlight and dust. The motion stops in a background tab and with "reduce motion".
 - Two new themes, Babylon (the hanging gardens: glazed-brick header with the gate's gold band, a dark garden ground, Marcellus headings) and Alexandria (the great library: a lapis-marble cornice with a gilded egg-and-dart frieze, a sunlit marble ground, papyrus cards, Cinzel headings). Pick them in Settings → Appearance. The images are public-domain or CC0 museum and texture photos.
@@ -22,6 +28,10 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Changed
 
+- Babylon and Alexandria (#555, #560–#563, #575): every page has a full-width picture banner that fades into the page, cards are translucent glass or parchment, a book's or project's own picture sits blurred behind its detail page, and comments are two columns (list left, writing right). Upload, imprint and the public profile follow too.
+- Project pages (#566, #568): characters, places, projects and lore are compact cards that never run long; tabs show an icon and how many entries they hold; the overview's counts sit beside the title; the timeline reads like a chronicle with the dates in their own column; linked books are a cover grid; the map spans the full width, centred.
+- Buttons no longer move under the pointer when pressed or hovered -- the search field's ✕ jumped away and the click missed (#567).
+- Progress bars kept their full width in German (a decimal comma broke the CSS width) (#554).
 - Project files: images are a compact thumbnail grid and open full size (browse with the arrows, arrow keys or a swipe); documents are slim rows, and PDF, TXT and Markdown files open right in the app instead of only downloading.
 - World bible: the look (Standard / Dark Academia) is one switch that shows which is active; translation, book, chapter and search share one bar; previous/next chapter are arrows beside the chapter title (and still below the text). In Dark Academia the page title is centred again.
 - Security and operations (from the September review, #544–#548):
