@@ -24,7 +24,15 @@ export type DiscoverBooksQuery = {
     sort: DiscoverSort;
     page: number;
     pageSize: number;
+    // Optional: only books whose title, author or genre contains it.
+    search?: string;
 };
+
+// A user's term goes into LIKE as text: escape LIKE's own wildcards so a
+// search for "100%" or "a_b" means exactly that.
+export function likePattern(search: string): string {
+    return `%${search.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+}
 
 export type DiscoverBooksResult = {
     items: DiscoverBookSummary[];
@@ -43,6 +51,11 @@ export async function discoverBooks(db: D1Database, query: DiscoverBooksQuery, v
     // dashboardService.ts), so two books created within the same second
     // would otherwise sort in SQLite's unspecified default order.
     const orderClause = query.sort === "rating" ? "average_rating DESC, books.id DESC" : "books.created_at DESC, books.id DESC";
+    const search = query.search?.trim();
+    const searchClause = search
+        ? "AND (books.title LIKE ? ESCAPE '\\' OR books.author LIKE ? ESCAPE '\\' OR books.genre LIKE ? ESCAPE '\\')"
+        : "";
+    const searchParams = search ? [likePattern(search), likePattern(search), likePattern(search)] : [];
 
     const [rows, countRow] = await Promise.all([
         db
@@ -52,11 +65,11 @@ export async function discoverBooks(db: D1Database, query: DiscoverBooksQuery, v
                     (SELECT COUNT(*) FROM ratings WHERE book_id = books.id) AS rating_count,
                     (SELECT rating FROM ratings WHERE book_id = books.id AND user_id = ?) AS my_rating
                  FROM books JOIN users ON users.id = books.owner_id
-                 WHERE books.visibility = 'PUBLIC' AND users.deleted_at IS NULL
+                 WHERE books.visibility = 'PUBLIC' AND users.deleted_at IS NULL ${searchClause}
                  ORDER BY ${orderClause}
                  LIMIT ? OFFSET ?`
             )
-            .bind(viewerId, query.pageSize, offset)
+            .bind(viewerId, ...searchParams, query.pageSize, offset)
             .all<{
                 id: number;
                 title: string;
@@ -69,7 +82,8 @@ export async function discoverBooks(db: D1Database, query: DiscoverBooksQuery, v
                 my_rating: number | null;
             }>(),
         db
-            .prepare(`SELECT COUNT(*) AS total FROM books JOIN users ON users.id = books.owner_id WHERE books.visibility = 'PUBLIC' AND users.deleted_at IS NULL`)
+            .prepare(`SELECT COUNT(*) AS total FROM books JOIN users ON users.id = books.owner_id WHERE books.visibility = 'PUBLIC' AND users.deleted_at IS NULL ${searchClause}`)
+            .bind(...searchParams)
             .first<{ total: number }>(),
     ]);
 
@@ -104,19 +118,80 @@ export type SearchUsersResult = {
 };
 
 export async function searchUsers(db: D1Database, search: string, page: number, pageSize: number, origin: string): Promise<SearchUsersResult> {
-    const like = `%${search}%`;
+    const like = likePattern(search);
     const offset = (page - 1) * pageSize;
 
     const [rows, countRow] = await Promise.all([
         db
-            .prepare(`SELECT username, avatar_url, avatar_key FROM users WHERE deleted_at IS NULL AND username LIKE ? ORDER BY username ASC LIMIT ? OFFSET ?`)
+            .prepare(`SELECT username, avatar_url, avatar_key FROM users WHERE deleted_at IS NULL AND username LIKE ? ESCAPE '\\' ORDER BY username ASC LIMIT ? OFFSET ?`)
             .bind(like, pageSize, offset)
             .all<{ username: string; avatar_url: string | null; avatar_key: string | null }>(),
-        db.prepare(`SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL AND username LIKE ?`).bind(like).first<{ total: number }>(),
+        db.prepare(`SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL AND username LIKE ? ESCAPE '\\'`).bind(like).first<{ total: number }>(),
     ]);
 
     return {
         items: rows.results.map((row) => ({ username: row.username, avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin) })),
+        total: countRow?.total ?? 0,
+        page,
+        pageSize,
+    };
+}
+
+// Public projects for Discover (newest first), optionally searched by
+// title, description or type. Only PUBLIC projects of active accounts --
+// the same rule as the public profile's projects chapter.
+export type DiscoverProjectSummary = {
+    id: number;
+    title: string;
+    description: string | null;
+    type: string;
+    coverUrl: string | null;
+    ownerUsername: string;
+};
+
+export type DiscoverProjectsResult = {
+    items: DiscoverProjectSummary[];
+    total: number;
+    page: number;
+    pageSize: number;
+};
+
+const PROJECT_DESCRIPTION_PREVIEW = 160;
+
+export async function discoverProjects(db: D1Database, search: string, page: number, pageSize: number): Promise<DiscoverProjectsResult> {
+    const offset = (page - 1) * pageSize;
+    const term = search.trim();
+    const searchClause = term ? "AND (projects.title LIKE ? ESCAPE '\\' OR projects.description LIKE ? ESCAPE '\\' OR projects.type LIKE ? ESCAPE '\\')" : "";
+    const searchParams = term ? [likePattern(term), likePattern(term), likePattern(term)] : [];
+
+    const [rows, countRow] = await Promise.all([
+        db
+            .prepare(
+                `SELECT projects.id, projects.title, projects.description, projects.type, projects.cover_url, users.username AS owner_username
+                 FROM projects JOIN users ON users.id = projects.owner_id
+                 WHERE projects.visibility = 'PUBLIC' AND users.deleted_at IS NULL ${searchClause}
+                 ORDER BY projects.created_at DESC, projects.id DESC
+                 LIMIT ? OFFSET ?`
+            )
+            .bind(...searchParams, pageSize, offset)
+            .all<{ id: number; title: string; description: string | null; type: string; cover_url: string | null; owner_username: string }>(),
+        db
+            .prepare(`SELECT COUNT(*) AS total FROM projects JOIN users ON users.id = projects.owner_id WHERE projects.visibility = 'PUBLIC' AND users.deleted_at IS NULL ${searchClause}`)
+            .bind(...searchParams)
+            .first<{ total: number }>(),
+    ]);
+
+    return {
+        items: rows.results.map((row) => ({
+            id: row.id,
+            title: row.title,
+            description: row.description && row.description.length > PROJECT_DESCRIPTION_PREVIEW
+                ? `${row.description.slice(0, PROJECT_DESCRIPTION_PREVIEW).trimEnd()}…`
+                : row.description,
+            type: row.type,
+            coverUrl: row.cover_url ? `/api/projects/${row.id}/cover` : null,
+            ownerUsername: row.owner_username,
+        })),
         total: countRow?.total ?? 0,
         page,
         pageSize,

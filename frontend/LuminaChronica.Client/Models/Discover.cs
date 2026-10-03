@@ -72,3 +72,41 @@ public class DiscoverUserListResponse
     [JsonPropertyName("pageSize")]
     public int PageSize { get; set; }
 }
+
+// Mirrors discoverService.ts's DiscoverProjectSummary: a public project
+// for Discover's projects shelf and search.
+public class DiscoverProject
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "WORLD";
+
+    [JsonPropertyName("coverUrl")]
+    public string? CoverUrl { get; set; }
+
+    [JsonPropertyName("ownerUsername")]
+    public string OwnerUsername { get; set; } = string.Empty;
+}
+
+public class DiscoverProjectListResponse
+{
+    [JsonPropertyName("items")]
+    public List<DiscoverProject> Items { get; set; } = [];
+
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("page")]
+    public int Page { get; set; }
+
+    [JsonPropertyName("pageSize")]
+    public int PageSize { get; set; }
+}
