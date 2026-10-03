@@ -1,0 +1,32 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* Page banner for the two themed worlds (Babylon, Alexandria), the same
+   language as Home's hero: a picture across the full width that fades
+   into the page, the page's title over its left side. The picture per
+   page lives in the theme files (data-page selects it), so nothing loads
+   under the classic themes -- there the banner is hidden and each page
+   keeps its own header; the theme files hide those instead. Exactly one
+   h1 is visible either way. Not used on the Bible page (own rework). *@
+<div class="world-banner" data-page="@Page">
+    <div class="world-banner-image" aria-hidden="true"></div>
+    <div class="world-banner-shade" aria-hidden="true"></div>
+    <div class="world-banner-content">
+        <p class="world-banner-eyebrow world-banner-eyebrow--babylon">@I18n.T("home.eyebrowBabylon")</p>
+        <p class="world-banner-eyebrow world-banner-eyebrow--alexandria">@I18n.T("worldBanner.eyebrowAlexandria")</p>
+        <h1>@Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <p class="world-banner-subtitle">@Subtitle</p>
+        }
+    </div>
+</div>
+
+@code {
+    // Picks the picture: library, shelves, statistics, discover, projects,
+    // settings, profile, offline (anything else gets the theme's default).
+    [Parameter, EditorRequired] public string Page { get; set; } = "";
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+}

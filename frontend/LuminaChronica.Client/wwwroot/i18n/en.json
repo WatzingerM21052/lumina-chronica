@@ -739,6 +739,12 @@
 
   "home.eyebrowBabylon": "The hanging gardens",
   "home.eyebrowAlexandria": "The great library · reading hall",
+  "worldBanner.eyebrowAlexandria": "The great library",
+  "worldBanner.librarySubtitle": "All your books in one place.",
+  "worldBanner.shelvesSubtitle": "Your collections, shelf by shelf.",
+  "worldBanner.projectsSubtitle": "Worlds, stories and campaigns.",
+  "worldBanner.settingsSubtitle": "Appearance, language and notifications.",
+  "worldBanner.profileSubtitle": "How other readers see you.",
   "home.welcomeBack": "Welcome back",
   "statusWidget.unreachable": "The server can't be reached right now. You can still read your offline books.",
   "home.continueReadingTitle": "Continue reading",
