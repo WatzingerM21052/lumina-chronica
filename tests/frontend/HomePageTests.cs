@@ -325,11 +325,71 @@ public class HomePageTests : BunitContext
         Assert.DoesNotContain("Du hast noch keine Projekte erstellt", cut.Markup);
     }
 
-    private void UseHandler(RoutedFakeHttpMessageHandler handler)
+    private void UseHandler(RoutedFakeHttpMessageHandler handler, string theme = "classic-library")
     {
+        Services.AddSingleton<IThemeService>(new FakeThemeService(theme));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<II18nService, FakeI18nService>();
+    }
+
+    private const string TwoBooksJson = """
+        {"success":true,"data":{"items":[
+            {"id":1,"title":"Dune","author":"Frank Herbert","coverUrl":null,"genre":"Science Fiction","visibility":"PRIVATE","createdAt":"2026-01-01","tags":[]},
+            {"id":2,"title":"Emma","author":"Jane Austen","coverUrl":null,"genre":"Klassiker","visibility":"PRIVATE","createdAt":"2026-01-01","tags":[]}
+        ],"total":2,"page":1,"pageSize":6}}
+        """;
+
+    private static RoutedFakeHttpMessageHandler BooksHandler() => new RoutedFakeHttpMessageHandler()
+        .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+        .WhenPathEndsWith("/api/books", TwoBooksJson)
+        .WhenPathEndsWith("/api/books/facets", """{"success":true,"data":{"tags":[],"genres":["Klassiker","Science Fiction"]}}""")
+        .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
+        .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson);
+
+    [Fact]
+    public void Home_Alexandria_ShowsLibraryAsScrollShelf_WhenNeverChosen()
+    {
+        UseHandler(BooksHandler(), "alexandria");
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<bool?>("getHomeScrollShelf", _ => true)
+            .SetResult(null);
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".scroll-wall .book-scroll").Count));
+        Assert.Empty(cut.FindAll(".book-card"));
+    }
+
+    [Fact]
+    public void Home_Alexandria_ShowsCoverStrip_WhenScrollShelfSwitchedOff()
+    {
+        UseHandler(BooksHandler(), "alexandria");
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<bool?>("getHomeScrollShelf", _ => true)
+            .SetResult(false);
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-grid--strip .book-card").Count));
+        Assert.Empty(cut.FindAll(".scroll-shelf"));
+    }
+
+    [Fact]
+    public void Home_OtherThemes_NeverShowTheScrollShelf()
+    {
+        UseHandler(BooksHandler(), "babylon");
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-grid--strip .book-card").Count));
+        Assert.Empty(cut.FindAll(".scroll-shelf"));
     }
 }
