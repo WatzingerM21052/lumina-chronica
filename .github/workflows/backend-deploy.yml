@@ -34,6 +34,42 @@ jobs:
         run: npm ci && npx vitest run
         working-directory: tests/backend
 
+      # Review §3.3: a Worker whose migration or secret is missing fails
+      # quietly (the reset flow answers 200 and sends nothing), so check both
+      # before shipping. A check that cannot run (API outage, a token
+      # without D1/secret read access) only warns -- it must never be the
+      # reason a deploy can't happen.
+      - name: Check remote migrations and secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if migrations=$(npx wrangler d1 migrations list lumina-chronica-db --remote 2>&1); then
+            if echo "$migrations" | grep -qi "No migrations to apply"; then
+              echo "All D1 migrations are applied."
+            else
+              echo "$migrations"
+              echo "::error::Unapplied D1 migrations. Apply them first: npx wrangler d1 migrations apply lumina-chronica-db --remote"
+              exit 1
+            fi
+          else
+            echo "$migrations"
+            echo "::warning::Could not list the remote D1 migrations; deploying without that check."
+          fi
+
+          if secrets=$(npx wrangler secret list --format json 2>/dev/null); then
+            missing=""
+            for name in JWT_SECRET PASSWORD_CODE_SECRET RESEND_API_KEY; do
+              echo "$secrets" | jq -e --arg n "$name" 'map(.name) | index($n)' >/dev/null || missing="$missing $name"
+            done
+            if [ -n "$missing" ]; then
+              echo "::error::Worker secrets missing:$missing (npx wrangler secret put <NAME>)"
+              exit 1
+            fi
+            echo "Required secrets are set."
+          else
+            echo "::warning::Could not list the Worker secrets; deploying without that check."
+          fi
+
       - uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

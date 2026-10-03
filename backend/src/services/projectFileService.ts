@@ -148,16 +148,3 @@ export async function getProjectFileObject(db: D1Database, storage: R2Bucket, ow
     return { object, row };
 }
 
-// Used by deleteProject (projectService.ts) to clean up a project's files
-// (and their R2 objects) before the project row itself is deleted -- real
-// D1 enforces foreign keys, same lesson as deleteCharactersForProject.
-export async function deleteProjectFilesForProject(db: D1Database, storage: R2Bucket, projectId: number): Promise<void> {
-    const rows = await db.prepare("SELECT file_url FROM project_files WHERE project_id = ?").bind(projectId).all<{ file_url: string }>();
-    await db.prepare("DELETE FROM project_files WHERE project_id = ?").bind(projectId).run();
-
-    for (const row of rows.results) {
-        await storage.delete(row.file_url).catch((err) => {
-            console.error(`Failed to delete R2 object ${row.file_url} while deleting project ${projectId}'s files:`, err);
-        });
-    }
-}

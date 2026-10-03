@@ -199,17 +199,3 @@ export async function getCharacterImageObject(db: D1Database, storage: R2Bucket,
     return storage.get(row.image_url);
 }
 
-// Used by deleteProject (Phase 1's projectService.ts) to clean up a
-// project's characters and their R2 images before the project row itself is
-// deleted -- real D1 enforces foreign keys, same lesson as deleteBook/deleteShelf.
-export async function deleteCharactersForProject(db: D1Database, storage: R2Bucket, projectId: number): Promise<void> {
-    const rows = await db.prepare("SELECT image_url FROM characters WHERE project_id = ?").bind(projectId).all<{ image_url: string | null }>();
-    await db.prepare("DELETE FROM characters WHERE project_id = ?").bind(projectId).run();
-
-    for (const row of rows.results) {
-        if (!row.image_url) continue;
-        await storage.delete(row.image_url).catch((err) => {
-            console.error(`Failed to delete R2 object ${row.image_url} while deleting project ${projectId}'s characters:`, err);
-        });
-    }
-}
