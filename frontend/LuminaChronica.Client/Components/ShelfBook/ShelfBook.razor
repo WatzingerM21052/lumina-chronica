@@ -47,7 +47,7 @@
             @if (ProgressPercentage is { } progress)
             {
                 <span class="shelf-book-progress">
-                    <span class="shelf-book-progress-bar" style="width: @(progress)%"></span>
+                    <span class="shelf-book-progress-bar" style="width: @(progress.ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span>
                 </span>
             }
         </span>

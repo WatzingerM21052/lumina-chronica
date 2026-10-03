@@ -95,4 +95,26 @@ public class BookCardTests : BunitContext
 
         Assert.Contains("Geliehen von bob", cut.Find(".book-card-borrowed-badge").TextContent);
     }
+
+    // The width is a CSS value, so it must use a decimal point whatever the
+    // UI culture: "width: 8,5%" (German) is invalid CSS and the bar silently
+    // renders full width.
+    [Fact]
+    public void BookCard_ProgressWidth_UsesInvariantDecimalPoint()
+    {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-AT");
+        try
+        {
+            var cut = Render<BookCard>(parameters => parameters
+                .Add(p => p.Book, MakeBook())
+                .Add(p => p.ProgressPercentage, 8.5));
+
+            Assert.Equal("width: 8.5%", cut.Find(".book-card-progress-bar").GetAttribute("style"));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
+    }
 }
