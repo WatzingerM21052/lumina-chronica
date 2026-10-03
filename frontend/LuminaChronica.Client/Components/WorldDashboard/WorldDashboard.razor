@@ -1,0 +1,235 @@
+@namespace LuminaChronica.Client.Components
+@using System.Globalization
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* Home for the two themed worlds (Babylon, Alexandria), laid out like the
+   theme studio: a card grid that fills the width instead of left-aligned
+   strips -- continue reading next to the yearly goal, the reading calendar
+   across the full width, then the library, recommendations and projects.
+   The classic themes keep Home's plain sections. *@
+<div class="world-dashboard">
+    @if (Featured is { } featured)
+    {
+        var percent = (int)Math.Round(Math.Clamp(featured.Percentage, 0, 100));
+        <article class="world-card world-continue">
+            <header class="world-card-head">
+                <h2>@I18n.T("home.continueReadingTitle")</h2>
+                <small>@LastOpenedLabel(featured.LastOpened)</small>
+            </header>
+            <div class="world-continue-main">
+                <div class="world-continue-cover">
+                    <BookCard Book="featured.Book" Href="@ReadHref(featured)" Size="BookCardSize.Small" ShowFavorite="false" />
+                </div>
+                <div class="world-continue-text">
+                    <a class="world-continue-title" href="@ReadHref(featured)">@featured.Book.Title</a>
+                    @if (!string.IsNullOrWhiteSpace(featured.Book.Author))
+                    {
+                        <span class="world-continue-author">@featured.Book.Author</span>
+                    }
+                    <div class="world-continue-progress">
+                        <div class="world-continue-progress-top">
+                            <span>@PagesLabel(featured)</span>
+                            <span>@percent %</span>
+                        </div>
+                        <div class="book-detail-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@percent"
+                             aria-label="@featured.Book.Title">
+                            <div class="book-detail-progress-fill" style="width: @percent.ToString(CultureInfo.InvariantCulture)%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @if (Dashboard!.ContinueReading.Count > 1)
+            {
+                <ul class="world-continue-more">
+                    @foreach (var item in Dashboard.ContinueReading.Skip(1).Take(3))
+                    {
+                        var itemPercent = (int)Math.Round(Math.Clamp(item.Percentage, 0, 100));
+                        <li>
+                            <a href="@ReadHref(item)">@item.Book.Title</a>
+                            <span>@itemPercent %</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </article>
+    }
+
+    <article class="world-card world-goal">
+        <header class="world-card-head">
+            <h2>@I18n.T("statistics.goalTitle")</h2>
+            <small>@DateTime.UtcNow.Year.ToString(CultureInfo.InvariantCulture)</small>
+        </header>
+        @if (Goal is { TargetBooks: { } target and > 0 } goal)
+        {
+            var pct = Math.Clamp(goal.BooksFinishedThisYear * 100.0 / target, 0, 100);
+            var left = Math.Max(0, target - goal.BooksFinishedThisYear);
+            <div class="world-goal-main">
+                <div class="goal-ring" style="--goal-pct: @(pct.ToString("F0", CultureInfo.InvariantCulture))">
+                    <div class="goal-ring-inner">
+                        <span class="goal-ring-value">@goal.BooksFinishedThisYear</span>
+                    </div>
+                </div>
+                <div class="world-goal-text">
+                    <b>@string.Format(I18n.T("home.goalOf"), goal.BooksFinishedThisYear, target)</b>
+                    <span>@(left == 0 ? I18n.T("home.goalReached") : string.Format(I18n.T(left == 1 ? "home.goalLeftOne" : "home.goalLeft"), left))</span>
+                    <a class="btn-link" href="statistics">@I18n.T("home.goalEdit") →</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="world-goal-main world-goal-main--empty">
+                <p>@I18n.T("statistics.goalSetPrompt")</p>
+                <a class="btn btn-primary" href="statistics">@I18n.T("statistics.goalSetButton")</a>
+            </div>
+        }
+    </article>
+
+    <article class="world-card world-calendar">
+        <header class="world-card-head">
+            <h2>@I18n.T("statistics.calendarTitle")</h2>
+            <small>@string.Format(I18n.T("home.calendarRange"), CalendarWeeks)</small>
+        </header>
+        <ReadingCalendar Days="CalendarDays" Weeks="CalendarWeeks" />
+        <a class="btn-link world-card-more" href="statistics">@I18n.T("home.allStatisticsLink") →</a>
+    </article>
+
+    <article class="world-card world-library">
+        <header class="world-card-head">
+            <h2>@I18n.T("home.libraryTitle")</h2>
+            @if (Dashboard is not null)
+            {
+                <small>@string.Format(I18n.T("home.librarySummary"), Dashboard.Overview.TotalBooks, Dashboard.Overview.TotalFavorites, Dashboard.Overview.FinishedBooks)</small>
+            }
+        </header>
+        @if (Books is null)
+        {
+            <LoadingIndicator Text="@I18n.T("home.libraryLoading")" />
+        }
+        else if (Books.Count == 0)
+        {
+            <EmptyState Message="@I18n.T("home.emptyLibraryMessage")" ActionText="@I18n.T("home.addBookAction")" ActionHref="library/upload" />
+        }
+        else if (ShowScrollShelf)
+        {
+            <ScrollShelf Books="Books" Genres="Genres" />
+        }
+        else
+        {
+            <div class="world-strip">
+                @foreach (var book in Books)
+                {
+                    <BookCard Book="book" Size="BookCardSize.Small" />
+                }
+            </div>
+        }
+        @if (Books is { Count: > 0 } && TotalBooks > Books.Count)
+        {
+            <a class="btn-link world-card-more" href="library">@string.Format(I18n.T("home.viewFullLibraryLink"), TotalBooks) →</a>
+        }
+    </article>
+
+    @if (Dashboard is { Recommendations.Count: > 0 })
+    {
+        <article class="world-card world-half">
+            <header class="world-card-head">
+                <h2>@I18n.T("home.recommendationsTitle")</h2>
+            </header>
+            <div class="world-strip">
+                @foreach (var book in Dashboard.Recommendations.Take(4))
+                {
+                    <BookCard Book="book" Size="BookCardSize.Small" />
+                }
+            </div>
+        </article>
+    }
+
+    @* Alone (no recommendations) the projects card takes the whole row. *@
+    <article class="world-card @(Dashboard is { Recommendations.Count: > 0 } ? "world-half" : "world-full")">
+        <header class="world-card-head">
+            <h2>@I18n.T("home.recentProjectsTitle")</h2>
+            @if (Projects is { Count: > 0 })
+            {
+                <small>@Projects.Count</small>
+            }
+        </header>
+        @if (Projects is null)
+        {
+            <LoadingIndicator Text="@I18n.T("home.projectsLoading")" />
+        }
+        else if (Projects.Count == 0)
+        {
+            <EmptyState Message="@I18n.T("home.emptyProjectsMessage")" ActionText="@I18n.T("home.createProjectAction")" ActionHref="projects" />
+        }
+        else
+        {
+            <ul class="world-projects">
+                @foreach (var project in Projects.Take(4))
+                {
+                    <li>
+                        <a href="@($"projects/{project.Id}")">@project.Title</a>
+                        @if (!string.IsNullOrWhiteSpace(project.Description))
+                        {
+                            <span>@project.Description</span>
+                        }
+                    </li>
+                }
+            </ul>
+            @if (Projects.Count > 4)
+            {
+                <a class="btn-link world-card-more" href="projects">@string.Format(I18n.T("home.viewAllProjectsLink"), Projects.Count) →</a>
+            }
+        }
+    </article>
+</div>
+
+@code {
+    [Parameter] public DashboardResponse? Dashboard { get; set; }
+    [Parameter] public List<Book>? Books { get; set; }
+    [Parameter] public int TotalBooks { get; set; }
+    [Parameter] public List<Project>? Projects { get; set; }
+    [Parameter] public IReadOnlyList<string> Genres { get; set; } = [];
+    [Parameter] public bool ShowScrollShelf { get; set; }
+    [Parameter] public ReadingGoal? Goal { get; set; }
+    [Parameter] public IReadOnlyList<CalendarDay> CalendarDays { get; set; } = [];
+    // Page count of the featured book (the dashboard list carries none).
+    [Parameter] public int? FeaturedPages { get; set; }
+
+    // The theme studio showed about eight months; that fills the card at
+    // desktop width with tiles the size of the Statistics page's.
+    private const int CalendarWeeks = 34;
+
+    private ContinueReadingItem? Featured => Dashboard?.ContinueReading.FirstOrDefault();
+
+    private static string ReadHref(ContinueReadingItem item) => $"library/books/{item.Book.Id}/read";
+
+    private string PagesLabel(ContinueReadingItem item)
+    {
+        if (FeaturedPages is { } pages and > 0)
+        {
+            var current = (int)Math.Round(Math.Clamp(item.Percentage, 0, 100) / 100 * pages);
+            return string.Format(CultureInfo.InvariantCulture, I18n.T("home.pagesOf"), current, pages);
+        }
+        return I18n.T("home.progressLabel");
+    }
+
+    // "heute" / "gestern" / "vor 3 Tagen" from the progress timestamp.
+    private string LastOpenedLabel(string lastOpened) => RelativeDay(I18n, lastOpened);
+
+    public static string RelativeDay(II18nService i18n, string lastOpened)
+    {
+        if (!DateTime.TryParse(lastOpened, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var opened))
+        {
+            return "";
+        }
+        var days = (DateTime.UtcNow.Date - opened.Date).Days;
+        return days switch
+        {
+            <= 0 => i18n.T("home.lastOpenedToday"),
+            1 => i18n.T("home.lastOpenedYesterday"),
+            _ => string.Format(CultureInfo.InvariantCulture, i18n.T("home.lastOpenedDaysAgo"), days),
+        };
+    }
+}

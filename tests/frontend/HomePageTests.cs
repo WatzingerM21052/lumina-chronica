@@ -346,7 +346,10 @@ public class HomePageTests : BunitContext
         .WhenPathEndsWith("/api/books", TwoBooksJson)
         .WhenPathEndsWith("/api/books/facets", """{"success":true,"data":{"tags":[],"genres":["Klassiker","Science Fiction"]}}""")
         .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
-        .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson);
+        .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson)
+        .WhenPathEndsWith("/api/statistics", EmptyStatisticsJson);
+
+    private const string EmptyStatisticsJson = """{"success":true,"data":{"goal":{"targetBooks":null,"booksFinishedThisYear":0},"readingCalendar":[]}}""";
 
     [Fact]
     public void Home_Alexandria_ShowsLibraryAsScrollShelf_WhenNeverChosen()
@@ -376,7 +379,7 @@ public class HomePageTests : BunitContext
 
         var cut = Render<Home>();
 
-        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-grid--strip .book-card").Count));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".world-library .book-card").Count));
         Assert.Empty(cut.FindAll(".scroll-shelf"));
     }
 
@@ -389,7 +392,70 @@ public class HomePageTests : BunitContext
 
         var cut = Render<Home>();
 
-        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-grid--strip .book-card").Count));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".world-library .book-card").Count));
         Assert.Empty(cut.FindAll(".scroll-shelf"));
+    }
+
+    // Theme studio dashboard: the themed worlds get a card grid with the
+    // goal and the reading calendar; the classic themes keep their sections.
+    [Fact]
+    public void Home_ThemedWorld_UsesTheStudioDashboard_WithGoalAndCalendar()
+    {
+        var handler = new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", TwoBooksJson)
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/api/dashboard", EmptyDashboardJson)
+            .WhenPathEndsWith("/api/statistics", """{"success":true,"data":{"goal":{"targetBooks":12,"booksFinishedThisYear":5},"readingCalendar":[]}}""");
+        UseHandler(handler, "babylon");
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".world-dashboard .world-goal .goal-ring")));
+        Assert.Contains("5 von 12", cut.Find(".world-goal").TextContent);
+        Assert.Contains("Noch 7 Bücher bis Silvester", cut.Find(".world-goal").TextContent);
+        Assert.NotEmpty(cut.FindAll(".world-calendar .reading-calendar .calendar-cell[data-date]"));
+    }
+
+    [Fact]
+    public void Home_ClassicTheme_KeepsThePlainSections()
+    {
+        UseHandler(BooksHandler());
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-grid--strip .book-card").Count));
+        Assert.Empty(cut.FindAll(".world-dashboard"));
+        Assert.Empty(cut.FindAll(".home-hero-cta"));
+    }
+
+    [Fact]
+    public void Home_ThemedWorld_HeroOffersToContinueTheLastBook_WithPageAndPagesLeft()
+    {
+        const string dashboardJson = """
+            {"success":true,"data":{"continueReading":[{"book":{"id":7,"title":"Dune","author":"Frank Herbert","visibility":"PRIVATE","createdAt":"2026-01-01","tags":[]},"percentage":50,"lastOpened":"2020-01-01 10:00:00"}],
+             "recommendations":[],"overview":{"totalBooks":2,"totalShelves":0,"totalFavorites":0,"finishedBooks":0}}}
+            """;
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .WhenPathEndsWith("/api/status", """{"success":true,"data":{"status":"online"}}""")
+            .WhenPathEndsWith("/api/books", TwoBooksJson)
+            .WhenPathEndsWith("/api/books/7", """{"success":true,"data":{"id":7,"title":"Dune","pages":400,"visibility":"PRIVATE","createdAt":"2026-01-01","tags":[]}}""")
+            .WhenPathEndsWith("/api/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/api/dashboard", dashboardJson)
+            .WhenPathEndsWith("/api/statistics", EmptyStatisticsJson), "babylon");
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.Equal("library/books/7/read", cut.Find("a.home-hero-cta").GetAttribute("href")));
+        Assert.Contains("S. 200", cut.Find("a.home-hero-cta").TextContent);
+        Assert.Contains("„Dune“", cut.Find(".home-hero-lead").TextContent);
+        Assert.Contains("Noch 200 Seiten bis zum Ende.", cut.Find(".home-hero-lead").TextContent);
+        Assert.Contains("200 von 400 Seiten", cut.Find(".world-continue").TextContent);
     }
 }

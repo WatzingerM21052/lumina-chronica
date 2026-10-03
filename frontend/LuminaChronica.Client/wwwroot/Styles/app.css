@@ -2146,17 +2146,26 @@ select:focus-visible,
 
 /* In the full-width calendar row the tiles grow with the card (the 1.1rem
    cap is for narrow cards) and sit a little further apart. */
-.calendar-card .calendar-weeks .calendar-cell {
+.reading-calendar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-self: stretch;
+    min-width: 0;
+}
+
+.reading-calendar .calendar-weeks .calendar-cell {
     max-width: 1.6rem;
 }
 
-.calendar-card .calendar-weeks,
-.calendar-card .calendar-months {
+.reading-calendar .calendar-weeks,
+.reading-calendar .calendar-months {
     column-gap: 4px;
 }
 
-.calendar-card .calendar-week,
-.calendar-card .calendar-weekdays {
+.reading-calendar .calendar-week,
+.reading-calendar .calendar-weekdays {
     row-gap: 4px;
 }
 
@@ -4246,3 +4255,339 @@ input[type="checkbox"].switch:disabled {
     }
 }
 
+
+/* ---------- Themed worlds (Babylon, Alexandria): theme studio layout ----------
+   Home's hero runs edge to edge under the header and fades into the page;
+   below it WorldDashboard lays its cards out in a grid that fills the
+   width (1.55fr / 1fr like the studio): continue reading + goal, the
+   reading calendar and the library across, recommendations + projects. */
+html:is([data-theme="babylon"], [data-theme="alexandria"]) body {
+    /* The full-bleed hero is 100vw wide, which counts the scrollbar. */
+    overflow-x: clip;
+}
+
+html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero {
+    height: clamp(320px, 46vh, 440px);
+    margin: calc(-1 * var(--space-3)) calc(50% - 50vw) 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* The picture fades out into the page itself (a mask, not a colour), so
+   there is no seam however the page background is painted. */
+html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero {
+    background-color: transparent;
+}
+
+html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero-world {
+    -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+}
+
+html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.is-compact {
+    height: clamp(220px, 30vh, 300px);
+}
+
+/* The hero's text lines up with the content column below it. */
+html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero-content {
+    padding: var(--space-3) max(var(--space-3), calc(50vw - 44rem + var(--space-3))) 3.4rem;
+}
+
+.home-hero-lead {
+    max-width: 34rem;
+    margin: 0.4rem 0 0;
+    font-size: 1.02rem;
+    line-height: 1.5;
+}
+
+.home-hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-top: 1rem;
+    padding: 0.5rem 0.55rem 0.5rem 1.15rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: transform var(--motion-standard) var(--ease-standard);
+}
+
+.home-hero-cta:hover {
+    transform: translateY(-2px);
+}
+
+.home-hero-cta small {
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+.home-hero-cta-go {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+}
+
+.world-dashboard {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 1.1rem;
+    margin-top: -1.6rem;
+}
+
+.world-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-width: 0;
+    padding: 1.2rem 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card);
+}
+
+.world-calendar,
+.world-library,
+.world-full {
+    grid-column: 1 / -1;
+}
+
+/* With no book to continue, the goal card takes the whole first row. */
+.world-goal:first-child {
+    grid-column: 1 / -1;
+}
+
+.world-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.1rem 0.5rem;
+}
+
+.world-card-head h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+.world-card-head small {
+    white-space: nowrap;
+    font-size: 0.78rem;
+    color: var(--color-text-secondary);
+}
+
+.world-card-more {
+    align-self: flex-start;
+    font-size: var(--font-size-small);
+}
+
+.world-continue-main {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 1.1rem;
+    align-items: center;
+}
+
+/* The cover alone: BookCard's own title row would repeat the text beside it. */
+.world-continue-cover .book-card {
+    width: 100%;
+}
+
+.world-continue-cover .book-card-info {
+    display: none;
+}
+
+.world-continue-text {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.world-continue-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+    line-height: 1.25;
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.world-continue-author {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.world-continue-progress {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+}
+
+.world-continue-progress .book-detail-progress-track {
+    flex: none;
+    width: 100%;
+}
+
+.world-continue-progress-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+}
+
+.world-continue-more,
+.world-projects {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0.7rem 0 0;
+    list-style: none;
+    border-top: 1px solid var(--color-border);
+}
+
+.world-continue-more li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.88rem;
+}
+
+.world-continue-more a,
+.world-projects a {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.world-continue-more span {
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.world-projects {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.world-projects li {
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.world-projects li:last-child {
+    border-bottom: 0;
+}
+
+.world-projects a {
+    font-weight: 600;
+}
+
+.world-projects span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.world-goal-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1.2rem;
+    align-items: center;
+    flex: 1;
+}
+
+.world-goal-main .goal-ring {
+    width: 112px;
+    height: 112px;
+}
+
+.world-goal-text {
+    display: grid;
+    gap: 0.2rem;
+    justify-items: start;
+}
+
+.world-goal-text b {
+    font-family: var(--font-family-display);
+    font-weight: 400;
+    font-size: 1.4rem;
+    line-height: 1.1;
+}
+
+.world-goal-text span {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.world-goal-text .btn-link {
+    margin-top: 0.4rem;
+    font-size: var(--font-size-small);
+}
+
+.world-goal-main--empty {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+}
+
+.world-goal-main--empty p {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+/* Covers in a row that fills the card: as many as fit, never scrolling. */
+.world-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    gap: 1rem;
+}
+
+.world-strip .book-card {
+    width: 100%;
+}
+
+@media (max-width: 839.98px) {
+    .world-dashboard {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.9rem;
+        margin-top: -1rem;
+    }
+
+    .world-card {
+        padding: 1rem;
+    }
+
+    html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero {
+        margin-top: calc(-1 * var(--space-2));
+        margin-inline: calc(-1 * var(--space-2));
+        height: clamp(300px, 52vh, 420px);
+    }
+
+    html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero-content {
+        padding: var(--space-2) var(--space-2) 2.6rem;
+    }
+
+    .world-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .world-strip .book-card:nth-child(n + 7) {
+        display: none;
+    }
+}
