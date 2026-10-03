@@ -377,8 +377,10 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 
 /* The book: a link whose box never moves; the tilt turns its faces only. */
 .journey-book {
-    --tilt-y: -22deg;
-    --tilt-x: 5deg;
+    --tilt-y: 36deg;
+    --tilt-x: 9deg;
+    /* Depth of a 300-page novel: about a sixth of the cover's width. */
+    --d: 46px;
     position: relative;
     z-index: 2;
     display: block;
@@ -397,7 +399,7 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 }
 
 .journey-book-front {
-    transform: translateZ(16px);
+    transform: translateZ(calc(var(--d) / 2));
     display: grid;
     grid-template-rows: auto 1fr auto;
     justify-items: center;
@@ -504,11 +506,11 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     mask-image: url("../images/themes/books/fleuron.svg");
 }
 
-/* Spine and page block turn about their own centre at the cover's left
-   and right edge, so they span exactly the book's depth (32px). */
+/* Spine, page block and top edge turn about their own centre at the
+   cover's edges, so each spans exactly the book's depth (--d). */
 .journey-book-spine {
-    left: -16px;
-    width: 32px !important;
+    left: calc(var(--d) / -2);
+    width: var(--d) !important;
     right: auto !important;
     border-radius: 4px !important;
     transform: rotateY(-90deg);
@@ -524,10 +526,10 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 }
 
 .journey-book-pages {
-    left: calc(100% - 16px);
+    left: calc(100% - var(--d) / 2 - 3px);
     top: 4px !important;
     bottom: 4px !important;
-    width: 30px !important;
+    width: calc(var(--d) - 4px) !important;
     right: auto !important;
     border-radius: 2px !important;
     transform: rotateY(90deg);
@@ -536,8 +538,20 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 }
 
 .journey-book-back {
-    transform: translateZ(-16px);
+    transform: translateZ(calc(var(--d) / -2));
     background: #120c06;
+}
+
+.journey-book-top {
+    top: calc(var(--d) / -2 + 3px) !important;
+    bottom: auto !important;
+    left: 2px !important;
+    right: 5px !important;
+    height: calc(var(--d) - 4px);
+    border-radius: 2px !important;
+    transform: rotateX(90deg);
+    background: repeating-linear-gradient(0deg, #f3ead2 0 1.5px, #d9cba6 1.5px 2.5px);
+    box-shadow: inset 0 0 8px rgba(80, 60, 20, 0.4);
 }
 
 /* The cover: a hinge groove along the spine, a gold-tooled frame and a
@@ -1006,34 +1020,105 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 .journey-tome:nth-child(2) { grid-column: 5 / span 3; margin-top: 90px; }
 .journey-tome:nth-child(3) { grid-column: 9 / span 3; margin-top: 36px; }
 
-/* The cover turns a little on hover; the link box around it stays put. */
-.journey-tome-cover {
-    position: relative;
-    display: grid;
-    aspect-ratio: 2 / 3;
-    overflow: hidden;
-    border-radius: 3px 10px 10px 3px;
+.journey-tome { --bind: linear-gradient(160deg, #3b2a17, #160f08); --bind-spine: linear-gradient(90deg, #120c06, #3a2914 45%, #1a1108); }
+.journey-tome:nth-child(2) { --bind: linear-gradient(160deg, #5a2236, #1d0b12); --bind-spine: linear-gradient(90deg, #1a0710, #5a2236 45%, #250c16); }
+.journey-tome:nth-child(3) { --bind: linear-gradient(160deg, #1e3d5c, #0b1626); --bind-spine: linear-gradient(90deg, #08111f, #234569 45%, #0c1a2c); }
+
+/* A volume in 3D, turned to show its spine. The whole volume turns a
+   little further on hover; the link box around it stays put. */
+.journey-tome-book {
+    --d: 40px;
     --j-grain: url("../images/themes/books/leather_grain.webp") 0 0 / 200px;
-    background: var(--j-grain), linear-gradient(160deg, #3b2a17, #160f08);
-    background-blend-mode: soft-light, normal;
-    /* The page block shows at the fore-edge and below the cover. */
-    --j-pages: 2px 2px 0 -0.5px #efe4c8, 3px 3px 0 -0.5px #cdbd95, 4px 4px 0 -0.5px #efe4c8, 5px 5px 0 -0.5px #cdbd95, 6px 6px 0 -0.5px #e8dcbc;
-    box-shadow: var(--j-pages), 0 26px 50px rgba(0, 0, 0, 0.45);
-    transform-origin: left center;
-    transition: box-shadow 0.4s, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+    position: relative;
+    display: block;
+    aspect-ratio: 2 / 3;
+    margin-left: calc(var(--d) * 0.4);
+    transform-style: preserve-3d;
+    transform: rotateY(32deg) rotateX(9deg);
+    transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.journey-tome:nth-child(2) .journey-tome-cover { background: var(--j-grain), linear-gradient(160deg, #5a2236, #1d0b12); background-blend-mode: soft-light, normal; }
-.journey-tome:nth-child(3) .journey-tome-cover { background: var(--j-grain), linear-gradient(160deg, #1e3d5c, #0b1626); background-blend-mode: soft-light, normal; }
-.journey[data-world="alexandria"] .journey-tome-cover { --j-grain: url("../images/themes/books/linen_grain.webp") 0 0 / 160px; }
+.journey[data-world="alexandria"] .journey-tome-book {
+    --j-grain: url("../images/themes/books/linen_grain.webp") 0 0 / 160px;
+}
+
+.journey-tome:hover .journey-tome-book,
+.journey-tome:focus-visible .journey-tome-book {
+    transform: rotateY(18deg) rotateX(6deg);
+}
+
+.journey-tome-book > span {
+    position: absolute;
+}
+
+.journey-tome-cover {
+    inset: 0;
+    display: grid;
+    overflow: hidden;
+    border-radius: 3px 8px 8px 3px;
+    background: var(--j-grain), var(--bind);
+    background-blend-mode: soft-light, normal;
+    transform: translateZ(calc(var(--d) / 2));
+    box-shadow: 0 26px 50px rgba(0, 0, 0, 0.45);
+    transition: box-shadow 0.4s;
+}
 
 .journey[data-world="alexandria"] .journey-tome-cover {
-    box-shadow: var(--j-pages), 0 26px 44px rgba(24, 38, 74, 0.28);
+    box-shadow: 0 26px 44px rgba(24, 38, 74, 0.28);
 }
 
 .journey-tome:hover .journey-tome-cover {
-    transform: rotateY(-14deg);
-    box-shadow: var(--j-pages), 0 26px 70px color-mix(in srgb, var(--j-gold) 40%, transparent);
+    box-shadow: 0 26px 70px color-mix(in srgb, var(--j-gold) 40%, transparent);
+}
+
+/* Spine: the binding's colour, raised bands and the title in gold. */
+.journey-tome-spine {
+    top: 0;
+    bottom: 0;
+    left: calc(var(--d) / -2);
+    width: var(--d);
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
+    background:
+        repeating-linear-gradient(180deg, transparent 0 9%, rgba(232, 201, 122, 0.6) 9% 10%, transparent 10% 11.5%, rgba(232, 201, 122, 0.6) 11.5% 12.5%, transparent 12.5% 86%, rgba(232, 201, 122, 0.6) 86% 87%, transparent 87% 100%),
+        var(--j-grain), var(--bind-spine);
+    background-blend-mode: normal, soft-light, normal;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    transform: rotateY(-90deg);
+}
+
+.journey-tome-spine span {
+    max-height: 70%;
+    overflow: hidden;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font: 400 0.82rem/1.1 var(--font-family-display);
+    color: #f1d995;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.journey-tome-pages {
+    top: 3px;
+    bottom: 3px;
+    left: calc(100% - var(--d) / 2 - 3px);
+    width: calc(var(--d) - 4px);
+    border-radius: 2px;
+    background: repeating-linear-gradient(90deg, #f3ead2 0 1.5px, #d9cba6 1.5px 2.5px);
+    box-shadow: inset 0 0 6px rgba(80, 60, 20, 0.35);
+    transform: rotateY(90deg);
+}
+
+.journey-tome-top {
+    left: 2px;
+    right: 5px;
+    top: calc(var(--d) / -2 + 3px);
+    height: calc(var(--d) - 4px);
+    border-radius: 2px;
+    background: repeating-linear-gradient(0deg, #f3ead2 0 1.5px, #d9cba6 1.5px 2.5px);
+    box-shadow: inset 0 0 8px rgba(80, 60, 20, 0.4);
+    transform: rotateX(90deg);
 }
 
 .journey-tome-cover img {
@@ -1360,7 +1445,7 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 
 /* ---------- One-shot entrances (only with journey.js running) ---------- */
 .journey--moving .journey-book-col[data-enter]:not(.is-in) .journey-book {
-    transform: rotateY(-70deg) rotateX(var(--tilt-x));
+    transform: rotateY(80deg) rotateX(var(--tilt-x));
     opacity: 0;
 }
 
