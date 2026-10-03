@@ -25,6 +25,7 @@
             <div class="journey-wrap journey-grid">
                 <div class="journey-book-col" data-tilt data-enter>
                     <div class="journey-pool"></div>
+                    <div class="journey-book-shadow"></div>
                     @if (IsBabylon)
                     {
                         <img class="journey-object journey-object--tablet" src="images/themes/babylon/tablet_letter.webp" alt="" data-speed="0.06" />
@@ -36,7 +37,7 @@
                     }
                     <a class="journey-book" href="@ReadHref(featured)" aria-label="@featured.Book.Title">
                         <span class="journey-book-back"></span>
-                        <span class="journey-book-spine"></span>
+                        <span class="journey-book-spine"><span>@featured.Book.Title</span></span>
                         <span class="journey-book-pages"></span>
                         <span class="journey-book-top"></span>
                         <span class="journey-book-front">

@@ -316,7 +316,7 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     display: grid;
     place-items: center;
     min-height: 500px;
-    perspective: 1400px;
+    perspective: 2000px;
 }
 
 .journey-copy {
@@ -339,6 +339,24 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 
 .journey[data-world="alexandria"] .journey-pool {
     background: radial-gradient(closest-side, rgba(232, 160, 60, 0.28), transparent);
+}
+
+.journey-book-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: calc(50% - min(270px, 60vw) * 0.75 - 22px);
+    width: min(300px, 66vw);
+    height: 46px;
+    translate: -46% 0;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent);
+    filter: blur(4px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.journey[data-world="alexandria"] .journey-book-shadow {
+    background: radial-gradient(closest-side, rgba(60, 40, 10, 0.4), transparent);
 }
 
 .journey-object--tablet {
@@ -377,10 +395,10 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 
 /* The book: a link whose box never moves; the tilt turns its faces only. */
 .journey-book {
-    --tilt-y: 36deg;
-    --tilt-x: 9deg;
-    /* Depth of a 300-page novel: about a sixth of the cover's width. */
-    --d: 46px;
+    --tilt-y: 32deg;
+    --tilt-x: 3deg;
+    /* Depth of a 300-page novel: about a fifth of the cover's width. */
+    --d: 54px;
     position: relative;
     z-index: 2;
     display: block;
@@ -508,24 +526,47 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 
 /* Spine, page block and top edge turn about their own centre at the
    cover's edges, so each spans exactly the book's depth (--d). */
-.journey-book-spine {
+/* "> span" in the selectors: .journey-book > span sets inset: 0 and
+   would otherwise put both faces at the cover's left edge. */
+.journey-book > .journey-book-spine {
     left: calc(var(--d) / -2);
     width: var(--d) !important;
     right: auto !important;
-    border-radius: 4px !important;
+    border-radius: 10px / 6px !important;
+    display: grid;
+    place-items: center;
     transform: rotateY(-90deg);
     background:
-        repeating-linear-gradient(180deg, transparent 0 18%, rgba(232, 201, 122, 0.55) 18% 19.2%, transparent 19.2% 20.6%, rgba(232, 201, 122, 0.55) 20.6% 21.8%, transparent 21.8% 100%),
-        linear-gradient(90deg, #120c06, #3a2914 45%, #1a1108);
+        repeating-linear-gradient(180deg, transparent 0 9%, rgba(232, 201, 122, 0.65) 9% 10%, transparent 10% 11.5%, rgba(232, 201, 122, 0.65) 11.5% 12.5%, transparent 12.5% 86%, rgba(232, 201, 122, 0.65) 86% 87%, transparent 87% 100%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.12) 38%, rgba(255, 255, 255, 0.04) 55%, rgba(0, 0, 0, 0.6)),
+        url("../images/themes/books/leather_grain.webp") 0 0 / 200px,
+        #2c1f10;
+    background-blend-mode: normal, normal, soft-light, normal;
+}
+
+.journey-book-spine span,
+.journey-tome-spine span {
+    max-height: 68%;
+    overflow: hidden;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font: 400 0.9rem/1.1 var(--font-family-display);
+    color: #f1d995;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
 }
 
 .journey[data-world="alexandria"] .journey-book-spine {
     background:
-        repeating-linear-gradient(180deg, transparent 0 18%, rgba(232, 201, 122, 0.55) 18% 19.2%, transparent 19.2% 20.6%, rgba(232, 201, 122, 0.55) 20.6% 21.8%, transparent 21.8% 100%),
-        linear-gradient(90deg, #0a142e, #22407a 45%, #0d1a3a);
+        repeating-linear-gradient(180deg, transparent 0 9%, rgba(232, 201, 122, 0.65) 9% 10%, transparent 10% 11.5%, rgba(232, 201, 122, 0.65) 11.5% 12.5%, transparent 12.5% 86%, rgba(232, 201, 122, 0.65) 86% 87%, transparent 87% 100%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.12) 38%, rgba(255, 255, 255, 0.04) 55%, rgba(0, 0, 0, 0.6)),
+        url("../images/themes/books/linen_grain.webp") 0 0 / 160px,
+        #1c3466;
+    background-blend-mode: normal, normal, soft-light, normal;
 }
 
-.journey-book-pages {
+.journey-book > .journey-book-pages {
     left: calc(100% - var(--d) / 2 - 3px);
     top: 4px !important;
     bottom: 4px !important;
@@ -1011,7 +1052,7 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     display: grid;
     gap: 10px;
     max-width: 230px;
-    perspective: 900px;
+    perspective: 1600px;
     text-decoration: none;
     color: inherit;
 }
@@ -1027,14 +1068,14 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 /* A volume in 3D, turned to show its spine. The whole volume turns a
    little further on hover; the link box around it stays put. */
 .journey-tome-book {
-    --d: 40px;
+    --d: 44px;
     --j-grain: url("../images/themes/books/leather_grain.webp") 0 0 / 200px;
     position: relative;
     display: block;
     aspect-ratio: 2 / 3;
     margin-left: calc(var(--d) * 0.4);
     transform-style: preserve-3d;
-    transform: rotateY(32deg) rotateX(9deg);
+    transform: rotateY(30deg) rotateX(3deg);
     transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
@@ -1044,7 +1085,7 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
 
 .journey-tome:hover .journey-tome-book,
 .journey-tome:focus-visible .journey-tome-book {
-    transform: rotateY(18deg) rotateX(6deg);
+    transform: rotateY(16deg) rotateX(2deg);
 }
 
 .journey-tome-book > span {
@@ -1067,6 +1108,25 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     box-shadow: 0 26px 44px rgba(24, 38, 74, 0.28);
 }
 
+/* A contact shadow on the floor under each volume. */
+.journey-tome-book::after {
+    content: "";
+    position: absolute;
+    left: -10%;
+    right: -14%;
+    bottom: -20px;
+    height: 36px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(0, 0, 0, 0.5), transparent);
+    filter: blur(3px);
+    transform: translateZ(calc(var(--d) / -2 - 1px));
+    pointer-events: none;
+}
+
+.journey[data-world="alexandria"] .journey-tome-book::after {
+    background: radial-gradient(closest-side, rgba(60, 40, 10, 0.35), transparent);
+}
+
 .journey-tome:hover .journey-tome-cover {
     box-shadow: 0 26px 70px color-mix(in srgb, var(--j-gold) 40%, transparent);
 }
@@ -1079,25 +1139,16 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     width: var(--d);
     display: grid;
     place-items: center;
-    border-radius: 4px;
+    border-radius: 10px / 6px;
     background:
-        repeating-linear-gradient(180deg, transparent 0 9%, rgba(232, 201, 122, 0.6) 9% 10%, transparent 10% 11.5%, rgba(232, 201, 122, 0.6) 11.5% 12.5%, transparent 12.5% 86%, rgba(232, 201, 122, 0.6) 86% 87%, transparent 87% 100%),
+        repeating-linear-gradient(180deg, transparent 0 9%, rgba(232, 201, 122, 0.65) 9% 10%, transparent 10% 11.5%, rgba(232, 201, 122, 0.65) 11.5% 12.5%, transparent 12.5% 86%, rgba(232, 201, 122, 0.65) 86% 87%, transparent 87% 100%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.12) 38%, rgba(255, 255, 255, 0.04) 55%, rgba(0, 0, 0, 0.6)),
         var(--j-grain), var(--bind-spine);
-    background-blend-mode: normal, soft-light, normal;
+    background-blend-mode: normal, normal, soft-light, normal;
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
     transform: rotateY(-90deg);
 }
 
-.journey-tome-spine span {
-    max-height: 70%;
-    overflow: hidden;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    font: 400 0.82rem/1.1 var(--font-family-display);
-    color: #f1d995;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
 
 .journey-tome-pages {
     top: 3px;
