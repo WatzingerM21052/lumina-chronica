@@ -323,24 +323,39 @@ html[data-theme="babylon"] .world-goal-text b {
     color: #f3ead2;
 }
 
-/* ---------- Page banners (WorldBanner) ---------- */
+/* ---------- Page banners (WorldBanner) ----------
+   One picture per page (CREDITS.md); the plain rule is the fallback
+   for a page without its own. */
 html[data-theme="babylon"] .world-banner-image {
-    background-image: url("../../images/themes/babylon/glazed_bricks.webp");
-    background-size: 640px;
-    filter: saturate(1.05);
+    background: url("../../images/themes/babylon/glazed_bricks.webp") center / 640px;
 }
 
-html[data-theme="babylon"] .world-banner[data-page="library"] .world-banner-image,
-html[data-theme="babylon"] .world-banner[data-page="shelves"] .world-banner-image {
+html[data-theme="babylon"] .world-banner[data-page="library"] .world-banner-image {
     background: url("../../images/themes/babylon/banner_ishtar_dragon.webp") 60% 46% / cover;
 }
 
+html[data-theme="babylon"] .world-banner[data-page="shelves"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_nebuchadnezzar_cylinder.webp") 70% 50% / cover;
+}
+
 html[data-theme="babylon"] .world-banner[data-page="statistics"] .world-banner-image {
-    background: url("../../images/themes/babylon/banner_mushhushshu.webp") 70% 40% / cover;
+    background: url("../../images/themes/babylon/banner_cuneiform_stars.webp") 70% 50% / cover;
 }
 
 html[data-theme="babylon"] .world-banner[data-page="discover"] .world-banner-image {
     background: url("../../images/themes/babylon/banner_walls.webp") 70% 30% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="projects"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_tower_of_babel.webp") 50% 45% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="profile"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_babel_print.webp") 60% 40% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="offline"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_birs_nimrud.webp") 60% 60% / cover;
 }
 
 html[data-theme="babylon"] .world-banner-shade {

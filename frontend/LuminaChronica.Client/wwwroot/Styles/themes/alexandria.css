@@ -559,14 +559,19 @@ html[data-theme="alexandria"] .home-hero {
     background-color: transparent;
 }
 
-/* ---------- Page banners (WorldBanner) ---------- */
+/* ---------- Page banners (WorldBanner) ----------
+   One picture per page (CREDITS.md); the plain rule is the fallback
+   for a page without its own. */
 html[data-theme="alexandria"] .world-banner-image {
     background: url("../../images/themes/alexandria/banner_pharos.webp") 60% 35% / cover;
 }
 
-html[data-theme="alexandria"] .world-banner[data-page="library"] .world-banner-image,
+html[data-theme="alexandria"] .world-banner[data-page="library"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_leiden_library.webp") 50% 40% / cover;
+}
+
 html[data-theme="alexandria"] .world-banner[data-page="shelves"] .world-banner-image {
-    background: url("../../images/themes/alexandria/library_duotone.webp") center 30% / cover;
+    background: url("../../images/themes/alexandria/banner_pantheon_interior.webp") center / cover;
 }
 
 html[data-theme="alexandria"] .world-banner[data-page="statistics"] .world-banner-image {
@@ -575,6 +580,22 @@ html[data-theme="alexandria"] .world-banner[data-page="statistics"] .world-banne
 
 html[data-theme="alexandria"] .world-banner[data-page="discover"] .world-banner-image {
     background: url("../../images/themes/alexandria/banner_ptolemy_map.webp") 60% 40% / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="projects"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_pharos.webp") 60% 35% / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="settings"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_pantheon_portico.webp") center / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="profile"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_colossus.webp") center / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="offline"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_mausoleum.webp") center / cover;
 }
 
 html[data-theme="alexandria"] .world-banner-shade {
