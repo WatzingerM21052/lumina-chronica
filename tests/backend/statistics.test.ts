@@ -181,8 +181,64 @@ describe("GET /api/statistics", () => {
         const res = await app.request("/api/statistics", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
         const json = await readJson(res);
 
-        expect(json.data.readingCalendar).toEqual([{ date: today, count: 1 }]);
+        expect(json.data.readingCalendar).toEqual([{ date: today, count: 1, pages: null, books: ["Test Book"] }]);
         expect(json.data.streaks).toEqual({ currentStreak: 1, longestStreak: 1 });
+    });
+
+    it("adds the day's pages and books to the calendar, from the day's first to last save", async () => {
+        const dune = await uploadBook(tokenA, "Dune");
+        await setPages(tokenA, dune, 400);
+        await saveProgress(tokenA, dune, 10);
+        // Yesterday's progress is the start of today's reading.
+        await env.DB.prepare("UPDATE reading_activity_books SET activity_date = date('now', '-1 day')").run();
+        await saveProgress(tokenA, dune, 20);
+        await saveProgress(tokenA, dune, 35);
+        const noPages = await uploadBook(tokenA, "Emma");
+        await saveProgress(tokenA, noPages, 5);
+
+        const today = new Date().toISOString().slice(0, 10);
+        const res = await app.request("/api/statistics", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        const day = json.data.readingCalendar.find((d: { date: string }) => d.date === today);
+        expect(day.pages).toBe(100);
+        expect(day.books).toEqual(["Dune", "Emma"]);
+    });
+
+    it("counts going back in a book as no pages and leaves pages null without a page count", async () => {
+        const bookId = await uploadBook(tokenA, "Reread");
+        await saveProgress(tokenA, bookId, 50);
+        await env.DB.prepare("UPDATE reading_activity_books SET activity_date = date('now', '-1 day')").run();
+        await setPages(tokenA, bookId, 200);
+        await saveProgress(tokenA, bookId, 20);
+
+        const today = new Date().toISOString().slice(0, 10);
+        const res = await app.request("/api/statistics", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.readingCalendar.find((d: { date: string }) => d.date === today).pages).toBe(0);
+    });
+
+    it("never shows another user's books in the calendar", async () => {
+        const bobBook = await uploadBook(tokenB, "Bob's Secret");
+        await saveProgress(tokenB, bobBook, 40);
+        const aliceBook = await uploadBook(tokenA, "Alice's Book");
+        await saveProgress(tokenA, aliceBook, 10);
+
+        const res = await app.request("/api/statistics", { headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        const json = await readJson(res);
+
+        expect(json.data.readingCalendar[0].books).toEqual(["Alice's Book"]);
+    });
+
+    it("drops a deleted book's day detail", async () => {
+        const bookId = await uploadBook(tokenA, "Gone Soon");
+        await saveProgress(tokenA, bookId, 30);
+
+        await app.request(`/api/books/${bookId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+
+        const row = await env.DB.prepare("SELECT COUNT(*) AS total FROM reading_activity_books").first<{ total: number }>();
+        expect(row?.total).toBe(0);
     });
 
     it("increments event_count on repeated saves the same day rather than duplicating the row", async () => {
@@ -294,9 +350,9 @@ describe("GET /api/statistics/calendar (plan C3 year picker)", () => {
 
         expect(res.status).toBe(200);
         expect(json.data).toEqual([
-            { date: "2025-01-01", count: 2 },
-            { date: "2025-07-14", count: 2 },
-            { date: "2025-12-31", count: 2 },
+            { date: "2025-01-01", count: 2, pages: null, books: [] },
+            { date: "2025-07-14", count: 2, pages: null, books: [] },
+            { date: "2025-12-31", count: 2, pages: null, books: [] },
         ]);
     });
 

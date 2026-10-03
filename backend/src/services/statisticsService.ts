@@ -38,6 +38,11 @@ export type YearlyOverviewItem = {
 export type CalendarDay = {
     date: string;
     count: number;
+    // Day detail (0028): pages read that day, or null when no book read
+    // that day has a page count (and for every day before 0028); titles of
+    // the books read, most progress first.
+    pages: number | null;
+    books: string[];
 };
 
 export type Streaks = {
@@ -233,21 +238,57 @@ export function computeReadingPace(pagesRead: number, booksRead: number, activeD
 }
 
 async function getReadingCalendar(db: D1Database, userId: number): Promise<CalendarDay[]> {
-    const rows = await db
-        .prepare("SELECT activity_date, event_count FROM reading_activity WHERE user_id = ? AND activity_date >= date('now', ?) ORDER BY activity_date ASC")
-        .bind(userId, `-${CALENDAR_DAYS} days`)
-        .all<{ activity_date: string; event_count: number }>();
-    return rows.results.map((row) => ({ date: row.activity_date, count: row.event_count }));
+    return readCalendar(db, userId, "activity_date >= date('now', ?)", [`-${CALENDAR_DAYS} days`]);
 }
 
 // Plan C3: the statistics page's year picker shows one calendar year
 // (1 January to 31 December) instead of the rolling last 365 days.
 export async function getReadingCalendarForYear(db: D1Database, userId: number, year: number): Promise<CalendarDay[]> {
-    const rows = await db
-        .prepare("SELECT activity_date, event_count FROM reading_activity WHERE user_id = ? AND activity_date BETWEEN ? AND ? ORDER BY activity_date ASC")
-        .bind(userId, `${year}-01-01`, `${year}-12-31`)
-        .all<{ activity_date: string; event_count: number }>();
-    return rows.results.map((row) => ({ date: row.activity_date, count: row.event_count }));
+    return readCalendar(db, userId, "activity_date BETWEEN ? AND ?", [`${year}-01-01`, `${year}-12-31`]);
+}
+
+type DayBookRow = { activity_date: string; title: string; pages: number | null; start_percentage: number; end_percentage: number };
+
+async function readCalendar(db: D1Database, userId: number, range: string, rangeParams: string[]): Promise<CalendarDay[]> {
+    const [days, dayBooks] = await Promise.all([
+        db
+            .prepare(`SELECT activity_date, event_count FROM reading_activity WHERE user_id = ? AND ${range} ORDER BY activity_date ASC`)
+            .bind(userId, ...rangeParams)
+            .all<{ activity_date: string; event_count: number }>(),
+        db
+            .prepare(
+                `SELECT rab.activity_date, b.title, m.pages, rab.start_percentage, rab.end_percentage
+                 FROM reading_activity_books rab
+                 JOIN books b ON b.id = rab.book_id
+                 LEFT JOIN book_metadata m ON m.book_id = rab.book_id
+                 WHERE rab.user_id = ? AND rab.${range}`
+            )
+            .bind(userId, ...rangeParams)
+            .all<DayBookRow>(),
+    ]);
+
+    const detailByDate = new Map<string, DayBookRow[]>();
+    for (const row of dayBooks.results) {
+        const list = detailByDate.get(row.activity_date) ?? [];
+        list.push(row);
+        detailByDate.set(row.activity_date, list);
+    }
+
+    return days.results.map((row) => ({ date: row.activity_date, count: row.event_count, ...dayDetail(detailByDate.get(row.activity_date) ?? []) }));
+}
+
+// Pages = progress made that day x the book's page count; going back in a
+// book counts as nothing rather than negative.
+export function dayDetail(rows: { title: string; pages: number | null; start_percentage: number; end_percentage: number }[]): { pages: number | null; books: string[] } {
+    let pages: number | null = null;
+    const withDelta = rows.map((row) => ({ row, delta: Math.max(0, Math.min(100, row.end_percentage) - Math.max(0, row.start_percentage)) }));
+    for (const { row, delta } of withDelta) {
+        if (row.pages != null && row.pages > 0) {
+            pages = (pages ?? 0) + Math.round((delta / 100) * row.pages);
+        }
+    }
+    const books = [...new Set(withDelta.sort((a, b) => b.delta - a.delta).map(({ row }) => row.title))];
+    return { pages, books };
 }
 
 // Years that have any reading activity, newest first -- the year picker's
