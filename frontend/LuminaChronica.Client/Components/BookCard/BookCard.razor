@@ -42,7 +42,7 @@
         @if (ProgressPercentage is { } progress)
         {
             <div class="book-card-progress">
-                <div class="book-card-progress-bar" style="width: @(progress)%"></div>
+                <div class="book-card-progress-bar" style="width: @(progress.ToString(System.Globalization.CultureInfo.InvariantCulture))%"></div>
             </div>
         }
     </div>
