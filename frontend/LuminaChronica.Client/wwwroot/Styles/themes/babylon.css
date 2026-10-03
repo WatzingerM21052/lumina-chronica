@@ -390,6 +390,10 @@ html[data-theme="babylon"] .world-banner[data-page="offline"] .world-banner-imag
     background: url("../../images/themes/babylon/banner_birs_nimrud.webp") 60% 60% / cover;
 }
 
+html[data-theme="babylon"] .world-banner[data-page="upload"] .world-banner-image {
+    background: url("../../images/themes/babylon/lion_panel.webp") 60% 55% / cover;
+}
+
 html[data-theme="babylon"] .world-banner-shade {
     background: linear-gradient(90deg, rgba(8, 22, 21, 0.94) 0%, rgba(8, 22, 21, 0.72) 34%, rgba(8, 22, 21, 0.08) 68%);
 }

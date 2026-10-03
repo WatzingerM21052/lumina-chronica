@@ -15,7 +15,10 @@
 
 <PageTitle>@I18n.T("bookUpload.title") — Lumina Chronica</PageTitle>
 
-<h1>@I18n.T("bookUpload.title")</h1>
+<WorldBanner Page="upload" Title="@I18n.T("bookUpload.title")" Subtitle="@I18n.T("worldBanner.uploadSubtitle")" />
+<div class="page-header">
+    <h1>@I18n.T("bookUpload.title")</h1>
+</div>
 
 <EditForm Model="_form" OnValidSubmit="SubmitAsync" class="book-form-card">
     @if (_errorMessage is not null)
