@@ -38,7 +38,7 @@
     <div class="home-hero-content">
         <p class="home-hero-eyebrow home-hero-eyebrow--babylon">@I18n.T("home.eyebrowBabylon")</p>
         <p class="home-hero-eyebrow home-hero-eyebrow--alexandria">@I18n.T("home.eyebrowAlexandria")</p>
-        <h1>@I18n.T("home.welcomeBack")</h1>
+        <h1>@(_username is { Length: > 0 } name ? string.Format(I18n.T("home.welcomeBackName"), name) : I18n.T("home.welcomeBack"))</h1>
         <p class="home-hero-greek" lang="grc">ΒΙΒΛΙΟΘΗΚΗ ΑΛΕΞΑΝΔΡΕΙΑΣ</p>
         @if (_world is not null && _dashboard is { ContinueReading.Count: > 0 } && _dashboard.ContinueReading[0] is { } lastRead)
         {
@@ -193,6 +193,8 @@ else
     // Babylon/Alexandria: the immersive journey (default) or the card
     // dashboard, per the "Immersives Theme" switch in Settings.
     private bool _immersive = true;
+    // "Willkommen zurück, Matthias" -- the plain greeting until (or if) it loads.
+    private string? _username;
     private ReadingGoal? _goal;
     private List<CalendarDay> _calendarDays = [];
     private int? _featuredPages;
@@ -205,6 +207,7 @@ else
         var facetsTask = _showScrollShelf ? ApiClient.GetAsync<BookFacets>("/api/books/facets") : null;
         var statisticsTask = _world is not null ? ApiClient.GetAsync<StatisticsResponse>("/api/statistics") : null;
         var dashboardTask = ApiClient.GetAsync<DashboardResponse>("/api/dashboard");
+        var profileTask = LoadUsernameAsync();
         var projectsTask = ApiClient.GetAsync<List<Project>>("/api/projects");
         var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?sort=createdAt&order=desc&pageSize={RecentBooksLimit}");
         if (response is { Success: true, Data: not null })
@@ -234,10 +237,25 @@ else
             _calendarDays = statistics.Data.ReadingCalendar;
         }
 
+        _username = await profileTask;
+
         if (_world is not null && _dashboard.ContinueReading.FirstOrDefault() is { } featured)
         {
             var detail = await ApiClient.GetAsync<Book>($"/api/books/{featured.Book.Id}");
             _featuredPages = detail is { Success: true, Data.Pages: > 0 } ? detail.Data.Pages : null;
+        }
+    }
+
+    private async Task<string?> LoadUsernameAsync()
+    {
+        try
+        {
+            var response = await ApiClient.GetAsync<UserProfile>("/api/users/me");
+            return response is { Success: true, Data.Username: { Length: > 0 } name } ? name : null;
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 
