@@ -5,19 +5,25 @@
 @inject BlobUrlService BlobUrlService
 @inject II18nService I18n
 
-<a class="project-card" href="@($"projects/{Project.Id}")">
-    <div class="project-card-cover">
+@* A project: its cover (or initials) as a wide picture, the title, the
+   kind as a chip and two lines of the description. *@
+<a class="entity-card entity-card--project" href="@($"projects/{Project.Id}")">
+    <span class="entity-card-media">
         @if (_coverObjectUrl is not null)
         {
-            <img src="@_coverObjectUrl" alt="@Project.Title" />
+            <img src="@_coverObjectUrl" alt="" />
         }
         else
         {
-            <div class="project-card-cover-placeholder project-card-initials" aria-hidden="true">@CardInitials.Of(Project.Title)</div>
+            <span class="entity-card-initials" aria-hidden="true">@CardInitials.Of(Project.Title)</span>
         }
-    </div>
-    <div class="project-card-info">
-        <div class="project-card-title">@Project.Title</div>
-        <div class="project-card-type">@ProjectTypeLabel.For(Project.Type, I18n)</div>
-    </div>
+    </span>
+    <span class="entity-card-body">
+        <span class="entity-card-title">@Project.Title</span>
+        <span class="entity-card-chip">@ProjectTypeLabel.For(Project.Type, I18n)</span>
+        @if (TextExcerpt.Of(Project.Description) is { } excerpt)
+        {
+            <span class="entity-card-excerpt">@excerpt</span>
+        }
+    </span>
 </a>

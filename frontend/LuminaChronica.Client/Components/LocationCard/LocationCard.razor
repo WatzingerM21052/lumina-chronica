@@ -4,19 +4,27 @@
 @inject BlobUrlService BlobUrlService
 @inject LuminaChronica.Client.Services.II18nService I18n
 
-<a class="project-card project-card--landscape" href="@($"projects/{Location.ProjectId}/locations/{Location.Id}")">
-    <div class="project-card-cover">
+@* A place: a landscape picture (or its initials), the name, whether it is
+   on the map, and two lines of its description. *@
+<a class="entity-card entity-card--location" href="@($"projects/{Location.ProjectId}/locations/{Location.Id}")">
+    <span class="entity-card-media">
         @if (_imageObjectUrl is not null)
         {
-            <img src="@_imageObjectUrl" alt="@Location.Name" />
+            <img src="@_imageObjectUrl" alt="" />
         }
         else
         {
-            <div class="project-card-cover-placeholder project-card-initials" aria-hidden="true">@CardInitials.Of(Location.Name)</div>
+            <span class="entity-card-initials" aria-hidden="true">@CardInitials.Of(Location.Name)</span>
         }
-    </div>
-    <div class="project-card-info">
-        <div class="project-card-title">@Location.Name</div>
-        <div class="project-card-type">@(Location.X is not null ? I18n.T("locationDetail.placedOnMap") : I18n.T("locationDetail.notPlacedOnMap"))</div>
-    </div>
+    </span>
+    <span class="entity-card-body">
+        <span class="entity-card-title">@Location.Name</span>
+        <span class="entity-card-chip @(Location.X is not null ? "entity-card-chip--on" : null)">
+            @(Location.X is not null ? I18n.T("locationDetail.placedOnMap") : I18n.T("locationDetail.notPlacedOnMap"))
+        </span>
+        @if (TextExcerpt.Of(Location.Description) is { } excerpt)
+        {
+            <span class="entity-card-excerpt">@excerpt</span>
+        }
+    </span>
 </a>

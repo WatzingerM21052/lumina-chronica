@@ -1,19 +1,24 @@
 @namespace LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 
-<a class="project-card" href="@($"projects/{Entry.ProjectId}/lore/{Entry.Id}")">
-    <div class="project-card-cover">
-        <div class="project-card-cover-placeholder" aria-hidden="true">
+@* A lore entry as a text card: a small scroll mark, the title and three
+   lines of its text as a preview (the Markdown turned into plain text, so
+   no "##" or "*" shows). *@
+<a class="entity-card entity-card--lore" href="@($"projects/{Entry.ProjectId}/lore/{Entry.Id}")">
+    <span class="entity-card-body">
+        <span class="entity-card-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
                 <path d="M6 4h9a3 3 0 0 1 3 3v13H9a3 3 0 0 1-3-3V4z" />
                 <path d="M6 4a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3" />
                 <path d="M10 9h5M10 12.5h5" />
             </svg>
-        </div>
-    </div>
-    <div class="project-card-info">
-        <div class="project-card-title">@Entry.Title</div>
-    </div>
+        </span>
+        <span class="entity-card-title">@Entry.Title</span>
+        @if (TextExcerpt.FromMarkdown(Entry.Content, 320) is { } excerpt)
+        {
+            <span class="entity-card-excerpt">@excerpt</span>
+        }
+    </span>
 </a>
 
 @code {

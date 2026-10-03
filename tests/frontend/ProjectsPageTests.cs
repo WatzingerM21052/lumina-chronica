@@ -50,7 +50,7 @@ public class ProjectsPageTests : BunitContext
 
         Assert.Contains("Aetherfall", cut.Markup);
         Assert.Contains("Chronicle of Ash", cut.Markup);
-        Assert.Equal(2, cut.FindAll("a.project-card").Count);
+        Assert.Equal(2, cut.FindAll("a.entity-card").Count);
     }
 
     [Fact]

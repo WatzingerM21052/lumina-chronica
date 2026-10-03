@@ -108,7 +108,6 @@ html[data-theme="babylon"] .dashboard-stat,
 html[data-theme="babylon"] .stats-card,
 html[data-theme="babylon"] .settings-card,
 html[data-theme="babylon"] .profile-card,
-html[data-theme="babylon"] .project-card,
 html[data-theme="babylon"] .world-card,
 html[data-theme="babylon"] .world-surface,
 html[data-theme="babylon"] .book-detail,
@@ -131,7 +130,6 @@ html[data-theme="babylon"] .dashboard-stat:not(:has(.dialog-overlay)),
 html[data-theme="babylon"] .stats-card:not(:has(.dialog-overlay)),
 html[data-theme="babylon"] .settings-card:not(:has(.dialog-overlay)),
 html[data-theme="babylon"] .profile-card:not(:has(.dialog-overlay)),
-html[data-theme="babylon"] .project-card:not(:has(.dialog-overlay)),
 html[data-theme="babylon"] .world-card:not(:has(.dialog-overlay)),
 html[data-theme="babylon"] .world-surface:not(:has(.dialog-overlay)),
 html[data-theme="babylon"] .book-detail:not(:has(.dialog-overlay)),
@@ -445,4 +443,12 @@ html[data-theme="babylon"] .book-comments > .comment-form {
 html[data-theme="babylon"] .book-comments > p.text-muted {
     border-color: rgba(217, 176, 82, 0.2);
     background: rgba(255, 255, 255, 0.02);
+}
+
+/* Project, character, place and lore cards: translucent tiles without a
+   blur (there can be dozens of them). */
+html[data-theme="babylon"] .entity-card {
+    background: linear-gradient(160deg, rgba(22, 46, 43, 0.62), rgba(10, 24, 23, 0.55));
+    border-color: rgba(217, 176, 82, 0.16);
+    box-shadow: inset 0 1px 0 rgba(255, 245, 220, 0.06), 0 16px 32px -22px rgba(0, 0, 0, 0.85);
 }

@@ -290,7 +290,7 @@ public class ProjectDetailPageTests : BunitContext
 
         Assert.Contains("Elarion", cut.Markup);
         Assert.Contains("The Silver Vale", cut.Markup);
-        Assert.Single(cut.FindAll("a.project-card"));
+        Assert.Single(cut.FindAll("a.entity-card"));
     }
 
     [Fact]
@@ -404,7 +404,7 @@ public class ProjectDetailPageTests : BunitContext
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Karte").Click();
 
         Assert.Contains("Ashen Hollow", cut.Markup);
-        Assert.Single(cut.FindAll("a.project-card"));
+        Assert.Single(cut.FindAll("a.entity-card"));
     }
 
     [Fact]
@@ -726,7 +726,7 @@ public class ProjectDetailPageTests : BunitContext
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Lore").Click();
 
         Assert.Contains("The Silver Vale", cut.Markup);
-        Assert.Single(cut.FindAll("a.project-card"));
+        Assert.Single(cut.FindAll("a.entity-card"));
     }
 
     [Fact]
