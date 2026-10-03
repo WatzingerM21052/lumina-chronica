@@ -605,28 +605,43 @@ else
 
         <Dialog IsOpen="_showCreateFileForm" Title="@I18n.T("projectDetail.addFileButton")" OnClose="CloseCreateFile">
             <ChildContent>
-                <EditForm id="create-file-form" Model="_createFileForm" OnValidSubmit="CreateProjectFileAsync" class="auth-form">
+                @* Up to ten files in one go (user request). Each file's kind
+                   (image or document) comes from its extension; files that
+                   can't go up are named with the reason before anything is
+                   sent, and every file shows its own status. *@
+                <form id="create-file-form" class="auth-form" @onsubmit="UploadProjectFilesAsync" @onsubmit:preventDefault="true">
                     @if (_createFileErrorMessage is not null)
                     {
                         <p class="form-error">@_createFileErrorMessage</p>
                     }
                     <div class="form-group">
-                        <label for="file-category">@I18n.T("projectDetail.typeLabel")</label>
-                        <InputSelect id="file-category" @bind-Value="_createFileForm.Category">
-                            <option value="IMAGE">@I18n.T("projectDetail.categoryImage")</option>
-                            <option value="DOCUMENT">@I18n.T("projectDetail.categoryDocument")</option>
-                        </InputSelect>
+                        <label for="file-upload">@I18n.T("projectDetail.filesLabel")</label>
+                        <FileDropzone Id="file-upload" Label="@I18n.T("projectDetail.filesDropzoneLabel")" Multiple="true"
+                                      Accept="@ProjectFileAccept" Hint="@I18n.T("projectDetail.fileFormatsHint")"
+                                      SelectedFileName="@(_pendingUploads.Count == 0 ? null : string.Format(I18n.T("projectDetail.filesSelected"), _pendingUploads.Count))"
+                                      OnChange="OnProjectFilesSelected" />
                     </div>
-                    <div class="form-group">
-                        <label for="file-upload">@I18n.T("projectDetail.fileLabel")</label>
-                        <FileDropzone Id="file-upload" Label="@I18n.T("projectDetail.fileDropzoneLabel")"
-                                      SelectedFileName="@_selectedProjectFile?.Name" OnChange="OnProjectFileSelected" />
-                    </div>
-                </EditForm>
+                    @if (_pendingUploads.Count > 0)
+                    {
+                        <ul class="file-upload-list" aria-live="polite">
+                            @foreach (var upload in _pendingUploads)
+                            {
+                                <li class="file-upload-item file-upload-item--@upload.Status.ToString().ToLowerInvariant()">
+                                    <Icon Name="@(upload.Category == "IMAGE" ? "image" : "document")" />
+                                    <span class="file-upload-name">@upload.File.Name</span>
+                                    <span class="file-upload-meta">@FormatFileSize(upload.File.Size)</span>
+                                    <span class="file-upload-status">@UploadStatusText(upload)</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </form>
             </ChildContent>
             <Footer>
-                <button type="button" class="btn" @onclick="CloseCreateFile">@I18n.T("projectDetail.cancelButton")</button>
-                <button type="submit" form="create-file-form" class="btn btn-primary">@I18n.T("projectDetail.uploadButton")</button>
+                <button type="button" class="btn" @onclick="CloseCreateFile" disabled="@_isUploadingFiles">@I18n.T("projectDetail.cancelButton")</button>
+                <button type="submit" form="create-file-form" class="btn btn-primary" disabled="@(_isUploadingFiles || !_pendingUploads.Any(u => u.Status == UploadStatus.Ready))">
+                    @(UploadableCount == 0 ? I18n.T("projectDetail.uploadButton") : string.Format(I18n.T("projectDetail.uploadFilesButton"), UploadableCount))
+                </button>
             </Footer>
         </Dialog>
 
@@ -811,8 +826,8 @@ else
     private List<ProjectFile>? _files;
     private string? _filesErrorMessage;
     private string? _createFileErrorMessage;
-    private CreateProjectFileFormModel _createFileForm = new();
-    private IBrowserFile? _selectedProjectFile;
+    private List<PendingUpload> _pendingUploads = [];
+    private bool _isUploadingFiles;
     private readonly Dictionary<int, string> _fileThumbnails = new();
 
     private List<Book>? _linkedBooks;
@@ -1363,8 +1378,10 @@ else
 
     private void CloseCreateFile()
     {
+        if (_isUploadingFiles) return;
         _showCreateFileForm = false;
         _createFileErrorMessage = null;
+        _pendingUploads = [];
     }
 
     private async Task DeleteTimelineEventAsync()
@@ -1533,38 +1550,108 @@ else
         }
     }
 
-    private void OnProjectFileSelected(InputFileChangeEventArgs e) => _selectedProjectFile = e.File;
+    // What the backend takes (projectFileService.ts / fileValidation.ts).
+    private const int MaxFilesPerUpload = 10;
+    private static readonly string[] ImageExtensions = ["jpg", "jpeg", "png", "webp"];
+    private static readonly string[] DocumentExtensions = ["pdf", "txt", "md", "doc", "docx"];
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+    private const long MaxDocumentBytes = 20 * 1024 * 1024;
+    private static readonly string ProjectFileAccept = string.Join(",", ImageExtensions.Concat(DocumentExtensions).Select(e => "." + e));
 
-    private async Task CreateProjectFileAsync()
+    private enum UploadStatus { Ready, Uploading, Done, Failed, Rejected }
+
+    private sealed class PendingUpload(IBrowserFile file, string category)
+    {
+        public IBrowserFile File { get; } = file;
+        public string Category { get; } = category;
+        public UploadStatus Status { get; set; } = UploadStatus.Ready;
+        public string? Message { get; set; }
+    }
+
+    private int UploadableCount => _pendingUploads.Count(u => u.Status == UploadStatus.Ready);
+
+    private string UploadStatusText(PendingUpload upload) => upload.Status switch
+    {
+        UploadStatus.Ready => upload.Category == "IMAGE" ? I18n.T("projectDetail.categoryImage") : I18n.T("projectDetail.categoryDocument"),
+        UploadStatus.Uploading => I18n.T("projectDetail.uploadStatusUploading"),
+        UploadStatus.Done => I18n.T("projectDetail.uploadStatusDone"),
+        _ => upload.Message ?? I18n.T("projectDetail.fileUploadError"),
+    };
+
+    // Picks (or drops) up to ten files and sorts out the ones the backend
+    // would refuse, so the user learns why before anything is sent.
+    private void OnProjectFilesSelected(InputFileChangeEventArgs e)
     {
         _createFileErrorMessage = null;
+        var files = e.GetMultipleFiles(int.MaxValue);
+        if (files.Count > MaxFilesPerUpload)
+        {
+            _createFileErrorMessage = string.Format(I18n.T("projectDetail.tooManyFilesError"), MaxFilesPerUpload);
+        }
 
-        if (_selectedProjectFile is null)
+        _pendingUploads = files.Take(MaxFilesPerUpload).Select(file =>
+        {
+            var extension = Path.GetExtension(file.Name).TrimStart('.').ToLowerInvariant();
+            var category = ImageExtensions.Contains(extension) ? "IMAGE" : "DOCUMENT";
+            var upload = new PendingUpload(file, category);
+            if (!ImageExtensions.Contains(extension) && !DocumentExtensions.Contains(extension))
+            {
+                upload.Status = UploadStatus.Rejected;
+                upload.Message = I18n.T("projectDetail.fileTypeNotAllowed");
+            }
+            else if (file.Size > (category == "IMAGE" ? MaxImageBytes : MaxDocumentBytes))
+            {
+                upload.Status = UploadStatus.Rejected;
+                upload.Message = string.Format(I18n.T("projectDetail.fileTooLarge"), (category == "IMAGE" ? MaxImageBytes : MaxDocumentBytes) / 1024 / 1024);
+            }
+            return upload;
+        }).ToList();
+    }
+
+    // One request per file, one after another, each with its own status.
+    // The dialog closes on its own once everything went up; otherwise it
+    // stays open with the files that didn't.
+    private async Task UploadProjectFilesAsync()
+    {
+        _createFileErrorMessage = null;
+        if (UploadableCount == 0)
         {
             _createFileErrorMessage = I18n.T("projectDetail.fileRequiredError");
             return;
         }
 
-        const long maxFileBytes = 20 * 1024 * 1024;
-        using var content = new MultipartFormDataContent
+        _isUploadingFiles = true;
+        foreach (var upload in _pendingUploads.Where(u => u.Status == UploadStatus.Ready).ToList())
         {
-            { new StringContent(_createFileForm.Category), "\"category\"" }
-        };
-        var streamContent = new StreamContent(_selectedProjectFile.OpenReadStream(maxFileBytes));
-        streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(_selectedProjectFile.ContentType) ? "application/octet-stream" : _selectedProjectFile.ContentType);
-        content.Add(streamContent, "\"file\"", $"\"{_selectedProjectFile.Name}\"");
+            upload.Status = UploadStatus.Uploading;
+            StateHasChanged();
 
-        var response = await ApiClient.PostMultipartAsync<ProjectFile>($"/api/projects/{Id}/files", content);
-        if (response is { Success: true, Data: not null })
-        {
-            _createFileForm = new CreateProjectFileFormModel();
-            _selectedProjectFile = null;
-            _showCreateFileForm = false;
-            await LoadProjectFilesAsync();
+            using var content = new MultipartFormDataContent
+            {
+                { new StringContent(upload.Category), "\"category\"" }
+            };
+            var streamContent = new StreamContent(upload.File.OpenReadStream(upload.Category == "IMAGE" ? MaxImageBytes : MaxDocumentBytes));
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(upload.File.ContentType) ? "application/octet-stream" : upload.File.ContentType);
+            content.Add(streamContent, "\"file\"", $"\"{upload.File.Name}\"");
+
+            var response = await ApiClient.PostMultipartAsync<ProjectFile>($"/api/projects/{Id}/files", content);
+            if (response is { Success: true, Data: not null })
+            {
+                upload.Status = UploadStatus.Done;
+            }
+            else
+            {
+                upload.Status = UploadStatus.Failed;
+                upload.Message = response?.Error?.Message ?? I18n.T("projectDetail.fileUploadError");
+            }
+            StateHasChanged();
         }
-        else
+        _isUploadingFiles = false;
+
+        await LoadProjectFilesAsync();
+        if (_pendingUploads.All(u => u.Status == UploadStatus.Done))
         {
-            _createFileErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.fileUploadError");
+            CloseCreateFile();
         }
     }
 
@@ -1691,11 +1778,6 @@ else
     private class CreateLocationFormModel
     {
         public string Name { get; set; } = string.Empty;
-    }
-
-    private class CreateProjectFileFormModel
-    {
-        public string Category { get; set; } = "IMAGE";
     }
 
     private class CommentFormModel

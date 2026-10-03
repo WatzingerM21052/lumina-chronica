@@ -1,9 +1,11 @@
-/* The stage takes all height between the title row and the bottom bar;
-   the image is contained, never cropped or upscaled past its size. */
+/* The stage has a fixed height -- the viewport minus the title row and the
+   bottom bar -- so neither it nor the arrows move when the next picture
+   has another size (they used to jump, user report). The image is
+   contained, never cropped or upscaled past its size. */
 .lightbox-stage {
     position: relative;
-    flex: 1;
-    min-height: 0;
+    height: calc(100dvh - 8.5rem);
+    min-height: 12rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -20,10 +22,35 @@
     user-select: none;
 }
 
+/* The whole left/right edge of the stage is the button (a click anywhere
+   along it flips); the round mark is just where it shows. */
 .lightbox-arrow {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    width: min(22%, 9rem);
+    padding: 0 var(--space-2);
+    border: 0;
+    background: transparent;
+    color: #f3ece0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.lightbox-arrow--previous {
+    left: 0;
+    justify-content: flex-start;
+}
+
+.lightbox-arrow--next {
+    right: 0;
+    justify-content: flex-end;
+}
+
+.lightbox-arrow-mark {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -33,25 +60,23 @@
     border: 1px solid rgba(243, 236, 224, 0.35);
     border-radius: 50%;
     background: rgba(8, 6, 4, 0.55);
-    color: #f3ece0;
     font-size: 2rem;
     line-height: 1;
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
-.lightbox-arrow:hover,
-.lightbox-arrow:focus-visible {
+.lightbox-arrow:hover .lightbox-arrow-mark,
+.lightbox-arrow:focus-visible .lightbox-arrow-mark {
     background: rgba(8, 6, 4, 0.85);
     border-color: var(--color-gold-accent, #c9a227);
 }
 
-.lightbox-arrow--previous {
-    left: var(--space-2);
+.lightbox-arrow:active .lightbox-arrow-mark {
+    transform: scale(0.94);
 }
 
-.lightbox-arrow--next {
-    right: var(--space-2);
+.lightbox-arrow:focus-visible {
+    outline: none;
 }
 
 .lightbox-bar {
@@ -76,19 +101,19 @@
     color: #f3ece0;
 }
 
-/* Phones: swipe is the main way, the arrows shrink out of the picture's way. */
+/* Phones: swipe is the main way, the marks shrink out of the picture's way. */
 @media (max-width: 599.98px) {
+    .lightbox-stage {
+        height: calc(100dvh - 7.5rem);
+    }
+
     .lightbox-arrow {
+        padding: 0 0.25rem;
+    }
+
+    .lightbox-arrow-mark {
         width: 2.5rem;
         height: 2.5rem;
         font-size: 1.6rem;
-    }
-
-    .lightbox-arrow--previous {
-        left: 0;
-    }
-
-    .lightbox-arrow--next {
-        right: 0;
     }
 }
