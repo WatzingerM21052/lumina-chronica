@@ -402,14 +402,17 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     grid-template-rows: auto 1fr auto;
     justify-items: center;
     gap: 10px;
-    padding: 26px 22px;
+    /* Title and author sit inside the gilt corners. */
+    padding: 17% 17% 15%;
     overflow: hidden;
-    background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.14), transparent 46%), linear-gradient(160deg, #3b2a17, #160f08 70%);
+    background: url("../images/themes/books/leather_grain.webp") 0 0 / 220px, radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.14), transparent 46%), linear-gradient(160deg, #3b2a17, #160f08 70%);
+    background-blend-mode: soft-light, normal, normal;
     box-shadow: inset 6px 0 10px rgba(0, 0, 0, 0.45), 0 40px 70px rgba(0, 0, 0, 0.5);
 }
 
 .journey[data-world="alexandria"] .journey-book-front {
-    background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.18), transparent 46%), linear-gradient(160deg, #2a4a8c, #0f1f45 70%);
+    background: url("../images/themes/books/linen_grain.webp") 0 0 / 180px, radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.18), transparent 46%), linear-gradient(160deg, #2a4a8c, #0f1f45 70%);
+    background-blend-mode: soft-light, normal, normal;
     box-shadow: inset 6px 0 10px rgba(0, 0, 0, 0.3), 0 40px 60px rgba(24, 38, 74, 0.3);
 }
 
@@ -419,6 +422,12 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.journey-book-title,
+.journey-book-author {
+    position: relative;
+    z-index: 2;
 }
 
 .journey-book-title {
@@ -435,12 +444,64 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     text-align: center;
 }
 
-/* A gold clockwork medallion on books without a cover. */
-.journey-book-ornament {
-    grid-row: 2;
-    align-self: center;
-    width: 70%;
-    height: auto;
+/* Gold tooling on covers without a picture: public-domain ornaments
+   (books/*.svg) used as masks over a gold gradient, so they read as
+   stamped gilt and take any size. Corner piece: a bottom-left corner,
+   mirrored for the other three. */
+.journey-tooling {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.journey-corner,
+.journey-medallion {
+    position: absolute;
+    background: linear-gradient(135deg, #f6e3a1, #c79a3c 45%, #f3d98a 60%, #a8792a);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
+    opacity: 0.88;
+}
+
+.journey-corner {
+    width: 19%;
+    aspect-ratio: 202 / 176;
+    -webkit-mask-image: url("../images/themes/books/corner.svg");
+    mask-image: url("../images/themes/books/corner.svg");
+}
+
+.journey-corner--bl { left: 9%; bottom: 3.5%; }
+.journey-corner--tl { left: 9%; top: 3.5%; scale: 1 -1; }
+.journey-corner--br { right: 3.5%; bottom: 3.5%; scale: -1 1; }
+.journey-corner--tr { right: 3.5%; top: 3.5%; scale: -1 -1; }
+
+.journey-medallion {
+    left: 50%;
+    top: 46%;
+    translate: -50% -50%;
+}
+
+/* Library volumes: title on top, so the medallion sits lower. */
+.journey-tome-generated .journey-medallion {
+    top: 66%;
+}
+
+.journey-medallion--rosette {
+    width: 42%;
+    aspect-ratio: 1;
+    -webkit-mask-image: url("../images/themes/books/rosette.svg");
+    mask-image: url("../images/themes/books/rosette.svg");
+}
+
+.journey-medallion--fleuron {
+    width: 52%;
+    aspect-ratio: 120 / 69;
+    -webkit-mask-image: url("../images/themes/books/fleuron.svg");
+    mask-image: url("../images/themes/books/fleuron.svg");
 }
 
 /* Spine and page block turn about their own centre at the cover's left
@@ -952,7 +1013,9 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     aspect-ratio: 2 / 3;
     overflow: hidden;
     border-radius: 3px 10px 10px 3px;
-    background: linear-gradient(160deg, #3b2a17, #160f08);
+    --j-grain: url("../images/themes/books/leather_grain.webp") 0 0 / 200px;
+    background: var(--j-grain), linear-gradient(160deg, #3b2a17, #160f08);
+    background-blend-mode: soft-light, normal;
     /* The page block shows at the fore-edge and below the cover. */
     --j-pages: 2px 2px 0 -0.5px #efe4c8, 3px 3px 0 -0.5px #cdbd95, 4px 4px 0 -0.5px #efe4c8, 5px 5px 0 -0.5px #cdbd95, 6px 6px 0 -0.5px #e8dcbc;
     box-shadow: var(--j-pages), 0 26px 50px rgba(0, 0, 0, 0.45);
@@ -960,8 +1023,9 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     transition: box-shadow 0.4s, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.journey-tome:nth-child(2) .journey-tome-cover { background: linear-gradient(160deg, #5a2236, #1d0b12); }
-.journey-tome:nth-child(3) .journey-tome-cover { background: linear-gradient(160deg, #1e3d5c, #0b1626); }
+.journey-tome:nth-child(2) .journey-tome-cover { background: var(--j-grain), linear-gradient(160deg, #5a2236, #1d0b12); background-blend-mode: soft-light, normal; }
+.journey-tome:nth-child(3) .journey-tome-cover { background: var(--j-grain), linear-gradient(160deg, #1e3d5c, #0b1626); background-blend-mode: soft-light, normal; }
+.journey[data-world="alexandria"] .journey-tome-cover { --j-grain: url("../images/themes/books/linen_grain.webp") 0 0 / 160px; }
 
 .journey[data-world="alexandria"] .journey-tome-cover {
     box-shadow: var(--j-pages), 0 26px 44px rgba(24, 38, 74, 0.28);
@@ -985,8 +1049,8 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     display: grid;
     grid-template-rows: auto 1fr auto;
     justify-items: center;
-    gap: 10px;
-    padding: 22px 18px;
+    gap: 8px;
+    padding: 18% 16% 15%;
 }
 
 .journey-tome-generated .journey-book-title {
@@ -994,9 +1058,7 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     font-size: 1.15rem;
 }
 
-.journey-tome-generated .journey-book-ornament {
-    width: 54%;
-}
+
 
 .journey-tome b {
     font: 400 1.1rem/1.2 var(--font-family-display);

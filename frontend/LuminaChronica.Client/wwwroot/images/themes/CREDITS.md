@@ -55,3 +55,10 @@ freigestellt oder eingefärbt.
   (Open Access, CC0). Freigestellt.
 - `alexandria/ptolemaic_queen.webp`: Marmorkopf einer ptolemäischen Königin (ca. 270–250 v. Chr.),
   The Metropolitan Museum of Art, 2002.66 (Open Access, CC0). Freigestellt, unten ausgeblendet.
+
+## Bucheinbände (Startseite der Welten)
+- `books/leather_grain.webp`: ambientCG „Leather025“ (CC0), in neutrales Grau umgerechnet, Lichtverlauf entfernt.
+- `books/linen_grain.webp`: ambientCG „Fabric030“ (CC0), ebenso.
+- `books/corner.svg`: S. H. Redmond, „Ornamental corner“ (gemeinfrei, Wikimedia Commons „Ornamental corner by S. H. Redmond 01.svg“).
+- `books/rosette.svg`: Fleuron aus „Le Livre des petits enfans“ (gemeinfrei, Wikimedia Commons „Fleuron Le Livre des petits enfans.svg“).
+- `books/fleuron.svg`: Chappell & Co. Fleuron (gemeinfrei, Wikimedia Commons „Chappell & Co fleuron.svg“).
