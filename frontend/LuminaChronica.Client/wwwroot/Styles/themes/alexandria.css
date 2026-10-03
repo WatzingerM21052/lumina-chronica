@@ -247,9 +247,24 @@ html[data-theme="alexandria"] .calendar-cell--level-2 { background: linear-gradi
 html[data-theme="alexandria"] .calendar-cell--level-3 { background: linear-gradient(160deg, #4e78b5, #36609e); }
 html[data-theme="alexandria"] .calendar-cell--level-4 { background: linear-gradient(160deg, #e7c66f, #a6802c); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 0 1px rgba(166, 128, 44, 0.25); }
 
-html[data-theme="alexandria"] .calendar-months span {
+html[data-theme="alexandria"] .calendar-months span,
+html[data-theme="alexandria"] .calendar-weekdays {
     color: #5d4a22;
 }
+
+/* The day's tooltip: a slip of papyrus with an ink date and gold pages. */
+html[data-theme="alexandria"] .calendar-tooltip {
+    border-color: rgba(150, 112, 40, 0.35);
+    background:
+        linear-gradient(180deg, rgba(253, 248, 235, 0.95), rgba(244, 233, 206, 0.95)),
+        url("../../images/themes/alexandria/papyrus.webp") center / 220px;
+    color: #2b2213;
+    box-shadow: 0 10px 24px -10px rgba(60, 40, 10, 0.55);
+}
+
+html[data-theme="alexandria"] .calendar-tooltip span { color: #8a6420; }
+html[data-theme="alexandria"] .calendar-tooltip small { color: #6e5a38; }
+html[data-theme="alexandria"] .calendar-cell.is-selected { outline-color: #1d3254; }
 
 /* ---------- Progress: a gilded thread ----------
    A drawn gold wire laid in an engraved hairline groove: no rounded pill,

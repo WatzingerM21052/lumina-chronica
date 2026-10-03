@@ -254,7 +254,10 @@ public class StatisticsPageTests : BunitContext
 
         var cut = Render<Statistics>();
 
-        var expectedLabel = $"{today:dd.MM.yyyy}: 3 Aktivität(en)";
+        string[] weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+        string[] months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+        var date = today.Date;
+        var expectedLabel = $"{weekdays[((int)date.DayOfWeek + 6) % 7]}, {date.Day}. {months[date.Month - 1]} {date.Year}: Gelesen";
         Assert.Contains($"role=\"img\" aria-label=\"{expectedLabel}\"", cut.Markup);
     }
 
@@ -436,7 +439,7 @@ public class StatisticsPageTests : BunitContext
         Assert.Equal("?year=2025", requestedQuery);
         var months = cut.FindAll(".calendar-months span").Select(m => m.TextContent).ToList();
         Assert.Equal(["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"], months);
-        Assert.Contains("aria-label=\"01.03.2025: 2 Aktivität(en)\"", cut.Markup);
+        Assert.Contains("aria-label=\"Sa, 1. März 2025: Gelesen\"", cut.Markup);
     }
 
     private void UseHandler(HttpMessageHandler handler)
@@ -446,5 +449,30 @@ public class StatisticsPageTests : BunitContext
         Services.AddSingleton<ApiClient>();
         Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
+    }
+
+    // Theme studio: each day carries date, pages and books for the hover
+    // card; a day without activity says so, padding cells carry nothing.
+    [Fact]
+    public void Statistics_CalendarCell_CarriesDayDetailForTheHoverCard()
+    {
+        var today = DateTime.UtcNow.Date;
+        var json = $$$"""
+            {"success":true,"data":{"booksRead":1,"booksInProgress":0,"pagesRead":10,"genreBreakdown":[],
+             "recentActivity":[],"readingCalendar":[{"date":"{{{today:yyyy-MM-dd}}}","count":2,"pages":24,"books":["Dune","Emma"]}]}}
+            """;
+        UseApiResponse(json);
+
+        var cut = Render<Statistics>();
+
+        var cell = cut.FindAll(".calendar-cell[data-date]").Last();
+        Assert.Equal("24 Seiten", cell.GetAttribute("data-main"));
+        // Studio scale: 21-40 pages is level 2, whatever the activity count.
+        Assert.Contains("calendar-cell--level-2", cell.ClassList);
+        Assert.Equal("Dune · Emma", cell.GetAttribute("data-books"));
+        Assert.EndsWith(": 24 Seiten, Dune · Emma", cell.GetAttribute("aria-label"));
+        var quietDay = cut.FindAll(".calendar-cell[data-date]").First();
+        Assert.Equal("Nicht gelesen", quietDay.GetAttribute("data-main"));
+        Assert.Null(quietDay.GetAttribute("title"));
     }
 }
