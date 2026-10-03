@@ -17,6 +17,9 @@
 }
 
 .project-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     flex-shrink: 0;
     margin-bottom: -1px;
     padding: var(--space-1) var(--space-2);
@@ -44,6 +47,32 @@
     border-bottom-color: var(--color-accent-text);
 }
 
+.project-tab ::deep .icon {
+    width: 1.05rem;
+    height: 1.05rem;
+    opacity: 0.75;
+}
+
+.project-tab.is-active ::deep .icon {
+    color: var(--color-accent-text);
+    opacity: 1;
+}
+
+/* How many entries the tab holds (data-count; none while loading or 0). */
+.project-tab[data-count]::after {
+    content: attr(data-count);
+    min-width: 1.5em;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+    background: color-mix(in srgb, var(--color-text-primary) 9%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .project-tab {
         transition: none;
@@ -63,9 +92,37 @@
 /* Overview tiles: one per tab, count over label; the whole tile opens it. */
 .project-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
     gap: var(--space-2);
     margin: var(--space-4) 0 0;
+}
+
+/* In the overview's header card: a 3 x 2 block on the right. */
+.project-overview > .project-stats {
+    flex: 0 0 auto;
+    width: min(27rem, 40%);
+    align-self: center;
+    margin: 0 0 0 auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 64rem) {
+    .project-overview {
+        flex-wrap: wrap;
+    }
+
+    .project-overview > .project-stats {
+        flex-basis: 100%;
+        width: 100%;
+        grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    }
+}
+
+@media (max-width: 40rem) {
+    .project-overview > .project-stats {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 .project-stat {
@@ -80,11 +137,21 @@
     color: var(--color-text-primary);
     font-family: inherit;
     cursor: pointer;
-    transition: border-color var(--motion-micro) var(--ease-standard), transform var(--motion-micro) var(--ease-standard);
+    transition: border-color var(--motion-micro) var(--ease-standard);
 }
 
 .project-stat:hover {
     border-color: var(--color-accent-text);
+}
+
+.project-stat ::deep .project-stat-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+    color: var(--color-text-secondary);
+}
+
+.project-stat:hover ::deep .project-stat-icon {
+    color: var(--color-accent-text);
 }
 
 .project-stat-value {
@@ -101,18 +168,8 @@
 }
 
 @media (max-width: 599.98px) {
-    /* .timeline prefix: the base rules come later in this file. The
-       line and card were indented 56px, a sixth of the screen. */
-    ol.timeline {
-        --timeline-indent: var(--space-3);
-    }
-
-    .timeline .timeline-event {
-        padding-left: var(--space-2);
-    }
-
     .timeline .timeline-event-card {
-        padding: var(--space-2);
+        padding: 0.75rem 0.85rem;
     }
 
     .project-stats {
@@ -209,38 +266,41 @@
     margin-top: var(--space-2);
 }
 
-/* --timeline-indent: the list's left padding; the line sits at
-   --space-1 inside it and each dot is placed from the same two values, so
-   dot and line stay centred on each other at any indent. (The dots used
-   to sit 17px right of the line.) */
+/* The timeline: a spine with a dot per event. On a wide screen the date
+   stands in its own column left of the spine (read down the dates like a
+   chronicle); on a phone it sits inside the card. Everything is placed
+   from --timeline-date (the date column, 0 on a phone) and --timeline-axis
+   (the spine's centre), so dot and line always stay centred on each
+   other. */
 .timeline {
-    --timeline-indent: var(--space-4);
+    --timeline-date: 0rem;
+    --timeline-axis: calc(var(--timeline-date) + 0.75rem);
     position: relative;
     list-style: none;
-    margin: var(--space-4) 0 0 0;
-    padding: 0 0 0 var(--timeline-indent);
+    margin: var(--space-3) 0 0 0;
+    padding: 0;
 }
 
 .timeline::before {
     content: "";
     position: absolute;
-    left: calc(var(--space-1) - 1px);
-    top: 0.4rem;
-    bottom: 0.4rem;
+    left: calc(var(--timeline-axis) - 1px);
+    top: 0.6rem;
+    bottom: 0.6rem;
     width: 2px;
     background: linear-gradient(to bottom, var(--color-gold-accent), var(--color-border));
 }
 
 .timeline-event {
     position: relative;
-    padding: 0 0 var(--space-4) var(--space-3);
+    padding: 0 0 var(--space-2) calc(var(--timeline-axis) + 1.5rem);
 }
 
 .timeline-event::before {
     content: "";
     position: absolute;
-    left: calc(var(--space-1) - var(--timeline-indent) - 6px);
-    top: 0.3rem;
+    left: calc(var(--timeline-axis) - 6px);
+    top: 1.15rem;
     width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -258,11 +318,10 @@
     align-items: start;
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: var(--space-2);
-    background: var(--color-bg-card);
+    background: color-mix(in srgb, var(--color-bg-card) 75%, transparent);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card);
-    padding: var(--space-2) var(--space-3);
+    padding: 0.85rem 1.1rem;
 }
 
 .timeline-event-card > :not(.timeline-event-controls) {
@@ -277,7 +336,8 @@
 /* The description is the last text: its own bottom margin doubled the
    card padding under it. */
 .timeline-event-card .user-text {
-    margin-bottom: 0;
+    margin: 0.35rem 0 0;
+    color: var(--color-text-secondary);
 }
 
 .timeline-event-date {
@@ -294,9 +354,9 @@
 
 .timeline-event-title {
     font-family: var(--font-family-display);
-    font-size: var(--font-size-h3);
+    font-size: 1.15rem;
     font-weight: 600;
-    margin: var(--space-1) 0;
+    margin: 0.2rem 0 0;
 }
 
 .timeline-event-controls {
@@ -305,6 +365,28 @@
     align-self: start;
     display: flex;
     gap: 4px;
+}
+
+@media (min-width: 720px) {
+    .timeline {
+        --timeline-date: 9.5rem;
+    }
+
+    /* The date leaves the card for its column, level with the dot. */
+    .timeline-event-date {
+        position: absolute;
+        left: 0;
+        top: 0.95rem;
+        width: calc(var(--timeline-date) - 0.5rem);
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .timeline-event-date + .timeline-event-title {
+        grid-column: 1;
+        align-self: center;
+        margin-top: 0;
+    }
 }
 
 /* File viewer (2026-10-02): images as a dense square grid, documents as
@@ -320,7 +402,7 @@
 
 .file-image-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
     gap: var(--space-2);
     margin: 0;
     padding: 0;
@@ -471,5 +553,58 @@ pre.file-viewer-text {
 
     .file-document-meta {
         display: none;
+    }
+}
+
+/* Linked books: the search across the width, the books as a cover grid,
+   "remove" a small icon on each cover (it was a big button under every
+   book). */
+.world-surface ::deep .project-book-search,
+.project-book-search {
+    max-width: none;
+    margin-bottom: var(--space-3);
+}
+
+.project-book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: var(--space-3) var(--space-2);
+}
+
+.project-book {
+    position: relative;
+    min-width: 0;
+}
+
+.project-book ::deep .book-card {
+    width: 100%;
+}
+
+.project-book-remove.btn {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    z-index: 1;
+    background: rgba(8, 6, 4, 0.7);
+    color: #fff;
+    border-color: transparent;
+    opacity: 0;
+    transition: opacity var(--motion-micro) var(--ease-standard);
+}
+
+.project-book:hover .project-book-remove.btn,
+.project-book:focus-within .project-book-remove.btn {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .project-book-remove.btn {
+        opacity: 1;
+    }
+}
+
+@media (max-width: 599.98px) {
+    .project-book-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

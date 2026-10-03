@@ -39,14 +39,14 @@ else
     {
         <h1 class="project-compact-title">@_project.Title</h1>
     }
+    @* Each tab with its icon and, once loaded, how many entries it holds
+       (data-count, drawn by CSS -- the tab's text stays its plain name). *@
     <div class="project-tabs" role="tablist">
-        <button type="button" class="project-tab @(_activeTab == "overview" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "overview" ? "true" : "false")" @onclick="@(() => _activeTab = "overview")">@I18n.T("projectDetail.tabOverview")</button>
-        <button type="button" class="project-tab @(_activeTab == "characters" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "characters" ? "true" : "false")" @onclick="@(() => _activeTab = "characters")">@I18n.T("projectDetail.tabCharacters")</button>
-        <button type="button" class="project-tab @(_activeTab == "map" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "map" ? "true" : "false")" @onclick="@(() => _activeTab = "map")">@I18n.T("projectDetail.tabMap")</button>
-        <button type="button" class="project-tab @(_activeTab == "timeline" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "timeline" ? "true" : "false")" @onclick="@(() => _activeTab = "timeline")">@I18n.T("projectDetail.tabTimeline")</button>
-        <button type="button" class="project-tab @(_activeTab == "lore" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "lore" ? "true" : "false")" @onclick="@(() => _activeTab = "lore")">@I18n.T("projectDetail.tabLore")</button>
-        <button type="button" class="project-tab @(_activeTab == "books" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "books" ? "true" : "false")" @onclick="@(() => _activeTab = "books")">@I18n.T("projectDetail.tabBooks")</button>
-        <button type="button" class="project-tab @(_activeTab == "files" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "files" ? "true" : "false")" @onclick="@(() => _activeTab = "files")">@I18n.T("projectDetail.tabFiles")</button>
+        @foreach (var (tab, icon, labelKey) in Tabs)
+        {
+            <button type="button" class="project-tab @(_activeTab == tab ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == tab ? "true" : "false")"
+                    data-count="@TabCount(tab)" @onclick="() => _activeTab = tab"><Icon Name="@icon" />@I18n.T(labelKey)</button>
+        }
     </div>
 
     @* Themed worlds: every tab but the overview (which has its own cards)
@@ -78,19 +78,22 @@ else
                     <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
                 </div>
             </div>
+
+            @* Design audit F3: what the project holds at a glance; each tile
+               opens its tab. Beside the title on a wide screen (the header
+               card's right half stood empty), below it otherwise. *@
+            <nav class="project-stats" aria-label="@I18n.T("projectDetail.statsLabel")">
+                @foreach (var (tab, count, labelKey) in ProjectStats)
+                {
+                    <button type="button" class="project-stat" @onclick="() => _activeTab = tab">
+                        <Icon Name="@TabIcon(tab)" Class="project-stat-icon" />
+                        <span class="project-stat-value">@count</span>
+                        <span class="project-stat-label">@I18n.T(labelKey)</span>
+                    </button>
+                }
+            </nav>
         </div>
 
-        @* Design audit F3: what the project holds at a glance; each tile
-           opens its tab. *@
-        <nav class="project-stats" aria-label="@I18n.T("projectDetail.statsLabel")">
-            @foreach (var (tab, count, labelKey) in ProjectStats)
-            {
-                <button type="button" class="project-stat" @onclick="() => _activeTab = tab">
-                    <span class="project-stat-value">@count</span>
-                    <span class="project-stat-label">@I18n.T(labelKey)</span>
-                </button>
-            }
-        </nav>
 
         @* UI/UX plan A3: edit in a dialog like book and shelf, instead of
            swapping the header for an inline form. Every way out except
@@ -554,7 +557,7 @@ else
             <h2>@I18n.T("projectDetail.linkedBooksTitle")</h2>
         </div>
 
-        <SearchInput Class="library-search-wrapper" Placeholder="@I18n.T("projectDetail.bookSearchPlaceholder")" Value="@_bookSearchTerm" OnInput="OnBookSearchInput">
+        <SearchInput Class="library-search-wrapper project-book-search" Placeholder="@I18n.T("projectDetail.bookSearchPlaceholder")" Value="@_bookSearchTerm" OnInput="OnBookSearchInput">
             @if (_bookSuggestions is { Count: > 0 })
             {
                 <ul class="library-search-suggestions">
@@ -592,12 +595,13 @@ else
         }
         else
         {
-            <div class="library-grid">
+            <div class="project-book-grid">
                 @foreach (var book in _linkedBooks)
                 {
-                    <div class="shelf-book-entry">
+                    <div class="project-book">
                         <BookCard Book="book" />
-                        <button type="button" class="btn shelf-book-remove" @onclick="() => RemoveBookAsync(book.Id)">@I18n.T("projectDetail.removeBookButton")</button>
+                        <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger project-book-remove" @onclick="() => RemoveBookAsync(book.Id)"
+                                title="@I18n.T("projectDetail.removeBookButton")"><Icon Name="remove" /><span class="visually-hidden">@I18n.T("projectDetail.removeBookButton")</span></button>
                     </div>
                 }
             </div>
@@ -786,6 +790,23 @@ else
     private bool _confirmingDelete;
 
     private string _activeTab = "overview";
+    private static readonly (string Tab, string Icon, string LabelKey)[] Tabs =
+    [
+        ("overview", "grid", "projectDetail.tabOverview"),
+        ("characters", "person", "projectDetail.tabCharacters"),
+        ("map", "location-pin", "projectDetail.tabMap"),
+        ("timeline", "calendar", "projectDetail.tabTimeline"),
+        ("lore", "scrolls", "projectDetail.tabLore"),
+        ("books", "book", "projectDetail.tabBooks"),
+        ("files", "document", "projectDetail.tabFiles"),
+    ];
+
+    private static string TabIcon(string tab) => Tabs.First(t => t.Tab == tab).Icon;
+
+    // The count on a tab once its list has loaded and holds something.
+    private string? TabCount(string tab) =>
+        ProjectStats.FirstOrDefault(s => s.Tab == tab) is { Tab: not null, Count: > 0 } stat ? stat.Count.ToString(CultureInfo.InvariantCulture) : null;
+
     private IEnumerable<(string Tab, int Count, string LabelKey)> ProjectStats =>
     [
         ("characters", _characters?.Count ?? 0, "projectDetail.tabCharacters"),

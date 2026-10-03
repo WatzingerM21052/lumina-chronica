@@ -191,6 +191,9 @@
     private string _searchTerm = string.Empty;
     private string _scope = "all";
     private bool _isSearching;
+    // A load is in flight: the lists on screen are the previous kind's, so
+    // "Mehr laden" waits (it would page from the wrong list).
+    private bool _isLoading;
     private ITimer? _searchDebounceTimer;
     private int _loadVersion;
     // null while the first load is in flight.
@@ -267,6 +270,7 @@
     {
         var version = ++_loadVersion;
         var term = Uri.EscapeDataString(_searchTerm.Trim());
+        _isLoading = true;
 
         var booksTask = ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?search={term}&sort={_sort}&pageSize={SizeFor("books")}");
         var projectsTask = ApiClient.GetAsync<DiscoverProjectListResponse>($"/api/discover/projects?search={term}&pageSize={SizeFor("projects")}");
@@ -281,6 +285,7 @@
         _projectResults = projects is { Success: true, Data: not null } ? projects.Data : new DiscoverProjectListResponse();
         _userResults = users is { Success: true, Data: not null } ? users.Data : new DiscoverUserListResponse();
         _isSearching = false;
+        _isLoading = false;
         StateHasChanged();
 
         if (_scope is "all" or "projects")
@@ -417,7 +422,7 @@
 
     private RenderFragment MoreButton(string scope, int shown, int total, string labelKey) => __builder =>
     {
-        if (shown < total)
+        if (shown < total && !_isLoading)
         {
             <button type="button" class="btn discover-show-more" @onclick="() => ShowMoreAsync(scope)">
                 @(_scope == "all" ? string.Format(I18n.T(labelKey), total) : I18n.T("discover.loadMore"))
