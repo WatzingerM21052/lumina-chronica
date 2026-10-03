@@ -43,10 +43,3 @@ export async function listProjectBooks(db: D1Database, ownerId: number, projectI
     return rows.results.map((row) => toBookSummary(row, ownerId));
 }
 
-// Used by deleteProject (projectService.ts) to clean up a project's book
-// links before the project row itself is deleted -- real D1 enforces
-// foreign keys, same lesson as deleteShelf. The linked books themselves are
-// untouched, same as deleteShelf leaving shelf_books' books alone.
-export async function deleteProjectBooksForProject(db: D1Database, projectId: number): Promise<void> {
-    await db.prepare("DELETE FROM project_books WHERE project_id = ?").bind(projectId).run();
-}

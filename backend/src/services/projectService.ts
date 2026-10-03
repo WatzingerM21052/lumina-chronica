@@ -8,13 +8,6 @@
 // analog (owner-scoped resource with an optional cover image).
 
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
-import { deleteCharactersForProject } from "./characterService";
-import { deleteLocationsForProject } from "./locationService";
-import { deleteTimelineEventsForProject } from "./timelineService";
-import { deleteLoreEntriesForProject } from "./loreService";
-import { deleteProjectFilesForProject } from "./projectFileService";
-import { deleteProjectBooksForProject } from "./projectBookService";
-import { deleteCharacterRelationshipsForProject } from "./characterRelationshipService";
 import { recordProjectPublicActivity } from "./activityService";
 import { NotFoundError } from "./errors";
 import { TEXT_LIMITS, assertMaxLengths } from "../utils/textLimits";
@@ -214,22 +207,37 @@ export async function deleteProject(db: D1Database, storage: R2Bucket, ownerId: 
     const row = await findOwnedProjectRow(db, ownerId, projectId);
     if (!row) throw new NotFoundError();
 
-    // Every sub-resource's cleanup runs before the DELETE below -- real D1
-    // enforces foreign keys, same lesson as deleteBook/deleteShelf.
-    // deleteCharacterRelationshipsForProject must run before
-    // deleteCharactersForProject removes the characters it points at.
-    await deleteCharacterRelationshipsForProject(db, projectId);
-    await deleteCharactersForProject(db, storage, projectId);
-    await deleteLocationsForProject(db, storage, projectId);
-    await deleteTimelineEventsForProject(db, projectId);
-    await deleteLoreEntriesForProject(db, projectId);
-    await deleteProjectFilesForProject(db, storage, projectId);
-    await deleteProjectBooksForProject(db, projectId);
-    await db.prepare("DELETE FROM profile_activities WHERE target_type = 'PROJECT' AND target_id = ?").bind(projectId).run();
-    await db.prepare("DELETE FROM comments WHERE target_type = 'PROJECT' AND target_id = ?").bind(projectId).run();
-    await db.prepare("DELETE FROM projects WHERE id = ?").bind(projectId).run();
+    // R2 keys first: once the rows are gone nothing points at the pictures
+    // and files any more.
+    const pictureRows = await db
+        .prepare(
+            `SELECT image_url AS key FROM characters WHERE project_id = ?1 AND image_url IS NOT NULL
+             UNION ALL SELECT image_url FROM locations WHERE project_id = ?1 AND image_url IS NOT NULL
+             UNION ALL SELECT file_url FROM project_files WHERE project_id = ?1`
+        )
+        .bind(projectId)
+        .all<{ key: string }>();
 
-    for (const key of [row.cover_url, row.map_url]) {
+    // One batch, so the project goes completely or not at all (review N-13;
+    // the same lesson as #477's deleteUser). Children first -- real D1
+    // enforces foreign keys -- and relationships before the characters they
+    // point at.
+    await db.batch([
+        db.prepare("DELETE FROM character_relationships WHERE project_id = ?").bind(projectId),
+        db.prepare("DELETE FROM characters WHERE project_id = ?").bind(projectId),
+        db.prepare("DELETE FROM locations WHERE project_id = ?").bind(projectId),
+        db.prepare("DELETE FROM timeline_events WHERE project_id = ?").bind(projectId),
+        db.prepare("DELETE FROM lore_entries WHERE project_id = ?").bind(projectId),
+        db.prepare("DELETE FROM project_files WHERE project_id = ?").bind(projectId),
+        db.prepare("DELETE FROM project_books WHERE project_id = ?").bind(projectId),
+        db.prepare("DELETE FROM profile_activities WHERE target_type = 'PROJECT' AND target_id = ?").bind(projectId),
+        db.prepare("DELETE FROM comments WHERE target_type = 'PROJECT' AND target_id = ?").bind(projectId),
+        db.prepare("DELETE FROM projects WHERE id = ?").bind(projectId),
+    ]);
+
+    // Storage after the rows: a failed delete here leaves an orphaned object,
+    // never a row pointing at a missing one.
+    for (const key of [row.cover_url, row.map_url, ...pictureRows.results.map((r) => r.key)]) {
         if (!key) continue;
         await storage.delete(key).catch((err) => {
             console.error(`Failed to delete R2 object ${key} after deleting project ${projectId}:`, err);

@@ -106,10 +106,3 @@ export async function deleteLoreEntry(db: D1Database, ownerId: number, projectId
     await db.prepare("DELETE FROM lore_entries WHERE id = ?").bind(entryId).run();
 }
 
-// Used by deleteProject (projectService.ts) to clean up a project's lore
-// entries before the project row itself is deleted -- real D1 enforces
-// foreign keys, same lesson as deleteCharactersForProject. No R2 objects to
-// clean up here -- lore entries have no image.
-export async function deleteLoreEntriesForProject(db: D1Database, projectId: number): Promise<void> {
-    await db.prepare("DELETE FROM lore_entries WHERE project_id = ?").bind(projectId).run();
-}

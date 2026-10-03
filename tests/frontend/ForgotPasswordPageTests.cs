@@ -45,7 +45,7 @@ public class ForgotPasswordPageTests : BunitContext
     }
 
     [Fact]
-    public void ForgotPassword_ClosingTheDialog_NavigatesHome()
+    public void ForgotPassword_ClosingTheDialog_LeadsBackToLogin()
     {
         RegisterServices(this, new FakeHttpMessageHandler("""{"success":true}"""));
         var navManager = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
@@ -55,6 +55,6 @@ public class ForgotPasswordPageTests : BunitContext
         cut.Find(".dialog-overlay").MouseDown();
         cut.Find(".dialog-overlay").Click();
 
-        Assert.Equal(navManager.BaseUri, navManager.Uri);
+        Assert.Equal(navManager.BaseUri + "login", navManager.Uri);
     }
 }

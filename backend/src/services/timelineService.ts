@@ -147,9 +147,3 @@ export async function moveTimelineEvent(db: D1Database, ownerId: number, project
     return listTimelineEvents(db, ownerId, projectId);
 }
 
-// Used by deleteProject (projectService.ts) to clean up a project's
-// timeline events before the project row itself is deleted -- real D1
-// enforces foreign keys, same lesson as deleteCharactersForProject.
-export async function deleteTimelineEventsForProject(db: D1Database, projectId: number): Promise<void> {
-    await db.prepare("DELETE FROM timeline_events WHERE project_id = ?").bind(projectId).run();
-}

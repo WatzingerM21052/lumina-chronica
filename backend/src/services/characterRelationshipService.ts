@@ -159,13 +159,6 @@ export async function deleteCharacterRelationship(db: D1Database, ownerId: numbe
     await db.prepare("DELETE FROM character_relationships WHERE id = ?").bind(relationshipId).run();
 }
 
-// Used by deleteProject (projectService.ts) to clean up a project's
-// relationships before the project row itself is deleted -- real D1
-// enforces foreign keys, same lesson as deleteCharactersForProject.
-export async function deleteCharacterRelationshipsForProject(db: D1Database, projectId: number): Promise<void> {
-    await db.prepare("DELETE FROM character_relationships WHERE project_id = ?").bind(projectId).run();
-}
-
 // Used by deleteCharacter (characterService.ts) -- a character being
 // deleted may still be referenced by relationships pointing at it from
 // either side, which real D1's foreign keys would otherwise reject.

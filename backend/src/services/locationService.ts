@@ -186,17 +186,3 @@ export async function getLocationImageObject(db: D1Database, storage: R2Bucket, 
     return storage.get(row.image_url);
 }
 
-// Used by deleteProject (projectService.ts) to clean up a project's
-// locations and their R2 images before the project row itself is deleted --
-// real D1 enforces foreign keys, same lesson as deleteCharactersForProject.
-export async function deleteLocationsForProject(db: D1Database, storage: R2Bucket, projectId: number): Promise<void> {
-    const rows = await db.prepare("SELECT image_url FROM locations WHERE project_id = ?").bind(projectId).all<{ image_url: string | null }>();
-    await db.prepare("DELETE FROM locations WHERE project_id = ?").bind(projectId).run();
-
-    for (const row of rows.results) {
-        if (!row.image_url) continue;
-        await storage.delete(row.image_url).catch((err) => {
-            console.error(`Failed to delete R2 object ${row.image_url} while deleting project ${projectId}'s locations:`, err);
-        });
-    }
-}

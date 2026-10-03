@@ -202,4 +202,32 @@ describe("DELETE /api/projects/:id with existing files", () => {
         const rows = await env.DB.prepare("SELECT COUNT(*) AS total FROM project_files WHERE project_id = ?").bind(projectId).first<{ total: number }>();
         expect(rows?.total).toBe(0);
     });
+
+    // Review N-13: the rows go in one batch, the stored objects after it.
+    it("removes the stored files and the character picture once the rows are gone", async () => {
+        const projectId = await createProject(tokenA);
+        const fileForm = new FormData();
+        fileForm.set("category", "DOCUMENT");
+        fileForm.set("file", new File(["notes"], "notes.md", { type: "text/markdown" }));
+        await app.request(`/api/projects/${projectId}/files`, { method: "POST", headers: { Authorization: `Bearer ${tokenA}` }, body: fileForm }, env);
+        const characterForm = new FormData();
+        characterForm.set("name", "Aldous");
+        characterForm.set("image", new File(["png"], "aldous.png", { type: "image/png" }));
+        await app.request(`/api/projects/${projectId}/characters`, { method: "POST", headers: { Authorization: `Bearer ${tokenA}` }, body: characterForm }, env);
+
+        const keys = await env.DB
+            .prepare("SELECT file_url AS key FROM project_files WHERE project_id = ?1 UNION ALL SELECT image_url FROM characters WHERE project_id = ?1")
+            .bind(projectId)
+            .all<{ key: string | null }>();
+        const stored = keys.results.map((r) => r.key).filter((k): k is string => !!k);
+        expect(stored).toHaveLength(2);
+        for (const key of stored) expect(await env.STORAGE.get(key)).not.toBeNull();
+
+        const deleteRes = await app.request(`/api/projects/${projectId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        expect(deleteRes.status).toBe(204);
+
+        for (const key of stored) expect(await env.STORAGE.get(key)).toBeNull();
+        const characters = await env.DB.prepare("SELECT COUNT(*) AS total FROM characters WHERE project_id = ?").bind(projectId).first<{ total: number }>();
+        expect(characters?.total).toBe(0);
+    });
 });
