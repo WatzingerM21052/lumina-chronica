@@ -97,7 +97,9 @@ html[data-theme="babylon"] .settings-card,
 html[data-theme="babylon"] .profile-card,
 html[data-theme="babylon"] .project-card,
 html[data-theme="babylon"] .book-card,
-html[data-theme="babylon"] .world-card {
+html[data-theme="babylon"] .world-card,
+html[data-theme="babylon"] .world-surface,
+html[data-theme="babylon"] .discover-section {
     background-color: rgba(19, 37, 34, 0.82);
     border-color: rgba(217, 176, 82, 0.2);
     box-shadow: var(--shadow-card);

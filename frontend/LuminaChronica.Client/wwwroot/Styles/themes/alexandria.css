@@ -101,7 +101,9 @@ html[data-theme="alexandria"] .stats-card,
 html[data-theme="alexandria"] .settings-card,
 html[data-theme="alexandria"] .profile-card,
 html[data-theme="alexandria"] .project-card,
-html[data-theme="alexandria"] .world-card {
+html[data-theme="alexandria"] .world-card,
+html[data-theme="alexandria"] .world-surface,
+html[data-theme="alexandria"] .discover-section {
     background:
         linear-gradient(180deg, rgba(253, 248, 235, 0.92), rgba(247, 238, 214, 0.92)),
         url("../../images/themes/alexandria/papyrus.webp") center / 360px,

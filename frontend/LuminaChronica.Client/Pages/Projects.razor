@@ -73,6 +73,10 @@
                ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
                OnConfirm="ConfirmDiscardCreate" OnCancel="() => _confirmingDiscardCreate = false" />
 
+@* Themed worlds: the page's content sits on one card like the dashboard's
+   (WorldBanner above). Under the classic themes this wrapper has no box
+   of its own (display: contents). *@
+<div class="world-surface">
 @if (_errorMessage is not null)
 {
     <p class="form-error">@_errorMessage</p>
@@ -96,6 +100,7 @@ else
         }
     </div>
 }
+</div>
 
 @code {
     private List<Project>? _projects;
