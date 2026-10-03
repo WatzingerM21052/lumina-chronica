@@ -3,22 +3,30 @@
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 
-<a class="project-card" href="@($"projects/{Character.ProjectId}/characters/{Character.Id}")">
-    <div class="project-card-cover">
+@* A compact character row-card (user feedback: text hung off the left
+   edge and long fields made cards endless): round portrait or initials on
+   the left, then the name, one line of age · origin and two lines of the
+   description -- every line clamped, so all cards keep one height. *@
+<a class="entity-card entity-card--character" href="@($"projects/{Character.ProjectId}/characters/{Character.Id}")">
+    <span class="entity-card-avatar">
         @if (_imageObjectUrl is not null)
         {
-            <img src="@_imageObjectUrl" alt="@Character.Name" />
+            <img src="@_imageObjectUrl" alt="" />
         }
         else
         {
-            <div class="project-card-cover-placeholder project-card-initials" aria-hidden="true">@CardInitials.Of(Character.Name)</div>
+            <span class="entity-card-initials" aria-hidden="true">@CardInitials.Of(Character.Name)</span>
         }
-    </div>
-    <div class="project-card-info">
-        <div class="project-card-title">@Character.Name</div>
-        @if (!string.IsNullOrWhiteSpace(Character.Origin))
+    </span>
+    <span class="entity-card-body">
+        <span class="entity-card-title">@Character.Name</span>
+        @if (TextExcerpt.Join(Character.Age, Character.Origin) is { } meta)
         {
-            <div class="project-card-type">@Character.Origin</div>
+            <span class="entity-card-meta">@meta</span>
         }
-    </div>
+        @if (TextExcerpt.Of(Character.Description ?? Character.Personality ?? Character.Biography) is { } excerpt)
+        {
+            <span class="entity-card-excerpt">@excerpt</span>
+        }
+    </span>
 </a>

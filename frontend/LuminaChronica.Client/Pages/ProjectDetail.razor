@@ -255,7 +255,7 @@ else
         }
         else
         {
-            <div class="library-grid">
+            <div class="entity-grid entity-grid--rows">
                 @foreach (var character in _characters)
                 {
                     <CharacterCard Character="character" />
@@ -362,14 +362,16 @@ else
         }
         else
         {
-            <div class="library-grid">
+            <div class="entity-grid entity-grid--media">
                 @foreach (var location in _locations)
                 {
-                    <div class="shelf-book-entry">
+                    @* The "place on map" action sits on the card's picture,
+                       outside the card's link. *@
+                    <div class="entity-tile">
                         <LocationCard Location="location" />
                         @if (location.X is null && _mapObjectUrl is not null)
                         {
-                            <button type="button" class="btn btn-icon btn-icon-sm shelf-book-remove" @onclick="() => _placingLocationId = location.Id" title="@I18n.T("projectDetail.placeOnMapButton")"><Icon Name="location-pin" /><span class="visually-hidden">@I18n.T("projectDetail.placeOnMapButton")</span></button>
+                            <button type="button" class="btn btn-icon btn-icon-sm entity-tile-action" @onclick="() => _placingLocationId = location.Id" title="@I18n.T("projectDetail.placeOnMapButton")"><Icon Name="location-pin" /><span class="visually-hidden">@I18n.T("projectDetail.placeOnMapButton")</span></button>
                         }
                     </div>
                 }
@@ -531,7 +533,7 @@ else
         }
         else
         {
-            <div class="library-grid">
+            <div class="entity-grid entity-grid--text">
                 @foreach (var entry in _loreEntries)
                 {
                     <LoreEntryCard Entry="entry" />

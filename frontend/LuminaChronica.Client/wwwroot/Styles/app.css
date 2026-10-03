@@ -1580,7 +1580,6 @@ select:focus-visible,
     }
 
     main .library-grid .book-card,
-    main .library-grid .project-card,
     main .library-raster .book-card {
         width: 100%;
         min-width: 0;
@@ -1590,11 +1589,6 @@ select:focus-visible,
     main .library-raster {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: var(--space-2) var(--space-1);
-    }
-
-    /* Landscape location cards: two per row. */
-    main .library-grid:has(.project-card--landscape) {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     main .library-grid--strip {
@@ -1614,8 +1608,7 @@ select:focus-visible,
         display: none;
     }
 
-    main .library-grid--strip > .book-card,
-    main .library-grid--strip > .project-card {
+    main .library-grid--strip > .book-card {
         flex: 0 0 7rem;
         width: 7rem;
         scroll-snap-align: start;
@@ -1662,13 +1655,11 @@ select:focus-visible,
 
     /* Smaller type under the smaller covers. */
     main .library-grid .book-card-title,
-    main .library-grid .project-card-title,
     main .library-raster .book-card-title {
         font-size: var(--font-size-small);
     }
 
     main .library-grid .book-card-author,
-    main .library-grid .project-card-type,
     main .library-raster .book-card-author {
         font-size: var(--font-size-caption);
     }
@@ -2373,12 +2364,6 @@ select:focus-visible,
     width: 10rem;
 }
 
-/* A location card is landscape (14rem): in the fixed 10rem book-width
-   wrapper it stuck 64px into the next card (user report: overlaps on the
-   project's places). The wrapper takes the card's width instead. */
-.shelf-book-entry:has(.project-card--landscape) {
-    width: auto;
-}
 
 /* The shelf's books sit a section-gap below its header. */
 .shelf-books {
@@ -4080,86 +4065,6 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     opacity: 0.6;
 }
 
-.project-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    text-decoration: none;
-    color: var(--color-text-primary);
-    width: 10rem;
-}
-
-/* Portrait like a book cover (design audit F4): projects, characters and
-   lore entries sit in the same grids and at the same size as books.
-   Locations stay landscape -- place images are usually landscapes. */
-.project-card-cover {
-    aspect-ratio: 2 / 3;
-    border-radius: var(--radius, 4px);
-    overflow: hidden;
-    background-color: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-card);
-    transition: box-shadow 0.15s ease, transform 0.15s ease;
-}
-
-.project-card:hover .project-card-cover {
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
-}
-
-.project-card-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.project-card-cover-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text-disabled);
-}
-
-.project-card-cover-placeholder svg {
-    width: 40%;
-    height: 40%;
-}
-
-.project-card--landscape {
-    width: 14rem;
-}
-
-.project-card--landscape .project-card-cover {
-    aspect-ratio: 4 / 3;
-}
-
-/* No image: the name's initials in the display face, brass on a faint
-   brass wash -- tells the cards apart where one grey icon on every card
-   did not. */
-.project-card-initials {
-    font-family: var(--font-family-display);
-    font-size: 2.25rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--color-accent-text);
-    background: linear-gradient(160deg, color-mix(in srgb, var(--color-accent-text) 14%, var(--color-bg-card)), var(--color-bg-card));
-}
-
-.project-card-title {
-    font-family: var(--font-family-display);
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.project-card-type {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-small);
-}
-
 /* Preference rows (settings; plan A7): label and description on the
    left, a switch on the right, a hairline between rows. The whole row is
    the <label>, so it's one big tap target. */
@@ -4686,7 +4591,7 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .world-banner + .page
 }
 
 /* Cards everywhere share the dashboard's softer corners. */
-html:is([data-theme="babylon"], [data-theme="alexandria"]) :is(.stats-card, .settings-card, .profile-card, .project-card, .dashboard-stat) {
+html:is([data-theme="babylon"], [data-theme="alexandria"]) :is(.stats-card, .settings-card, .profile-card, .dashboard-stat) {
     border-radius: 16px;
 }
 
@@ -4972,4 +4877,243 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .lore-content {
 
 .file-upload-item--uploading {
     border-color: var(--color-accent-text);
+}
+
+/* ---------- Entity cards: projects, characters, places, lore ----------
+   Real cards (user feedback: text hung off the edge, long fields made
+   cards endless): padding all round, every line clamped, a grid that
+   fills the width. Characters are compact row-cards (portrait left, many
+   fit at once); places and projects lead with a wide picture; lore is a
+   text card with a preview. Theme files only change the surface. */
+.entity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+    gap: 0.9rem;
+}
+
+.entity-grid--media {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+}
+
+.entity-grid--text {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+}
+
+.entity-grid > * {
+    min-width: 0;
+}
+
+.entity-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card);
+    color: var(--color-text-primary);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.entity-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--color-accent-text) 45%, var(--color-border));
+    box-shadow: var(--shadow-card-hover);
+}
+
+.entity-card:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+}
+
+.entity-card-media {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-accent-text) 10%, var(--color-bg-card));
+}
+
+.entity-card-media img,
+.entity-card-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.entity-card-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-family: var(--font-family-display);
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-accent-text);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-accent-text) 16%, var(--color-bg-card)), var(--color-bg-card));
+}
+
+.entity-card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+    padding: 0.8rem 0.95rem 0.95rem;
+}
+
+.entity-card-title {
+    overflow: hidden;
+    font-family: var(--font-family-display);
+    font-size: 1.02rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.entity-card-meta {
+    overflow: hidden;
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.entity-card-excerpt {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: var(--font-size-small);
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.entity-card-chip {
+    align-self: flex-start;
+    padding: 0.08rem 0.55rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 0.72rem;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.entity-card-chip--on {
+    border-color: color-mix(in srgb, var(--color-accent-text) 55%, transparent);
+    color: var(--color-accent-text);
+}
+
+/* Characters: portrait left, text right, one fixed row height. */
+.entity-card--character {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.85rem;
+    min-height: 6.5rem;
+    padding: 0.85rem 0.95rem;
+}
+
+.entity-card--character .entity-card-body {
+    padding: 0;
+    gap: 0.2rem;
+}
+
+.entity-card-avatar {
+    flex: 0 0 auto;
+    width: 4.25rem;
+    height: 4.25rem;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+}
+
+.entity-card-avatar img {
+    object-position: center 20%;
+}
+
+.entity-card-avatar .entity-card-initials {
+    font-size: 1.25rem;
+}
+
+/* Lore: a mark, the title over two lines at most, three lines of text. */
+.entity-card--lore .entity-card-body {
+    gap: 0.45rem;
+    padding: 1rem 1.05rem 1.1rem;
+}
+
+.entity-card--lore .entity-card-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+}
+
+.entity-card--lore .entity-card-excerpt {
+    -webkit-line-clamp: 3;
+}
+
+.entity-card-mark {
+    display: inline-flex;
+    width: 1.6rem;
+    height: 1.6rem;
+    color: var(--color-accent-text);
+}
+
+.entity-card-mark svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* A card with an action button on top of its picture (place on map). */
+.entity-tile {
+    position: relative;
+}
+
+.entity-tile > .entity-tile-action.btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+    box-shadow: var(--shadow-card);
+}
+
+/* Home's projects strip (classic themes): fixed-width cards in a row. */
+.library-grid--strip > .entity-card {
+    flex: 0 0 15rem;
+    width: 15rem;
+}
+
+@media (max-width: 599.98px) {
+    main .library-grid--strip > .entity-card {
+        flex: 0 0 13rem;
+        width: 13rem;
+        scroll-snap-align: start;
+    }
+
+    .entity-card--character {
+        min-height: 5.75rem;
+    }
+
+    .entity-card-avatar {
+        width: 3.6rem;
+        height: 3.6rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .entity-card {
+        transition: none;
+    }
+
+    .entity-card:hover {
+        transform: none;
+    }
 }
