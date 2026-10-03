@@ -1155,6 +1155,39 @@ public class ProjectDetailPageTests : BunitContext
         Assert.Equal("Aetherfall", cut.Find("h1.project-compact-title").TextContent);
     }
 
+    // Each tab carries an icon and, once its list holds something, the
+    // count as data-count (drawn by CSS, so the tab's text stays its name).
+    [Fact]
+    public void ProjectDetail_Tabs_ShowAnIconAndTheCountOfFilledLists()
+    {
+        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/comments", EmptyCommentsJson)
+            .WhenPathEndsWith(
+                "/characters",
+                """{"success":true,"data":[{"id":5,"projectId":1,"name":"Elarion","description":null,"imageUrl":null,"age":null,"origin":null,"personality":null,"biography":null,"createdAt":"2026-01-01"}]}""")
+            .WhenPathEndsWith("/locations", EmptyLocationsJson)
+            .WhenPathEndsWith("/timeline", EmptyTimelineJson)
+            .WhenPathEndsWith("/lore", EmptyLoreJson)
+            .WhenPathEndsWith("/files", EmptyFilesJson)
+            .WhenPathEndsWith("/books", EmptyBooksJson)
+            .WhenPathEndsWith("/projects/1", ProjectJson);
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+        Services.AddSingleton<ElementMetricsService>();
+        UseAuthenticatedUser();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+
+        var tabs = cut.FindAll(".project-tabs [role=tab]");
+        Assert.All(tabs, t => Assert.NotNull(t.QuerySelector("svg")));
+        Assert.Equal("Charaktere", tabs[1].TextContent.Trim());
+        Assert.Equal("1", tabs[1].GetAttribute("data-count"));
+        // Nothing to count on the overview, and an empty list shows no "0".
+        Assert.Null(tabs[0].GetAttribute("data-count"));
+        Assert.Null(tabs[3].GetAttribute("data-count"));
+    }
+
     // User request: up to ten files in one go, the kind taken from each
     // file's extension, and anything the backend would refuse named with
     // its reason before upload.
