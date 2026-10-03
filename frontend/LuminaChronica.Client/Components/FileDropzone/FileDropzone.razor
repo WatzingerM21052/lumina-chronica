@@ -3,12 +3,25 @@
 @* A file picker styled as the app's dropzone (click or drag a file onto it),
    instead of the browser's bare "Datei auswählen / Keine ausgewählt" input.
    Shows the chosen file's name once one is picked (UI/UX plan A5). The
-   parent keeps the IBrowserFile from OnChange, as with a plain InputFile. *@
+   parent keeps the IBrowserFile from OnChange, as with a plain InputFile.
+   With Multiple it takes several files at once (the parent reads them with
+   e.GetMultipleFiles); Hint states what may go in -- formats, sizes. *@
 <div class="dropzone @(_isDragging ? "dropzone--active" : "") @(SelectedFileName is not null ? "dropzone--filled" : "")"
      @ondragenter="() => _isDragging = true" @ondragleave="() => _isDragging = false"
      @ondragover:preventDefault @ondrop="() => _isDragging = false">
-    <InputFile id="@Id" accept="@Accept" OnChange="OnChange" />
+    @if (Multiple)
+    {
+        <InputFile id="@Id" accept="@Accept" OnChange="OnChange" multiple aria-describedby="@HintId" />
+    }
+    else
+    {
+        <InputFile id="@Id" accept="@Accept" OnChange="OnChange" aria-describedby="@HintId" />
+    }
     <span class="dropzone-label">@(SelectedFileName ?? Label)</span>
+    @if (Hint is not null)
+    {
+        <span class="dropzone-hint" id="@HintId">@Hint</span>
+    }
 </div>
 
 @code {
@@ -27,6 +40,16 @@
 
     [Parameter]
     public EventCallback<InputFileChangeEventArgs> OnChange { get; set; }
+
+    // Several files in one pick (or drop).
+    [Parameter]
+    public bool Multiple { get; set; }
+
+    // A line under the label, e.g. the allowed formats and sizes.
+    [Parameter]
+    public string? Hint { get; set; }
+
+    private string? HintId => Hint is null ? null : $"{Id}-hint";
 
     private bool _isDragging;
 }

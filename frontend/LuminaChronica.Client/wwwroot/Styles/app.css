@@ -4907,3 +4907,69 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .lore-content {
     box-sizing: border-box;
     width: 100%;
 }
+
+/* Formats/sizes line under a dropzone's label (the dropzone lays out in
+   a row, so a hint turns it into a centred column). */
+.dropzone:has(.dropzone-hint) {
+    flex-direction: column;
+    text-align: center;
+}
+
+.dropzone-hint {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: var(--font-size-caption, 0.75rem);
+    color: var(--color-text-muted);
+    pointer-events: none;
+}
+
+/* Project file upload: one row per chosen file with its own status. */
+.file-upload-list {
+    display: grid;
+    gap: 0.35rem;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.file-upload-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    font-size: var(--font-size-small);
+}
+
+.file-upload-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.file-upload-meta,
+.file-upload-status {
+    white-space: nowrap;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.file-upload-item--done .file-upload-status {
+    color: var(--color-success, #3f7d4a);
+}
+
+.file-upload-item--failed,
+.file-upload-item--rejected {
+    border-color: color-mix(in srgb, var(--color-error, #a33) 45%, transparent);
+}
+
+.file-upload-item--failed .file-upload-status,
+.file-upload-item--rejected .file-upload-status {
+    color: var(--color-error, #a33);
+}
+
+.file-upload-item--uploading {
+    border-color: var(--color-accent-text);
+}

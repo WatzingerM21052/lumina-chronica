@@ -15,8 +15,11 @@
             <img src="@image.Url" alt="@image.Name" />
             @if (Images.Count > 1)
             {
-                <button type="button" class="lightbox-arrow lightbox-arrow--previous" aria-label="@I18n.T("lightbox.previous")" @onclick="() => StepAsync(-1)">‹</button>
-                <button type="button" class="lightbox-arrow lightbox-arrow--next" aria-label="@I18n.T("lightbox.next")" @onclick="() => StepAsync(1)">›</button>
+                @* Each arrow is the whole left/right edge of the stage, so a
+                   click anywhere along it flips -- the round mark is only
+                   its visible part, and it stays put whatever the image's size. *@
+                <button type="button" class="lightbox-arrow lightbox-arrow--previous" aria-label="@I18n.T("lightbox.previous")" @onclick="() => StepAsync(-1)"><span class="lightbox-arrow-mark" aria-hidden="true">‹</span></button>
+                <button type="button" class="lightbox-arrow lightbox-arrow--next" aria-label="@I18n.T("lightbox.next")" @onclick="() => StepAsync(1)"><span class="lightbox-arrow-mark" aria-hidden="true">›</span></button>
             }
         </div>
         <div class="lightbox-bar">

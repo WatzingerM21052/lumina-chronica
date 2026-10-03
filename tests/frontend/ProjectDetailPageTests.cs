@@ -1154,4 +1154,66 @@ public class ProjectDetailPageTests : BunitContext
         Assert.Equal("true", cut.FindAll(".project-tabs [role=tab]")[2].GetAttribute("aria-selected"));
         Assert.Equal("Aetherfall", cut.Find("h1.project-compact-title").TextContent);
     }
+
+    // User request: up to ten files in one go, the kind taken from each
+    // file's extension, and anything the backend would refuse named with
+    // its reason before upload.
+    [Fact]
+    public void ProjectDetail_FileUpload_TakesSeveralFiles_SortsOutTheWrongOnes_AndUploadsTheRest()
+    {
+        var posted = new List<string>();
+        var handler = new RoutedFakeHttpMessageHandler()
+            .When(r => r.Method == HttpMethod.Post && r.RequestUri!.AbsolutePath.EndsWith("/files"), r =>
+            {
+                posted.Add(r.Content!.ReadAsStringAsync().Result);
+                return RoutedFakeHttpMessageHandler.JsonResponse("""{"success":true,"data":{"id":9,"projectId":1,"name":"x","category":"IMAGE","size":1,"url":"/api/projects/1/files/9/content","createdAt":"2026-01-01"}}""");
+            });
+        foreach (var (suffix, json) in new[] { ("/comments", EmptyCommentsJson), ("/files", EmptyFilesJson), ("/characters", EmptyCharactersJson), ("/locations", EmptyLocationsJson),
+                     ("/timeline", EmptyTimelineJson), ("/lore", EmptyLoreJson), ("/books", EmptyBooksJson), ("/projects/1", ProjectJson) })
+        {
+            handler = handler.WhenPathEndsWith(suffix, json);
+        }
+        UseFileHandler(handler);
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
+        cut.Find("#add-file-button").Click();
+
+        Assert.Contains("JPG, PNG, WebP", cut.Find(".dropzone-hint").TextContent);
+        var input = cut.FindComponents<Microsoft.AspNetCore.Components.Forms.InputFile>()
+            .Single(c => c.Instance.AdditionalAttributes?.TryGetValue("id", out var id) == true && (string)id == "file-upload");
+        input.UploadFiles(
+            InputFileContent.CreateFromText("map", "map.png", contentType: "image/png"),
+            InputFileContent.CreateFromText("# Notes", "notes.md", contentType: "text/markdown"),
+            InputFileContent.CreateFromText("MZ", "tool.exe", contentType: "application/octet-stream"));
+
+        var rows = cut.FindAll(".file-upload-item");
+        Assert.Equal(3, rows.Count);
+        Assert.Contains("Format nicht erlaubt", cut.Find(".file-upload-item--rejected").TextContent);
+        Assert.Contains("2 hochladen", cut.Find("button[form='create-file-form']").TextContent);
+
+        cut.Find("#create-file-form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, posted.Count), TimeSpan.FromSeconds(2));
+        Assert.Contains(posted, body => body.Contains("IMAGE") && body.Contains("map.png"));
+        Assert.Contains(posted, body => body.Contains("DOCUMENT") && body.Contains("notes.md"));
+        // The rejected one keeps the dialog open so it stays visible.
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".file-upload-item--done").Count), TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void ProjectDetail_FileUpload_MoreThanTen_TakesTheFirstTenAndSaysSo()
+    {
+        UseDefaultRoutes();
+
+        var cut = Render<ProjectDetail>(parameters => parameters.Add(p => p.Id, 1));
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Dateien").Click();
+        cut.Find("#add-file-button").Click();
+        var input = cut.FindComponents<Microsoft.AspNetCore.Components.Forms.InputFile>()
+            .Single(c => c.Instance.AdditionalAttributes?.TryGetValue("id", out var id) == true && (string)id == "file-upload");
+        input.UploadFiles(Enumerable.Range(1, 12).Select(i => InputFileContent.CreateFromText("x", $"note{i}.txt", contentType: "text/plain")).ToArray());
+
+        Assert.Equal(10, cut.FindAll(".file-upload-item").Count);
+        Assert.Contains("Höchstens 10 Dateien", cut.Find("#create-file-form .form-error").TextContent);
+    }
 }
