@@ -19,7 +19,7 @@
 @inject TimeProvider TimeProvider
 
 <PageTitle>@(_project?.Title ?? I18n.T("projectDetail.defaultTitle")) — Lumina Chronica</PageTitle>
-<WorldBackdrop Kind="project" ImageUrl="@_coverObjectUrl" />
+<WorldBackdrop Kind="project" ImageUrl="@_coverObjectUrl" Pending="@(_project is null || (_project.CoverUrl is not null && _coverObjectUrl is null))" />
 
 <a class="back-link" href="projects">@I18n.T("projectDetail.backLink")</a>
 
@@ -49,6 +49,9 @@ else
         <button type="button" class="project-tab @(_activeTab == "files" ? "is-active" : "")" role="tab" aria-selected="@(_activeTab == "files" ? "true" : "false")" @onclick="@(() => _activeTab = "files")">@I18n.T("projectDetail.tabFiles")</button>
     </div>
 
+    @* Themed worlds: every tab but the overview (which has its own cards)
+       sits on one content card; display: contents elsewhere. *@
+    <div class="world-surface @(_activeTab == "overview" ? "world-surface--bare" : null)">
     @if (_activeTab == "overview")
     {
         <div class="book-detail project-overview">
@@ -729,6 +732,7 @@ else
                            OnConfirm="DeleteProjectFileAsync" OnCancel="() => _confirmingFileDeleteId = null" />
         }
     }
+    </div>
 }
 
 

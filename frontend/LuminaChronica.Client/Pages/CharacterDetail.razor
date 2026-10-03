@@ -12,7 +12,7 @@
 @inject II18nService I18n
 
 <PageTitle>@(_character?.Name ?? I18n.T("characterDetail.defaultTitle")) — Lumina Chronica</PageTitle>
-<WorldBackdrop Kind="character" ImageUrl="@_imageObjectUrl" />
+<WorldBackdrop Kind="character" ImageUrl="@_imageObjectUrl" Pending="@(_character is null || (_character.ImageUrl is not null && _imageObjectUrl is null))" />
 
 <a class="back-link" href="@($"projects/{ProjectId}")">@I18n.T("characterDetail.backLink")</a>
 

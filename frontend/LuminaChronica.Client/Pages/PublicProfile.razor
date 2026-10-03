@@ -11,7 +11,7 @@
 @inject II18nService I18n
 
 <PageTitle>@(_profile?.Username ?? Username) — Lumina Chronica</PageTitle>
-<WorldBackdrop Kind="profile" ImageUrl="@_profile?.AvatarUrl" />
+<WorldBackdrop Kind="profile" ImageUrl="@_profile?.AvatarUrl" Pending="@(_profile is null)" />
 
 @if (_notFound)
 {

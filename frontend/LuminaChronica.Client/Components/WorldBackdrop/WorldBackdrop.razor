@@ -5,10 +5,12 @@
    the full width behind the top of the page, heavily blurred and tinted in
    the theme's colours, fading into the page. The page's own header (cover,
    title, actions) stays as it is and sits on it as a card. Without a
-   picture the theme's own texture stands in. Hidden under the classic
-   themes; purely decorative, so hidden from assistive tech. *@
-<div class="world-backdrop" data-kind="@Kind" aria-hidden="true">
-    <div class="world-backdrop-image @(ImageStyle is null ? "world-backdrop-image--texture" : null)" style="@ImageStyle"></div>
+   picture the theme's own texture stands in -- but only once it's clear
+   there is none: while the entry or its picture is still loading only the
+   shade shows, then the picture fades in. Hidden under the classic themes;
+   purely decorative, so hidden from assistive tech. *@
+<div class="world-backdrop @(Pending ? "is-pending" : null)" data-kind="@Kind" aria-hidden="true">
+    <div class="world-backdrop-image @(!Pending && ImageStyle is null ? "world-backdrop-image--texture" : null)" style="@ImageStyle"></div>
     <div class="world-backdrop-shade"></div>
 </div>
 
@@ -18,6 +20,9 @@
 
     // An object URL (blob:) or same-origin URL of the entry's picture.
     [Parameter] public string? ImageUrl { get; set; }
+
+    // True while the entry, or a picture it is known to have, is loading.
+    [Parameter] public bool Pending { get; set; }
 
     // Only blob:/relative URLs come in here; quotes would break out of url().
     private string? ImageStyle => ImageUrl is { } url && !url.Contains('\'') && !url.Contains('"') && !url.Contains(')')
