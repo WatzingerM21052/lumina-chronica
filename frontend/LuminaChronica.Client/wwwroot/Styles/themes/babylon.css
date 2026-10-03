@@ -322,3 +322,56 @@ html[data-theme="babylon"] .home-hero-cta-go {
 html[data-theme="babylon"] .world-goal-text b {
     color: #f3ead2;
 }
+
+/* ---------- Page banners (WorldBanner) ----------
+   One picture per page (CREDITS.md); the plain rule is the fallback
+   for a page without its own. */
+html[data-theme="babylon"] .world-banner-image {
+    background: url("../../images/themes/babylon/glazed_bricks.webp") center / 640px;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="library"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_ishtar_dragon.webp") 60% 46% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="shelves"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_nebuchadnezzar_cylinder.webp") 70% 50% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="statistics"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_cuneiform_stars.webp") 70% 50% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="discover"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_walls.webp") 70% 30% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="projects"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_tower_of_babel.webp") 50% 45% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="profile"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_babel_print.webp") 60% 40% / cover;
+}
+
+html[data-theme="babylon"] .world-banner[data-page="offline"] .world-banner-image {
+    background: url("../../images/themes/babylon/banner_birs_nimrud.webp") 60% 60% / cover;
+}
+
+html[data-theme="babylon"] .world-banner-shade {
+    background: linear-gradient(90deg, rgba(8, 22, 21, 0.94) 0%, rgba(8, 22, 21, 0.72) 34%, rgba(8, 22, 21, 0.08) 68%);
+}
+
+html[data-theme="babylon"] .world-banner-content h1 {
+    font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+    color: #f3ead2;
+}
+
+html[data-theme="babylon"] .world-banner-eyebrow { color: var(--color-gold-accent); }
+html[data-theme="babylon"] .world-banner-subtitle { color: rgba(243, 234, 210, 0.82); }
+
+@media (max-width: 599.98px) {
+    html[data-theme="babylon"] .world-banner-shade {
+        background: linear-gradient(0deg, rgba(8, 22, 21, 0.9) 10%, rgba(8, 22, 21, 0.5) 60%, rgba(8, 22, 21, 0.15));
+    }
+}

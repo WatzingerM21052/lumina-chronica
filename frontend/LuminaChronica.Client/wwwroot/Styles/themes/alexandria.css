@@ -558,3 +558,60 @@ html[data-theme="alexandria"] .world-goal-text b {
 html[data-theme="alexandria"] .home-hero {
     background-color: transparent;
 }
+
+/* ---------- Page banners (WorldBanner) ----------
+   One picture per page (CREDITS.md); the plain rule is the fallback
+   for a page without its own. */
+html[data-theme="alexandria"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_pharos.webp") 60% 35% / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="library"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_leiden_library.webp") 50% 40% / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="shelves"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_pantheon_interior.webp") center / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="statistics"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_cellarius.webp") 70% 45% / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="discover"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_ptolemy_map.webp") 60% 40% / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="projects"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_pharos.webp") 60% 35% / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="settings"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_pantheon_portico.webp") center / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="profile"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_colossus.webp") center / cover;
+}
+
+html[data-theme="alexandria"] .world-banner[data-page="offline"] .world-banner-image {
+    background: url("../../images/themes/alexandria/banner_mausoleum.webp") center / cover;
+}
+
+html[data-theme="alexandria"] .world-banner-shade {
+    background: linear-gradient(90deg, rgba(241, 233, 214, 0.96) 0%, rgba(241, 233, 214, 0.84) 34%, rgba(241, 233, 214, 0.06) 70%);
+}
+
+html[data-theme="alexandria"] .world-banner-content h1 {
+    font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+    color: #1d3254;
+}
+
+html[data-theme="alexandria"] .world-banner-eyebrow { color: #8f6c22; }
+html[data-theme="alexandria"] .world-banner-subtitle { color: #3b3222; }
+
+@media (max-width: 599.98px) {
+    html[data-theme="alexandria"] .world-banner-shade {
+        background: linear-gradient(0deg, rgba(239, 231, 214, 0.95) 10%, rgba(241, 233, 214, 0.75) 60%, rgba(241, 233, 214, 0.25));
+    }
+}
