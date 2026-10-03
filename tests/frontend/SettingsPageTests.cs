@@ -11,21 +11,14 @@ namespace LuminaChronica.Client.Tests;
 // added below the pre-existing theme picker.
 public class SettingsPageTests : BunitContext
 {
-    private class FakeThemeService : IThemeService
-    {
-        public string Theme = "classic-library";
-        public Task<string> GetThemeAsync() => Task.FromResult(Theme);
-        public Task SetThemeAsync(string theme) { Theme = theme; return Task.CompletedTask; }
-    }
-
     private const string AllEnabledPreferencesJson = """{"success":true,"data":{"FOLLOW":true,"COMMENT":true,"RATING":true,"SHARE":true,"ACTIVITY_RATING":true,"ACTIVITY_RATING_STARS":true}}""";
 
-    private RoutedFakeHttpMessageHandler UseHandler(RoutedFakeHttpMessageHandler handler)
+    private RoutedFakeHttpMessageHandler UseHandler(RoutedFakeHttpMessageHandler handler, string theme = "classic-library")
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
-        Services.AddSingleton<IThemeService>(new FakeThemeService());
+        Services.AddSingleton<IThemeService>(new FakeThemeService(theme));
         Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<ToastService>();
         // Loose so tests unrelated to the shelf-cover-text preference don't
@@ -215,5 +208,47 @@ public class SettingsPageTests : BunitContext
         await cut.InvokeAsync(() => cut.FindAll(".theme-picker button").Single(b => b.TextContent == "English").Click());
 
         Assert.Equal("""{"language":"en"}""", sentBody);
+    }
+
+    // The home scroll shelf belongs to the Alexandria theme, so its switch
+    // only appears there.
+    [Fact]
+    public void Settings_HomeScrollShelfSwitch_IsHiddenOutsideAlexandria()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson), "babylon");
+
+        var cut = Render<Settings>();
+
+        Assert.Empty(cut.FindAll("label.home-scroll-shelf-row"));
+    }
+
+    [Fact]
+    public void Settings_HomeScrollShelfSwitch_InAlexandria_IsOnWhenNeverChosen()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson), "alexandria");
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<bool?>("getHomeScrollShelf", _ => true)
+            .SetResult(null);
+
+        var cut = Render<Settings>();
+
+        Assert.True(cut.Find("label.home-scroll-shelf-row input[type=checkbox]").HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void Settings_TogglingHomeScrollShelfSwitch_Persists()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson), "alexandria");
+        JSInterop.SetupModule("./js/libraryPreferences.js")
+            .Setup<bool?>("getHomeScrollShelf", _ => true)
+            .SetResult(null);
+        var setHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setHomeScrollShelf", _ => true);
+
+        var cut = Render<Settings>();
+        cut.Find("label.home-scroll-shelf-row input[type=checkbox]").Change(false);
+
+        var invocation = Assert.Single(setHandler.Invocations);
+        Assert.Equal(false, invocation.Arguments[0]);
+        Assert.False(cut.Find("label.home-scroll-shelf-row input[type=checkbox]").HasAttribute("checked"));
     }
 }

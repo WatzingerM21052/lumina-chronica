@@ -1,0 +1,121 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* Alexandria's library (theme studio v4): papyrus scrolls lying on cedar
+   boards. Each scroll's hanging tag (a sillybos, as on the scrolls of
+   Alexandria) names the book; its wax seal shows the genre. The look lives
+   in themes/alexandria.css -- this component is only rendered while that
+   theme is active. *@
+<div class="scroll-shelf">
+    <div class="scroll-wall">
+        @foreach (var book in Books)
+        {
+            var seal = SealColor(book.Genre);
+            var label = string.IsNullOrWhiteSpace(book.Author) ? book.Title : $"{book.Title} – {book.Author}";
+            if (!string.IsNullOrWhiteSpace(book.Genre))
+            {
+                label += $", {book.Genre.Trim()}";
+            }
+            <a @key="book.Id" class="book-scroll" href="@($"library/books/{book.Id}")" aria-label="@label">
+                <span class="scroll-cylinder" style="@CylinderStyle(book, seal)"><span class="scroll-band"></span></span>
+                <span class="scroll-tag" style="@TagStyle(book, seal)" aria-hidden="true">
+                    <b>@book.Title</b>
+                    @if (!string.IsNullOrWhiteSpace(book.Author))
+                    {
+                        <small>@book.Author</small>
+                    }
+                </span>
+            </a>
+        }
+    </div>
+    @if (LegendGenres.Count > 0)
+    {
+        <ul class="scroll-legend" aria-label="@I18n.T("scrollShelf.legendLabel")">
+            @foreach (var genre in LegendGenres)
+            {
+                <li><i style="--seal: @SealColor(genre)"></i>@genre</li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Book> Books { get; set; } = [];
+
+    // The library's genre list (from /api/books/facets). A genre's seal is
+    // its position in this list, so colours stay put across pages and never
+    // repeat until the palette runs out -- a hash of the name would put two
+    // of six genres on the same colour most of the time.
+    [Parameter]
+    public IReadOnlyList<string> Genres { get; set; } = [];
+
+    // Sealing-wax colours: oxblood, lapis, verdigris, ochre, murex purple,
+    // umber, olive, madder rose.
+    public static readonly string[] SealPalette =
+        ["#8e2b22", "#2c4f8a", "#2f7a6a", "#b07a1f", "#6b3c74", "#6a4a2c", "#5f6b2a", "#a24a5a"];
+
+    public const string NoGenreSeal = "#9a8a68";
+
+    private IReadOnlyList<string> LegendGenres => Books
+        .Select(b => b.Genre?.Trim())
+        .Where(g => !string.IsNullOrEmpty(g))
+        .Select(g => g!)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(GenreIndex)
+        .ThenBy(g => g, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private int GenreIndex(string genre)
+    {
+        for (var i = 0; i < Genres.Count; i++)
+        {
+            if (string.Equals(Genres[i].Trim(), genre, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+        return int.MaxValue;
+    }
+
+    private string SealColor(string? genre)
+    {
+        var name = genre?.Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            return NoGenreSeal;
+        }
+
+        var index = GenreIndex(name);
+        if (index == int.MaxValue)
+        {
+            // Not in the facet list (e.g. it wasn't loaded): a stable
+            // fallback, never string.GetHashCode (randomised per process).
+            index = 0;
+            foreach (var c in name.ToLowerInvariant())
+            {
+                index = (index * 31 + c) & 0x7fffffff;
+            }
+        }
+        return SealPalette[index % SealPalette.Length];
+    }
+
+    // Small per-book variation (thickness, position on the board, tag
+    // tilt), seeded from the id so it doesn't jump on re-render. All whole
+    // numbers: a double here would print "1,5deg" under German culture,
+    // which is invalid CSS.
+    private static string CylinderStyle(Book book, string seal)
+    {
+        var height = 34 + Math.Abs(book.Id * 37) % 15;
+        var inset = Math.Abs(book.Id * 53) % 15;
+        return $"--h: {height}px; --inset-left: {8 + inset}px; --inset-right: {22 - inset}px; --seal: {seal}";
+    }
+
+    private static string TagStyle(Book book, string seal)
+    {
+        var tilt = Math.Abs(book.Id * 29) % 5 - 2;
+        return $"--seal: {seal}; --tilt: {tilt}deg";
+    }
+}

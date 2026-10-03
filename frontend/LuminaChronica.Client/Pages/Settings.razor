@@ -64,6 +64,16 @@
         </span>
         <input type="checkbox" role="switch" class="switch" checked="@_showShelfCoverText" @onchange="e => SetShowShelfCoverTextAsync((bool)e.Value!)" />
     </label>
+    @if (_currentTheme == "alexandria")
+    {
+        <label class="preference-row home-scroll-shelf-row">
+            <span class="preference-row-text">
+                <strong>@I18n.T("settings.homeScrollShelfLabel")</strong>
+                <span class="text-muted">@I18n.T("settings.homeScrollShelfDescription")</span>
+            </span>
+            <input type="checkbox" role="switch" class="switch" checked="@_homeScrollShelf" @onchange="e => SetHomeScrollShelfAsync((bool)e.Value!)" />
+        </label>
+    }
 </div>
 
 @if (_preferences is null)
@@ -146,6 +156,8 @@ else
     private NotificationPreferences? _preferences;
     private bool _showShelfCoverText;
     private IJSObjectReference? _shelfCoverTextModule;
+    private bool _homeScrollShelf = true;
+    private IJSObjectReference? _libraryPreferencesModule;
 
     protected override async Task OnInitializedAsync()
     {
@@ -155,6 +167,18 @@ else
 
         _shelfCoverTextModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/shelfCoverText.js");
         _showShelfCoverText = await _shelfCoverTextModule.InvokeAsync<bool>("getShowCoverText");
+
+        // Loaded whatever the theme, so the switch is right the moment the
+        // Alexandria card is picked. null = never chosen: on.
+        _libraryPreferencesModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+        _homeScrollShelf = await _libraryPreferencesModule.InvokeAsync<bool?>("getHomeScrollShelf") ?? true;
+    }
+
+    private async Task SetHomeScrollShelfAsync(bool show)
+    {
+        _homeScrollShelf = show;
+        _libraryPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+        await _libraryPreferencesModule.InvokeVoidAsync("setHomeScrollShelf", show);
     }
 
     private async Task SetShowShelfCoverTextAsync(bool show)

@@ -27,3 +27,16 @@ export function getShelfBookZoom() {
 export function setShelfBookZoom(value) {
     localStorage.setItem(SHELF_BOOK_ZOOM_KEY, value);
 }
+
+// Alexandria theme only: whether Home shows the library as the scroll shelf
+// (the default) or as the standard cover strip. null = never chosen.
+const HOME_SCROLL_SHELF_KEY = "lumina_home_scroll_shelf";
+
+export function getHomeScrollShelf() {
+    const raw = localStorage.getItem(HOME_SCROLL_SHELF_KEY);
+    return raw === null ? null : raw === "true";
+}
+
+export function setHomeScrollShelf(value) {
+    localStorage.setItem(HOME_SCROLL_SHELF_KEY, String(value));
+}

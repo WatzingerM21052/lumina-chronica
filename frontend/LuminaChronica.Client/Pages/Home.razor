@@ -8,6 +8,7 @@
 @inject ApiClient ApiClient
 @inject IJSRuntime JsRuntime
 @inject II18nService I18n
+@inject IThemeService ThemeService
 
 <PageTitle>Lumina Chronica</PageTitle>
 
@@ -82,12 +83,19 @@ else if (_books.Count == 0)
 }
 else
 {
-    <div class="library-grid library-grid--strip">
-        @foreach (var book in _books)
-        {
-            <BookCard Book="book" />
-        }
-    </div>
+    @if (_showScrollShelf)
+    {
+        <ScrollShelf Books="_books" Genres="_genres" />
+    }
+    else
+    {
+        <div class="library-grid library-grid--strip">
+            @foreach (var book in _books)
+            {
+                <BookCard Book="book" />
+            }
+        </div>
+    }
     @if (_totalBooks > _books.Count)
     {
         <p class="section-more"><a class="btn-link" href="library">@string.Format(I18n.T("home.viewFullLibraryLink"), _totalBooks) →</a></p>
@@ -147,8 +155,15 @@ else
     private DashboardResponse? _dashboard;
     private List<Project>? _projects;
 
+    // Alexandria shows the library as its scroll shelf unless the user
+    // switched back to the cover strip in Settings (only offered there).
+    private bool _showScrollShelf;
+    private IReadOnlyList<string> _genres = [];
+
     protected override async Task OnInitializedAsync()
     {
+        _showScrollShelf = await ShouldShowScrollShelfAsync();
+        var facetsTask = _showScrollShelf ? ApiClient.GetAsync<BookFacets>("/api/books/facets") : null;
         var dashboardTask = ApiClient.GetAsync<DashboardResponse>("/api/dashboard");
         var projectsTask = ApiClient.GetAsync<List<Project>>("/api/projects");
         var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?sort=createdAt&order=desc&pageSize={RecentBooksLimit}");
@@ -167,6 +182,26 @@ else
 
         var projectsResponse = await projectsTask;
         _projects = projectsResponse is { Success: true, Data: not null } ? projectsResponse.Data : [];
+
+        if (facetsTask is not null && await facetsTask is { Success: true, Data: not null } facetsResponse)
+        {
+            _genres = facetsResponse.Data.Genres;
+        }
+    }
+
+    private async Task<bool> ShouldShowScrollShelfAsync()
+    {
+        try
+        {
+            if (await ThemeService.GetThemeAsync() != "alexandria") return false;
+            var module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
+            // null = never chosen: the shelf is the default.
+            return await module.InvokeAsync<bool?>("getHomeScrollShelf") ?? true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     // Reuses motion.js's initHeaderCompact for the hero itself (already
