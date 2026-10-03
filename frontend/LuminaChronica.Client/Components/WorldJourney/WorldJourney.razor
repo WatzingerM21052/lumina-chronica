@@ -38,6 +38,7 @@
                         <span class="journey-book-back"></span>
                         <span class="journey-book-spine"></span>
                         <span class="journey-book-pages"></span>
+                        <span class="journey-book-top"></span>
                         <span class="journey-book-front">
                             @if (CoverOf(featured.Book) is { } cover)
                             {
@@ -268,6 +269,12 @@
                     @foreach (var book in ShelfSelection)
                     {
                         <a class="journey-tome" href="@($"library/books/{book.Id}")">
+                            @* A volume in 3D: spine with the title, page block
+                               and top edge behind the cover. *@
+                            <span class="journey-tome-book">
+                            <span class="journey-tome-spine" aria-hidden="true"><span>@book.Title</span></span>
+                            <span class="journey-tome-pages" aria-hidden="true"></span>
+                            <span class="journey-tome-top" aria-hidden="true"></span>
                             <span class="journey-tome-cover">
                                 @if (CoverOf(book) is { } cover)
                                 {
@@ -284,6 +291,7 @@
                                         }
                                     </span>
                                 }
+                            </span>
                             </span>
                             <b>@book.Title</b>
                             @if (!string.IsNullOrWhiteSpace(book.Author))

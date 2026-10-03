@@ -149,8 +149,8 @@ export function start(root) {
         on(area, "pointermove", (e) => {
             const r = area.getBoundingClientRect();
             const nx = (e.clientX - r.left) / r.width - 0.5, ny = (e.clientY - r.top) / r.height - 0.5;
-            book.style.setProperty("--tilt-y", `${(-22 + nx * 26).toFixed(2)}deg`);
-            book.style.setProperty("--tilt-x", `${(5 - ny * 12).toFixed(2)}deg`);
+            book.style.setProperty("--tilt-y", `${(36 + nx * 16).toFixed(2)}deg`);
+            book.style.setProperty("--tilt-x", `${(9 - ny * 10).toFixed(2)}deg`);
         });
         on(area, "pointerleave", () => {
             book.style.removeProperty("--tilt-y");
