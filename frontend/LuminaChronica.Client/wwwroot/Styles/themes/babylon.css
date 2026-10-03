@@ -97,7 +97,12 @@ html[data-theme="babylon"] .settings-card,
 html[data-theme="babylon"] .profile-card,
 html[data-theme="babylon"] .project-card,
 html[data-theme="babylon"] .book-card,
-html[data-theme="babylon"] .world-card {
+html[data-theme="babylon"] .world-card,
+html[data-theme="babylon"] .world-surface,
+html[data-theme="babylon"] .book-detail,
+html[data-theme="babylon"] .lore-content,
+html[data-theme="babylon"] .book-comments,
+html[data-theme="babylon"] .discover-section {
     background-color: rgba(19, 37, 34, 0.82);
     border-color: rgba(217, 176, 82, 0.2);
     box-shadow: var(--shadow-card);
@@ -374,4 +379,21 @@ html[data-theme="babylon"] .world-banner-subtitle { color: rgba(243, 234, 210, 0
     html[data-theme="babylon"] .world-banner-shade {
         background: linear-gradient(0deg, rgba(8, 22, 21, 0.9) 10%, rgba(8, 22, 21, 0.5) 60%, rgba(8, 22, 21, 0.15));
     }
+}
+
+/* ---------- Detail pages (WorldBackdrop) ---------- */
+html[data-theme="babylon"] .world-backdrop-image {
+    opacity: 0.8;
+}
+
+html[data-theme="babylon"] .world-backdrop-image--texture {
+    inset: 0;
+    background: url("../../images/themes/babylon/glazed_bricks.webp") center / 640px;
+    filter: none;
+    transform: none;
+    opacity: 0.55;
+}
+
+html[data-theme="babylon"] .world-backdrop-shade {
+    background: linear-gradient(180deg, rgba(8, 22, 21, 0.3) 0%, rgba(8, 22, 21, 0.62) 60%, rgba(8, 22, 21, 0.9) 100%);
 }

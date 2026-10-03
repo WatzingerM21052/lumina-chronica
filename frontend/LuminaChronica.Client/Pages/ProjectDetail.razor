@@ -19,6 +19,7 @@
 @inject TimeProvider TimeProvider
 
 <PageTitle>@(_project?.Title ?? I18n.T("projectDetail.defaultTitle")) — Lumina Chronica</PageTitle>
+<WorldBackdrop Kind="project" ImageUrl="@_coverObjectUrl" />
 
 <a class="back-link" href="projects">@I18n.T("projectDetail.backLink")</a>
 

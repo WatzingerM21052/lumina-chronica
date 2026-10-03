@@ -30,6 +30,10 @@
    genre/tag/favourite filters out underneath, sort, the view as two icon
    buttons, and the view's size/page setting. Labels that were visible
    text are now aria-labels/titles. *@
+@* Themed worlds: the page's content sits on one card like the dashboard's
+   (WorldBanner above). Under the classic themes this wrapper has no box
+   of its own (display: contents). *@
+<div class="world-surface">
 <div class="library-toolbar">
     <div class="library-toolbar-row">
         <SearchInput Class="library-search-wrapper" Placeholder="@I18n.T("library.searchPlaceholder")" Value="@_searchTerm" OnInput="OnSearchInput">
@@ -214,6 +218,7 @@ else
         }
     }
 }
+</div>
 
 @code {
     // Scrolls (Alexandria's scroll shelf) is only offered in that theme.
