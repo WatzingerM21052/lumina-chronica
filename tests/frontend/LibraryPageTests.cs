@@ -19,6 +19,7 @@ public class LibraryPageTests : BunitContext
     public LibraryPageTests()
     {
         Services.AddSingleton<TimeProvider>(_timeProvider);
+        Services.AddSingleton<IThemeService>(new FakeThemeService());
     }
 
     private void UseApiResponse(string responseJson)
@@ -796,5 +797,56 @@ public class LibraryPageTests : BunitContext
 
             return SecondBooksResponse.Task;
         }
+    }
+
+    private const string TwoBooksJson = """
+        {"success":true,"data":{"items":[
+            {"id":1,"title":"Dune","author":"Frank Herbert","coverUrl":null,"genre":"scifi","language":"en","visibility":"PRIVATE","createdAt":"2026-01-01"},
+            {"id":2,"title":"The Hobbit","author":"J.R.R. Tolkien","coverUrl":null,"genre":"fantasy","language":"en","visibility":"PRIVATE","createdAt":"2026-01-02"}
+        ],"total":2,"page":1,"pageSize":20}}
+        """;
+
+    // Alexandria's scroll shelf is a third view, offered only in that theme
+    // and its starting view there.
+    [Fact]
+    public void Library_Alexandria_StartsInTheScrollsView()
+    {
+        UseApiResponse(TwoBooksJson);
+        Services.AddSingleton<IThemeService>(new FakeThemeService("alexandria"));
+
+        var cut = Render<Library>();
+
+        Assert.Equal("true", cut.Find("#view-scrolls").GetAttribute("aria-pressed"));
+        Assert.Equal("Rollen", cut.Find("#view-scrolls").GetAttribute("aria-label"));
+        Assert.Equal(2, cut.FindAll(".scroll-wall .book-scroll").Count);
+        Assert.Empty(cut.FindAll("a.book-card"));
+        // Paged like the raster, so its page-size picker stays.
+        Assert.NotEmpty(cut.FindAll(".library-raster-page-size"));
+    }
+
+    [Fact]
+    public void Library_Alexandria_CanSwitchFromScrollsToRaster()
+    {
+        UseApiResponse(TwoBooksJson);
+        Services.AddSingleton<IThemeService>(new FakeThemeService("alexandria"));
+
+        var cut = Render<Library>();
+        cut.Find("#view-raster").Click();
+
+        Assert.Equal("false", cut.Find("#view-scrolls").GetAttribute("aria-pressed"));
+        Assert.Equal(2, cut.FindAll("a.book-card").Count);
+        Assert.Empty(cut.FindAll(".scroll-shelf"));
+    }
+
+    [Fact]
+    public void Library_OtherThemes_DoNotOfferTheScrollsView()
+    {
+        UseApiResponse(TwoBooksJson);
+        Services.AddSingleton<IThemeService>(new FakeThemeService("babylon"));
+
+        var cut = Render<Library>();
+
+        Assert.Empty(cut.FindAll("#view-scrolls"));
+        Assert.Equal("true", cut.Find("#view-raster").GetAttribute("aria-pressed"));
     }
 }
