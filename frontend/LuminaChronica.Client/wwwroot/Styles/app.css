@@ -1783,6 +1783,11 @@ select:focus-visible,
     grid-column: span 2;
 }
 
+/* The reading calendar's own row (theme studio): full width, big tiles. */
+.stats-card--full {
+    grid-column: 1 / -1;
+}
+
 @media (max-width: 1199.98px) {
     .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1795,7 +1800,8 @@ select:focus-visible,
         gap: var(--space-2);
     }
 
-    .stats-card--wide {
+    .stats-card--wide,
+    .stats-card--full {
         grid-column: auto;
     }
 
@@ -2086,6 +2092,134 @@ select:focus-visible,
     box-shadow:
         0 0 6px color-mix(in srgb, var(--color-primary) 90%, transparent),
         0 0 14px color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
+/* Weekday labels (Mo, Mi, Fr, So) in a slim column left of the weeks; the
+   month row is shifted by the same width so both stay over their cells. */
+.calendar-heatmap {
+    --weekday-col: 1.7rem;
+}
+
+.calendar-months {
+    margin-left: var(--weekday-col);
+}
+
+.calendar-body {
+    display: grid;
+    grid-template-columns: var(--weekday-col) minmax(0, 1fr);
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-rows: repeat(7, 1fr);
+    row-gap: 2px;
+    font-size: var(--font-size-caption);
+    line-height: 1;
+    color: color-mix(in srgb, var(--color-text-on-dark) 70%, transparent);
+}
+
+.calendar-weekdays span {
+    display: flex;
+    align-items: center;
+}
+
+.calendar-heatmap:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+}
+
+.calendar-weeks .calendar-cell[data-date] {
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), filter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.calendar-weeks .calendar-cell[data-date]:hover,
+.calendar-cell.is-selected {
+    z-index: 1;
+    transform: scale(1.18);
+    filter: brightness(1.15);
+}
+
+.calendar-cell.is-selected {
+    box-shadow: 0 0 0 2px var(--color-accent-text) !important;
+}
+
+/* In the full-width calendar row the tiles grow with the card (the 1.1rem
+   cap is for narrow cards) and sit a little further apart. */
+.calendar-card .calendar-weeks .calendar-cell {
+    max-width: 1.6rem;
+}
+
+.calendar-card .calendar-weeks,
+.calendar-card .calendar-months {
+    column-gap: 4px;
+}
+
+.calendar-card .calendar-week,
+.calendar-card .calendar-weekdays {
+    row-gap: 4px;
+}
+
+/* The day's tooltip (theme studio): date, pages, books. One per card,
+   positioned by calendarTooltip.js, never clipped by the swipe area. */
+.calendar-tooltip {
+    position: absolute;
+    z-index: 5;
+    display: grid;
+    gap: 0.1rem;
+    /* max-content: near the card's right edge an absolutely placed box
+       would otherwise shrink and wrap the date over three lines. */
+    width: max-content;
+    min-width: 9.5rem;
+    max-width: min(17rem, calc(100% - 1rem));
+    padding: 0.45rem 0.65rem;
+    translate: -50% 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-bg-card);
+    color: var(--color-text);
+    box-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.45);
+    font-size: var(--font-size-small);
+    line-height: 1.3;
+    pointer-events: none;
+    white-space: normal;
+    opacity: 0;
+    translate: -50% 4px;
+    transition: opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1), translate 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.calendar-tooltip[hidden] {
+    display: none;
+}
+
+.calendar-tooltip.is-shown {
+    opacity: 1;
+    translate: -50% 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .calendar-tooltip,
+    .calendar-weeks .calendar-cell[data-date] {
+        transition: none;
+    }
+}
+
+.calendar-tooltip b {
+    font-weight: 600;
+}
+
+.calendar-tooltip span {
+    color: var(--color-accent-text);
+    font-weight: 600;
+}
+
+.calendar-tooltip small {
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .calendar-legend {

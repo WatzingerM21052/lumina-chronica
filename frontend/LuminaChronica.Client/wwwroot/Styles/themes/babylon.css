@@ -223,6 +223,23 @@ html[data-theme="babylon"] .calendar-cell::before {
     display: none;
 }
 
+html[data-theme="babylon"] .calendar-weekdays {
+    color: rgba(232, 222, 196, 0.6);
+}
+
+/* The day's tooltip: dark glazed glass with a gold rim. */
+html[data-theme="babylon"] .calendar-tooltip {
+    border-color: rgba(217, 176, 82, 0.4);
+    background: rgba(9, 24, 23, 0.94);
+    color: #efe6cc;
+    box-shadow: 0 12px 26px -10px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    backdrop-filter: blur(6px);
+}
+
+html[data-theme="babylon"] .calendar-tooltip span { color: #e3c06a; }
+html[data-theme="babylon"] .calendar-tooltip small { color: rgba(232, 222, 196, 0.72); }
+html[data-theme="babylon"] .calendar-cell.is-selected { outline-color: #f1d68a; }
+
 /* Bevelled like the bricks of the gate: light top-left, shadow bottom-right. */
 html[data-theme="babylon"] .calendar-cell--level-1 { background: linear-gradient(145deg, #1b5566, #12404e); box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.16), inset -1px -1px 0 rgba(0, 0, 0, 0.35); }
 html[data-theme="babylon"] .calendar-cell--level-2 { background: linear-gradient(145deg, #2584a0, #186579); box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.16), inset -1px -1px 0 rgba(0, 0, 0, 0.35); }

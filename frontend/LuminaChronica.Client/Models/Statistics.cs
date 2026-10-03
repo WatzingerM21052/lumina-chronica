@@ -47,6 +47,14 @@ public class CalendarDay
 
     [JsonPropertyName("count")]
     public int Count { get; set; }
+
+    // Day detail (backend migration 0028): pages read that day, null when
+    // unknown; titles of the books read. Older days have neither.
+    [JsonPropertyName("pages")]
+    public int? Pages { get; set; }
+
+    [JsonPropertyName("books")]
+    public List<string> Books { get; set; } = [];
 }
 
 public class Streaks
