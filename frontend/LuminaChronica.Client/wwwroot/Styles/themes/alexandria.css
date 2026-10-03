@@ -103,6 +103,9 @@ html[data-theme="alexandria"] .profile-card,
 html[data-theme="alexandria"] .project-card,
 html[data-theme="alexandria"] .world-card,
 html[data-theme="alexandria"] .world-surface,
+html[data-theme="alexandria"] .book-detail,
+html[data-theme="alexandria"] .lore-content,
+html[data-theme="alexandria"] .book-comments,
 html[data-theme="alexandria"] .discover-section {
     background:
         linear-gradient(180deg, rgba(253, 248, 235, 0.92), rgba(247, 238, 214, 0.92)),
@@ -616,4 +619,23 @@ html[data-theme="alexandria"] .world-banner-subtitle { color: #3b3222; }
     html[data-theme="alexandria"] .world-banner-shade {
         background: linear-gradient(0deg, rgba(239, 231, 214, 0.95) 10%, rgba(241, 233, 214, 0.75) 60%, rgba(241, 233, 214, 0.25));
     }
+}
+
+/* ---------- Detail pages (WorldBackdrop) ---------- */
+html[data-theme="alexandria"] .world-backdrop-image {
+    opacity: 0.9;
+}
+
+html[data-theme="alexandria"] .world-backdrop-image--texture {
+    inset: 0;
+    background:
+        radial-gradient(60% 80% at 75% 10%, rgba(255, 226, 160, 0.75), transparent 70%),
+        url("../../images/themes/alexandria/papyrus.webp") center / 420px;
+    filter: none;
+    transform: none;
+    opacity: 0.55;
+}
+
+html[data-theme="alexandria"] .world-backdrop-shade {
+    background: linear-gradient(180deg, rgba(241, 233, 214, 0.05) 0%, rgba(241, 233, 214, 0.3) 60%, rgba(239, 231, 214, 0.75) 100%);
 }
