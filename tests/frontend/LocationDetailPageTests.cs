@@ -30,11 +30,17 @@ public class LocationDetailPageTests : BunitContext
         }}
         """;
 
+    private const string ProjectWithoutMapJson = """{"success":true,"data":{"id":1,"title":"Aetherfall","description":null,"type":"WORLD","coverUrl":null,"mapUrl":null,"visibility":"PRIVATE","createdAt":"2026-01-01"}}""";
+
     private RoutedFakeHttpMessageHandler UseDefaultRoutes(string locationJson) =>
         new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/locations/9", locationJson);
 
     private void UseHandler(RoutedFakeHttpMessageHandler handler)
     {
+        // A placed location asks for the project's map; these tests' project
+        // has none (the mini map has its own test).
+        handler.WhenPathEndsWith("/projects/1", ProjectWithoutMapJson);
+        Services.AddSingleton<ElementMetricsService>();
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
@@ -200,5 +206,29 @@ public class LocationDetailPageTests : BunitContext
         cut.Find("#location-edit-button").Click();
 
         Assert.NotNull(cut.Find(".dialog .dropzone #location-edit-image"));
+    }
+
+    // A place on the project map shows that map, its pin in the middle:
+    // the image is offset by the pin's position times the zoom.
+    [Fact]
+    public void LocationDetail_PlacedLocation_ShowsTheMapCentredOnItsPin()
+    {
+        UseHandler(UseDefaultRoutes(LocationJson)
+            .WhenPathEndsWith("/projects/1", """{"success":true,"data":{"id":1,"title":"Aetherfall","description":null,"type":"WORLD","coverUrl":null,"mapUrl":"/api/projects/1/map","visibility":"PRIVATE","createdAt":"2026-01-01"}}""")
+            .WhenPathEndsWith("/projects/1/map", "fake-map-bytes", "image/png"));
+        JSInterop.SetupModule("./js/blobUrl.js")
+            .Setup<string>("createObjectUrl", _ => true).SetResult("blob:fake-map");
+
+        var cut = Render<LocationDetail>(DefaultParams);
+
+        cut.WaitForAssertion(() => Assert.Equal("blob:fake-map", cut.Find(".location-minimap img").GetAttribute("src")), TimeSpan.FromSeconds(2));
+        var style = cut.Find(".location-minimap").GetAttribute("style");
+        // Zoom 3 in a 2:1 window, map aspect 1.5 until it has loaded: the
+        // image is 300 % wide and 3 * 2 / 1.5 = 400 % high, so x 42.5 ->
+        // 50 - 127.5 = -77.5 % and y 17.25 -> 50 - 69 = -19 %.
+        Assert.Contains("--map-width: 300%", style);
+        Assert.Contains("--map-height: 400%", style);
+        Assert.Contains("--map-left: -77.5%", style);
+        Assert.Contains("--map-top: -19%", style);
     }
 }

@@ -5104,3 +5104,201 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .lore-content {
     }
 
 }
+
+/* Character and location pages as a profile: a card with picture, name,
+   facts and actions on the left (it stays in view while the right side
+   scrolls), the text in sections on the right. One column on a phone.
+   No transform/filter on these boxes: they hold dialogs. */
+.entity-profile {
+    display: grid;
+    grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.entity-profile-card,
+.entity-section {
+    padding: 1.25rem 1.35rem;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card);
+}
+
+.entity-profile-card {
+    position: sticky;
+    top: calc(var(--header-height, 4.5rem) + var(--space-2));
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.entity-profile-card h1 {
+    margin: 0.25rem 0 0;
+    padding: 0;
+    border: none;
+    font-size: var(--font-size-h2);
+    overflow-wrap: anywhere;
+}
+
+.entity-profile-card .entity-card-chip {
+    margin: 0;
+}
+
+.entity-profile-card .form-actions {
+    margin: 0;
+    flex-wrap: wrap;
+}
+
+.entity-profile-portrait {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border-radius: 12px;
+    background: linear-gradient(160deg,
+        color-mix(in srgb, var(--color-accent-text) 22%, var(--color-bg-paper)),
+        var(--color-bg-paper));
+}
+
+.entity-profile-portrait--landscape {
+    aspect-ratio: 4 / 3;
+}
+
+.entity-profile-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.entity-profile-initials {
+    font-family: var(--font-family-display);
+    font-size: 3.5rem;
+    font-weight: 600;
+    color: var(--color-accent-text);
+    opacity: 0.85;
+}
+
+/* Origin / age as label-over-value pairs. */
+.entity-profile-facts {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+}
+
+.entity-profile-facts dt {
+    font-size: var(--font-size-caption);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.entity-profile-facts dd {
+    margin: 0.1rem 0 0;
+    color: var(--color-text-primary);
+}
+
+.entity-profile-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.entity-section h2 {
+    margin: 0 0 0.6rem;
+    font-size: 1.15rem;
+}
+
+.entity-section .user-text {
+    margin: 0;
+    line-height: 1.7;
+}
+
+.entity-section-empty {
+    margin: 0;
+}
+
+.entity-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-2);
+}
+
+.entity-section-header h2 {
+    margin: 0;
+}
+
+/* A wide window onto the project map, three times enlarged, with the
+   place's pin in its middle. Size and offsets come from LocationDetail
+   (its MiniMapWindowAspect must match the aspect-ratio here). */
+.location-minimap {
+    position: relative;
+    aspect-ratio: 2;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-paper);
+}
+
+.location-minimap img {
+    position: absolute;
+    left: var(--map-left, 0%);
+    top: var(--map-top, 0%);
+    width: var(--map-width, 300%);
+    height: var(--map-height, 400%);
+    max-width: none;
+}
+
+.location-minimap-pin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 2.2rem;
+    height: 2.2rem;
+    margin: -2.2rem 0 0 -1.1rem;
+    color: var(--color-primary);
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+    pointer-events: none;
+}
+
+.location-minimap-pin .icon {
+    width: 100%;
+    height: 100%;
+    fill: var(--color-bg-dark);
+}
+
+@media (max-width: 52rem) {
+    .entity-profile {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .entity-profile-card {
+        position: static;
+        display: grid;
+        grid-template-columns: 7rem minmax(0, 1fr);
+        column-gap: var(--space-2);
+        align-items: start;
+    }
+
+    .entity-profile-card > :not(.entity-profile-portrait) {
+        grid-column: 2;
+    }
+
+    .entity-profile-portrait {
+        grid-row: 1 / span 4;
+    }
+
+    .entity-profile-initials {
+        font-size: 2rem;
+    }
+
+    .entity-profile-card,
+    .entity-section {
+        padding: 1rem;
+    }
+}

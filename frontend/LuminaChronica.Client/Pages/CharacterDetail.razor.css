@@ -4,20 +4,43 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
     gap: var(--space-2);
 }
 
+/* One card: the other character's initials, who relates to whom, the
+   note; edit/delete top right. */
 .relationship-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background-color: color-mix(in srgb, var(--color-bg-paper) 55%, transparent);
+}
+
+.relationship-avatar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background-color: var(--color-bg-card);
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--color-accent-text) 45%, transparent);
+    background: color-mix(in srgb, var(--color-accent-text) 14%, transparent);
+    font-family: var(--font-family-display);
+    font-weight: 600;
+    color: var(--color-accent-text);
+    text-decoration: none;
+}
+
+.relationship-avatar:hover,
+.relationship-avatar:focus-visible {
+    border-color: var(--color-accent-text);
 }
 
 .relationship-text {
@@ -26,6 +49,10 @@
 
 .relationship-text p {
     margin: 0;
+}
+
+.relationship-pair {
+    padding-right: 4.5rem;
 }
 
 .relationship-text p + p {
@@ -38,16 +65,14 @@
     padding: 0 var(--space-1);
 }
 
+/* Top right over the card, so the text below keeps the full width. */
 .relationship-actions {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
     display: flex;
-    gap: var(--space-1);
+    gap: 4px;
     flex-shrink: 0;
 }
 
-@media (max-width: 40rem) {
-    .relationship-item {
-        flex-direction: column;
-        align-items: stretch;
-        padding: var(--space-2);
-    }
-}
+
