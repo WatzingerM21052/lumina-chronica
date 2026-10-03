@@ -26,53 +26,58 @@ else if (_character is null)
 }
 else
 {
-    @* UI/UX plan A5: same header layout as book and project (image beside
-       the info column); editing and relationships happen in dialogs. *@
-    <div class="book-detail">
-        <div class="book-detail-cover">
-            @if (_imageObjectUrl is not null)
-            {
-                <img src="@_imageObjectUrl" alt="@_character.Name" />
-            }
-            else
-            {
-                <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="person" /></div>
-            }
-        </div>
-
-        <div class="book-detail-info">
+    @* A profile (user feedback: the page was one header card and an empty
+       right half): a portrait card with the facts and actions on the left,
+       the character's text in sections and the relationships on the right.
+       Editing and relationships still happen in dialogs (UI/UX plan A5). *@
+    <div class="entity-profile">
+        <aside class="entity-profile-card">
+            <div class="entity-profile-portrait">
+                @if (_imageObjectUrl is not null)
+                {
+                    <img src="@_imageObjectUrl" alt="@_character.Name" />
+                }
+                else
+                {
+                    <span class="entity-profile-initials" aria-hidden="true">@CardInitials.Of(_character.Name)</span>
+                }
+            </div>
             <h1>@_character.Name</h1>
             @if (!string.IsNullOrWhiteSpace(_character.Origin) || !string.IsNullOrWhiteSpace(_character.Age))
             {
-                <dl class="book-detail-meta">
+                <dl class="entity-profile-facts">
                     @if (!string.IsNullOrWhiteSpace(_character.Origin))
                     {
-                        <dt>@I18n.T("characterDetail.originLabel")</dt><dd>@_character.Origin</dd>
+                        <div><dt>@I18n.T("characterDetail.originLabel")</dt><dd>@_character.Origin</dd></div>
                     }
                     @if (!string.IsNullOrWhiteSpace(_character.Age))
                     {
-                        <dt>@I18n.T("characterDetail.ageLabel")</dt><dd>@_character.Age</dd>
+                        <div><dt>@I18n.T("characterDetail.ageLabel")</dt><dd>@_character.Age</dd></div>
                     }
                 </dl>
-            }
-            @if (!string.IsNullOrWhiteSpace(_character.Description))
-            {
-                <p class="user-text">@_character.Description</p>
-            }
-            @if (!string.IsNullOrWhiteSpace(_character.Personality))
-            {
-                <p class="user-text"><strong>@I18n.T("characterDetail.personalityLabel"):</strong> @_character.Personality</p>
-            }
-            @if (!string.IsNullOrWhiteSpace(_character.Biography))
-            {
-                <p class="user-text"><strong>@I18n.T("characterDetail.biographyLabel"):</strong> @_character.Biography</p>
             }
             <div class="form-actions">
                 <button type="button" id="character-edit-button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("characterDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("characterDetail.editButton")</span></button>
                 <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("characterDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("characterDetail.deleteButton")</span></button>
             </div>
-        </div>
-    </div>
+        </aside>
+
+        <div class="entity-profile-main">
+            @if (StorySections.Count == 0)
+            {
+                <section class="entity-section">
+                    <p class="text-muted entity-section-empty">@I18n.T("characterDetail.noStoryMessage")</p>
+                </section>
+            }
+            @foreach (var (labelKey, text) in StorySections)
+            {
+                <section class="entity-section">
+                    <h2>@I18n.T(labelKey)</h2>
+                    <p class="user-text">@text</p>
+                </section>
+            }
+
+            <section class="entity-section">
     <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("characterDetail.deleteConfirmMessage")"
                    OnConfirm="DeleteCharacterAsync" OnCancel="() => _confirmingDelete = false" />
 
@@ -129,7 +134,7 @@ else
         </Footer>
     </Dialog>
 
-    <div class="library-header">
+    <div class="entity-section-header">
         <h2>@I18n.T("characterDetail.relationshipsTitle")</h2>
         <button type="button" id="add-relationship-button" class="btn btn-primary" @onclick="OpenCreateRelationship">@I18n.T("characterDetail.addRelationshipButton")</button>
     </div>
@@ -213,12 +218,15 @@ else
     }
     else
     {
-        @* A plain list, not the centered upload-form card: rows span the
-           content width with the text left and the actions right. *@
+        @* One card per relationship: the other character's initials (a
+           link to them), then who relates to whom, then the note. *@
         <ul class="relationship-list">
             @foreach (var relationship in _relationships)
             {
+                var otherId = relationship.CharacterAId == Id ? relationship.CharacterBId : relationship.CharacterAId;
+                var otherName = relationship.CharacterAId == Id ? relationship.CharacterBName : relationship.CharacterAName;
                 <li class="relationship-item">
+                    <a class="relationship-avatar" href="@($"projects/{ProjectId}/characters/{otherId}")" title="@otherName" aria-label="@otherName">@CardInitials.Of(otherName)</a>
                     <div class="relationship-text">
                         <p class="relationship-pair"><strong>@relationship.CharacterAName</strong> <span class="relationship-type">@relationship.RelationshipType</span> <strong>@relationship.CharacterBName</strong></p>
                         @if (!string.IsNullOrWhiteSpace(relationship.Description))
@@ -236,6 +244,9 @@ else
     }
     <ConfirmDialog IsOpen="_confirmingRelationshipDeleteId is not null" Message="@I18n.T("characterDetail.deleteRelationshipConfirmMessage")"
                    OnConfirm="DeleteRelationshipAsync" OnCancel="() => _confirmingRelationshipDeleteId = null" />
+            </section>
+        </div>
+    </div>
 
     <ConfirmDialog IsOpen="_guard.IsConfirmingDiscard" Message="@I18n.T("dialog.discardChangesMessage")"
                    ConfirmText="@I18n.T("dialog.discardChangesConfirm")" CancelText="@I18n.T("dialog.discardChangesCancel")"
@@ -264,6 +275,19 @@ else
     private int? _confirmingRelationshipDeleteId;
 
     private List<CharacterRelationship>? _relationships;
+
+    // Description, personality and story -- the ones filled in, each its
+    // own section.
+    private List<(string LabelKey, string Text)> StorySections =>
+        new (string LabelKey, string? Text)[]
+        {
+            ("characterDetail.descriptionLabel", _character?.Description),
+            ("characterDetail.personalityLabel", _character?.Personality),
+            ("characterDetail.biographyLabel", _character?.Biography),
+        }
+        .Where(s => !string.IsNullOrWhiteSpace(s.Text))
+        .Select(s => (s.LabelKey, s.Text!))
+        .ToList();
     private string? _relationshipsErrorMessage;
     private List<Character>? _otherCharacters;
     private bool _showCreateRelationshipForm;

@@ -345,6 +345,9 @@
   "loreEntryDetail.saveError": "Speichern fehlgeschlagen.",
   "loreEntryDetail.deleteError": "Löschen fehlgeschlagen.",
 
+  "locationDetail.onMapTitle": "Auf der Karte",
+  "locationDetail.noDescriptionMessage": "Noch keine Beschreibung — über „Bearbeiten“ ergänzen.",
+  "locationDetail.openMapLink": "Zur Karte",
   "locationDetail.defaultTitle": "Ort",
   "locationDetail.backLink": "← Zurück zum Projekt",
   "locationDetail.loading": "Ort wird geladen...",
@@ -366,6 +369,7 @@
   "locationDetail.imageSaveError": "Bild konnte nicht ersetzt werden.",
   "locationDetail.deleteError": "Löschen fehlgeschlagen.",
 
+  "characterDetail.noStoryMessage": "Noch keine Beschreibung — über „Bearbeiten“ ergänzen.",
   "characterDetail.defaultTitle": "Charakter",
   "characterDetail.backLink": "← Zurück zum Projekt",
   "characterDetail.loading": "Charakter wird geladen...",

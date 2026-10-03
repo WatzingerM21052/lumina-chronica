@@ -1,6 +1,7 @@
 @page "/projects/{ProjectId:int}/locations/{Id:int}"
 @attribute [Authorize]
 @implements IDisposable
+@using System.Globalization
 @using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
@@ -8,6 +9,7 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
+@inject ElementMetricsService ElementMetricsService
 @inject NavigationManager NavigationManager
 @inject II18nService I18n
 
@@ -26,34 +28,59 @@ else if (_location is null)
 }
 else
 {
-    @* UI/UX plan A5: same header layout as book and project; editing in a dialog. *@
-    <div class="book-detail">
-        <div class="book-detail-cover">
-            @if (_imageObjectUrl is not null)
-            {
-                <img src="@_imageObjectUrl" alt="@_location.Name" />
-            }
-            else
-            {
-                <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="location-pin" /></div>
-            }
-        </div>
-
-        <div class="book-detail-info">
+    @* A profile like the character page: picture, name, map status and
+       actions on the left; the description and -- once the place is on
+       the project map -- a section of that map centred on its pin on the
+       right. Editing in a dialog (UI/UX plan A5). *@
+    <div class="entity-profile">
+        <aside class="entity-profile-card">
+            <div class="entity-profile-portrait entity-profile-portrait--landscape">
+                @if (_imageObjectUrl is not null)
+                {
+                    <img src="@_imageObjectUrl" alt="@_location.Name" />
+                }
+                else
+                {
+                    <span class="entity-profile-initials" aria-hidden="true">@CardInitials.Of(_location.Name)</span>
+                }
+            </div>
             <h1>@_location.Name</h1>
-            <p class="text-muted">@(_location.X is not null ? I18n.T("locationDetail.placedOnMap") : I18n.T("locationDetail.notPlacedOnMap"))</p>
-            @if (!string.IsNullOrWhiteSpace(_location.Description))
-            {
-                <p class="user-text">@_location.Description</p>
-            }
+            <p class="entity-card-chip @(_location.X is not null ? "entity-card-chip--on" : null)">@(_location.X is not null ? I18n.T("locationDetail.placedOnMap") : I18n.T("locationDetail.notPlacedOnMap"))</p>
             <div class="form-actions">
                 <button type="button" id="location-edit-button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("locationDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("locationDetail.editButton")</span></button>
+                <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("locationDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("locationDetail.deleteButton")</span></button>
                 @if (_location.X is not null)
                 {
                     <button type="button" class="btn" @onclick="RemovePositionAsync">@I18n.T("locationDetail.removeFromMapButton")</button>
                 }
-                <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("locationDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("locationDetail.deleteButton")</span></button>
             </div>
+        </aside>
+
+        <div class="entity-profile-main">
+            <section class="entity-section">
+                <h2>@I18n.T("locationDetail.descriptionLabel")</h2>
+                @if (!string.IsNullOrWhiteSpace(_location.Description))
+                {
+                    <p class="user-text">@_location.Description</p>
+                }
+                else
+                {
+                    <p class="text-muted entity-section-empty">@I18n.T("locationDetail.noDescriptionMessage")</p>
+                }
+            </section>
+
+            @if (_location.X is not null && _location.Y is not null && _mapObjectUrl is not null)
+            {
+                <section class="entity-section">
+                    <h2>@I18n.T("locationDetail.onMapTitle")</h2>
+                    @* A wide window onto the map three times enlarged, the pin
+                       in its middle (see MiniMapStyle for the offsets). *@
+                    <div class="location-minimap" style="@MiniMapStyle">
+                        <img @ref="_mapImageRef" src="@_mapObjectUrl" alt="" @onload="OnMapLoadedAsync" />
+                        <span class="location-minimap-pin" aria-hidden="true"><Icon Name="location-pin" /></span>
+                    </div>
+                </section>
+            }
         </div>
     </div>
     <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("locationDetail.deleteConfirmMessage")"
@@ -105,6 +132,30 @@ else
     public int Id { get; set; }
 
     private Location? _location;
+    private string? _mapObjectUrl;
+    private ElementReference _mapImageRef;
+    // Width / height of the project map, once it has loaded.
+    private double? _mapAspect;
+
+    private const double MiniMapZoom = 3;
+    // Width / height of the window (app.css .location-minimap).
+    private const double MiniMapWindowAspect = 2;
+
+    private string MiniMapStyle
+    {
+        get
+        {
+            var x = _location?.X ?? 50;
+            var y = _location?.Y ?? 50;
+            var aspect = _mapAspect ?? 1.5;
+            static string F(double v) => v.ToString("0.###", CultureInfo.InvariantCulture);
+            // The image is MiniMapZoom window-widths wide; its height, in
+            // window-heights, follows from the two aspects. Offsetting by the
+            // pin's share of each puts the pin in the window's middle.
+            var heightFactor = MiniMapZoom * MiniMapWindowAspect / aspect;
+            return $"--map-width: {F(MiniMapZoom * 100)}%; --map-height: {F(heightFactor * 100)}%; --map-left: {F(50 - x * MiniMapZoom)}%; --map-top: {F(50 - y * heightFactor)}%;";
+        }
+    }
     private string? _loadErrorMessage;
     private string? _imageObjectUrl;
 
@@ -127,10 +178,37 @@ else
         {
             _location = response.Data;
             await LoadImageAsync();
+            await LoadMapAsync();
         }
         else
         {
             _loadErrorMessage = response?.Error?.Message ?? I18n.T("locationDetail.loadError");
+        }
+    }
+
+    // The project's map, only for a place that is on it.
+    private async Task LoadMapAsync()
+    {
+        if (_mapObjectUrl is not null || _location?.X is null) return;
+        var project = await ApiClient.GetAsync<Project>($"/api/projects/{ProjectId}");
+        if (project is not { Success: true, Data.MapUrl: { } mapUrl }) return;
+        var result = await ApiClient.GetBytesAsync(mapUrl);
+        if (result is { } map)
+        {
+            _mapObjectUrl = await BlobUrlService.CreateObjectUrlAsync(map.Bytes, map.ContentType);
+        }
+    }
+
+    private async Task OnMapLoadedAsync()
+    {
+        try
+        {
+            var size = await ElementMetricsService.GetNaturalSizeAsync(_mapImageRef);
+            _mapAspect = size.Width > 0 && size.Height > 0 ? size.Width / size.Height : null;
+        }
+        catch (JSException)
+        {
+            _mapAspect = null;
         }
     }
 
@@ -241,6 +319,10 @@ else
         if (_imageObjectUrl is not null)
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(_imageObjectUrl);
+        }
+        if (_mapObjectUrl is not null)
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(_mapObjectUrl);
         }
     }
 

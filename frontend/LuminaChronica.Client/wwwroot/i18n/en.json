@@ -345,6 +345,9 @@
   "loreEntryDetail.saveError": "Save failed.",
   "loreEntryDetail.deleteError": "Delete failed.",
 
+  "locationDetail.onMapTitle": "On the map",
+  "locationDetail.noDescriptionMessage": "No description yet — add one via “Edit”.",
+  "locationDetail.openMapLink": "Open the map",
   "locationDetail.defaultTitle": "Location",
   "locationDetail.backLink": "← Back to Project",
   "locationDetail.loading": "Loading location...",
@@ -366,6 +369,7 @@
   "locationDetail.imageSaveError": "Image could not be replaced.",
   "locationDetail.deleteError": "Delete failed.",
 
+  "characterDetail.noStoryMessage": "No description yet — add one via “Edit”.",
   "characterDetail.defaultTitle": "Character",
   "characterDetail.backLink": "← Back to Project",
   "characterDetail.loading": "Loading character...",
