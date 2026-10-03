@@ -366,18 +366,16 @@ public partial class WorldJourney : IAsyncDisposable
 
     private static readonly double[] StarRadius = [1.6, 2.6, 3.6, 4.8, 6];
 
-    // A gold clockwork medallion on books without a cover.
-    private static readonly RenderFragment Ornament = builder =>
+    // Gold tooling on books without a cover: four corner pieces and a
+    // centre medallion (the eight-lobed rosette in Babylon, a fleuron in
+    // Alexandria), all public-domain ornaments used as masks over gold.
+    private RenderFragment Tooling => builder =>
     {
         builder.AddMarkupContent(0,
-            "<svg class=\"journey-book-ornament\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"#e8c97a\" stroke-width=\"1.1\" aria-hidden=\"true\">" +
-            "<circle cx=\"50\" cy=\"50\" r=\"30\"/><circle cx=\"50\" cy=\"50\" r=\"22\" stroke-dasharray=\"2 3\"/>" +
-            string.Concat(Enumerable.Range(0, 24).Select(i =>
-            {
-                var a = i / 24.0 * Math.PI * 2;
-                return $"<line x1=\"{F(50 + Math.Cos(a) * 30)}\" y1=\"{F(50 + Math.Sin(a) * 30)}\" x2=\"{F(50 + Math.Cos(a) * 35)}\" y2=\"{F(50 + Math.Sin(a) * 35)}\"/>";
-            })) +
-            "<path d=\"M50 50 L50 30 M50 50 L64 58\" stroke-width=\"2\" stroke-linecap=\"round\"/><circle cx=\"50\" cy=\"50\" r=\"2.5\" fill=\"#e8c97a\"/></svg>");
+            "<span class=\"journey-tooling\" aria-hidden=\"true\">" +
+            "<i class=\"journey-corner journey-corner--tl\"></i><i class=\"journey-corner journey-corner--tr\"></i>" +
+            "<i class=\"journey-corner journey-corner--bl\"></i><i class=\"journey-corner journey-corner--br\"></i>" +
+            $"<i class=\"journey-medallion journey-medallion--{(IsBabylon ? "rosette" : "fleuron")}\"></i></span>");
     };
 
     // ---------- Library and finale ----------
