@@ -20,7 +20,7 @@
 @inject TimeProvider TimeProvider
 
 <PageTitle>@(_book?.Title ?? I18n.T("bookDetail.defaultTitle")) — Lumina Chronica</PageTitle>
-<WorldBackdrop Kind="book" ImageUrl="@_coverObjectUrl" />
+<WorldBackdrop Kind="book" ImageUrl="@_coverObjectUrl" Pending="@(_book is null || (_book.CoverUrl is not null && _coverObjectUrl is null))" />
 
 <a class="back-link" href="library">@I18n.T("bookDetail.backLink")</a>
 

@@ -10,7 +10,7 @@
 @inject II18nService I18n
 
 <PageTitle>@(_entry?.Title ?? I18n.T("loreEntryDetail.defaultTitle")) — Lumina Chronica</PageTitle>
-<WorldBackdrop Kind="lore" />
+<WorldBackdrop Kind="lore" Pending="@(_entry is null)" />
 
 <a class="back-link" href="@($"projects/{ProjectId}")">@I18n.T("loreEntryDetail.backLink")</a>
 
