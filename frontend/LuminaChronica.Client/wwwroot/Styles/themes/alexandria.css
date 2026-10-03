@@ -58,8 +58,8 @@
    afternoon light from the upper right. */
 html[data-theme="alexandria"] body {
     background:
-        radial-gradient(70% 45% at 88% 12%, rgba(255, 233, 180, 0.55), transparent 70%),
-        linear-gradient(180deg, rgba(243, 236, 222, 0.35), rgba(214, 196, 160, 0.3)),
+        radial-gradient(70% 45% at 88% 12%, rgba(255, 233, 180, 0.5), transparent 70%),
+        linear-gradient(180deg, rgba(242, 235, 220, 0.78), rgba(226, 212, 182, 0.72)),
         url("../../images/themes/alexandria/cream_marble.webp") 0 0 / 640px,
         var(--color-bg-paper);
     background-attachment: fixed;
@@ -100,7 +100,8 @@ html[data-theme="alexandria"] .dashboard-stat,
 html[data-theme="alexandria"] .stats-card,
 html[data-theme="alexandria"] .settings-card,
 html[data-theme="alexandria"] .profile-card,
-html[data-theme="alexandria"] .project-card {
+html[data-theme="alexandria"] .project-card,
+html[data-theme="alexandria"] .world-card {
     background:
         linear-gradient(180deg, rgba(253, 248, 235, 0.92), rgba(247, 238, 214, 0.92)),
         url("../../images/themes/alexandria/papyrus.webp") center / 360px,
@@ -140,7 +141,7 @@ html[data-theme="alexandria"] .home-hero-world-shade {
     inset: 0;
     background:
         linear-gradient(90deg, rgba(241, 233, 214, 0.96) 0%, rgba(241, 233, 214, 0.82) 36%, rgba(241, 233, 214, 0.04) 72%),
-        linear-gradient(0deg, rgba(239, 231, 214, 0.7) 0%, rgba(239, 231, 214, 0) 42%);
+        linear-gradient(0deg, rgba(238, 229, 210, 0.97) 0%, rgba(239, 231, 214, 0) 45%);
 }
 
 /* Afternoon light falling through high windows, drifting slowly. */
@@ -521,4 +522,39 @@ html[data-theme="alexandria"] .scroll-legend i {
     html[data-theme="alexandria"] .scroll-tag {
         transition: none;
     }
+}
+
+/* ---------- Studio dashboard (WorldDashboard) ---------- */
+html[data-theme="alexandria"] .world-card {
+    border-color: rgba(150, 112, 40, 0.32);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 22px 40px -26px rgba(80, 56, 18, 0.55), 0 2px 6px rgba(80, 56, 18, 0.08);
+}
+
+html[data-theme="alexandria"] .world-card-head h2 {
+    font-family: var(--font-family-display);
+    color: #1d3254;
+}
+
+html[data-theme="alexandria"] .home-hero-lead {
+    color: #3b3222;
+}
+
+html[data-theme="alexandria"] .home-hero-cta {
+    background: linear-gradient(180deg, #34609f, #26487c);
+    color: #f7f2e5;
+    box-shadow: 0 12px 26px -12px rgba(29, 50, 84, 0.7);
+}
+
+html[data-theme="alexandria"] .home-hero-cta-go {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+html[data-theme="alexandria"] .world-goal-text b {
+    font-size: 1.2rem;
+    color: #1d3254;
+}
+
+/* The hero's light hall fades into the (now calmer) marble floor. */
+html[data-theme="alexandria"] .home-hero {
+    background-color: transparent;
 }

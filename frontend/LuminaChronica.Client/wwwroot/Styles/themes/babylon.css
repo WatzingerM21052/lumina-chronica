@@ -96,7 +96,8 @@ html[data-theme="babylon"] .stats-card,
 html[data-theme="babylon"] .settings-card,
 html[data-theme="babylon"] .profile-card,
 html[data-theme="babylon"] .project-card,
-html[data-theme="babylon"] .book-card {
+html[data-theme="babylon"] .book-card,
+html[data-theme="babylon"] .world-card {
     background-color: rgba(19, 37, 34, 0.82);
     border-color: rgba(217, 176, 82, 0.2);
     box-shadow: var(--shadow-card);
@@ -130,7 +131,7 @@ html[data-theme="babylon"] .home-hero-world-shade {
     inset: 0;
     background:
         linear-gradient(90deg, rgba(8, 22, 21, 0.94) 0%, rgba(8, 22, 21, 0.7) 32%, rgba(8, 22, 21, 0.05) 62%),
-        linear-gradient(0deg, rgba(8, 22, 21, 0.7) 0%, rgba(8, 22, 21, 0) 40%);
+        linear-gradient(0deg, var(--color-bg-paper) 0%, rgba(8, 22, 21, 0) 42%);
 }
 
 html[data-theme="babylon"] .home-hero-motes {
@@ -291,4 +292,33 @@ html[data-theme="babylon"] .book-card-large .book-card-progress-bar::after {
         animation: none;
         opacity: 0;
     }
+}
+
+/* ---------- Studio dashboard (WorldDashboard) ---------- */
+html[data-theme="babylon"] .world-card {
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="babylon"] .world-card-head h2 {
+    font-family: var(--font-family-display);
+    color: #f3ead2;
+}
+
+html[data-theme="babylon"] .home-hero-lead {
+    color: rgba(243, 234, 210, 0.85);
+}
+
+html[data-theme="babylon"] .home-hero-cta {
+    background: linear-gradient(180deg, #e3bd62, #c99a3c);
+    color: #1a1406;
+    box-shadow: 0 10px 28px -10px rgba(217, 176, 82, 0.7);
+}
+
+html[data-theme="babylon"] .home-hero-cta-go {
+    background: rgba(26, 20, 6, 0.12);
+}
+
+html[data-theme="babylon"] .world-goal-text b {
+    color: #f3ead2;
 }

@@ -7,8 +7,6 @@
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
 @inject II18nService I18n
-@inject IJSRuntime JsRuntime
-@implements IAsyncDisposable
 
 <PageTitle>@I18n.T("statistics.pageTitle") — Lumina Chronica</PageTitle>
 
@@ -46,7 +44,7 @@ else
     <div class="stats-grid">
         @* Theme studio order: the calendar gets its own full-width row
            under the tiles; goal + trend, then genres, pace and years. *@
-        <section class="stats-card stats-card--full calendar-card" @ref="_calendarCardRef">
+        <section class="stats-card stats-card--full calendar-card">
             <div class="stats-card-head">
                 <h2><Icon Name="calendar" /> @I18n.T("statistics.calendarTitle")</h2>
                 @if (_stats.CalendarYears.Count > 1)
@@ -60,56 +58,7 @@ else
                     </select>
                 }
             </div>
-            @* .calendar-scroll is a row-reverse flex box, so on a phone the
-               swipeable heatmap starts scrolled to its right end -- the most
-               recent weeks -- instead of last year's. *@
-            <div class="calendar-scroll">
-                <div class="calendar-heatmap" style="--weeks: @_calendarWeeks.Count" tabindex="0" aria-label="@I18n.T("statistics.calendarKeyboardHint")">
-                    <div class="calendar-months" aria-hidden="true">
-                        @foreach (var (column, label) in _monthLabels)
-                        {
-                            <span style="grid-column: @column">@label</span>
-                        }
-                    </div>
-                    <div class="calendar-body">
-                        <div class="calendar-weekdays" aria-hidden="true">
-                            @foreach (var (label, index) in WeekdayNames().Select((label, index) => (label, index)))
-                            {
-                                <span>@(index % 2 == 0 ? label : "")</span>
-                            }
-                        </div>
-                        <div class="calendar-weeks">
-                            @foreach (var week in _calendarWeeks)
-                            {
-                                <div class="calendar-week">
-                                    @foreach (var day in week)
-                                    {
-                                        @if (day.DateLabel is null)
-                                        {
-                                            <div class="calendar-cell calendar-cell--level-0 calendar-cell--outside"></div>
-                                        }
-                                        else
-                                        {
-                                            <div class="calendar-cell calendar-cell--level-@day.Level" data-date="@day.DateLabel" data-main="@day.Main" data-books="@day.Books"
-                                                 role="@(day.Count > 0 ? "img" : null)" aria-label="@(day.Count > 0 ? day.AriaLabel : null)"></div>
-                                        }
-                                    }
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="calendar-tooltip" role="status" hidden></div>
-            <div class="calendar-legend">
-                <span class="calendar-legend-label">@I18n.T("statistics.calendarLegendLess")</span>
-                <span class="calendar-cell calendar-cell--level-0"></span>
-                <span class="calendar-cell calendar-cell--level-1"></span>
-                <span class="calendar-cell calendar-cell--level-2"></span>
-                <span class="calendar-cell calendar-cell--level-3"></span>
-                <span class="calendar-cell calendar-cell--level-4"></span>
-                <span class="calendar-legend-label">@I18n.T("statistics.calendarLegendMore")</span>
-            </div>
+            <ReadingCalendar Days="_calendarDays" Year="_calendarYear" />
         </section>
 
         <section class="stats-card goal-card">
@@ -255,120 +204,15 @@ else
     private bool _trendShowsBooks;
     private int? _calendarYear;
     private List<CalendarDay> _calendarDays = [];
-    private List<List<CalendarCell>> _calendarWeeks = [];
-    private List<(int Column, string Label)> _monthLabels = [];
 
     protected override async Task OnInitializedAsync()
     {
         var response = await ApiClient.GetAsync<StatisticsResponse>("/api/statistics");
         _stats = response is { Success: true, Data: not null } ? response.Data : new StatisticsResponse();
         _calendarDays = _stats.ReadingCalendar;
-        BuildCalendarWeeks();
     }
 
     private string[] MonthNames() => I18n.T("statistics.monthsShort").Split(',');
-
-    // Theme studio scale: pages per day (1-20, 21-40, 41-60, over 60). Days
-    // without a page count (before backend migration 0028, or books with
-    // no page number) fall back to the old relative activity level.
-    private static int Level(CalendarDay? day, int maxCount)
-    {
-        if (day is null || day.Count == 0) return 0;
-        if (day.Pages is { } pages and > 0)
-        {
-            return pages switch { <= 20 => 1, <= 40 => 2, <= 60 => 3, _ => 4 };
-        }
-        return Math.Clamp((int)Math.Ceiling(day.Count * 4.0 / Math.Max(1, maxCount)), 1, 4);
-    }
-
-    private string[] WeekdayNames() => I18n.T("statistics.weekdaysShort").Split(',');
-
-    // Tooltip text for one day, e.g. "Mi, 13. Mai 2026" / "24 Seiten" /
-    // "Dune · Emma". Built from the app language's own name lists and plain
-    // integers, never CurrentCulture (see #554). Days before the backend
-    // recorded pages (and books without a page count) say "Gelesen".
-    private CalendarCell BuildCell(DateTime date, CalendarDay? day, int level)
-    {
-        var weekdays = WeekdayNames();
-        var months = I18n.T("statistics.monthsLong").Split(',');
-        var weekday = weekdays.Length == 7 ? weekdays[((int)date.DayOfWeek + 6) % 7] : "";
-        var month = months.Length == 12 ? months[date.Month - 1] : date.Month.ToString(CultureInfo.InvariantCulture);
-        var dateLabel = string.Format(CultureInfo.InvariantCulture, I18n.T("statistics.calendarDayLabel"), weekday, date.Day, month, date.Year);
-
-        var count = day?.Count ?? 0;
-        string main;
-        if (count == 0)
-        {
-            main = I18n.T("statistics.calendarNotRead");
-        }
-        else if (day?.Pages is { } pages && pages > 0)
-        {
-            main = string.Format(CultureInfo.InvariantCulture, I18n.T(pages == 1 ? "statistics.calendarPage" : "statistics.calendarPages"), pages);
-        }
-        else
-        {
-            main = I18n.T("statistics.calendarRead");
-        }
-
-        var books = day is { Books.Count: > 0 } ? string.Join(" · ", day.Books) : null;
-        var aria = books is null ? $"{dateLabel}: {main}" : $"{dateLabel}: {main}, {books}";
-        return new CalendarCell(count, level, dateLabel, main, books, aria);
-    }
-
-    // Default: a Monday-start grid over the last 52 weeks. With a year
-    // picked: 1 January to 31 December of that year. Either way every day
-    // gets a cell, since the API only returns days that had activity.
-    private void BuildCalendarWeeks()
-    {
-        var dayByDate = _calendarDays.ToDictionary(d => d.Date);
-        var maxCount = dayByDate.Count > 0 ? dayByDate.Values.Max(d => d.Count) : 0;
-
-        var today = DateTime.UtcNow.Date;
-        var (first, last) = _calendarYear is { } year
-            ? (new DateTime(year, 1, 1), new DateTime(year, 12, 31))
-            : (today.AddDays(-364), today);
-        var start = first.AddDays(-(((int)first.DayOfWeek + 6) % 7));
-        var months = MonthNames();
-
-        var weeks = new List<List<CalendarCell>>();
-        var labels = new List<(int Column, string Label)>();
-        for (var current = start; current <= last; current = current.AddDays(7))
-        {
-            var week = new List<CalendarCell>();
-            for (var offset = 0; offset < 7; offset++)
-            {
-                var date = current.AddDays(offset);
-                if (date < first || date > last || date > today)
-                {
-                    week.Add(new CalendarCell(0, 0, null, null, null, null));
-                    continue;
-                }
-
-                // A month's name sits above the week holding its 1st (and
-                // above the first column for the month the range starts in).
-                if ((date.Day == 1 || date == first) && months.Length == 12)
-                {
-                    labels.Add((weeks.Count + 1, months[date.Month - 1]));
-                }
-
-                var dateKey = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                var day = dayByDate.GetValueOrDefault(dateKey);
-                var count = day?.Count ?? 0;
-                week.Add(BuildCell(date, day, Level(day, maxCount)));
-            }
-            weeks.Add(week);
-        }
-
-        // The partial month the rolling range starts in would overlap the
-        // next month's label when it's only a week or two long: drop it.
-        if (labels.Count > 1 && labels[1].Column - labels[0].Column < 3)
-        {
-            labels.RemoveAt(0);
-        }
-
-        _calendarWeeks = weeks;
-        _monthLabels = labels;
-    }
 
     private async Task OnCalendarYearChanged(ChangeEventArgs e)
     {
@@ -376,7 +220,6 @@ else
         {
             _calendarYear = null;
             _calendarDays = _stats?.ReadingCalendar ?? [];
-            BuildCalendarWeeks();
             return;
         }
 
@@ -385,7 +228,6 @@ else
         {
             _calendarYear = year;
             _calendarDays = days;
-            BuildCalendarWeeks();
         }
     }
 
@@ -443,38 +285,4 @@ else
             _editingGoal = false;
         }
     }
-
-    private ElementReference _calendarCardRef;
-    private IJSObjectReference? _calendarTooltipModule;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_calendarTooltipModule is not null || _stats is null) return;
-
-        try
-        {
-            _calendarTooltipModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/calendarTooltip.js");
-            await _calendarTooltipModule.InvokeVoidAsync("init", _calendarCardRef);
-        }
-        catch (Exception)
-        {
-            // Progressive enhancement: the cells keep their aria-labels.
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_calendarTooltipModule is null) return;
-        try
-        {
-            await _calendarTooltipModule.InvokeVoidAsync("dispose", _calendarCardRef);
-            await _calendarTooltipModule.DisposeAsync();
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-    }
-
-    // DateLabel is null for padding cells outside the shown range.
-    private record CalendarCell(int Count, int Level, string? DateLabel, string? Main, string? Books, string? AriaLabel);
 }

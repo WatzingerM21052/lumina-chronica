@@ -40,102 +40,122 @@
         <p class="home-hero-eyebrow home-hero-eyebrow--alexandria">@I18n.T("home.eyebrowAlexandria")</p>
         <h1>@I18n.T("home.welcomeBack")</h1>
         <p class="home-hero-greek" lang="grc">ΒΙΒΛΙΟΘΗΚΗ ΑΛΕΞΑΝΔΡΕΙΑΣ</p>
+        @if (_world is not null && _dashboard is { ContinueReading.Count: > 0 } && _dashboard.ContinueReading[0] is { } lastRead)
+        {
+            <p class="home-hero-lead">@HeroLead(lastRead)</p>
+            <a class="home-hero-cta" href="@($"library/books/{lastRead.Book.Id}/read")">
+                @I18n.T("home.continueReadingTitle")
+                @if (CurrentPage(lastRead) is { } page)
+                {
+                    <small>@string.Format(System.Globalization.CultureInfo.InvariantCulture, I18n.T("home.pageShort"), page)</small>
+                }
+                <span class="home-hero-cta-go" aria-hidden="true">→</span>
+            </a>
+        }
     </div>
 </div>
 
 <StatusWidget />
 
-@if (_dashboard is { ContinueReading.Count: > 0 })
+@if (_world is not null)
 {
-    <h2>@I18n.T("home.continueReadingTitle")</h2>
-    @* Bottom-aligned: the first card is the large featured one, so the
-       smaller cards' titles and progress bars line up with its own. *@
-    <div class="library-grid library-grid--strip continue-reading-grid">
-        @for (var i = 0; i < _dashboard.ContinueReading.Count; i++)
-        {
-            var item = _dashboard.ContinueReading[i];
-            <BookCard Book="item.Book" ProgressPercentage="item.Percentage" Href="@($"library/books/{item.Book.Id}/read")"
-                      ShowFavorite="item.OwnerUsername is null" OwnerUsername="@item.OwnerUsername"
-                      Size="@(i == 0 ? BookCardSize.Large : BookCardSize.Normal)" />
-        }
-    </div>
-}
-
-<h2>@I18n.T("home.libraryTitle")</h2>
-@if (_dashboard is not null)
-{
-    <div class="dashboard-overview">
-        <StatCard Value="@_dashboard.Overview.TotalBooks.ToString()" Label="@I18n.T("home.statBooks")" />
-        <StatCard Value="@_dashboard.Overview.TotalShelves.ToString()" Label="@I18n.T("home.statShelves")" />
-        <StatCard Value="@_dashboard.Overview.TotalFavorites.ToString()" Label="@I18n.T("home.statFavorites")" />
-        <StatCard Value="@_dashboard.Overview.FinishedBooks.ToString()" Label="@I18n.T("home.statFinished")" />
-    </div>
-}
-@if (_books is null)
-{
-    <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="@I18n.T("home.libraryLoading")" />
-}
-else if (_books.Count == 0)
-{
-    <EmptyState Message="@I18n.T("home.emptyLibraryMessage")"
-                ActionText="@I18n.T("home.addBookAction")"
-                ActionHref="library/upload" />
+    <WorldDashboard Dashboard="_dashboard" Books="_books" TotalBooks="_totalBooks" Projects="_projects" Genres="_genres"
+                    ShowScrollShelf="_showScrollShelf" Goal="_goal" CalendarDays="_calendarDays" FeaturedPages="_featuredPages" />
 }
 else
 {
-    @if (_showScrollShelf)
+    @if (_dashboard is { ContinueReading.Count: > 0 })
     {
-        <ScrollShelf Books="_books" Genres="_genres" />
+        <h2>@I18n.T("home.continueReadingTitle")</h2>
+        @* Bottom-aligned: the first card is the large featured one, so the
+           smaller cards' titles and progress bars line up with its own. *@
+        <div class="library-grid library-grid--strip continue-reading-grid">
+            @for (var i = 0; i < _dashboard.ContinueReading.Count; i++)
+            {
+                var item = _dashboard.ContinueReading[i];
+                <BookCard Book="item.Book" ProgressPercentage="item.Percentage" Href="@($"library/books/{item.Book.Id}/read")"
+                          ShowFavorite="item.OwnerUsername is null" OwnerUsername="@item.OwnerUsername"
+                          Size="@(i == 0 ? BookCardSize.Large : BookCardSize.Normal)" />
+            }
+        </div>
+    }
+
+    <h2>@I18n.T("home.libraryTitle")</h2>
+    @if (_dashboard is not null)
+    {
+        <div class="dashboard-overview">
+            <StatCard Value="@_dashboard.Overview.TotalBooks.ToString()" Label="@I18n.T("home.statBooks")" />
+            <StatCard Value="@_dashboard.Overview.TotalShelves.ToString()" Label="@I18n.T("home.statShelves")" />
+            <StatCard Value="@_dashboard.Overview.TotalFavorites.ToString()" Label="@I18n.T("home.statFavorites")" />
+            <StatCard Value="@_dashboard.Overview.FinishedBooks.ToString()" Label="@I18n.T("home.statFinished")" />
+        </div>
+    }
+    @if (_books is null)
+    {
+        <LoadingIndicator Mode="LoadingIndicatorMode.Page" Type="LoadingIndicatorType.Library" Text="@I18n.T("home.libraryLoading")" />
+    }
+    else if (_books.Count == 0)
+    {
+        <EmptyState Message="@I18n.T("home.emptyLibraryMessage")"
+                    ActionText="@I18n.T("home.addBookAction")"
+                    ActionHref="library/upload" />
     }
     else
     {
+        @if (_showScrollShelf)
+        {
+            <ScrollShelf Books="_books" Genres="_genres" />
+        }
+        else
+        {
+            <div class="library-grid library-grid--strip">
+                @foreach (var book in _books)
+                {
+                    <BookCard Book="book" />
+                }
+            </div>
+        }
+        @if (_totalBooks > _books.Count)
+        {
+            <p class="section-more"><a class="btn-link" href="library">@string.Format(I18n.T("home.viewFullLibraryLink"), _totalBooks) →</a></p>
+        }
+    }
+
+    @if (_dashboard is { Recommendations.Count: > 0 })
+    {
+        <h2>@I18n.T("home.recommendationsTitle")</h2>
         <div class="library-grid library-grid--strip">
-            @foreach (var book in _books)
+            @foreach (var book in _dashboard.Recommendations)
             {
                 <BookCard Book="book" />
             }
         </div>
     }
-    @if (_totalBooks > _books.Count)
+
+    <h2>@I18n.T("home.recentProjectsTitle")</h2>
+    @if (_projects is null)
     {
-        <p class="section-more"><a class="btn-link" href="library">@string.Format(I18n.T("home.viewFullLibraryLink"), _totalBooks) →</a></p>
+        <LoadingIndicator Text="@I18n.T("home.projectsLoading")" />
     }
-}
-
-@if (_dashboard is { Recommendations.Count: > 0 })
-{
-    <h2>@I18n.T("home.recommendationsTitle")</h2>
-    <div class="library-grid library-grid--strip">
-        @foreach (var book in _dashboard.Recommendations)
-        {
-            <BookCard Book="book" />
-        }
-    </div>
-}
-
-<h2>@I18n.T("home.recentProjectsTitle")</h2>
-@if (_projects is null)
-{
-    <LoadingIndicator Text="@I18n.T("home.projectsLoading")" />
-}
-else if (_projects.Count == 0)
-{
-    <EmptyState Message="@I18n.T("home.emptyProjectsMessage")"
-                ActionText="@I18n.T("home.createProjectAction")"
-                ActionHref="projects" />
-}
-else
-{
-    <div class="library-grid library-grid--strip">
-        @* Only shows newest projects; backend orders by created_at DESC (see projectService.listProjects) *@
-        @foreach (var project in _projects.Take(RecentProjectsLimit))
-        {
-            <ProjectCard Project="project" />
-        }
-    </div>
-    @if (_projects.Count > RecentProjectsLimit)
+    else if (_projects.Count == 0)
     {
-        <p class="section-more"><a class="btn-link" href="projects">@string.Format(I18n.T("home.viewAllProjectsLink"), _projects.Count) →</a></p>
+        <EmptyState Message="@I18n.T("home.emptyProjectsMessage")"
+                    ActionText="@I18n.T("home.createProjectAction")"
+                    ActionHref="projects" />
+    }
+    else
+    {
+        <div class="library-grid library-grid--strip">
+            @* Only shows newest projects; backend orders by created_at DESC (see projectService.listProjects) *@
+            @foreach (var project in _projects.Take(RecentProjectsLimit))
+            {
+                <ProjectCard Project="project" />
+            }
+        </div>
+        @if (_projects.Count > RecentProjectsLimit)
+        {
+            <p class="section-more"><a class="btn-link" href="projects">@string.Format(I18n.T("home.viewAllProjectsLink"), _projects.Count) →</a></p>
+        }
     }
 }
 
@@ -160,10 +180,20 @@ else
     private bool _showScrollShelf;
     private IReadOnlyList<string> _genres = [];
 
+    // "babylon" / "alexandria" while one of the themed worlds is active:
+    // Home then uses the studio dashboard (WorldDashboard) and loads the
+    // goal, the calendar and the featured book's page count for it.
+    private string? _world;
+    private ReadingGoal? _goal;
+    private List<CalendarDay> _calendarDays = [];
+    private int? _featuredPages;
+
     protected override async Task OnInitializedAsync()
     {
-        _showScrollShelf = await ShouldShowScrollShelfAsync();
+        _world = await WorldThemeAsync();
+        _showScrollShelf = _world == "alexandria" && await ScrollShelfPreferenceAsync();
         var facetsTask = _showScrollShelf ? ApiClient.GetAsync<BookFacets>("/api/books/facets") : null;
+        var statisticsTask = _world is not null ? ApiClient.GetAsync<StatisticsResponse>("/api/statistics") : null;
         var dashboardTask = ApiClient.GetAsync<DashboardResponse>("/api/dashboard");
         var projectsTask = ApiClient.GetAsync<List<Project>>("/api/projects");
         var response = await ApiClient.GetAsync<BookListResponse>($"/api/books?sort=createdAt&order=desc&pageSize={RecentBooksLimit}");
@@ -187,13 +217,52 @@ else
         {
             _genres = facetsResponse.Data.Genres;
         }
+
+        if (statisticsTask is not null && await statisticsTask is { Success: true, Data: not null } statistics)
+        {
+            _goal = statistics.Data.Goal;
+            _calendarDays = statistics.Data.ReadingCalendar;
+        }
+
+        if (_world is not null && _dashboard.ContinueReading.FirstOrDefault() is { } featured)
+        {
+            var detail = await ApiClient.GetAsync<Book>($"/api/books/{featured.Book.Id}");
+            _featuredPages = detail is { Success: true, Data.Pages: > 0 } ? detail.Data.Pages : null;
+        }
     }
 
-    private async Task<bool> ShouldShowScrollShelfAsync()
+    private async Task<string?> WorldThemeAsync()
     {
         try
         {
-            if (await ThemeService.GetThemeAsync() != "alexandria") return false;
+            var theme = await ThemeService.GetThemeAsync();
+            return theme is "babylon" or "alexandria" ? theme : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private int? CurrentPage(ContinueReadingItem item) =>
+        _featuredPages is { } pages ? Math.Max(1, (int)Math.Round(Math.Clamp(item.Percentage, 0, 100) / 100 * pages)) : null;
+
+    // "Du warst gestern zuletzt bei „Dune“. Noch 86 Seiten bis zum Ende."
+    private string HeroLead(ContinueReadingItem item)
+    {
+        var when = WorldDashboard.RelativeDay(I18n, item.LastOpened);
+        var lead = string.Format(I18n.T("home.heroLead"), when, item.Book.Title);
+        if (_featuredPages is { } pages && CurrentPage(item) is { } page && pages - page > 0)
+        {
+            lead += " " + string.Format(System.Globalization.CultureInfo.InvariantCulture, I18n.T("home.heroPagesLeft"), pages - page);
+        }
+        return lead;
+    }
+
+    private async Task<bool> ScrollShelfPreferenceAsync()
+    {
+        try
+        {
             var module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
             // null = never chosen: the shelf is the default.
             return await module.InvokeAsync<bool?>("getHomeScrollShelf") ?? true;

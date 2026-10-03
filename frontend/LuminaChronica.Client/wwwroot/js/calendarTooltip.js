@@ -4,6 +4,8 @@
 // week) and Escape closes it. It lives in the card, outside the swipeable
 // .calendar-scroll, and is clamped to the card's edges.
 export function init(card) {
+    // `card` is any positioned box around the calendar (.reading-calendar).
+
     if (!card || card.__calendarTooltip) return;
 
     const heatmap = card.querySelector(".calendar-heatmap");
