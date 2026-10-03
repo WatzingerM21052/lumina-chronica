@@ -85,7 +85,6 @@
 
 .project-stat:hover {
     border-color: var(--color-accent-text);
-    transform: translateY(-1px);
 }
 
 .project-stat-value {
@@ -141,23 +140,42 @@
     }
 }
 
+/* The map's stage: the full content width, the map centred on it. */
+.map-stage {
+    --map-max-height: min(80vh, 60rem);
+    display: flex;
+    justify-content: center;
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+}
+
+@media (max-width: 640px) {
+    .map-stage {
+        padding: 0.4rem;
+        border-radius: 10px;
+    }
+}
+
+/* As wide as the stage, unless the map would then be taller than
+   --map-max-height; the image fills the wrapper exactly (pins are % of it).
+   Before the image has loaded (no --map-aspect yet) it just fits. */
 .map-wrapper {
     position: relative;
-    display: inline-block;
-    max-width: 100%;
+    width: min(100%, calc(var(--map-max-height) * var(--map-aspect, 1.5)));
 }
 
-/* Capped in height: a tall map pushed the places list below it off the
-   screen. The wrapper shrinks to the image, so the %-positioned pins still
-   line up. */
 .map-image {
-    max-width: 100%;
-    max-height: 70vh;
     display: block;
-    border-radius: var(--radius, 4px);
-    border: 1px solid var(--color-border);
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
 }
 
+/* Positioned by transform, so hover changes only the colour -- a growing
+   pin moved its tip away from the spot under the pointer. */
 .map-pin {
     position: absolute;
     transform: translate(-50%, -100%);
@@ -169,8 +187,10 @@
     cursor: pointer;
 }
 
-.map-pin:hover {
-    transform: translate(-50%, -100%) scale(1.15);
+.map-pin:hover,
+.map-pin:focus-visible {
+    color: var(--color-gold-accent);
+    filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.7));
 }
 
 /* The pin is an Icon (child component, hence ::deep); at the default icon
@@ -184,8 +204,8 @@
     fill: var(--color-bg-dark);
 }
 
-.map-wrapper + .text-muted,
-.map-wrapper ~ .form-group {
+.map-stage + .text-muted,
+.map-stage ~ .form-group {
     margin-top: var(--space-2);
 }
 

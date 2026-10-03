@@ -58,7 +58,6 @@
 
 .book-card:hover .book-card-cover {
     box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
 }
 
 .book-card-cover img {

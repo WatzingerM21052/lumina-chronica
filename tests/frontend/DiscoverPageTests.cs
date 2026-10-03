@@ -37,7 +37,7 @@ public class DiscoverPageTests : BunitContext
 
     private RoutedFakeHttpMessageHandler UseRoutes(string booksJson)
     {
-        var handler = NewHandler().WhenPathEndsWith("/discover/books", booksJson);
+        var handler = NewHandler().WhenPathEndsWith("/discover/books", booksJson).WhenPathEndsWith("/discover/users", EmptyUsersJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
@@ -110,7 +110,8 @@ public class DiscoverPageTests : BunitContext
     {
         var handler = NewHandler()
             .WhenPathEndsWith("/discover/books", BookWithCoverJson)
-            .WhenPathEndsWith("/books/1/cover", "fake-jpeg-bytes", "image/jpeg");
+            .WhenPathEndsWith("/books/1/cover", "fake-jpeg-bytes", "image/jpeg")
+            .WhenPathEndsWith("/discover/users", EmptyUsersJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
@@ -242,7 +243,7 @@ public class DiscoverPageTests : BunitContext
         {
             lastRequest = r;
             return RoutedFakeHttpMessageHandler.JsonResponse(BooksJson);
-        });
+        }).WhenPathEndsWith("/discover/users", EmptyUsersJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
@@ -250,7 +251,7 @@ public class DiscoverPageTests : BunitContext
         Services.AddSingleton<BlobUrlService>();
 
         var cut = Render<Discover>();
-        cut.Find("select").Change("rating");
+        cut.Find("#discover-sort").Change("rating");
 
         Assert.Contains("sort=rating", lastRequest?.RequestUri?.Query);
     }
@@ -330,6 +331,9 @@ public class DiscoverPageTests : BunitContext
 
     private void UseHandler(RoutedFakeHttpMessageHandler handler)
     {
+        // Readers are always asked for (their count fills the dropdown); a
+        // test that doesn't care gets none.
+        handler.WhenPathEndsWith("/discover/users", EmptyUsersJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
@@ -337,8 +341,11 @@ public class DiscoverPageTests : BunitContext
         Services.AddSingleton<BlobUrlService>();
     }
 
+    private static List<string> GroupHeadings(IRenderedComponent<Discover> cut) =>
+        cut.FindAll(".discover-group-heading").Select(h => $"{h.GetAttribute("data-kind")} {h.QuerySelector(".discover-group-count")?.TextContent}").ToList();
+
     // One search for everything: "Alles" shows each kind that has hits, with
-    // its count on the chip and in the group heading.
+    // its count in the dropdown and in the group heading.
     [Fact]
     public void Discover_SearchingAll_GroupsBooksProjectsAndReaders()
     {
@@ -350,20 +357,19 @@ public class DiscoverPageTests : BunitContext
         cut.Find("input").Input("a");
         _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
 
-        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".discover-result-group").Count), TimeSpan.FromSeconds(2));
-        var headings = cut.FindAll(".discover-result-heading").Select(h => h.TextContent.Trim()).ToList();
-        Assert.Equal(["Bücher 1", "Projekte 30", "Leser 1"], headings);
-        Assert.Equal("32", cut.Find("[data-scope='all'] .discover-scope-count").TextContent);
+        cut.WaitForAssertion(() => Assert.Equal(["books 1", "projects 30", "users 1"], GroupHeadings(cut)), TimeSpan.FromSeconds(2));
+        Assert.Equal("Alles (32)", cut.Find("#discover-scope option[value='all']").TextContent.Trim());
+        Assert.Equal("Projekte (30)", cut.Find("#discover-scope option[value='projects']").TextContent.Trim());
         // No public project page yet: a project opens its owner's profile.
         Assert.Contains(cut.FindAll("a.catalog-card"), a => a.GetAttribute("href") == "u/bob");
         // More than the preview: a way into the full list.
-        Assert.Contains("Alle 30 Projekte anzeigen", cut.Find(".discover-result-group:nth-of-type(2) .discover-show-more").TextContent);
-        // The shelves give way while searching.
-        Assert.Empty(cut.FindAll("#discover-sort"));
+        Assert.Contains(cut.FindAll(".discover-show-more"), b => b.TextContent.Contains("Alle 30 Projekte anzeigen"));
     }
 
+    // The scope is a dropdown next to the field; picking a kind asks for a
+    // full page of it and only a count of the others.
     [Fact]
-    public void Discover_ProjectsScope_SearchesOnlyProjects_WithAFullPage()
+    public void Discover_ProjectsScope_LoadsAFullPageOfProjects_AndOnlyCountsTheRest()
     {
         var requested = new List<string>();
         UseHandler(new RoutedFakeHttpMessageHandler()
@@ -373,15 +379,51 @@ public class DiscoverPageTests : BunitContext
             .WhenPathEndsWith("/discover/users", EmptyUsersJson));
 
         var cut = Render<Discover>();
-        cut.Find("[data-scope='projects']").Click();
+        cut.Find("#discover-scope").Change("projects");
         cut.Find("input").Input("garten");
         _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
 
         cut.WaitForAssertion(() => Assert.Contains("Mehr laden", cut.Find(".discover-show-more").TextContent), TimeSpan.FromSeconds(2));
-        var searches = requested.Where(r => r.Contains("search=")).ToList();
-        Assert.All(searches, r => Assert.Contains("/discover/projects", r));
-        Assert.Contains(searches, r => r.Contains("pageSize=24"));
-        Assert.Equal("true", cut.Find("[data-scope='projects']").GetAttribute("aria-pressed"));
+        var searches = requested.Where(r => r.Contains("search=garten")).ToList();
+        Assert.Contains(searches, r => r.Contains("/discover/projects") && r.Contains("pageSize=24"));
+        Assert.All(searches.Where(r => !r.Contains("/discover/projects")), r => Assert.Contains("pageSize=1", r));
+        Assert.Equal(["projects 30"], GroupHeadings(cut));
+    }
+
+    // User report: the filter did nothing before a term was typed. Without
+    // a term it browses that kind.
+    [Fact]
+    public void Discover_PickingAKind_WithoutATerm_BrowsesThatKind()
+    {
+        UseHandler(NewHandler(ProjectResultsJson)
+            .WhenPathEndsWith("/discover/books", BooksJson)
+            .WhenPathEndsWith("/discover/users", UserResultsJson));
+
+        var cut = Render<Discover>();
+        cut.WaitForAssertion(() => Assert.Equal(["books 1", "projects 30", "users 1"], GroupHeadings(cut)), TimeSpan.FromSeconds(2));
+
+        cut.Find("#discover-scope").Change("projects");
+        cut.WaitForAssertion(() => Assert.Equal(["projects 30"], GroupHeadings(cut)), TimeSpan.FromSeconds(2));
+        Assert.Contains("Die Gärten", cut.Markup);
+        // Books have no sort to offer outside their own lists.
+        Assert.Empty(cut.FindAll("#discover-sort"));
+
+        cut.Find("#discover-scope").Change("users");
+        cut.WaitForAssertion(() => Assert.Equal(["users 1"], GroupHeadings(cut)), TimeSpan.FromSeconds(2));
+        Assert.Equal("u/alice", cut.Find(".discover-author-card").GetAttribute("href"));
+    }
+
+    [Fact]
+    public void Discover_WithoutATerm_TheDropdownShowsHowManyThereAre()
+    {
+        UseHandler(NewHandler(ProjectResultsJson)
+            .WhenPathEndsWith("/discover/books", BooksJson)
+            .WhenPathEndsWith("/discover/users", UserResultsJson));
+
+        var cut = Render<Discover>();
+
+        cut.WaitForAssertion(() => Assert.Equal("Bücher (1)", cut.Find("#discover-scope option[value='books']").TextContent.Trim()), TimeSpan.FromSeconds(2));
+        Assert.Equal("Leser (1)", cut.Find("#discover-scope option[value='users']").TextContent.Trim());
     }
 
     [Fact]
@@ -410,8 +452,9 @@ public class DiscoverPageTests : BunitContext
         var cut = Render<Discover>();
 
         cut.WaitForAssertion(() => Assert.Equal("Discoverable", cut.Find("input").GetAttribute("value")), TimeSpan.FromSeconds(2));
-        Assert.Equal("true", cut.Find("[data-scope='books']").GetAttribute("aria-pressed"));
-        Assert.Equal("library/books/1", cut.Find(".discover-results a.catalog-card").GetAttribute("href"));
+        Assert.Equal("books", cut.Find("#discover-scope").GetAttribute("value"));
+        Assert.Equal(["books 1"], GroupHeadings(cut));
+        Assert.Equal("library/books/1", cut.Find("a.catalog-card").GetAttribute("href"));
     }
 
     [Fact]

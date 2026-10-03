@@ -17,6 +17,12 @@ public class ElementMetricsService(IJSRuntime jsRuntime)
         var module = await _moduleTask.Value;
         return await module.InvokeAsync<ElementSize>("getElementSize", element);
     }
+
+    public async Task<ElementSize> GetNaturalSizeAsync(ElementReference image)
+    {
+        var module = await _moduleTask.Value;
+        return await module.InvokeAsync<ElementSize>("getNaturalSize", image);
+    }
 }
 
 public record ElementSize(double Width, double Height);

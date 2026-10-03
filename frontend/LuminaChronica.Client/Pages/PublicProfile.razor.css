@@ -130,9 +130,6 @@
     border-color: var(--color-primary-hover);
 }
 
-.btn-follow:active {
-    transform: scale(0.97);
-}
 
 /* Restrained press feedback -- a soft radial fade from the center, not a
    literal Material ripple (issue #341 explicitly asks for something more

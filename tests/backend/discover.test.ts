@@ -125,11 +125,22 @@ describe("GET /api/discover/users", () => {
         expect(res.status).toBe(200);
     });
 
-    it("returns an empty result for a blank search rather than listing every user", async () => {
-        const res = await app.request("/api/discover/users", {}, env);
-        const json = await readJson(res);
-        expect(json.data.items).toEqual([]);
-        expect(json.data.total).toBe(0);
+    it("lists only readers who share something for a blank search, not every account", async () => {
+        const empty = await readJson(await app.request("/api/discover/users", {}, env));
+        expect(empty.data.items).toEqual([]);
+        expect(empty.data.total).toBe(0);
+
+        await uploadBook(tokenA, "Alice Shares", "PUBLIC");
+        await uploadBook(tokenB, "Bob Keeps", "PRIVATE");
+        const json = await readJson(await app.request("/api/discover/users", {}, env));
+        expect(json.data.items.map((u: { username: string }) => u.username)).toEqual(["alice"]);
+        expect(json.data.total).toBe(1);
+    });
+
+    it("counts a public project as sharing something", async () => {
+        await createProject(tokenB, "Bob's World", null, "PUBLIC");
+        const json = await readJson(await app.request("/api/discover/users", {}, env));
+        expect(json.data.items.map((u: { username: string }) => u.username)).toEqual(["bob"]);
     });
 
     it("finds a user by a partial, case-sensitive-agnostic-in-SQLite substring", async () => {
