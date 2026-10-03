@@ -1,10 +1,17 @@
 @page "/impressum"
+@using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Services
 @inject II18nService I18n
 
 <PageTitle>@I18n.T("impressum.title") — Lumina Chronica</PageTitle>
 
-<h1>@I18n.T("impressum.title")</h1>
+<WorldBanner Page="impressum" Title="@I18n.T("impressum.title")" />
+<div class="page-header">
+    <h1>@I18n.T("impressum.title")</h1>
+</div>
+
+@* Themed worlds: the sections sit on one content card. *@
+<div class="world-surface">
 
 <section class="impressum-section">
     <h2>@I18n.T("impressum.section1Title")</h2>
@@ -51,3 +58,4 @@
         @I18n.T("impressum.copyrightParagraph2")
     </p>
 </section>
+</div>

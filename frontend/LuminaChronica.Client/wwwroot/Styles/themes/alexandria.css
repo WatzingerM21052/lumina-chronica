@@ -620,6 +620,10 @@ html[data-theme="alexandria"] .world-banner[data-page="offline"] .world-banner-i
     background: url("../../images/themes/alexandria/banner_mausoleum.webp") center / cover;
 }
 
+html[data-theme="alexandria"] .world-banner[data-page="upload"] .world-banner-image {
+    background: url("../../images/themes/alexandria/library_duotone.webp") center 30% / cover;
+}
+
 html[data-theme="alexandria"] .world-banner-shade {
     background: linear-gradient(90deg, rgba(241, 233, 214, 0.96) 0%, rgba(241, 233, 214, 0.84) 34%, rgba(241, 233, 214, 0.06) 70%);
 }

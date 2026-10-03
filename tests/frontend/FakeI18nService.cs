@@ -815,6 +815,7 @@ public class FakeI18nService : II18nService
         ["home.eyebrowBabylon"] = "Die hängenden Gärten",
         ["home.eyebrowAlexandria"] = "Die große Bibliothek · Lesesaal",
         ["worldBanner.eyebrowAlexandria"] = "Die große Bibliothek",
+        ["worldBanner.uploadSubtitle"] = "Ein neues Buch für deine Sammlung",
         ["worldBanner.librarySubtitle"] = "Alle deine Bücher an einem Ort.",
         ["worldBanner.shelvesSubtitle"] = "Deine Sammlungen, Regal für Regal.",
         ["worldBanner.projectsSubtitle"] = "Welten, Geschichten und Kampagnen.",
