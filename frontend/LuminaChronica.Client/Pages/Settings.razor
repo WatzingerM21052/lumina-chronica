@@ -51,6 +51,19 @@
         }
     </div>
 
+    @* Babylon and Alexandria: Home as the immersive journey (default) or
+       as the calmer card dashboard. *@
+    @if (_currentTheme is "babylon" or "alexandria")
+    {
+        <label class="preference-row immersive-theme-row">
+            <span class="preference-row-text">
+                <strong>@I18n.T("settings.immersiveLabel")</strong>
+                <span class="text-muted">@I18n.T("settings.immersiveDescription")</span>
+            </span>
+            <input type="checkbox" role="switch" class="switch" checked="@_immersive" @onchange="e => SetImmersiveAsync((bool)e.Value!)" />
+        </label>
+    }
+
     <h3 class="settings-subheading">@I18n.T("settings.languageTitle")</h3>
     <div class="theme-picker">
         <button class="btn @(I18n.CurrentLanguage == "de" ? "btn-primary" : "")" @onclick='() => SetLanguageAsync("de")'>@I18n.T("settings.languageGerman")</button>
@@ -65,7 +78,8 @@
         </span>
         <input type="checkbox" role="switch" class="switch" checked="@_showShelfCoverText" @onchange="e => SetShowShelfCoverTextAsync((bool)e.Value!)" />
     </label>
-    @if (_currentTheme == "alexandria")
+    @* The scroll shelf belongs to the card dashboard only. *@
+    @if (_currentTheme == "alexandria" && !_immersive)
     {
         <label class="preference-row home-scroll-shelf-row">
             <span class="preference-row-text">
@@ -159,6 +173,8 @@ else
     private IJSObjectReference? _shelfCoverTextModule;
     private bool _homeScrollShelf = true;
     private IJSObjectReference? _libraryPreferencesModule;
+    private bool _immersive = true;
+    private IJSObjectReference? _worldPreferencesModule;
 
     protected override async Task OnInitializedAsync()
     {
@@ -173,6 +189,17 @@ else
         // Alexandria card is picked. null = never chosen: on.
         _libraryPreferencesModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
         _homeScrollShelf = await _libraryPreferencesModule.InvokeAsync<bool?>("getHomeScrollShelf") ?? true;
+
+        // Same: right the moment a world theme is picked. null = never chosen: on.
+        _worldPreferencesModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/worldPreferences.js");
+        _immersive = await _worldPreferencesModule.InvokeAsync<bool?>("getImmersive") ?? true;
+    }
+
+    private async Task SetImmersiveAsync(bool immersive)
+    {
+        _immersive = immersive;
+        _worldPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/worldPreferences.js");
+        await _worldPreferencesModule.InvokeVoidAsync("setImmersive", immersive);
     }
 
     private async Task SetHomeScrollShelfAsync(bool show)

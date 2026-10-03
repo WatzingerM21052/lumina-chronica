@@ -14,7 +14,7 @@
 
 
 <div class="home-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
-<div class="home-hero" @ref="_heroRef">
+<div class="@(_world is not null && _immersive ? "home-hero home-hero--journey" : "home-hero")" @ref="_heroRef">
     <img src="images/dashboard-hero-layer1-background.webp" alt="" class="home-hero-layer home-hero-layer-1" fetchpriority="high" />
     <img src="images/dashboard-hero-layer2-lights.webp" alt="" class="home-hero-layer home-hero-layer-2" fetchpriority="low" decoding="async" />
     <img src="images/dashboard-hero-layer3-foreground.webp" alt="" class="home-hero-layer home-hero-layer-3" fetchpriority="low" decoding="async" />
@@ -57,7 +57,13 @@
 
 <StatusWidget />
 
-@if (_world is not null)
+@if (_world is not null && _immersive)
+{
+    @* The immersive journey (default); Settings can switch to the cards. *@
+    <WorldJourney World="@_world" Dashboard="_dashboard" Books="_books" TotalBooks="_totalBooks" Projects="_projects"
+                  Goal="_goal" CalendarDays="_calendarDays" FeaturedPages="_featuredPages" />
+}
+else if (_world is not null)
 {
     <WorldDashboard Dashboard="_dashboard" Books="_books" TotalBooks="_totalBooks" Projects="_projects" Genres="_genres"
                     ShowScrollShelf="_showScrollShelf" Goal="_goal" CalendarDays="_calendarDays" FeaturedPages="_featuredPages" />
@@ -184,6 +190,9 @@ else
     // Home then uses the studio dashboard (WorldDashboard) and loads the
     // goal, the calendar and the featured book's page count for it.
     private string? _world;
+    // Babylon/Alexandria: the immersive journey (default) or the card
+    // dashboard, per the "Immersives Theme" switch in Settings.
+    private bool _immersive = true;
     private ReadingGoal? _goal;
     private List<CalendarDay> _calendarDays = [];
     private int? _featuredPages;
@@ -191,7 +200,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         _world = await WorldThemeAsync();
-        _showScrollShelf = _world == "alexandria" && await ScrollShelfPreferenceAsync();
+        _immersive = _world is null || await ImmersivePreferenceAsync();
+        _showScrollShelf = _world == "alexandria" && !_immersive && await ScrollShelfPreferenceAsync();
         var facetsTask = _showScrollShelf ? ApiClient.GetAsync<BookFacets>("/api/books/facets") : null;
         var statisticsTask = _world is not null ? ApiClient.GetAsync<StatisticsResponse>("/api/statistics") : null;
         var dashboardTask = ApiClient.GetAsync<DashboardResponse>("/api/dashboard");
@@ -257,6 +267,20 @@ else
             lead += " " + string.Format(System.Globalization.CultureInfo.InvariantCulture, I18n.T("home.heroPagesLeft"), pages - page);
         }
         return lead;
+    }
+
+    private async Task<bool> ImmersivePreferenceAsync()
+    {
+        try
+        {
+            var module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/worldPreferences.js");
+            // null = never chosen: the journey is the default.
+            return await module.InvokeAsync<bool?>("getImmersive") ?? true;
+        }
+        catch (Exception)
+        {
+            return true;
+        }
     }
 
     private async Task<bool> ScrollShelfPreferenceAsync()

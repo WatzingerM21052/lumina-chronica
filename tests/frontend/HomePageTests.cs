@@ -351,12 +351,17 @@ public class HomePageTests : BunitContext
 
     private const string EmptyStatisticsJson = """{"success":true,"data":{"goal":{"targetBooks":null,"booksFinishedThisYear":0},"readingCalendar":[]}}""";
 
+    // The card dashboard (WorldDashboard): "Immersives Theme" switched off.
+    private void UseCardDashboard() =>
+        JSInterop.SetupModule("./js/worldPreferences.js").Setup<bool?>("getImmersive", _ => true).SetResult(false);
+
     [Fact]
     public void Home_Alexandria_ShowsLibraryAsScrollShelf_WhenNeverChosen()
     {
         UseHandler(BooksHandler(), "alexandria");
         Services.AddSingleton<BlobUrlService>();
         JSInterop.Mode = JSRuntimeMode.Loose;
+        UseCardDashboard();
         JSInterop.SetupModule("./js/libraryPreferences.js")
             .Setup<bool?>("getHomeScrollShelf", _ => true)
             .SetResult(null);
@@ -373,6 +378,7 @@ public class HomePageTests : BunitContext
         UseHandler(BooksHandler(), "alexandria");
         Services.AddSingleton<BlobUrlService>();
         JSInterop.Mode = JSRuntimeMode.Loose;
+        UseCardDashboard();
         JSInterop.SetupModule("./js/libraryPreferences.js")
             .Setup<bool?>("getHomeScrollShelf", _ => true)
             .SetResult(false);
@@ -389,6 +395,7 @@ public class HomePageTests : BunitContext
         UseHandler(BooksHandler(), "babylon");
         Services.AddSingleton<BlobUrlService>();
         JSInterop.Mode = JSRuntimeMode.Loose;
+        UseCardDashboard();
 
         var cut = Render<Home>();
 
@@ -410,6 +417,7 @@ public class HomePageTests : BunitContext
         UseHandler(handler, "babylon");
         Services.AddSingleton<BlobUrlService>();
         JSInterop.Mode = JSRuntimeMode.Loose;
+        UseCardDashboard();
 
         var cut = Render<Home>();
 
@@ -449,6 +457,7 @@ public class HomePageTests : BunitContext
             .WhenPathEndsWith("/api/statistics", EmptyStatisticsJson), "babylon");
         Services.AddSingleton<BlobUrlService>();
         JSInterop.Mode = JSRuntimeMode.Loose;
+        UseCardDashboard();
 
         var cut = Render<Home>();
 
@@ -457,5 +466,34 @@ public class HomePageTests : BunitContext
         Assert.Contains("„Dune“", cut.Find(".home-hero-lead").TextContent);
         Assert.Contains("Noch 200 Seiten bis zum Ende.", cut.Find(".home-hero-lead").TextContent);
         Assert.Contains("200 von 400 Seiten", cut.Find(".world-continue").TextContent);
+    }
+
+    // Babylon/Alexandria: the immersive journey unless "Immersives Theme" is off.
+    [Fact]
+    public void Home_ThemedWorld_ShowsTheJourneyByDefault()
+    {
+        UseHandler(BooksHandler(), "babylon");
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".journey[data-world=babylon]")));
+        Assert.Empty(cut.FindAll(".world-dashboard"));
+        Assert.Contains("home-hero--journey", cut.Find(".home-hero").ClassName);
+        Assert.Equal(2, cut.FindAll(".journey-tome").Count);
+    }
+
+    [Fact]
+    public void Home_ClassicTheme_NeverShowsTheJourney()
+    {
+        UseHandler(BooksHandler());
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-grid--strip .book-card").Count));
+        Assert.Empty(cut.FindAll(".journey"));
     }
 }

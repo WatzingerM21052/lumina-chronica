@@ -1,0 +1,370 @@
+@namespace LuminaChronica.Client.Components
+@using System.Globalization
+@using LuminaChronica.Client.Models
+
+@* See WorldJourney.razor.cs. Every chapter is readable without journey.js;
+   the module only adds motion and the hover cards ([data-tip-*]). *@
+<div class="journey" data-world="@World" @ref="_rootRef">
+    <div class="journey-stage" aria-hidden="true">
+        <div class="journey-amb" data-mood="reading"></div>
+        <div class="journey-amb" data-mood="goal"></div>
+        <div class="journey-amb" data-mood="sky"></div>
+        <div class="journey-amb" data-mood="library"></div>
+        <div class="journey-amb" data-mood="world"></div>
+        <div class="journey-amb" data-mood="finale"></div>
+        <canvas></canvas>
+    </div>
+    <div class="journey-tip" role="status" aria-live="polite"></div>
+
+    @* ---------- II · Weiterlesen ---------- *@
+    @if (Featured is { } featured)
+    {
+        var percent = Percent(featured.Percentage);
+        var page = CurrentPage(featured);
+        <section class="journey-chapter journey-reading" data-amb="reading" aria-labelledby="journey-reading-title">
+            <div class="journey-wrap journey-grid">
+                <div class="journey-book-col" data-tilt data-enter>
+                    <div class="journey-pool"></div>
+                    @if (IsBabylon)
+                    {
+                        <img class="journey-object journey-object--tablet" src="images/themes/babylon/tablet_letter.webp" alt="" data-speed="0.06" />
+                    }
+                    else
+                    {
+                        <div class="journey-lamp-glow"></div>
+                        <img class="journey-object journey-object--lamp" src="images/themes/alexandria/lamp.webp" alt="" data-speed="0.05" />
+                    }
+                    <a class="journey-book" href="@ReadHref(featured)" aria-label="@featured.Book.Title">
+                        <span class="journey-book-back"></span>
+                        <span class="journey-book-spine"></span>
+                        <span class="journey-book-pages"></span>
+                        <span class="journey-book-front">
+                            @if (CoverOf(featured.Book) is { } cover)
+                            {
+                                <img src="@cover" alt="" />
+                            }
+                            else
+                            {
+                                @Ornament
+                                <span class="journey-book-title">@featured.Book.Title</span>
+                                @if (!string.IsNullOrWhiteSpace(featured.Book.Author))
+                                {
+                                    <span class="journey-book-author">@featured.Book.Author</span>
+                                }
+                            }
+                        </span>
+                    </a>
+                </div>
+                <div class="journey-copy">
+                    <div class="journey-mark"><b>II</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.readingEyebrow"), WorldDashboard.RelativeDay(I18n, featured.LastOpened))</p></div>
+                    <h2 id="journey-reading-title">@featured.Book.Title</h2>
+                    @if (!string.IsNullOrWhiteSpace(featured.Book.Author))
+                    {
+                        <p class="journey-meta">@featured.Book.Author</p>
+                    }
+                    @if (page is { } current && FeaturedPages is { } pages)
+                    {
+                        <p class="journey-count" data-enter><strong data-count-to="@current">@current</strong><span>@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.pagesOf"), pages)</span></p>
+                    }
+                    else
+                    {
+                        <p class="journey-count" data-enter><strong data-count-to="@percent">@percent</strong><span>@I18n.T("journey.percentRead")</span></p>
+                    }
+                    <div class="journey-thread" data-enter style="--pct: @percent.ToString(CultureInfo.InvariantCulture)%">
+                        <i></i>
+                        <em>@(percent >= 100 ? I18n.T("journey.finished") : $"{percent} %")</em>
+                    </div>
+                    <a class="journey-cta" href="@ReadHref(featured)">
+                        @I18n.T("home.continueReadingTitle")
+                        @if (page is { } p && percent < 100)
+                        {
+                            <small>@string.Format(CultureInfo.InvariantCulture, I18n.T("home.pageShort"), p)</small>
+                        }
+                        <i aria-hidden="true">→</i>
+                    </a>
+                    @if (AlsoOpen.Any())
+                    {
+                        <div class="journey-also">
+                            <p class="journey-eyebrow">@I18n.T("journey.alsoOpen")</p>
+                            <div class="journey-also-row">
+                                @foreach (var item in AlsoOpen)
+                                {
+                                    var itemPercent = Percent(item.Percentage);
+                                    <a class="journey-sat" href="@ReadHref(item)">
+                                        <svg viewBox="0 0 64 64" aria-hidden="true">
+                                            <circle class="off" cx="32" cy="32" r="26" />
+                                            <circle class="on" cx="32" cy="32" r="26" stroke-dasharray="163.4" stroke-dashoffset="@F(163.4 * (1 - itemPercent / 100.0), "0.#")" />
+                                            <text x="32" y="36.5" text-anchor="middle">@itemPercent %</text>
+                                        </svg>
+                                        <span><b>@item.Book.Title</b>@if (!string.IsNullOrWhiteSpace(item.Book.Author)) {<small>@item.Book.Author</small>}</span>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    @* ---------- III · Jahresziel ---------- *@
+    <section class="journey-chapter journey-goal" data-amb="goal" aria-labelledby="journey-goal-title">
+        <div class="journey-wrap journey-grid">
+            <div class="journey-goal-copy">
+                <div class="journey-mark"><b>III</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.goalEyebrow"), DateTime.UtcNow.Year)</p></div>
+                @if (GoalTarget > 0)
+                {
+                    <p class="journey-goal-number"><span>@GoalDone</span><small>@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.goalOf"), GoalTarget)</small></p>
+                    <h2 id="journey-goal-title">@GoalHeading()</h2>
+                    <p class="journey-body">@GoalBodyText()</p>
+                    <p class="journey-hint">@I18n.T(UsePetals ? "journey.goalHintPetals" : "journey.goalHintRing")</p>
+                    <a class="journey-link" href="statistics">@I18n.T("home.goalEdit")</a>
+                }
+                else
+                {
+                    <h2 id="journey-goal-title">@I18n.T("journey.goalNoneTitle")</h2>
+                    <p class="journey-body">@I18n.T("statistics.goalSetPrompt")</p>
+                    <a class="journey-cta" href="statistics">@I18n.T("statistics.goalSetButton") <i aria-hidden="true">→</i></a>
+                }
+            </div>
+            <div class="journey-dial" data-enter>
+                <div class="journey-dial-halo"></div>
+                <svg viewBox="-320 -320 640 640" role="img" aria-label="@(GoalTarget > 0 ? $"{GoalDone} / {GoalTarget}" : I18n.T("journey.goalNoneTitle"))">
+                    <g class="journey-dial-ticks">
+                        @for (var i = 0; i < 72; i++)
+                        {
+                            var a = i / 72.0 * Math.PI * 2;
+                            var r1 = i % 6 == 0 ? 280 : 292;
+                            <line x1="@F(Math.Cos(a) * r1)" y1="@F(Math.Sin(a) * r1)" x2="@F(Math.Cos(a) * 300)" y2="@F(Math.Sin(a) * 300)" />
+                        }
+                        <circle r="300" />
+                        @foreach (var (x, y, label) in DialMonths())
+                        {
+                            <g><text x="@x" y="@y">@label</text></g>
+                        }
+                    </g>
+                    <g class="journey-dial-rotor">
+                        @foreach (var field in GoalFields())
+                        {
+                            var (transform, d) = SplitPath(field.Path);
+                            <path class="journey-field @(field.Lit ? "is-lit" : null)" transform="@(string.IsNullOrEmpty(transform) ? null : transform)" d="@d" tabindex="0"
+                                  style="--i: @field.Index"
+                                  data-tip-title="@field.Title" data-tip-main="@field.Main" data-tip-note="@field.Note"
+                                  aria-label="@($"{field.Title}: {field.Main}")" />
+                        }
+                        @if (UsePetals || (IsBabylon && GoalTarget == 0))
+                        {
+                            <circle class="journey-rosette-core" r="46" />
+                            @for (var i = 0; i < 12; i++)
+                            {
+                                var a = i / 12.0 * Math.PI * 2;
+                                <circle class="journey-rosette-dot" cx="@F(Math.Cos(a) * 30)" cy="@F(Math.Sin(a) * 30)" r="4" />
+                            }
+                            <circle class="journey-rosette-eye" r="12" />
+                        }
+                    </g>
+                </svg>
+                @if (!IsBabylon)
+                {
+                    <img class="journey-astrolabe" src="images/themes/alexandria/astrolabe_disc.webp" alt="" />
+                }
+            </div>
+        </div>
+    </section>
+
+    @* ---------- IV · Lesehimmel ---------- *@
+    <section class="journey-chapter journey-sky" data-amb="sky" aria-labelledby="journey-sky-title">
+        <div class="journey-wrap">
+            <div class="journey-grid journey-sky-head">
+                <div>
+                    <div class="journey-mark"><b>IV</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.skyEyebrow"), SkyWeeks)</p></div>
+                    <h2 id="journey-sky-title">@I18n.T("journey.skyTitle")</h2>
+                    <p class="journey-lede">@(_skyReadDays > 0 ? I18n.T("journey.skyLede") : I18n.T("journey.skyEmpty"))</p>
+                    <div class="journey-legend">
+                        <span><i class="is-none"></i>@I18n.T("journey.skyLegendNone")</span>
+                        <span><i class="is-read"></i>@I18n.T("journey.skyLegendRead")</span>
+                        <span><i class="is-best"></i>@I18n.T("journey.skyLegendBest")</span>
+                    </div>
+                </div>
+                <div class="journey-facts">
+                    <div><strong>@_skyPages.ToString("N0", CultureInfo.GetCultureInfo(I18n.CurrentLanguage == "en" ? "en-US" : "de-AT"))</strong><span>@I18n.T("journey.skyFactPages")</span></div>
+                    <div><strong>@_skyReadDays</strong><span>@I18n.T("journey.skyFactDays")</span></div>
+                    <div><strong>@_skyStreak</strong><span>@I18n.T("journey.skyFactStreak")</span></div>
+                    <div><strong>@_skyPerDay</strong><span>@I18n.T("journey.skyFactPerDay")</span></div>
+                </div>
+            </div>
+            <div class="journey-sky-scroll">
+                <svg class="journey-sky-chart" viewBox="0 0 1600 700" role="img" aria-label="@I18n.T("journey.skyTitle")">
+                    <defs>
+                        <radialGradient id="journey-halo">
+                            <stop offset="0" class="journey-halo-in" />
+                            <stop offset="1" class="journey-halo-out" />
+                        </radialGradient>
+                    </defs>
+                    @foreach (var lane in _lanes)
+                    {
+                        <path class="journey-lane" d="@lane" />
+                    }
+                    @foreach (var (x, y, label) in _skyWeekdays)
+                    {
+                        <g><text class="journey-weekday" x="@x" y="@y">@label</text></g>
+                    }
+                    @foreach (var (x, y, label) in _skyMonths)
+                    {
+                        <g><text class="journey-month" x="@x" y="@y">@label</text></g>
+                    }
+                    @foreach (var line in _lines)
+                    {
+                        <line class="journey-constellation" x1="@line.X1" y1="@line.Y1" x2="@line.X2" y2="@line.Y2" />
+                    }
+                    @foreach (var star in _stars)
+                    {
+                        <g class="journey-star journey-star--@star.Level @(star.Best ? "is-best" : null)" tabindex="0" role="img" aria-label="@star.Aria"
+                           data-tip-title="@star.Title" data-tip-main="@star.Main" data-tip-text="@star.Text" data-tip-note="@(star.Best ? I18n.T("journey.skyBestDay") : null)">
+                            <circle class="journey-star-halo" cx="@star.X" cy="@star.Y" r="@(10 + star.Level * 6)" />
+                            <circle class="journey-star-core" cx="@star.X" cy="@star.Y" r="@F(StarRadius[star.Level] + (star.Best ? 1.5 : 0))"
+                                    style="--tw: @((3 + star.Week % 5).ToString(CultureInfo.InvariantCulture))s; --td: -@F(star.Weekday * 0.6, "0.0")s" />
+                            <circle class="journey-star-hit" cx="@star.X" cy="@star.Y" r="15" />
+                        </g>
+                    }
+                </svg>
+                <span class="journey-shooting" aria-hidden="true"></span>
+            </div>
+        </div>
+    </section>
+
+    @* ---------- V · Bibliothek ---------- *@
+    <section class="journey-chapter journey-library" data-amb="library" aria-labelledby="journey-library-title">
+        @if (IsBabylon)
+        {
+            <div class="journey-deco journey-garland" aria-hidden="true" data-speed="0.05">
+                <img src="images/themes/babylon/wisteria_clean.webp" alt="" />
+                <img src="images/themes/babylon/wisteria_clean.webp" alt="" />
+                <img src="images/themes/babylon/wisteria_clean.webp" alt="" />
+            </div>
+        }
+        else
+        {
+            <div class="journey-deco journey-niche" aria-hidden="true" data-speed="0.04"><img src="images/themes/alexandria/ptolemaic_queen.webp" alt="" /></div>
+        }
+        <div class="journey-wrap">
+            <div class="journey-library-head">
+                <div class="journey-mark"><b>V</b><span></span><p class="journey-eyebrow">@I18n.T("journey.libraryEyebrow")</p></div>
+                <h2 id="journey-library-title">@I18n.T(IsBabylon ? "journey.libraryTitleBabylon" : "journey.libraryTitleAlexandria")</h2>
+                <div class="journey-library-stats">
+                    <div><strong>@(Dashboard?.Overview.TotalBooks ?? TotalBooks)</strong><span>@I18n.T("journey.statBooks")</span></div>
+                    <div><strong>@(Dashboard?.Overview.FinishedBooks ?? 0)</strong><span>@I18n.T("journey.statRead")</span></div>
+                    <div><strong>@(Dashboard?.Overview.TotalFavorites ?? 0)</strong><span>@I18n.T("journey.statFavorites")</span></div>
+                    <a class="journey-cta" href="library">@I18n.T("journey.libraryCta") <i aria-hidden="true">→</i></a>
+                </div>
+            </div>
+            @if (Books is { Count: 0 })
+            {
+                <p class="journey-lede journey-empty">@I18n.T("home.emptyLibraryMessage") <a class="journey-link" href="library/upload">@I18n.T("home.addBookAction")</a></p>
+            }
+            else
+            {
+                <div class="journey-grid journey-shelf" data-enter>
+                    @foreach (var book in ShelfSelection)
+                    {
+                        <a class="journey-tome" href="@($"library/books/{book.Id}")">
+                            <span class="journey-tome-cover">
+                                @if (CoverOf(book) is { } cover)
+                                {
+                                    <img src="@cover" alt="" />
+                                }
+                                else
+                                {
+                                    <span class="journey-tome-generated">
+                                        <span class="journey-book-title">@book.Title</span>
+                                        @Ornament
+                                        @if (!string.IsNullOrWhiteSpace(book.Author))
+                                        {
+                                            <span class="journey-book-author">@book.Author</span>
+                                        }
+                                    </span>
+                                }
+                            </span>
+                            <b>@book.Title</b>
+                            @if (!string.IsNullOrWhiteSpace(book.Author))
+                            {
+                                <small>@book.Author</small>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(book.Genre))
+                            {
+                                <span class="journey-genre">@book.Genre</span>
+                            }
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    @* ---------- VI · Welt ---------- *@
+    <section class="journey-chapter journey-world" data-amb="world" aria-labelledby="journey-world-title">
+        <div class="journey-wrap"><div class="journey-mark"><b>VI</b><span></span><p class="journey-eyebrow">@I18n.T("journey.worldEyebrow")</p></div></div>
+        @if (CurrentProject is { } project)
+        {
+            <div class="journey-world-window">
+                <div class="journey-world-image @(_projectCover is null ? "is-fallback" : null)"
+                     style="@(_projectCover is { } cover ? $"background-image: url('{cover}')" : null)"></div>
+                <div class="journey-world-inner">
+                    <div>
+                        <p class="journey-eyebrow">@ProjectTypeLabel.For(project.Type, I18n)</p>
+                        <h2 id="journey-world-title">@project.Title</h2>
+                        @if (!string.IsNullOrWhiteSpace(project.Description))
+                        {
+                            <p class="journey-world-tag">@TextExcerpt.Of(project.Description, 160)</p>
+                        }
+                    </div>
+                    <div class="journey-world-row">
+                        @if (_facts is { } facts)
+                        {
+                            <div class="journey-world-facts">
+                                <a href="@($"projects/{project.Id}")"><strong>@facts.Characters</strong><span>@I18n.T("journey.factCharacters")</span></a>
+                                <a href="@($"projects/{project.Id}")"><strong>@facts.Locations</strong><span>@I18n.T("journey.factLocations")</span></a>
+                                <a href="@($"projects/{project.Id}")"><strong>@facts.Events</strong><span>@I18n.T("journey.factEvents")</span></a>
+                                <a href="@($"projects/{project.Id}")"><strong>@facts.Lore</strong><span>@I18n.T("journey.factLore")</span></a>
+                                <a href="@($"projects/{project.Id}")"><strong>@facts.Books</strong><span>@I18n.T("journey.factBooks")</span></a>
+                                <a href="@($"projects/{project.Id}")"><strong>@facts.Files</strong><span>@I18n.T("journey.factFiles")</span></a>
+                            </div>
+                        }
+                        <a class="journey-cta" href="@($"projects/{project.Id}")">@I18n.T("journey.openProject") <i aria-hidden="true">→</i></a>
+                    </div>
+                </div>
+            </div>
+            @if (_lastEvent is { } lastEvent)
+            {
+                <div class="journey-wrap journey-chronicle">
+                    <p class="journey-eyebrow">@I18n.T("journey.lastEvent")</p>
+                    <p class="journey-chronicle-text">@(string.IsNullOrWhiteSpace(lastEvent.Date) ? "" : lastEvent.Date + ": ")@lastEvent.Title@(string.IsNullOrWhiteSpace(lastEvent.Description) ? "" : ". " + TextExcerpt.Of(lastEvent.Description, 180))</p>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="journey-wrap">
+                <h2 id="journey-world-title">@I18n.T("journey.noProjectTitle")</h2>
+                <p class="journey-lede">@I18n.T("home.emptyProjectsMessage")</p>
+                <a class="journey-cta" href="projects">@I18n.T("home.createProjectAction") <i aria-hidden="true">→</i></a>
+            </div>
+        }
+    </section>
+
+    @* ---------- Finale ---------- *@
+    <section class="journey-chapter journey-finale" data-amb="finale" aria-labelledby="journey-finale-title">
+        <div class="journey-deco journey-finale-bg" aria-hidden="true"></div>
+        <div class="journey-wrap journey-finale-inner" data-enter>
+            <div class="journey-mark journey-mark--center"><span></span><p class="journey-eyebrow" id="journey-finale-title">@I18n.T("journey.finaleEyebrow")</p><span></span></div>
+            <p class="journey-motto">@I18n.T("journey.motto")</p>
+            <nav class="journey-doors" aria-labelledby="journey-finale-title">
+                <a class="journey-door" href="library"><Icon Name="book" /><b>@I18n.T("nav.library")</b><span>@LibraryDoorText()</span><i aria-hidden="true">→</i></a>
+                <a class="journey-door" href="projects"><Icon Name="project" /><b>@I18n.T("nav.projects")</b><span>@ProjectsDoorText()</span><i aria-hidden="true">→</i></a>
+                <a class="journey-door" href="statistics"><Icon Name="chart" /><b>@I18n.T("nav.statistics")</b><span>@I18n.T("journey.doorStatistics")</span><i aria-hidden="true">→</i></a>
+                <a class="journey-door" href="discover"><Icon Name="discover" /><b>@I18n.T("nav.discover")</b><span>@I18n.T("journey.doorDiscover")</span><i aria-hidden="true">→</i></a>
+            </nav>
+            <a class="journey-cta journey-back-top" href="#" onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); return false;">@I18n.T("journey.backToTop") <i aria-hidden="true">↑</i></a>
+        </div>
+    </section>
+</div>

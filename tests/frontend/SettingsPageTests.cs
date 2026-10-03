@@ -226,6 +226,8 @@ public class SettingsPageTests : BunitContext
     public void Settings_HomeScrollShelfSwitch_InAlexandria_IsOnWhenNeverChosen()
     {
         UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson), "alexandria");
+        // The scroll shelf is a setting of the card dashboard only.
+        JSInterop.SetupModule("./js/worldPreferences.js").Setup<bool?>("getImmersive", _ => true).SetResult(false);
         JSInterop.SetupModule("./js/libraryPreferences.js")
             .Setup<bool?>("getHomeScrollShelf", _ => true)
             .SetResult(null);
@@ -239,6 +241,8 @@ public class SettingsPageTests : BunitContext
     public void Settings_TogglingHomeScrollShelfSwitch_Persists()
     {
         UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson), "alexandria");
+        // The scroll shelf is a setting of the card dashboard only.
+        JSInterop.SetupModule("./js/worldPreferences.js").Setup<bool?>("getImmersive", _ => true).SetResult(false);
         JSInterop.SetupModule("./js/libraryPreferences.js")
             .Setup<bool?>("getHomeScrollShelf", _ => true)
             .SetResult(null);
@@ -250,5 +254,47 @@ public class SettingsPageTests : BunitContext
         var invocation = Assert.Single(setHandler.Invocations);
         Assert.Equal(false, invocation.Arguments[0]);
         Assert.False(cut.Find("label.home-scroll-shelf-row input[type=checkbox]").HasAttribute("checked"));
+    }
+
+    // "Immersives Theme": Babylon and Alexandria only, on until switched off.
+    [Fact]
+    public void Settings_ImmersiveSwitch_InTheWorlds_IsOnWhenNeverChosen_AndPersists()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson), "babylon");
+        JSInterop.SetupModule("./js/worldPreferences.js").Setup<bool?>("getImmersive", _ => true).SetResult(null);
+        var setHandler = JSInterop.SetupModule("./js/worldPreferences.js").SetupVoid("setImmersive", _ => true);
+
+        var cut = Render<Settings>();
+        var toggle = cut.Find("label.immersive-theme-row input[type=checkbox]");
+        Assert.True(toggle.HasAttribute("checked"));
+        Assert.Contains("Immersives Theme", cut.Find("label.immersive-theme-row").TextContent);
+
+        toggle.Change(false);
+
+        Assert.Equal(false, Assert.Single(setHandler.Invocations).Arguments[0]);
+        Assert.False(cut.Find("label.immersive-theme-row input[type=checkbox]").HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void Settings_ImmersiveSwitch_IsHiddenInTheClassicThemes()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+
+        var cut = Render<Settings>();
+
+        Assert.Empty(cut.FindAll("label.immersive-theme-row"));
+    }
+
+    // With the journey on, the scroll-shelf choice (a card-dashboard setting) waits.
+    [Fact]
+    public void Settings_HomeScrollShelfSwitch_IsHiddenWhileTheJourneyIsOn()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson), "alexandria");
+        JSInterop.SetupModule("./js/worldPreferences.js").Setup<bool?>("getImmersive", _ => true).SetResult(null);
+
+        var cut = Render<Settings>();
+
+        Assert.Empty(cut.FindAll("label.home-scroll-shelf-row"));
+        Assert.NotEmpty(cut.FindAll("label.immersive-theme-row"));
     }
 }
