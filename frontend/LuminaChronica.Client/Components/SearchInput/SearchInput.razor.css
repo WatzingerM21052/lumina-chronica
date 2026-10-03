@@ -21,22 +21,22 @@
 .search-input ::deep .search-input-icon {
     position: absolute;
     left: 0.7rem;
-    top: 1.25rem;
+    top: 0.7rem;
     width: 1.1rem;
     height: 1.1rem;
-    transform: translateY(-50%);
     color: var(--color-text-secondary);
     pointer-events: none;
 }
 
-/* Centred on the 40px input row (top, not 50%: suggestion lists rendered
-   inside the wrapper would otherwise pull it down). 2rem square, so it's a
-   comfortable tap target without growing the field. */
+/* Centred on the 40px input row by plain offsets (top, not 50%: suggestion
+   lists rendered inside the wrapper would otherwise pull it down). Never
+   by a CSS transform: a press effect setting one would move the button
+   away under the pointer (user report: the "x" jumped, the click missed).
+   2rem square, so it's a comfortable tap target. */
 .search-input-clear {
     position: absolute;
     right: 0.25rem;
-    top: 1.25rem;
-    transform: translateY(-50%);
+    top: 0.25rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;

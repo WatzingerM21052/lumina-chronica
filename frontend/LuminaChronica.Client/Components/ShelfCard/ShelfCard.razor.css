@@ -19,7 +19,6 @@
 
 .shelf-card:hover .shelf-card-cover {
     box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
 }
 
 .shelf-card-cover img {

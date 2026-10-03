@@ -72,7 +72,7 @@
 }
 
 .lightbox-arrow:active .lightbox-arrow-mark {
-    transform: scale(0.94);
+    background: rgba(8, 6, 4, 0.95);
 }
 
 .lightbox-arrow:focus-visible {

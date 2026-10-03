@@ -438,23 +438,15 @@ button:hover,
     border-color: var(--color-primary);
 }
 
-/* Real press feedback (issue #349 Phase B, section 15) -- the transform
-   transition was already declared above but nothing set a different
-   transform on :active, so every plain button had none. scale(0.98),
-   the same restrained intensity as the pre-existing Follow-button press
-   effect (PublicProfile.razor.css's .btn-follow:active) -- not a
-   :disabled button, since a disabled control shouldn't visually react to
-   a click it isn't actually receiving. */
+/* Press feedback without movement: a button darkens a touch while pressed.
+   It used to scale(0.98), which overwrote the transform that centres
+   positioned buttons (the search field's clear "x" is placed with
+   translateY(-50%)) -- they jumped away under the pointer and the click
+   missed (user report). Nothing a pointer aims at may move. Not on a
+   :disabled button: it shouldn't react to a click it doesn't receive. */
 button:not(:disabled):active,
 .btn:not(:disabled):active {
-    transform: scale(0.98);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    button:not(:disabled):active,
-    .btn:not(:disabled):active {
-        transform: none;
-    }
+    filter: brightness(0.92);
 }
 
 .btn-primary {
@@ -4004,7 +3996,6 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
 
 .book-card:hover .book-card-cover {
     box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
 }
 
 .book-card-cover img {
@@ -4215,11 +4206,11 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero-content {
     font-weight: 600;
     font-size: 0.95rem;
     text-decoration: none;
-    transition: transform var(--motion-standard) var(--ease-standard);
+    transition: filter var(--motion-standard) var(--ease-standard);
 }
 
 .home-hero-cta:hover {
-    transform: translateY(-2px);
+    filter: brightness(1.06);
 }
 
 .home-hero-cta small {
@@ -4638,8 +4629,8 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .project-tabs + .worl
     margin-top: var(--space-2);
 }
 
-html:is([data-theme="babylon"], [data-theme="alexandria"]) .discover-section + .discover-section {
-    margin-top: 1.1rem;
+html:is([data-theme="babylon"], [data-theme="alexandria"]) .discover-section {
+    margin-bottom: 1rem;
 }
 
 html:is([data-theme="babylon"], [data-theme="alexandria"]) .world-surface > :first-child {
@@ -4920,7 +4911,6 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .lore-content {
 }
 
 .entity-card:hover {
-    transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--color-accent-text) 45%, var(--color-border));
     box-shadow: var(--shadow-card-hover);
 }
@@ -5113,7 +5103,4 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .lore-content {
         transition: none;
     }
 
-    .entity-card:hover {
-        transform: none;
-    }
 }

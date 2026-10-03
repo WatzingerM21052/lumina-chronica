@@ -5,3 +5,10 @@
 export function getElementSize(el) {
     return { width: el.clientWidth, height: el.clientHeight };
 }
+
+// The map's own pixel size, so the page can size it to fill the width
+// while a tall map still fits the screen (pins are % of the image, so the
+// image itself must keep its aspect -- no object-fit letterboxing).
+export function getNaturalSize(img) {
+    return { width: img.naturalWidth, height: img.naturalHeight };
+}

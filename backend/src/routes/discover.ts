@@ -43,12 +43,11 @@ discoverRoute.get("/projects", async (c) => {
     return c.json(success(result));
 });
 
+// Readers by username; a blank search lists those who share something.
 discoverRoute.get("/users", async (c) => {
     const q = c.req.query();
     const search = (q.search ?? "").trim().slice(0, MAX_SEARCH_LENGTH);
     const { page, pageSize } = parsePagination(q);
-
-    if (!search) return c.json(success({ items: [], total: 0, page, pageSize }));
 
     const result = await searchUsers(c.env.DB, search, page, pageSize, new URL(c.req.url).origin);
     return c.json(success(result));

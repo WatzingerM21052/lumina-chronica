@@ -281,9 +281,15 @@ else
 
         @if (_mapObjectUrl is not null)
         {
-            <div class="map-wrapper">
+            @* The map on a stage across the full width (user feedback: it sat
+               small at the left with the right side empty). The wrapper is
+               sized from the image's aspect -- as wide as the stage, unless
+               that would make a tall map higher than the screen -- and the
+               image fills it, so the %-positioned pins stay on their spots. *@
+            <div class="map-stage">
+            <div class="map-wrapper" style="@MapWrapperStyle">
                 <img @ref="_mapImageRef" src="@_mapObjectUrl" alt="@string.Format(I18n.T("projectDetail.mapAlt"), _project.Title)" class="map-image"
-                     @onclick="OnMapClickAsync" style="@(_placingLocationId is not null ? "cursor: crosshair;" : "")" />
+                     @onclick="OnMapClickAsync" @onload="OnMapLoadedAsync" style="@(_placingLocationId is not null ? "cursor: crosshair;" : "")" />
                 @if (_locations is not null)
                 {
                     @foreach (var location in _locations.Where(l => l.X is not null && l.Y is not null))
@@ -291,6 +297,7 @@ else
                         <a class="map-pin" style="@PinStyle(location)" href="@($"projects/{Id}/locations/{location.Id}")" title="@location.Name" aria-label="@location.Name"><Icon Name="location-pin" /></a>
                     }
                 }
+            </div>
             </div>
             @if (_placingLocationId is not null)
             {
@@ -800,6 +807,8 @@ else
     private bool _isDraggingMap;
     private string? _mapSaveErrorMessage;
     private ElementReference _mapImageRef;
+    // Width / height of the map image, once it has loaded.
+    private double? _mapAspect;
     private List<Location>? _locations;
     private string? _locationsErrorMessage;
     private bool _showCreateLocationForm;
@@ -1219,6 +1228,22 @@ else
         else
         {
             _mapSaveErrorMessage = response?.Error?.Message ?? I18n.T("projectDetail.mapUploadError");
+        }
+    }
+
+    private string? MapWrapperStyle =>
+        _mapAspect is { } aspect ? $"--map-aspect: {aspect.ToString("0.####", CultureInfo.InvariantCulture)};" : null;
+
+    private async Task OnMapLoadedAsync()
+    {
+        try
+        {
+            var size = await ElementMetricsService.GetNaturalSizeAsync(_mapImageRef);
+            _mapAspect = size.Width > 0 && size.Height > 0 ? size.Width / size.Height : null;
+        }
+        catch (JSException)
+        {
+            _mapAspect = null;
         }
     }
 

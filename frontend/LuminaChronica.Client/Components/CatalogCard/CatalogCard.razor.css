@@ -23,12 +23,11 @@
     aspect-ratio: 4 / 3;
 }
 
-/* "A book being pulled off the shelf" -- lift + a thin gold line, not a
+/* "A book being pulled off the shelf" -- deeper shadow + a thin gold line (no lift: nothing a pointer aims at moves), not a
    spring/glow/3D flourish (see issue #315's hover description). */
 .catalog-card:hover .catalog-card-cover,
 .catalog-card:focus-visible .catalog-card-cover {
     box-shadow: var(--shadow-card-hover);
-    transform: translateY(-3px);
     outline-color: var(--color-gold-accent);
 }
 

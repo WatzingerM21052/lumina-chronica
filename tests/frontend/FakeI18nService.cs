@@ -806,6 +806,8 @@ public class FakeI18nService : II18nService
         ["discover.loadMore"] = "Mehr laden",
         ["discover.projectShelfTitle"] = "Projekte",
         ["discover.projectShelfCaption"] = "öffentliche Welten und Geschichten",
+        ["discover.readersCaption"] = "die Bücher oder Welten teilen",
+        ["discover.noReadersYet"] = "Noch teilt niemand etwas öffentlich.",
         ["discover.searching"] = "Suche läuft…",
         ["discover.authorRoleLabel"] = "Autor / Worldbuilder",
         ["discover.noUsersFoundMessage"] = "Keine Nutzer gefunden.",

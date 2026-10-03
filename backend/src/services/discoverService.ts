@@ -117,16 +117,24 @@ export type SearchUsersResult = {
     pageSize: number;
 };
 
+// A blank search lists the readers who share something -- a public book or
+// project -- rather than every account: Discover browses what people chose
+// to show, it isn't a member directory.
+const SHARES_SOMETHING =
+    "(EXISTS (SELECT 1 FROM books WHERE books.owner_id = users.id AND books.visibility = 'PUBLIC') OR EXISTS (SELECT 1 FROM projects WHERE projects.owner_id = users.id AND projects.visibility = 'PUBLIC'))";
+
 export async function searchUsers(db: D1Database, search: string, page: number, pageSize: number, origin: string): Promise<SearchUsersResult> {
-    const like = likePattern(search);
+    const term = search.trim();
+    const where = term ? "deleted_at IS NULL AND username LIKE ? ESCAPE '\\'" : `deleted_at IS NULL AND ${SHARES_SOMETHING}`;
+    const params = term ? [likePattern(term)] : [];
     const offset = (page - 1) * pageSize;
 
     const [rows, countRow] = await Promise.all([
         db
-            .prepare(`SELECT username, avatar_url, avatar_key FROM users WHERE deleted_at IS NULL AND username LIKE ? ESCAPE '\\' ORDER BY username ASC LIMIT ? OFFSET ?`)
-            .bind(like, pageSize, offset)
+            .prepare(`SELECT username, avatar_url, avatar_key FROM users WHERE ${where} ORDER BY username ASC LIMIT ? OFFSET ?`)
+            .bind(...params, pageSize, offset)
             .all<{ username: string; avatar_url: string | null; avatar_key: string | null }>(),
-        db.prepare(`SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL AND username LIKE ? ESCAPE '\\'`).bind(like).first<{ total: number }>(),
+        db.prepare(`SELECT COUNT(*) AS total FROM users WHERE ${where}`).bind(...params).first<{ total: number }>(),
     ]);
 
     return {

@@ -810,6 +810,8 @@
   "discover.loadMore": "Load more",
   "discover.projectShelfTitle": "Projects",
   "discover.projectShelfCaption": "public worlds and stories",
+  "discover.readersCaption": "who share books or worlds",
+  "discover.noReadersYet": "Nobody shares anything publicly yet.",
   "discover.searching": "Searching…",
   "discover.authorRoleLabel": "Author / Worldbuilder",
   "discover.noUsersFoundMessage": "No users found.",
