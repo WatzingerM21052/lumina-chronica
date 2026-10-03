@@ -43,3 +43,15 @@ freigestellt oder eingefärbt.
   „Vedute di Roma“ (Pantheon innen, Vorhalle), Rijksmuseum RP-P-1941-641 / -642, CC0. Ausschnitt, eingefärbt.
 - `banner_colossus.webp`, `banner_mausoleum.webp`: Philips Galle nach Maarten van Heemskerck,
   „De acht wereldwonderen“ (1572), Rijksmuseum RP-P-1891-A-16451 / -16454, CC0. Ausschnitt, eingefärbt.
+
+## Immersives Dashboard (Babylon / Alexandria)
+- `babylon/tablet_letter.webp`: Keilschrifttafel, privater Brief (ca. 20.–19. Jh. v. Chr.),
+  The Metropolitan Museum of Art, 66.245.8 (Open Access, CC0). Freigestellt.
+- `babylon/wisteria_clean.webp`: wie `wisteria_purple.webp` (H. Witte, „Flora“, 1868, gemeinfrei),
+  helle Papierränder um die Blüten entfernt.
+- `alexandria/astrolabe_disc.webp`: Planisphärisches Astrolabium des Muhammad Zaman al-Munajjim al-Asturlabi
+  (1654/55), The Metropolitan Museum of Art, 63.166a–j (Open Access, CC0). Freigestellt, nur die runde Scheibe.
+- `alexandria/lamp.webp`: Öllampe aus Terrakotta (ca. 40–100 n. Chr.), The Metropolitan Museum of Art, 74.51.2103
+  (Open Access, CC0). Freigestellt.
+- `alexandria/ptolemaic_queen.webp`: Marmorkopf einer ptolemäischen Königin (ca. 270–250 v. Chr.),
+  The Metropolitan Museum of Art, 2002.66 (Open Access, CC0). Freigestellt, unten ausgeblendet.
