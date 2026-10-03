@@ -229,27 +229,49 @@ html[data-theme="babylon"] .calendar-cell--level-2 { background: linear-gradient
 html[data-theme="babylon"] .calendar-cell--level-3 { background: linear-gradient(145deg, #57cdd8, #2b9fb3); box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.22), inset -1px -1px 0 rgba(0, 0, 0, 0.3); }
 html[data-theme="babylon"] .calendar-cell--level-4 { background: linear-gradient(145deg, #f6d985, #c7943a); box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.45), inset -1px -1px 0 rgba(90, 60, 10, 0.4), 0 0 8px rgba(217, 176, 82, 0.35); }
 
-/* ---------- Progress: water running through a garden channel ---------- */
+/* ---------- Progress: water standing in a garden channel ----------
+   Calm water, not a loading bar: a deep channel, a surface that is light
+   on top and deep below, and -- only on the large bars -- one slow, soft
+   glint that drifts across and then rests. Small cards in a grid stay
+   still; dozens of synced shimmers would read as a loading screen. */
 html[data-theme="babylon"] .book-card-progress,
-html[data-theme="babylon"] .book-detail-progress-track {
-    background: rgba(0, 0, 0, 0.4);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+html[data-theme="babylon"] .book-detail-progress-track,
+html[data-theme="babylon"] .shelf-book-progress {
+    background: rgba(2, 14, 22, 0.55);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(143, 224, 222, 0.08);
 }
 
 html[data-theme="babylon"] .book-card-progress-bar,
-html[data-theme="babylon"] .book-detail-progress-fill {
-    background: linear-gradient(90deg, #1f8796, #3fb6c4 50%, #8fe0de 55%, #3fb6c4 60%, #1f8796) 0 0 / 220% 100%;
-    box-shadow: 0 0 10px rgba(63, 182, 196, 0.5);
-    animation: babylon-water 3.6s linear infinite;
+html[data-theme="babylon"] .book-detail-progress-fill,
+html[data-theme="babylon"] .shelf-book-progress-bar {
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(200, 245, 240, 0.55) 0%, rgba(200, 245, 240, 0) 45%),
+        linear-gradient(90deg, #17707e, #2a9aab 70%, #46b9c4);
+    box-shadow: 0 0 8px rgba(63, 182, 196, 0.28);
 }
 
-@keyframes babylon-water {
-    to { background-position: -220% 0; }
+html[data-theme="babylon"] .book-detail-progress-fill::after,
+html[data-theme="babylon"] .book-card-large .book-card-progress-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 45%;
+    background: linear-gradient(90deg, rgba(220, 252, 248, 0), rgba(220, 252, 248, 0.42) 50%, rgba(220, 252, 248, 0));
+    transform: translateX(-110%);
+    animation: babylon-glint 9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes babylon-glint {
+    0% { transform: translateX(-110%); }
+    55%, 100% { transform: translateX(240%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    html[data-theme="babylon"] .book-card-progress-bar,
-    html[data-theme="babylon"] .book-detail-progress-fill {
+    html[data-theme="babylon"] .book-detail-progress-fill::after,
+    html[data-theme="babylon"] .book-card-large .book-card-progress-bar::after {
         animation: none;
+        opacity: 0;
     }
 }

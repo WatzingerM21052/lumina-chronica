@@ -65,14 +65,16 @@ html[data-theme="alexandria"] body {
     background-attachment: fixed;
 }
 
-/* A lapis-marble cornice lit from above, closed by a gilded egg-and-dart
-   frieze -- the counterpart of Babylon's brick band. */
+/* A lapis-marble cornice lit from above. Below it a gilded fillet and a
+   fine running meander sit on the marble floor itself -- a hairline, not a
+   frieze, so the header stays light. */
 html[data-theme="alexandria"] .app-header {
     background:
         linear-gradient(180deg, rgba(255, 236, 190, 0.14), rgba(0, 0, 0, 0) 40%, rgba(5, 12, 30, 0.35)),
         url("../../images/themes/alexandria/lapis_marble.webp") center / 520px,
         #1d3254;
     border-bottom: 0;
+    box-shadow: 0 8px 16px -10px rgba(30, 20, 5, 0.55);
 }
 
 html[data-theme="alexandria"] .app-header::after {
@@ -80,11 +82,11 @@ html[data-theme="alexandria"] .app-header::after {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: -15px;
-    height: 15px;
+    bottom: -11px;
+    height: 11px;
     pointer-events: none;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='15' viewBox='0 0 28 15'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23f6dc93'/%3E%3Cstop offset='.55' stop-color='%23c79b45'/%3E%3Cstop offset='1' stop-color='%23805a1c'/%3E%3C/linearGradient%3E%3CradialGradient id='e' cx='.4' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23fbe7ad'/%3E%3Cstop offset='.6' stop-color='%23d2a650'/%3E%3Cstop offset='1' stop-color='%238a6222'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='28' height='15' fill='%23332611'/%3E%3Crect width='28' height='2' fill='url(%23g)'/%3E%3Cpath d='M3 3 Q3 14 14 14 Q25 14 25 3' fill='%23140e05' opacity='.6'/%3E%3Cellipse cx='14' cy='7.6' rx='7.4' ry='5.6' fill='url(%23e)'/%3E%3Cpath d='M0 3 L1.4 3 L0 12 Z M28 3 L26.6 3 L28 12 Z' fill='url(%23g)'/%3E%3C/svg%3E") 0 0 / 28px 15px repeat-x;
-    box-shadow: 0 6px 12px -4px rgba(40, 26, 6, 0.55);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='11' viewBox='0 0 24 11'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='11' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23f4dc94'/%3E%3Cstop offset='.45' stop-color='%23c99d45'/%3E%3Cstop offset='1' stop-color='%238a6420'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='24' height='1.5' fill='url(%23g)'/%3E%3Cpath d='M0 10.5H21.5V3.5H5.5V8.5H16.5V6' fill='none' stroke='url(%23g)' stroke-width='1'/%3E%3C/svg%3E") 0 0 / 24px 11px repeat-x;
+    filter: drop-shadow(0 1px 0 rgba(255, 250, 235, 0.55));
 }
 
 html[data-theme="alexandria"] .app-logo-text {
@@ -249,13 +251,41 @@ html[data-theme="alexandria"] .calendar-months span {
     color: #5d4a22;
 }
 
-/* ---------- Progress: a gilded thread ---------- */
+/* ---------- Progress: a gilded thread ----------
+   A drawn gold wire laid in an engraved hairline groove: no rounded pill,
+   no knob, and the leading end tapers off like a thread instead of
+   stopping in a cap. The wire's darker body (#9a7224) holds 3:1 against
+   the marble and papyrus behind it. */
 html[data-theme="alexandria"] .book-card-progress,
+html[data-theme="alexandria"] .book-detail-progress-track,
+html[data-theme="alexandria"] .shelf-book-progress {
+    height: 3px;
+    border-radius: 0;
+    background: linear-gradient(180deg, transparent 1px, rgba(110, 82, 34, 0.28) 1px, rgba(110, 82, 34, 0.28) 2px, transparent 2px);
+    overflow: visible;
+}
+
 html[data-theme="alexandria"] .book-detail-progress-track {
-    background: #e2d7bd;
+    height: 4px;
+    background: linear-gradient(180deg, transparent 1.5px, rgba(110, 82, 34, 0.3) 1.5px, rgba(110, 82, 34, 0.3) 2.5px, transparent 2.5px);
+}
+
+html[data-theme="alexandria"] .book-card-large .book-card-progress {
+    height: 3px;
 }
 
 html[data-theme="alexandria"] .book-card-progress-bar,
-html[data-theme="alexandria"] .book-detail-progress-fill {
-    background: linear-gradient(90deg, #8f6c22, #d2ad55);
+html[data-theme="alexandria"] .book-detail-progress-fill,
+html[data-theme="alexandria"] .shelf-book-progress-bar {
+    border-radius: 0;
+    background: linear-gradient(180deg, #f6e0a0 0%, #d4aa52 30%, #9a7224 70%, #6f4f15 100%);
+    box-shadow: 0 1px 1.5px rgba(70, 48, 12, 0.3);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 10px), rgba(0, 0, 0, 0.35));
+    mask-image: linear-gradient(90deg, #000 calc(100% - 10px), rgba(0, 0, 0, 0.35));
+}
+
+/* On a cover the groove would vanish: a dark hairline keeps the thread
+   readable over any artwork. */
+html[data-theme="alexandria"] .shelf-book-progress {
+    background: rgba(20, 14, 4, 0.45);
 }
