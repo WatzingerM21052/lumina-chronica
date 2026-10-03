@@ -820,6 +820,7 @@ public class FakeI18nService : II18nService
         ["worldBanner.projectsSubtitle"] = "Welten, Geschichten und Kampagnen.",
         ["worldBanner.settingsSubtitle"] = "Darstellung, Sprache und Benachrichtigungen.",
         ["worldBanner.profileSubtitle"] = "So sehen dich andere Leser.",
+        ["home.welcomeBackName"] = "Willkommen zurück, {0}",
         ["home.welcomeBack"] = "Willkommen zurück",
         ["statusWidget.unreachable"] = "Der Server ist gerade nicht erreichbar. Deine Offline-Bücher kannst du trotzdem lesen.",
         ["home.continueReadingTitle"] = "Weiterlesen",
