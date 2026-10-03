@@ -10,6 +10,7 @@
 @inject IJSRuntime JsRuntime
 @inject II18nService I18n
 @inject TimeProvider TimeProvider
+@inject IThemeService ThemeService
 
 <PageTitle>@I18n.T("library.title") — Lumina Chronica</PageTitle>
 
@@ -90,6 +91,13 @@
                         aria-pressed="@(_viewMode == LibraryViewMode.Grid ? "true" : "false")"
                         aria-label="@I18n.T("library.viewModeShelf")" title="@I18n.T("library.viewModeShelf")"
                         @onclick='() => SetViewMode(LibraryViewMode.Grid)'><Icon Name="shelf" /></button>
+                @if (_scrollsOffered)
+                {
+                    <button type="button" id="view-scrolls" class="segmented-option segmented-option--icon @(_viewMode == LibraryViewMode.Scrolls ? "is-selected" : "")"
+                            aria-pressed="@(_viewMode == LibraryViewMode.Scrolls ? "true" : "false")"
+                            aria-label="@I18n.T("library.viewModeScrolls")" title="@I18n.T("library.viewModeScrolls")"
+                            @onclick='() => SetViewMode(LibraryViewMode.Scrolls)'><Icon Name="scrolls" /></button>
+                }
             </div>
             @if (_viewMode == LibraryViewMode.Grid)
             {
@@ -101,7 +109,7 @@
                     }
                 </select>
             }
-            @if (_viewMode == LibraryViewMode.List)
+            @if (_viewMode is LibraryViewMode.List or LibraryViewMode.Scrolls)
             {
                 <select class="library-raster-page-size" aria-label="@I18n.T("library.pageSizeLabel")" title="@I18n.T("library.pageSizeLabel")"
                         @bind="_rasterPageSize" @bind:after="OnRasterPageSizeChangedAsync">
@@ -180,12 +188,20 @@ else
     }
     else
     {
-        <div class="library-raster">
-            @foreach (var book in (_allItems ?? []).Skip((_rasterPage - 1) * _rasterPageSize).Take(_rasterPageSize))
-            {
-                <BookCard Book="book" />
-            }
-        </div>
+        var pageItems = (_allItems ?? []).Skip((_rasterPage - 1) * _rasterPageSize).Take(_rasterPageSize).ToList();
+        if (_viewMode == LibraryViewMode.Scrolls)
+        {
+            <ScrollShelf Books="pageItems" Genres="@(_facets?.Genres ?? [])" />
+        }
+        else
+        {
+            <div class="library-raster">
+                @foreach (var book in pageItems)
+                {
+                    <BookCard Book="book" />
+                }
+            </div>
+        }
 
         @if ((_allItems?.Count ?? 0) > _rasterPageSize)
         {
@@ -199,7 +215,8 @@ else
 }
 
 @code {
-    private enum LibraryViewMode { Grid, List }
+    // Scrolls (Alexandria's scroll shelf) is only offered in that theme.
+    private enum LibraryViewMode { Grid, List, Scrolls }
 
     private const int FetchPageSize = 100; // backend's MAX_PAGE_SIZE
     private const int DefaultRasterPageSize = 20;
@@ -212,6 +229,7 @@ else
     // shelf (Grid) is one click away. Note the enum names predate the
     // labels: Grid = "Regal", List = "Raster".
     private LibraryViewMode _viewMode = LibraryViewMode.List;
+    private bool _scrollsOffered;
     private bool _filtersOpen;
 
     private string _searchTerm = string.Empty;
@@ -265,6 +283,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // First, so the toggle settles before anything else loads. In
+        // Alexandria the scroll shelf is offered and is the starting view.
+        try
+        {
+            _scrollsOffered = await ThemeService.GetThemeAsync() == "alexandria";
+        }
+        catch (Exception)
+        {
+            _scrollsOffered = false;
+        }
+        if (_scrollsOffered)
+        {
+            _viewMode = LibraryViewMode.Scrolls;
+        }
+
         // Supports deep-linking from a tag link on Book Detail (library?tag=X).
         var query = new Uri(NavigationManager.Uri).Query.TrimStart('?');
         foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
