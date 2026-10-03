@@ -103,6 +103,7 @@ Registration, login, logout, profile view/edit, and password change (PR #33/#34)
 ### `0007_extended_statistics.sql` (v1.5 — Personalisierung, §101 "Erweiterte Statistik")
 
 - **`reading_activity`** — `id`, `user_id` (FK → `users.id`), `activity_date` (`TEXT`, `YYYY-MM-DD`), `event_count`, `UNIQUE(user_id, activity_date)`. One row per user per calendar day they saved reading progress at least once — powers the Lesekalender heatmap and streak calculations without real session start/stop instrumentation ("Lesedauer" stays out of scope, same as always — see `Architecture.md`).
+- **`reading_activity_books`** (migration `0028`) — `id`, `user_id` (FK → `users.id`), `book_id` (FK → `books.id`), `activity_date`, `start_percentage`, `end_percentage`, `UNIQUE(user_id, activity_date, book_id)`. Day detail for the Lesekalender tooltip: the book's progress at the day's first save (the previous `reading_progress.percentage`) and its last save. Pages read that day = `max(0, end − start)` × `book_metadata.pages`; `null` when no book read that day has a page count. Only the owner's `GET /api/statistics` (and `/calendar`) return it. `deleteBook` removes a book's rows; account deletion is a soft delete and keeps them, like `reading_activity`. Days before `0028` have no rows.
 - **`user_settings.reading_goal_books`** — nullable `INTEGER` added to the existing table (not a new one), the user's yearly target book count for the Ziele card.
 
 ### `0014_auth_rate_limit.sql` (v2.1 — Sicherheit, issue #277)

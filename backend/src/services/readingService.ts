@@ -70,6 +70,17 @@ export async function saveProgress(db: D1Database, userId: number, input: SavePr
     if (!(await isAccessibleByUser(db, userId, input.bookId))) throw new NotFoundError();
 
     await db.batch([
+        // Per-book day detail for the Lesekalender tooltip (0028). Runs
+        // before the progress upsert so the first save of a day can take the
+        // book's previous percentage as the day's start; later saves only
+        // move the end.
+        db
+            .prepare(
+                `INSERT INTO reading_activity_books (user_id, book_id, activity_date, start_percentage, end_percentage)
+                 VALUES (?, ?, date('now'), COALESCE((SELECT percentage FROM reading_progress WHERE user_id = ? AND book_id = ?), 0), ?)
+                 ON CONFLICT(user_id, activity_date, book_id) DO UPDATE SET end_percentage = excluded.end_percentage`
+            )
+            .bind(userId, input.bookId, userId, input.bookId, input.percentage),
         db
             .prepare(
                 `INSERT INTO reading_progress (user_id, book_id, chapter, position, percentage, last_opened)
