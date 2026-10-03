@@ -17,136 +17,283 @@
     <h1>@I18n.T("discover.heading") <span class="discover-heading-caption">— @I18n.T("discover.headingCaption")</span></h1>
 </div>
 
-<section class="discover-section" data-reveal style="--reveal-delay: 60ms">
-    <h2 class="discover-subheading">@I18n.T("discover.searchUsersTitle")</h2>
-    <SearchInput Class="discover-search-field" Placeholder="@I18n.T("discover.usernamePlaceholder")" AriaLabel="@I18n.T("discover.searchUsersAriaLabel")"
-                 Value="@_userSearchTerm" OnInput="OnUserSearchInput" />
+@* One search for everything public: books (title, author, genre), projects
+   (title, description, type) and readers (username). The scope chips pick
+   what to search; "Alles" shows a few of each with a way into the full
+   list. Term and scope live in the URL (?q=&in=) so a search can be shared
+   and survives back/forward. *@
+<section class="discover-section discover-search" data-reveal style="--reveal-delay: 60ms">
+    <h2 class="discover-subheading">@I18n.T("discover.searchTitle")</h2>
+    <SearchInput Class="discover-search-field" Placeholder="@I18n.T("discover.searchPlaceholder")" AriaLabel="@I18n.T("discover.searchAriaLabel")"
+                 Value="@_searchTerm" OnInput="OnSearchInput" />
 
-    @* aria-live="polite" -- announces the debounced search's outcome
-       (result count via the list itself, or the empty/loading message)
-       without interrupting whatever the user is currently doing, which
-       aria-live="assertive" would. aria-busy reflects the in-flight state
-       explicitly rather than leaving a silent gap during the 400ms
-       debounce + request. *@
-    <div aria-live="polite" aria-busy="@(_isSearchingUsers ? "true" : "false")">
-        @if (_isSearchingUsers)
+    <div class="discover-scope segmented" role="group" aria-label="@I18n.T("discover.scopeLabel")">
+        @foreach (var (scope, labelKey) in Scopes)
+        {
+            <button type="button" class="segmented-option @(_scope == scope ? "is-selected" : null)" aria-pressed="@(_scope == scope ? "true" : "false")"
+                    data-scope="@scope" @onclick="() => SetScopeAsync(scope)">
+                @I18n.T(labelKey)
+                @if (HasTerm && !_isSearching && CountFor(scope) is { } count)
+                {
+                    <span class="discover-scope-count">@count</span>
+                }
+            </button>
+        }
+    </div>
+
+    @* aria-live="polite" announces the debounced search's outcome without
+       interrupting; aria-busy covers the debounce + request gap. *@
+    <div class="discover-results" aria-live="polite" aria-busy="@(_isSearching ? "true" : "false")">
+        @if (_isSearching)
         {
             <p class="text-muted">@I18n.T("discover.searching")</p>
         }
-        else if (_userSearchResults is { Count: > 0 })
+        else if (HasTerm)
         {
-            <ul class="discover-author-results">
-                @foreach (var user in _userSearchResults)
-                {
-                    <li>
-                        <a class="discover-author-card" href="@($"u/{user.Username}")">
-                            @if (user.AvatarUrl is { } avatarUrl)
+            @if (_scope == "all" && TotalAll == 0)
+            {
+                <p class="text-muted discover-no-results">@string.Format(I18n.T("discover.noResultsMessage"), _searchTerm.Trim())</p>
+            }
+
+            @if (_scope is "all" or "books" && _bookResults is { } books && (books.Total > 0 || _scope == "books"))
+            {
+                <div class="discover-result-group">
+                    @if (_scope == "all")
+                    {
+                        <h3 class="discover-result-heading">@I18n.T("discover.scopeBooks") <span>@books.Total</span></h3>
+                    }
+                    @if (books.Total == 0)
+                    {
+                        <p class="text-muted">@I18n.T("discover.noBooksFoundMessage")</p>
+                    }
+                    else
+                    {
+                        <div class="catalog-grid">
+                            @foreach (var book in _scope == "all" ? books.Items.Take(PreviewCount) : books.Items)
                             {
-                                <img src="@avatarUrl" alt="" class="discover-author-avatar" />
+                                <CatalogCard Kind="book" Href="@($"library/books/{book.Id}")" Title="@book.Title" Subtitle="@book.Author"
+                                             CoverUrl="@ResultCover($"book-{book.Id}")" OwnerUsername="@book.OwnerUsername" OnOwnerClick="GoToProfile"
+                                             RatingAverage="@book.AverageRating" RatingCount="@book.RatingCount" />
                             }
-                            else
+                        </div>
+                        @MoreButton("books", books.Items.Count, books.Total, "discover.showAllBooks")
+                    }
+                </div>
+            }
+
+            @if (_scope is "all" or "projects" && _projectResults is { } projects && (projects.Total > 0 || _scope == "projects"))
+            {
+                <div class="discover-result-group">
+                    @if (_scope == "all")
+                    {
+                        <h3 class="discover-result-heading">@I18n.T("discover.scopeProjects") <span>@projects.Total</span></h3>
+                    }
+                    @if (projects.Total == 0)
+                    {
+                        <p class="text-muted">@I18n.T("discover.noProjectsFoundMessage")</p>
+                    }
+                    else
+                    {
+                        <div class="catalog-grid">
+                            @foreach (var project in _scope == "all" ? projects.Items.Take(PreviewCount) : projects.Items)
                             {
-                                <span class="discover-author-avatar discover-author-avatar-placeholder" aria-hidden="true"><Icon Name="person" /></span>
+                                @ProjectCard(project)
                             }
-                            <span class="discover-author-info">
-                                <span class="discover-author-name">@user.Username</span>
-                                <span class="discover-author-role">@I18n.T("discover.authorRoleLabel")</span>
-                            </span>
-                        </a>
-                    </li>
-                }
-            </ul>
-        }
-        else if (!string.IsNullOrWhiteSpace(_userSearchTerm))
-        {
-            <p class="text-muted">@I18n.T("discover.noUsersFoundMessage")</p>
+                        </div>
+                        @MoreButton("projects", projects.Items.Count, projects.Total, "discover.showAllProjects")
+                    }
+                </div>
+            }
+
+            @if (_scope is "all" or "users" && _userResults is { } users && (users.Total > 0 || _scope == "users"))
+            {
+                <div class="discover-result-group">
+                    @if (_scope == "all")
+                    {
+                        <h3 class="discover-result-heading">@I18n.T("discover.scopeUsers") <span>@users.Total</span></h3>
+                    }
+                    @if (users.Total == 0)
+                    {
+                        <p class="text-muted">@I18n.T("discover.noUsersFoundMessage")</p>
+                    }
+                    else
+                    {
+                        <ul class="discover-author-results">
+                            @foreach (var user in _scope == "all" ? users.Items.Take(PreviewCount) : users.Items)
+                            {
+                                <li>
+                                    <a class="discover-author-card" href="@($"u/{user.Username}")">
+                                        @if (user.AvatarUrl is { } avatarUrl)
+                                        {
+                                            <img src="@avatarUrl" alt="" class="discover-author-avatar" />
+                                        }
+                                        else
+                                        {
+                                            <span class="discover-author-avatar discover-author-avatar-placeholder" aria-hidden="true"><Icon Name="person" /></span>
+                                        }
+                                        <span class="discover-author-info">
+                                            <span class="discover-author-name">@user.Username</span>
+                                            <span class="discover-author-role">@I18n.T("discover.authorRoleLabel")</span>
+                                        </span>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                        @MoreButton("users", users.Items.Count, users.Total, "discover.showAllUsers")
+                    }
+                </div>
+            }
         }
     </div>
 </section>
 
-<section class="discover-section" data-reveal style="--reveal-delay: 120ms">
-    <div class="discover-books-toolbar">
-        <h2 class="chapter-title">@I18n.T("discover.bookshelfTitle") <span class="chapter-caption">— @I18n.T("discover.bookshelfCaption")</span></h2>
-        <div class="discover-sort-field">
-            <label class="discover-sort-label" for="discover-sort">@I18n.T("discover.sortLabel")</label>
-            <select id="discover-sort" @bind="_sort" @bind:after="LoadBooksAsync">
-                <option value="newest">@I18n.T("discover.sortNewest")</option>
-                <option value="rating">@I18n.T("discover.sortBestRated")</option>
-            </select>
+@if (!HasTerm)
+{
+    <section class="discover-section" data-reveal style="--reveal-delay: 120ms">
+        <div class="discover-books-toolbar">
+            <h2 class="chapter-title">@I18n.T("discover.bookshelfTitle") <span class="chapter-caption">— @I18n.T("discover.bookshelfCaption")</span></h2>
+            <div class="discover-sort-field">
+                <label class="discover-sort-label" for="discover-sort">@I18n.T("discover.sortLabel")</label>
+                <select id="discover-sort" @bind="_sort" @bind:after="LoadBooksAsync">
+                    <option value="newest">@I18n.T("discover.sortNewest")</option>
+                    <option value="rating">@I18n.T("discover.sortBestRated")</option>
+                </select>
+            </div>
         </div>
-    </div>
 
-    @if (_books is null)
-    {
-        <span class="visually-hidden" role="status">@I18n.T("discover.booksLoading")</span>
-        <div class="catalog-grid" aria-hidden="true" aria-busy="true">
-            @for (var i = 0; i < 6; i++)
-            {
-                <SkeletonCatalogCard Kind="book" />
-            }
-        </div>
-    }
-    else if (_books.Count == 0)
-    {
-        <EmptyState Ornament="❦" Message="@I18n.T("discover.emptyShelfMessage")" />
-    }
-    else
-    {
-        <div class="catalog-grid" @ref="_gridRef">
-            @foreach (var book in _books)
-            {
-                @* data-lazy-cover marks a card whose cover hasn't been fetched yet --
-                   removed once it has, so a later re-observe (e.g. after sorting)
-                   never re-watches an already-loaded card. *@
-                @if (book.CoverUrl is not null && !_coverObjectUrls.ContainsKey(book.Id))
+        @if (_books is null)
+        {
+            <span class="visually-hidden" role="status">@I18n.T("discover.booksLoading")</span>
+            <div class="catalog-grid" aria-hidden="true" aria-busy="true">
+                @for (var i = 0; i < 6; i++)
                 {
-                    <div data-lazy-cover data-book-id="@book.Id">
+                    <SkeletonCatalogCard Kind="book" />
+                }
+            </div>
+        }
+        else if (_books.Count == 0)
+        {
+            <EmptyState Ornament="❦" Message="@I18n.T("discover.emptyShelfMessage")" />
+        }
+        else
+        {
+            <div class="catalog-grid" @ref="_gridRef">
+                @foreach (var book in _books)
+                {
+                    @* data-lazy-cover marks a card whose cover hasn't been fetched yet --
+                       removed once it has, so a later re-observe (e.g. after sorting)
+                       never re-watches an already-loaded card. *@
+                    @if (book.CoverUrl is not null && !_coverObjectUrls.ContainsKey(book.Id))
+                    {
+                        <div data-lazy-cover data-book-id="@book.Id">
+                            <CatalogCard Kind="book"
+                                         Href="@($"library/books/{book.Id}")"
+                                         Title="@book.Title"
+                                         Subtitle="@book.Author"
+                                         OwnerUsername="@book.OwnerUsername"
+                                         OnOwnerClick="GoToProfile"
+                                         RatingAverage="@book.AverageRating"
+                                         RatingCount="@book.RatingCount" />
+                        </div>
+                    }
+                    else
+                    {
                         <CatalogCard Kind="book"
                                      Href="@($"library/books/{book.Id}")"
                                      Title="@book.Title"
                                      Subtitle="@book.Author"
+                                     CoverUrl="@(_coverObjectUrls.TryGetValue(book.Id, out var coverUrl) ? coverUrl : null)"
                                      OwnerUsername="@book.OwnerUsername"
                                      OnOwnerClick="GoToProfile"
                                      RatingAverage="@book.AverageRating"
                                      RatingCount="@book.RatingCount" />
-                    </div>
+                    }
                 }
-                else
+            </div>
+        }
+    </section>
+
+    @if (_projectShelf is { Count: > 0 })
+    {
+        <section class="discover-section" data-reveal style="--reveal-delay: 180ms">
+            <div class="discover-books-toolbar">
+                <h2 class="chapter-title">@I18n.T("discover.projectShelfTitle") <span class="chapter-caption">— @I18n.T("discover.projectShelfCaption")</span></h2>
+            </div>
+            <div class="catalog-grid">
+                @foreach (var project in _projectShelf)
                 {
-                    <CatalogCard Kind="book"
-                                 Href="@($"library/books/{book.Id}")"
-                                 Title="@book.Title"
-                                 Subtitle="@book.Author"
-                                 CoverUrl="@(_coverObjectUrls.TryGetValue(book.Id, out var coverUrl) ? coverUrl : null)"
-                                 OwnerUsername="@book.OwnerUsername"
-                                 OnOwnerClick="GoToProfile"
-                                 RatingAverage="@book.AverageRating"
-                                 RatingCount="@book.RatingCount" />
+                    @ProjectCard(project)
                 }
-            }
-        </div>
+            </div>
+        </section>
     }
-</section>
+}
 
 @code {
+    // Discover shows previews of this many per kind under "Alles", and
+    // loads this many per page in a single kind.
+    private const int PreviewCount = 6;
+    private const int PageSize = 24;
+    private const int ProjectShelfCount = 12;
+
+    private static readonly (string Scope, string LabelKey)[] Scopes =
+    [
+        ("all", "discover.scopeAll"),
+        ("books", "discover.scopeBooks"),
+        ("projects", "discover.scopeProjects"),
+        ("users", "discover.scopeUsers"),
+    ];
+
+    [SupplyParameterFromQuery(Name = "q")] public string? QueryTerm { get; set; }
+    [SupplyParameterFromQuery(Name = "in")] public string? QueryScope { get; set; }
+
     private List<DiscoverBook>? _books;
     private string _sort = "newest";
     private readonly Dictionary<int, string> _coverObjectUrls = [];
+    private List<DiscoverProject>? _projectShelf;
 
-    // Passed to CatalogCard's OnOwnerClick -- see CatalogCard.razor for why
-    // that's a stopPropagation span rather than a nested <a>.
-    private void GoToProfile(string username) => NavigationManager.NavigateTo($"u/{username}");
+    private string _searchTerm = string.Empty;
+    private string _scope = "all";
+    private bool _isSearching;
+    private ITimer? _searchDebounceTimer;
+    private int _searchVersion;
+    private DiscoverBookListResponse? _bookResults;
+    private DiscoverProjectListResponse? _projectResults;
+    private DiscoverUserListResponse? _userResults;
+    // Search-result and project covers by "book-{id}" / "project-{id}".
+    private readonly Dictionary<string, string> _resultCovers = [];
 
-    private string _userSearchTerm = string.Empty;
-    private List<DiscoverUser>? _userSearchResults;
-    private ITimer? _userSearchDebounceTimer;
-    private bool _isSearchingUsers;
     private IJSObjectReference? _motionModule;
     private IJSObjectReference? _lazyCoverModule;
     private DotNetObjectReference<Discover>? _dotNetRef;
     private ElementReference _gridRef;
 
-    protected override async Task OnInitializedAsync() => await LoadBooksAsync();
+    private bool HasTerm => !string.IsNullOrWhiteSpace(_searchTerm);
+
+    private int TotalAll => (_bookResults?.Total ?? 0) + (_projectResults?.Total ?? 0) + (_userResults?.Total ?? 0);
+
+    private int? CountFor(string scope) => scope switch
+    {
+        "all" => TotalAll,
+        "books" => _bookResults?.Total,
+        "projects" => _projectResults?.Total,
+        "users" => _userResults?.Total,
+        _ => null,
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _scope = Scopes.Any(s => s.Scope == QueryScope) ? QueryScope! : "all";
+        _searchTerm = QueryTerm?.Trim() ?? string.Empty;
+
+        var shelf = LoadProjectShelfAsync();
+        if (HasTerm)
+        {
+            await SearchAsync();
+        }
+        await LoadBooksAsync();
+        await shelf;
+    }
 
     // See PublicProfile.razor's OnAfterRenderAsync for why this can't live
     // in MainLayout: the book grid/skeleton only exist in the DOM once
@@ -195,6 +342,13 @@
         // that card is actually near the viewport (issue #349 Phase C).
     }
 
+    private async Task LoadProjectShelfAsync()
+    {
+        var response = await ApiClient.GetAsync<DiscoverProjectListResponse>($"/api/discover/projects?pageSize={ProjectShelfCount}");
+        _projectShelf = response is { Success: true, Data: not null } ? response.Data.Items : [];
+        await LoadResultCoversAsync(_projectShelf.Select(p => ($"project-{p.Id}", p.CoverUrl)));
+    }
+
     // [JSInvokable] target for lazyCover.js's IntersectionObserver callback.
     // Guards against a book that's since left the list (e.g. a sort change
     // reloaded _books while this card's fetch was in flight) and against a
@@ -213,25 +367,47 @@
         }
     }
 
-    private void OnUserSearchInput(ChangeEventArgs e)
+    private string? ResultCover(string key) => _resultCovers.TryGetValue(key, out var url) ? url : null;
+
+    // Search results are few (a page at most), so their covers load right
+    // away instead of through the lazy observer.
+    private async Task LoadResultCoversAsync(IEnumerable<(string Key, string? Url)> covers)
     {
-        _userSearchTerm = e.Value?.ToString() ?? string.Empty;
+        foreach (var (key, url) in covers.ToList())
+        {
+            if (url is null || _resultCovers.ContainsKey(key)) continue;
+            var result = await ApiClient.GetBytesAsync(url);
+            if (result is { } cover)
+            {
+                _resultCovers[key] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+                StateHasChanged();
+            }
+        }
+    }
+
+    // Passed to CatalogCard's OnOwnerClick -- see CatalogCard.razor for why
+    // that's a stopPropagation span rather than a nested <a>.
+    private void GoToProfile(string username) => NavigationManager.NavigateTo($"u/{username}");
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
         // Set as soon as typing happens, not just once the debounce fires
         // below -- covers the full "nothing's happened yet" gap (issue
         // #341's search-accessibility requirement) with a single flag.
-        _isSearchingUsers = !string.IsNullOrWhiteSpace(_userSearchTerm);
+        _isSearching = HasTerm;
 
-        _userSearchDebounceTimer?.Dispose();
+        _searchDebounceTimer?.Dispose();
         // Created through the injected TimeProvider (TimeProvider.System in
         // Program.cs) rather than `new System.Threading.Timer` so bUnit tests
         // can advance a fake clock instead of racing a real 400ms timer
         // against a wall-clock WaitForAssertion timeout.
-        _userSearchDebounceTimer = TimeProvider.CreateTimer(
+        _searchDebounceTimer = TimeProvider.CreateTimer(
             _ => InvokeAsync(async () =>
             {
-                await SearchUsersAsync();
-                // Same gap as Library.razor's search-as-you-type: a Timer
-                // callback reached via InvokeAsync doesn't auto-render.
+                await SearchAsync();
+                UpdateUrl();
+                // A Timer callback reached via InvokeAsync doesn't auto-render.
                 StateHasChanged();
             }),
             null,
@@ -239,23 +415,119 @@
             Timeout.InfiniteTimeSpan);
     }
 
-    private async Task SearchUsersAsync()
+    private async Task SetScopeAsync(string scope)
     {
-        if (string.IsNullOrWhiteSpace(_userSearchTerm))
+        if (_scope == scope) return;
+        _scope = scope;
+        UpdateUrl();
+        if (HasTerm)
         {
-            _userSearchResults = null;
-            _isSearchingUsers = false;
+            _isSearching = true;
+            await SearchAsync();
+        }
+    }
+
+    // Searches the kinds the scope shows. "Alles" fetches a preview of each;
+    // a single kind fetches its first page. A newer search makes an older
+    // in-flight one drop its results.
+    private async Task SearchAsync()
+    {
+        var version = ++_searchVersion;
+        if (!HasTerm)
+        {
+            _bookResults = null;
+            _projectResults = null;
+            _userResults = null;
+            _isSearching = false;
             return;
         }
 
-        var response = await ApiClient.GetAsync<DiscoverUserListResponse>($"/api/discover/users?search={Uri.EscapeDataString(_userSearchTerm)}");
-        _userSearchResults = response is { Success: true, Data: not null } ? response.Data.Items : [];
-        _isSearchingUsers = false;
+        var term = Uri.EscapeDataString(_searchTerm.Trim());
+        var size = _scope == "all" ? PreviewCount : PageSize;
+        var booksTask = _scope is "all" or "books" ? ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?search={term}&pageSize={size}") : null;
+        var projectsTask = _scope is "all" or "projects" ? ApiClient.GetAsync<DiscoverProjectListResponse>($"/api/discover/projects?search={term}&pageSize={size}") : null;
+        var usersTask = _scope is "all" or "users" ? ApiClient.GetAsync<DiscoverUserListResponse>($"/api/discover/users?search={term}&pageSize={size}") : null;
+
+        var books = booksTask is null ? null : await booksTask;
+        var projects = projectsTask is null ? null : await projectsTask;
+        var users = usersTask is null ? null : await usersTask;
+        if (version != _searchVersion) return;
+
+        _bookResults = books is { Success: true, Data: not null } ? books.Data : booksTask is null ? _bookResults : new DiscoverBookListResponse();
+        _projectResults = projects is { Success: true, Data: not null } ? projects.Data : projectsTask is null ? _projectResults : new DiscoverProjectListResponse();
+        _userResults = users is { Success: true, Data: not null } ? users.Data : usersTask is null ? _userResults : new DiscoverUserListResponse();
+        _isSearching = false;
+        StateHasChanged();
+
+        await LoadResultCoversAsync(
+            (_bookResults?.Items ?? []).Select(b => ($"book-{b.Id}", b.CoverUrl))
+            .Concat((_projectResults?.Items ?? []).Select(p => ($"project-{p.Id}", p.CoverUrl))));
     }
+
+    // "Alles": jump into the full list of that kind. A single kind: next page.
+    private async Task ShowMoreAsync(string scope)
+    {
+        if (_scope == "all")
+        {
+            await SetScopeAsync(scope);
+            return;
+        }
+
+        var term = Uri.EscapeDataString(_searchTerm.Trim());
+        switch (scope)
+        {
+            case "books" when _bookResults is { } current:
+                var nextBooks = await ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?search={term}&pageSize={PageSize}&page={current.Items.Count / PageSize + 1}");
+                if (nextBooks is { Success: true, Data: { } b }) current.Items.AddRange(b.Items);
+                await LoadResultCoversAsync(current.Items.Select(x => ($"book-{x.Id}", x.CoverUrl)));
+                break;
+            case "projects" when _projectResults is { } current:
+                var nextProjects = await ApiClient.GetAsync<DiscoverProjectListResponse>($"/api/discover/projects?search={term}&pageSize={PageSize}&page={current.Items.Count / PageSize + 1}");
+                if (nextProjects is { Success: true, Data: { } p }) current.Items.AddRange(p.Items);
+                await LoadResultCoversAsync(current.Items.Select(x => ($"project-{x.Id}", x.CoverUrl)));
+                break;
+            case "users" when _userResults is { } current:
+                var nextUsers = await ApiClient.GetAsync<DiscoverUserListResponse>($"/api/discover/users?search={term}&pageSize={PageSize}&page={current.Items.Count / PageSize + 1}");
+                if (nextUsers is { Success: true, Data: { } u }) current.Items.AddRange(u.Items);
+                break;
+        }
+    }
+
+    // Keeps ?q=&in= in step with the page, replacing the history entry so
+    // typing doesn't fill the back button.
+    private void UpdateUrl()
+    {
+        var parameters = new Dictionary<string, object?>
+        {
+            ["q"] = HasTerm ? _searchTerm.Trim() : null,
+            ["in"] = _scope == "all" ? null : _scope,
+        };
+        NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameters(parameters), replace: true);
+    }
+
+    private RenderFragment MoreButton(string scope, int shown, int total, string labelKey) => __builder =>
+    {
+        if ((_scope == "all" && total > PreviewCount) || (_scope != "all" && shown < total))
+        {
+            <button type="button" class="btn discover-show-more" @onclick="() => ShowMoreAsync(scope)">
+                @(_scope == "all" ? string.Format(I18n.T(labelKey), total) : I18n.T("discover.loadMore"))
+            </button>
+        }
+    };
+
+    // Projects have no public detail page yet (ProjectDetail is the owner's
+    // workspace), so a project card opens its owner's public profile, where
+    // the project is listed.
+    private RenderFragment ProjectCard(DiscoverProject project) => __builder =>
+    {
+        <CatalogCard Kind="project" Href="@($"u/{project.OwnerUsername}")" Title="@project.Title" Subtitle="@project.Description"
+                     CoverUrl="@ResultCover($"project-{project.Id}")" TypeLabel="@ProjectTypeLabel.For(project.Type, I18n)"
+                     OwnerUsername="@project.OwnerUsername" OnOwnerClick="GoToProfile" ShowRating="false" />
+    };
 
     public void Dispose()
     {
-        _userSearchDebounceTimer?.Dispose();
+        _searchDebounceTimer?.Dispose();
         if (_motionModule is not null)
         {
             _ = _motionModule.DisposeAsync();
@@ -265,7 +537,7 @@
             _ = _lazyCoverModule.DisposeAsync();
         }
         _dotNetRef?.Dispose();
-        foreach (var url in _coverObjectUrls.Values)
+        foreach (var url in _coverObjectUrls.Values.Concat(_resultCovers.Values))
         {
             _ = BlobUrlService.RevokeObjectUrlAsync(url);
         }

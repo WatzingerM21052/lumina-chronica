@@ -144,3 +144,81 @@ describe("GET /api/discover/users", () => {
         expect(json.data.items).toEqual([]);
     });
 });
+
+async function createProject(token: string, title: string, description: string | null, visibility: "PUBLIC" | "PRIVATE" = "PUBLIC"): Promise<number> {
+    const form = new FormData();
+    form.set("title", title);
+    if (description) form.set("description", description);
+    const res = await app.request("/api/projects", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }, env);
+    const id = (await readJson(res)).data.id;
+    if (visibility === "PUBLIC") {
+        await app.request(
+            `/api/projects/${id}`,
+            { method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ title, description, visibility: "PUBLIC" }) },
+            env
+        );
+    }
+    return id;
+}
+
+describe("GET /api/discover/books?search=", () => {
+    it("narrows public books by title, author or genre, case-insensitively", async () => {
+        await uploadBook(tokenA, "Der Drachenhort");
+        await uploadBook(tokenB, "Stille Wasser");
+        await uploadBook(tokenA, "Drachen privat", "PRIVATE");
+
+        const res = await app.request("/api/discover/books?search=drachen", {}, env);
+        const json = await readJson(res);
+
+        expect(json.data.total).toBe(1);
+        expect(json.data.items.map((b: { title: string }) => b.title)).toEqual(["Der Drachenhort"]);
+    });
+
+    it("treats % and _ in the search as plain characters", async () => {
+        await uploadBook(tokenA, "100% Fantasy");
+        await uploadBook(tokenA, "1000 Seiten");
+
+        const res = await app.request(`/api/discover/books?search=${encodeURIComponent("100%")}`, {}, env);
+        const json = await readJson(res);
+
+        expect(json.data.items.map((b: { title: string }) => b.title)).toEqual(["100% Fantasy"]);
+    });
+});
+
+describe("GET /api/discover/projects", () => {
+    it("lists only public projects of every user, newest first, with the owner", async () => {
+        await createProject(tokenA, "Die Gärten", "Terrassen und Kanäle");
+        await createProject(tokenB, "Sternenhafen", null);
+        await createProject(tokenA, "Geheimes Projekt", null, "PRIVATE");
+
+        const res = await app.request("/api/discover/projects", {}, env);
+        const json = await readJson(res);
+
+        expect(res.status).toBe(200);
+        expect(json.data.total).toBe(2);
+        expect(json.data.items.map((p: { title: string; ownerUsername: string }) => [p.title, p.ownerUsername])).toEqual([
+            ["Sternenhafen", "bob"],
+            ["Die Gärten", "alice"],
+        ]);
+    });
+
+    it("searches title and description", async () => {
+        await createProject(tokenA, "Die Gärten", "Terrassen und Kanäle");
+        await createProject(tokenB, "Sternenhafen", "Ein Hafen am Meer");
+
+        const byDescription = await readJson(await app.request("/api/discover/projects?search=kanäle", {}, env));
+        const byTitle = await readJson(await app.request("/api/discover/projects?search=STERN", {}, env));
+
+        expect(byDescription.data.items.map((p: { title: string }) => p.title)).toEqual(["Die Gärten"]);
+        expect(byTitle.data.items.map((p: { title: string }) => p.title)).toEqual(["Sternenhafen"]);
+    });
+
+    it("pages", async () => {
+        for (let i = 0; i < 3; i++) await createProject(tokenA, `Projekt ${i}`, null);
+
+        const json = await readJson(await app.request("/api/discover/projects?page=2&pageSize=2", {}, env));
+
+        expect(json.data.total).toBe(3);
+        expect(json.data.items).toHaveLength(1);
+    });
+});

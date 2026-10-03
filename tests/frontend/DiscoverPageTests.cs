@@ -30,9 +30,14 @@ public class DiscoverPageTests : BunitContext
     private const string UserResultsJson =
         """{"success":true,"data":{"items":[{"username":"alice","avatarUrl":null}],"total":1,"page":1,"pageSize":20}}""";
 
+    private const string EmptyProjectsJson = """{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":20}}""";
+
+    private static RoutedFakeHttpMessageHandler NewHandler(string projectsJson = EmptyProjectsJson) =>
+        new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/discover/projects", projectsJson);
+
     private RoutedFakeHttpMessageHandler UseRoutes(string booksJson)
     {
-        var handler = new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/discover/books", booksJson);
+        var handler = NewHandler().WhenPathEndsWith("/discover/books", booksJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(httpClient);
         Services.AddSingleton<ApiClient>();
@@ -103,7 +108,7 @@ public class DiscoverPageTests : BunitContext
     [Fact]
     public async Task Discover_LoadCoverAsync_FetchesBytes_RendersImg_RemovesLazyWrapper()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = NewHandler()
             .WhenPathEndsWith("/discover/books", BookWithCoverJson)
             .WhenPathEndsWith("/books/1/cover", "fake-jpeg-bytes", "image/jpeg");
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -174,7 +179,7 @@ public class DiscoverPageTests : BunitContext
         var cut = Render<Discover>();
 
         Assert.NotEmpty(cut.FindAll(".discover-search-field .search-input-icon"));
-        Assert.Equal("Nutzer nach Benutzername durchsuchen", cut.Find("input").GetAttribute("aria-label"));
+        Assert.Equal("Bücher, Projekte und Leser durchsuchen", cut.Find("input").GetAttribute("aria-label"));
     }
 
     // Issue #341 a11y audit -- the 400ms debounce plus the request itself
@@ -198,7 +203,7 @@ public class DiscoverPageTests : BunitContext
     [Fact]
     public void Discover_AuthorCard_ShowsRoleCaption()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = NewHandler()
             .WhenPathEndsWith("/discover/books", EmptyBooksJson)
             .WhenPathEndsWith("/discover/users", UserResultsJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -233,7 +238,7 @@ public class DiscoverPageTests : BunitContext
     public void Discover_ChangingSort_RequestsRatingSort()
     {
         HttpRequestMessage? lastRequest = null;
-        var handler = new RoutedFakeHttpMessageHandler().When(r => r.RequestUri!.AbsolutePath.EndsWith("/discover/books"), r =>
+        var handler = NewHandler().When(r => r.RequestUri!.AbsolutePath.EndsWith("/discover/books"), r =>
         {
             lastRequest = r;
             return RoutedFakeHttpMessageHandler.JsonResponse(BooksJson);
@@ -253,7 +258,7 @@ public class DiscoverPageTests : BunitContext
     [Fact]
     public void Discover_TypingAUsername_ShowsMatchingResults()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = NewHandler()
             .WhenPathEndsWith("/discover/books", EmptyBooksJson)
             .When(r => r.RequestUri!.AbsolutePath.EndsWith("/discover/users") && r.RequestUri.Query.Contains("search=ali"), _ => RoutedFakeHttpMessageHandler.JsonResponse(UserResultsJson))
             .WhenPathEndsWith("/discover/users", EmptyUsersJson);
@@ -273,7 +278,7 @@ public class DiscoverPageTests : BunitContext
     [Fact]
     public void Discover_UserResult_LinksToPublicProfile_WithoutLeadingSlash()
     {
-        var handler = new RoutedFakeHttpMessageHandler()
+        var handler = NewHandler()
             .WhenPathEndsWith("/discover/books", EmptyBooksJson)
             .WhenPathEndsWith("/discover/users", UserResultsJson);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
@@ -318,5 +323,105 @@ public class DiscoverPageTests : BunitContext
 
         var revealed = cut.FindAll("[data-reveal]");
         Assert.True(revealed.Count >= 3, $"expected at least 3 [data-reveal] sections, found {revealed.Count}");
+    }
+
+    private const string ProjectResultsJson =
+        """{"success":true,"data":{"items":[{"id":7,"title":"Die Gärten","description":"Terrassen und Kanäle","type":"WORLD","coverUrl":null,"ownerUsername":"bob"}],"total":30,"page":1,"pageSize":6}}""";
+
+    private void UseHandler(RoutedFakeHttpMessageHandler handler)
+    {
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(httpClient);
+        Services.AddSingleton<ApiClient>();
+        Services.AddSingleton<II18nService, FakeI18nService>();
+        Services.AddSingleton<BlobUrlService>();
+    }
+
+    // One search for everything: "Alles" shows each kind that has hits, with
+    // its count on the chip and in the group heading.
+    [Fact]
+    public void Discover_SearchingAll_GroupsBooksProjectsAndReaders()
+    {
+        UseHandler(NewHandler(ProjectResultsJson)
+            .WhenPathEndsWith("/discover/books", BooksJson)
+            .WhenPathEndsWith("/discover/users", UserResultsJson));
+
+        var cut = Render<Discover>();
+        cut.Find("input").Input("a");
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
+
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".discover-result-group").Count), TimeSpan.FromSeconds(2));
+        var headings = cut.FindAll(".discover-result-heading").Select(h => h.TextContent.Trim()).ToList();
+        Assert.Equal(["Bücher 1", "Projekte 30", "Leser 1"], headings);
+        Assert.Equal("32", cut.Find("[data-scope='all'] .discover-scope-count").TextContent);
+        // No public project page yet: a project opens its owner's profile.
+        Assert.Contains(cut.FindAll("a.catalog-card"), a => a.GetAttribute("href") == "u/bob");
+        // More than the preview: a way into the full list.
+        Assert.Contains("Alle 30 Projekte anzeigen", cut.Find(".discover-result-group:nth-of-type(2) .discover-show-more").TextContent);
+        // The shelves give way while searching.
+        Assert.Empty(cut.FindAll("#discover-sort"));
+    }
+
+    [Fact]
+    public void Discover_ProjectsScope_SearchesOnlyProjects_WithAFullPage()
+    {
+        var requested = new List<string>();
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .When(r => { requested.Add(r.RequestUri!.PathAndQuery); return false; }, _ => throw new InvalidOperationException())
+            .WhenPathEndsWith("/discover/projects", ProjectResultsJson)
+            .WhenPathEndsWith("/discover/books", EmptyBooksJson)
+            .WhenPathEndsWith("/discover/users", EmptyUsersJson));
+
+        var cut = Render<Discover>();
+        cut.Find("[data-scope='projects']").Click();
+        cut.Find("input").Input("garten");
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
+
+        cut.WaitForAssertion(() => Assert.Contains("Mehr laden", cut.Find(".discover-show-more").TextContent), TimeSpan.FromSeconds(2));
+        var searches = requested.Where(r => r.Contains("search=")).ToList();
+        Assert.All(searches, r => Assert.Contains("/discover/projects", r));
+        Assert.Contains(searches, r => r.Contains("pageSize=24"));
+        Assert.Equal("true", cut.Find("[data-scope='projects']").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void Discover_NothingFound_SaysSo()
+    {
+        UseHandler(NewHandler()
+            .WhenPathEndsWith("/discover/books", EmptyBooksJson)
+            .WhenPathEndsWith("/discover/users", EmptyUsersJson));
+
+        var cut = Render<Discover>();
+        cut.Find("input").Input("zzz");
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(400));
+
+        cut.WaitForAssertion(() => Assert.Contains("Nichts gefunden für „zzz“.", cut.Find(".discover-no-results").TextContent), TimeSpan.FromSeconds(2));
+    }
+
+    // A shared link (?q=&in=) opens straight into that search.
+    [Fact]
+    public void Discover_QueryString_StartsWithThatSearchAndScope()
+    {
+        UseHandler(NewHandler()
+            .WhenPathEndsWith("/discover/books", BooksJson)
+            .WhenPathEndsWith("/discover/users", EmptyUsersJson));
+        Services.GetRequiredService<NavigationManager>().NavigateTo("discover?q=Discoverable&in=books");
+
+        var cut = Render<Discover>();
+
+        cut.WaitForAssertion(() => Assert.Equal("Discoverable", cut.Find("input").GetAttribute("value")), TimeSpan.FromSeconds(2));
+        Assert.Equal("true", cut.Find("[data-scope='books']").GetAttribute("aria-pressed"));
+        Assert.Equal("library/books/1", cut.Find(".discover-results a.catalog-card").GetAttribute("href"));
+    }
+
+    [Fact]
+    public void Discover_WithoutSearch_ShowsThePublicProjectsShelf()
+    {
+        UseHandler(NewHandler(ProjectResultsJson).WhenPathEndsWith("/discover/books", EmptyBooksJson));
+
+        var cut = Render<Discover>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Die Gärten", cut.Markup), TimeSpan.FromSeconds(2));
+        Assert.Contains("öffentliche Welten und Geschichten", cut.Markup);
     }
 }
