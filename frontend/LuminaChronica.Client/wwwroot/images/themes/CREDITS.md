@@ -62,3 +62,29 @@ freigestellt oder eingefärbt.
 - `books/corner.svg`: S. H. Redmond, „Ornamental corner“ (gemeinfrei, Wikimedia Commons „Ornamental corner by S. H. Redmond 01.svg“).
 - `books/rosette.svg`: Fleuron aus „Le Livre des petits enfans“ (gemeinfrei, Wikimedia Commons „Fleuron Le Livre des petits enfans.svg“).
 - `books/fleuron.svg`: Chappell & Co. Fleuron (gemeinfrei, Wikimedia Commons „Chappell & Co fleuron.svg“).
+
+## Klassische Themes (Classic Library, Modern Light, Dark Library, System)
+Seitenbanner in `classic/`. Alle Stiche gemeinfrei oder CC0 (Wikimedia Commons). Aus jedem Stich
+sind nur die Linien als Alphamaske herausgezogen, die App färbt sie in der Farbe des Themes.
+- `classic-library-bodleian.webp`: „Interieur van de Bodleian Library te Oxford“, Rijksmuseum,
+  RP-P-2015-26-2083, CC0. Oberes Bild, Ausschnitt.
+- `classic-shelves-piana.webp`: „Interieur van een bibliotheek: Biblioteca Piana“, Rijksmuseum,
+  RP-P-2015-26-1657, CC0. Ausschnitt.
+- `classic-statistics-uraniborg.webp`: Joan Blaeu, „Orthographia praecipuae domus arcis Uraniburgi“
+  (Atlas Maior, 1662), gemeinfrei (Commons „Uraniborg main building.jpg“). Ohne Titelzeile.
+- `classic-discover-blaeu.webp`: Willem Blaeu, „Nova totius terrarum orbis geographica ac
+  hydrographica tabula“, gemeinfrei. Ausschnitt.
+- `classic-projects-settala.webp`: Die Wunderkammer des Manfredo Settala in Mailand, Rijksmuseum,
+  RP-P-2012-48, CC0 (Commons „Manfredo Settala Wunderkammer in Milan.jpg“).
+- `classic-settings-ramelli.webp`: Agostino Ramelli, „Le diverse et artificiose machine“ (1588),
+  Figur CLXXXVIII (Bücherrad), gemeinfrei.
+- `classic-profile-jerome.webp`: Albrecht Dürer, „Der heilige Hieronymus im Gehäus“ (1514),
+  National Gallery of Art 35095, CC0.
+- `classic-offline-ship.webp`: „Zeilschip“, Rijksmuseum, RP-P-1938-2057, CC0.
+- `classic-upload-press.webp`: Jan van der Straet (Stradanus) / Joannes Galle, „Impressio librorum“
+  aus „Nova Reperta“ (um 1600), gemeinfrei (Commons „De uitvinding van de boekdrukkunst,
+  objectno PK.OPB.0186.005“). Ausschnitt.
+- `classic-impressum-faust.webp`: Rembrandt, „Faust“ (um 1652), The Metropolitan Museum of Art,
+  DP814788, CC0.
+- `classic-legal-justitia.webp`: „Personificatie van Gerechtigheid (Justitia)“, Rijksmuseum,
+  RP-P-1905-3985, CC0. Ohne Verse.
