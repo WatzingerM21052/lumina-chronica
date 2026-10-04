@@ -1,0 +1,58 @@
+{
+  "alexandria": {
+    "label": "Alexandria", "tier": "main", "mode": "light",
+    "tagline": "Sonnenmarmor: weißer Marmor, Papyrus, Lapislazuli und mattes Gold.",
+    "paper": "#f1eee6", "card": "#fbfaf6", "dark": "#1d3254", "onDark": "#f3efe4",
+    "primary": "#2e5592", "onPrimary": "#fbfaf6", "secondary": "#a8842f", "accentText": "#7d6122",
+    "text": "#1c2333", "text2": "#46506a", "muted": "#5f6577", "border": "#d9d3c4",
+    "chart": ["#2e5592", "#a8842f", "#8a4768", "#4c7a56"]
+  },
+  "babylon": {
+    "label": "Babylon", "tier": "main", "mode": "dark",
+    "tagline": "Glasierte Kobaltziegel, Gold und Türkis, dazwischen das Grün der hängenden Gärten.",
+    "paper": "#0e1918", "card": "#152421", "dark": "#0f2245", "onDark": "#efe7d2",
+    "primary": "#d6ad4f", "onPrimary": "#13110a", "secondary": "#3fb3a3", "accentText": "#e0bd6a",
+    "text": "#ece6d4", "text2": "#bcc7b9", "muted": "#8b9a8e", "border": "#28403a",
+    "chart": ["#d6ad4f", "#3fb3a3", "#6b93e0", "#c8734f"]
+  },
+  "skriptorium": {
+    "label": "Skriptorium", "tier": "alt", "mode": "dark", "family": "Alexandria",
+    "tagline": "Zedernholz, Kupfer und Papyrus unter der Öllampe.",
+    "paper": "#19130f", "card": "#241a13", "dark": "#100b08", "onDark": "#eadfca",
+    "primary": "#cf7d43", "onPrimary": "#1a0f08", "secondary": "#a54a38", "accentText": "#e0975f",
+    "text": "#ecdfc8", "text2": "#c9b89c", "muted": "#968672", "border": "#3a2a1e",
+    "chart": ["#cf7d43", "#7fa7b5", "#c9b66a", "#8fae74"]
+  },
+  "abendhafen": {
+    "label": "Abendhafen", "tier": "alt", "mode": "dark", "family": "Alexandria",
+    "tagline": "Dämmerblau über dem Hafen, das Gold des Leuchtturms.",
+    "paper": "#101828", "card": "#172237", "dark": "#0a111e", "onDark": "#e9e6ef",
+    "primary": "#e6b85c", "onPrimary": "#15100a", "secondary": "#d48a6a", "accentText": "#ecc574",
+    "text": "#eae7f0", "text2": "#bcc2d4", "muted": "#8a93ab", "border": "#283552",
+    "chart": ["#e6b85c", "#6fb3d9", "#d48a6a", "#8fc29a"]
+  },
+  "ischtar": {
+    "label": "Ischtar-Tor", "tier": "alt", "mode": "dark", "family": "Babylon",
+    "tagline": "Ganz im Kobaltblau des Tores, mit goldenen Löwen.",
+    "paper": "#0c1730", "card": "#132347", "dark": "#081025", "onDark": "#eef0f6",
+    "primary": "#e3ba4f", "onPrimary": "#120f06", "secondary": "#35b6c8", "accentText": "#ecc768",
+    "text": "#eef0f6", "text2": "#c0c9e2", "muted": "#8e9bbd", "border": "#25386b",
+    "chart": ["#e3ba4f", "#35b6c8", "#e07a6a", "#8fcf8f"]
+  },
+  "daemmergarten": {
+    "label": "Gärten in der Dämmerung", "tier": "alt", "mode": "light", "family": "Babylon",
+    "tagline": "Salbeigrün, Terrakotta und warmer Sandstein.",
+    "paper": "#ecefe4", "card": "#f8f8f1", "dark": "#2f4336", "onDark": "#eef1e6",
+    "primary": "#3f6b4c", "onPrimary": "#f8f8f1", "secondary": "#b35d3a", "accentText": "#8f4a2c",
+    "text": "#1e2a22", "text2": "#46554a", "muted": "#5b675d", "border": "#d3d8c6",
+    "chart": ["#3f6b4c", "#b35d3a", "#2a7f8c", "#9a7d2c"]
+  },
+  "nachtgarten": {
+    "label": "Nachtgarten", "tier": "alt", "mode": "dark", "family": "Babylon",
+    "tagline": "Tiefes Grün, Lehmrot und Laternengold.",
+    "paper": "#0d1912", "card": "#14241b", "dark": "#08100c", "onDark": "#e6ead8",
+    "primary": "#d3a94e", "onPrimary": "#120f06", "secondary": "#c0634a", "accentText": "#dfbd6c",
+    "text": "#e6ead8", "text2": "#bcc6b2", "muted": "#8a9a86", "border": "#24382b",
+    "chart": ["#d3a94e", "#c0634a", "#5fb3a6", "#a3b8e0"]
+  }
+}

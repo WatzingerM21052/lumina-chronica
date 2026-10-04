@@ -1,0 +1,174 @@
+{
+ "garten-library": {
+  "src": "src_3.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.12
+  ],
+  "cy": 0.75
+ },
+ "garten-shelves": {
+  "src": "src_19.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.06
+  ],
+  "cy": 0.5
+ },
+ "garten-statistics": {
+  "src": "src_50.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0.05,
+   0,
+   0.22
+  ],
+  "cy": 0.45
+ },
+ "garten-discover": {
+  "src": "src_22.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.06
+  ],
+  "cy": 0.5
+ },
+ "garten-projects": {
+  "src": "src_34.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.12
+  ],
+  "cy": 0.45
+ },
+ "garten-settings": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_14.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.06
+    ]
+   },
+   {
+    "src": "src_13.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.06
+    ]
+   },
+   {
+    "src": "src_18.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.06
+    ]
+   }
+  ]
+ },
+ "garten-profile": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_16.jpg"
+   },
+   {
+    "src": "src_7.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   }
+  ]
+ },
+ "garten-offline": {
+  "src": "src_10.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.12
+  ],
+  "cy": 0.5
+ },
+ "garten-upload": {
+  "src": "src_46.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.1
+  ],
+  "cy": 0.5
+ },
+ "garten-impressum": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_12.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.06
+    ]
+   },
+   {
+    "src": "src_20.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.06
+    ]
+   },
+   {
+    "src": "src_21.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.08
+    ]
+   }
+  ]
+ },
+ "garten-legal": {
+  "src": "src_36.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0.24,
+   0.06
+  ],
+  "cy": 0.5
+ }
+}

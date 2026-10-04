@@ -1,0 +1,127 @@
+{
+ "classic-library-bodleian": {
+  "src": "classic_library_bodleian.jpg",
+  "mode": "band",
+  "box": [
+   0,
+   0.045,
+   1,
+   0.4
+  ],
+  "gain": 8
+ },
+ "classic-shelves-piana": {
+  "src": "shelves_piana.jpg",
+  "mode": "band",
+  "box": [
+   0.23,
+   0.15,
+   0.8,
+   0.72
+  ],
+  "cy": 0.45
+ },
+ "classic-statistics-uraniborg": {
+  "src": "classic_stats_uranmain.jpg",
+  "mode": "motif",
+  "box": [
+   0.21,
+   0.235,
+   0.83,
+   0.82
+  ],
+  "fx": 0.06,
+  "fy": 0.0
+ },
+ "classic-discover-blaeu": {
+  "src": "discover_blaeu.jpg",
+  "mode": "band",
+  "box": [
+   0.08,
+   0.14,
+   0.92,
+   0.8
+  ],
+  "cy": 0.42
+ },
+ "classic-projects-settala": {
+  "src": "projects_settala.jpg",
+  "mode": "band",
+  "box": [
+   0,
+   0,
+   1,
+   1
+  ],
+  "cy": 0.45
+ },
+ "classic-settings-ramelli": {
+  "src": "settings_ramelli.jpg",
+  "mode": "motif",
+  "box": [
+   0.06,
+   0.05,
+   0.94,
+   0.93
+  ],
+  "cx": 0.7
+ },
+ "classic-profile-jerome": {
+  "src": "profile_jerome.jpg",
+  "mode": "motif",
+  "box": [
+   0.03,
+   0.03,
+   0.97,
+   0.97
+  ],
+  "cx": 0.7
+ },
+ "classic-offline-ship": {
+  "src": "offline_ship.jpg",
+  "mode": "motif",
+  "box": [
+   0.14,
+   0.07,
+   0.86,
+   0.85
+  ],
+  "cx": 0.7
+ },
+ "classic-upload-press": {
+  "src": "upload_press.jpg",
+  "mode": "band",
+  "box": [
+   0.06,
+   0.06,
+   0.95,
+   0.82
+  ],
+  "cy": 0.45
+ },
+ "classic-impressum-faust": {
+  "src": "impressum_faust.jpg",
+  "mode": "motif",
+  "box": [
+   0.03,
+   0.03,
+   0.97,
+   0.97
+  ],
+  "cx": 0.7,
+  "floor": 4
+ },
+ "classic-legal-justitia": {
+  "src": "legal_justitia3.jpg",
+  "mode": "motif",
+  "box": [
+   0.17,
+   0.255,
+   0.72,
+   0.8
+  ],
+  "cx": 0.7,
+  "fx": 0.12,
+  "fy": 0.06
+ }
+}

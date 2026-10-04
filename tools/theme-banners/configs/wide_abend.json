@@ -1,0 +1,40 @@
+{
+ "abendhafen-statistics": {
+  "src": "src_43.jpg",
+  "mode": "band",
+  "cy": 0.5
+ },
+ "abendhafen-settings": {
+  "src": "src_36.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.12
+  ],
+  "cy": 0.8
+ },
+ "abendhafen-profile": {
+  "src": "src_35.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.1
+  ],
+  "cy": 0.55
+ },
+ "abendhafen-impressum": {
+  "src": "src_30.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.1
+  ],
+  "cy": 0.5
+ }
+}

@@ -1,0 +1,5 @@
+{
+ "garten-settings": {"src": "src_6.jpg", "mode": "band", "cy": 0.5},
+ "garten-profile": {"src": "src_42.jpg", "mode": "band", "trim": [0, 0, 0, 0.12], "cy": 0.5},
+ "garten-impressum": {"src": "src_43.jpg", "mode": "band", "trim": [0, 0, 0, 0.12], "cy": 0.45}
+}

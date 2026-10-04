@@ -1,0 +1,45 @@
+{
+ "ischtar-statistics": {
+  "src": "src_9.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.05
+  ],
+  "cy": 0.4
+ },
+ "ischtar-settings": {
+  "src": "src_0.jpg",
+  "mode": "band",
+  "cy": 0.4
+ },
+ "ischtar-profile": {
+  "src": "src_11.jpg",
+  "mode": "band",
+  "cy": 0.45
+ },
+ "ischtar-impressum": {
+  "src": "src_8.jpg",
+  "mode": "band",
+  "cy": 0.5,
+  "trim": [
+   0.02,
+   0.02,
+   0.16,
+   0.04
+  ]
+ },
+ "ischtar-legal": {
+  "src": "src_10.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.12
+  ],
+  "cy": 0.4
+ }
+}

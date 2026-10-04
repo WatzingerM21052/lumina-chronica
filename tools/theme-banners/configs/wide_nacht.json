@@ -1,0 +1,95 @@
+{
+ "nachtgarten-statistics": {
+  "src": "src_17.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.06
+  ],
+  "cy": 0.55
+ },
+ "nachtgarten-discover": {
+  "src": "src_9.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0.04,
+   0,
+   0.14
+  ],
+  "cy": 0.5
+ },
+ "nachtgarten-projects": {
+  "src": "src_8.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.08
+  ],
+  "cy": 0.45
+ },
+ "nachtgarten-settings": {
+  "src": "src_2.jpg",
+  "mode": "band",
+  "trim": [
+   0.08,
+   0,
+   0,
+   0.08
+  ],
+  "cy": 0.45
+ },
+ "nachtgarten-profile": {
+  "src": "src_27.jpg",
+  "mode": "band",
+  "cy": 0.68
+ },
+ "nachtgarten-offline": {
+  "src": "src_30.jpg",
+  "mode": "band",
+  "box": [
+   0.08,
+   0.13,
+   0.79,
+   0.73
+  ],
+  "cy": 0.55
+ },
+ "nachtgarten-upload": {
+  "src": "src_20.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.1
+  ],
+  "cy": 0.5
+ },
+ "nachtgarten-impressum": {
+  "src": "src_24.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.05
+  ],
+  "cy": 0.82
+ },
+ "nachtgarten-legal": {
+  "src": "src_3.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.1
+  ],
+  "cy": 0.45
+ }
+}
