@@ -1,0 +1,64 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* One legal text (privacy policy, terms of use): numbered sections whose
+   wording lives in the i18n files under {Prefix}.{Key}.title / .p1.. /
+   .li1.., so both languages stay in one place each. Contact links and
+   the like come in via ChildContent at the end. *@
+<div class="legal-document">
+    <p class="legal-updated text-muted">@I18n.T("legal.updated") @I18n.T($"{Prefix}.updated")</p>
+
+    <nav class="legal-toc" aria-label="@I18n.T("legal.tocLabel")">
+        <ol>
+            @foreach (var section in Sections)
+            {
+                <li><a href="@($"{CurrentPath}#{Prefix}-{section.Key}")">@I18n.T($"{Prefix}.{section.Key}.title")</a></li>
+            }
+        </ol>
+    </nav>
+
+    @for (var i = 0; i < Sections.Count; i++)
+    {
+        var section = Sections[i];
+        <section class="legal-section" id="@($"{Prefix}-{section.Key}")">
+            <h2><span class="legal-section-number">@(i + 1).</span> @I18n.T($"{Prefix}.{section.Key}.title")</h2>
+            @for (var p = 1; p <= section.Paragraphs; p++)
+            {
+                <p>@I18n.T($"{Prefix}.{section.Key}.p{p}")</p>
+            }
+            @if (section.Items > 0)
+            {
+                <ul>
+                    @for (var li = 1; li <= section.Items; li++)
+                    {
+                        <li>@I18n.T($"{Prefix}.{section.Key}.li{li}")</li>
+                    }
+                </ul>
+            }
+            @if (section.Key == ContactSectionKey)
+            {
+                <p><a href="mailto:luminachronica@gmx.at">luminachronica@gmx.at</a></p>
+            }
+        </section>
+    }
+
+    @ChildContent
+</div>
+
+@code {
+    public sealed record Section(string Key, int Paragraphs, int Items = 0);
+
+    [Parameter, EditorRequired] public string Prefix { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<Section> Sections { get; set; } = [];
+
+    // The section that ends with the clickable contact address.
+    [Parameter] public string? ContactSectionKey { get; set; }
+
+    // Links to related pages under the last section.
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    // In-page anchors need the page's own path: the app sets <base href>,
+    // so a bare "#x" would point at the root instead.
+    [Parameter, EditorRequired] public string CurrentPath { get; set; } = "";
+}

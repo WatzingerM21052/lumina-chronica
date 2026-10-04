@@ -55,6 +55,11 @@
         <InputText id="confirmPassword" type="password" @bind-Value="_form.ConfirmPassword" />
     </div>
 
+    <p class="register-consent text-muted">
+        @I18n.T("register.consentPrefix") <a href="nutzungsbedingungen">@I18n.T("register.consentTermsLink")</a>
+        @I18n.T("register.consentAnd") <a href="datenschutz">@I18n.T("register.consentPrivacyLink")</a>@I18n.T("register.consentSuffix")
+    </p>
+
     @if (_isSubmitting)
     {
         <LoadingIndicator Text="@I18n.T("register.submitting")" />

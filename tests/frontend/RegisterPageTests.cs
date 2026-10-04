@@ -33,6 +33,20 @@ public class RegisterPageTests : BunitContext
     }
 
     [Fact]
+    public void Register_LinksTheTermsAndPrivacyPolicy_NextToTheSubmitButton()
+    {
+        var handler = new FakeHttpMessageHandler("""{"success":false,"error":{"code":"VALIDATION_ERROR","message":"unused"}}""");
+        Services.AddSingleton(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+        Services.AddSingleton<ApiClient>();
+        RegisterAuthServices(this);
+
+        var cut = Render<Register>();
+
+        var consent = cut.Find("form .register-consent");
+        Assert.Equal(new[] { "nutzungsbedingungen", "datenschutz" }, consent.QuerySelectorAll("a").Select(a => a.GetAttribute("href")));
+    }
+
+    [Fact]
     public void Register_MismatchedPasswords_ShowsErrorWithoutCallingApi()
     {
         var handler = new FakeHttpMessageHandler("""{"success":true,"data":{"token":"unused","userId":1}}""");

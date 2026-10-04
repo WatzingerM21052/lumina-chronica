@@ -3967,6 +3967,82 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     color: var(--color-primary);
 }
 
+/* Legal texts (Datenschutz, Nutzungsbedingungen; LegalDocument.razor):
+   a readable measure, a contents list up top, calm numbered sections. */
+.legal-document {
+    max-width: 76ch;
+}
+
+.legal-updated {
+    margin-top: 0;
+    font-size: var(--font-size-small);
+}
+
+.legal-toc {
+    margin: var(--space-3) 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-card);
+}
+
+.legal-toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+}
+
+@media (min-width: 640px) {
+    .legal-toc ol {
+        column-count: 2;
+        column-gap: var(--space-4);
+    }
+}
+
+.legal-toc li {
+    break-inside: avoid;
+    padding: 0.15em 0;
+}
+
+.legal-section {
+    margin-top: var(--space-4);
+    /* in-page jumps land below the sticky header */
+    scroll-margin-top: 5rem;
+}
+
+.legal-section h2 {
+    font-size: 1.2rem;
+}
+
+.legal-section-number {
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.legal-section p,
+.legal-section li {
+    line-height: 1.65;
+}
+
+.legal-section ul {
+    padding-left: 1.3em;
+}
+
+.legal-section li + li {
+    margin-top: 0.35em;
+}
+
+.legal-related {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-4);
+}
+
+.register-consent {
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+}
+
 /* Shared cover-thumbnail structure, used by BookCard.razor (private
    library) and by several detail pages' own single-cover markup
    (BookDetail/CharacterDetail/LocationDetail/ProjectDetail/ShelfDetail).
