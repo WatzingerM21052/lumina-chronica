@@ -103,8 +103,8 @@ html[data-theme="skriptorium"] .world-banner[data-page="legal"] {
 /* ---------- The immersive Home (WorldJourney, data-world="engraving") ---------- */
 html[data-theme="skriptorium"] {
     --j-engr-hero: url("../../images/themes/skriptorium/skriptorium-library.webp");
-    --j-engr-reading: url("../../images/themes/skriptorium/skriptorium-profile.webp");
-    --j-engr-library: url("../../images/themes/skriptorium/skriptorium-shelves.webp");
+    --j-engr-reading: url("../../images/themes/skriptorium/skriptorium-journey-reading.webp");
+    --j-engr-library: url("../../images/themes/skriptorium/skriptorium-journey-library.webp");
     --j-engr-world: url("../../images/themes/skriptorium/skriptorium-projects.webp");
     --j-engr-finale: url("../../images/themes/skriptorium/skriptorium-discover.webp");
 }
