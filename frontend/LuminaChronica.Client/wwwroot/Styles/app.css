@@ -12,6 +12,12 @@ body {
     color: var(--color-text-primary);
 }
 
+/* World layout: the page colour lives on <html> only, so a detail page's
+   backdrop (z-index -1, see WorldBackdrop below) isn't painted over. */
+html[data-layout="world"] body {
+    background-color: transparent;
+}
+
 * {
     box-sizing: border-box;
     /* Thin, quiet scrollbars everywhere (page, dialogs, lists): a slim
@@ -4665,6 +4671,26 @@ html:is([data-theme="classic-library"], [data-theme="modern-light"], [data-theme
 
 html:is([data-theme="classic-library"], [data-theme="modern-light"], [data-theme="dark-library"], [data-theme="system"]) .world-banner-shade {
     background: linear-gradient(90deg, var(--color-bg-paper) 0%, color-mix(in srgb, var(--color-bg-paper) 75%, transparent) 30%, transparent 62%);
+}
+
+/* Detail pages in the classic themes: the blurred cover fades into the
+   page colour; without a cover a soft wash of the theme's two accents. */
+html:is([data-theme="classic-library"], [data-theme="modern-light"], [data-theme="dark-library"], [data-theme="system"]) .world-backdrop-image {
+    opacity: 0.55;
+}
+
+html:is([data-theme="classic-library"], [data-theme="modern-light"], [data-theme="dark-library"], [data-theme="system"]) .world-backdrop-image--texture {
+    inset: 0;
+    background:
+        radial-gradient(55% 90% at 78% 0%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 70%),
+        radial-gradient(60% 80% at 15% 15%, color-mix(in srgb, var(--color-secondary) 14%, transparent), transparent 70%);
+    filter: none;
+    transform: none;
+    opacity: 1;
+}
+
+html:is([data-theme="classic-library"], [data-theme="modern-light"], [data-theme="dark-library"], [data-theme="system"]) .world-backdrop-shade {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-paper) 20%, transparent) 0%, color-mix(in srgb, var(--color-bg-paper) 60%, transparent) 60%, var(--color-bg-paper) 100%);
 }
 
 .world-banner[data-page="library"] {
