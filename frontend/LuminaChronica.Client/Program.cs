@@ -1,3 +1,4 @@
+using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -50,5 +51,17 @@ var host = builder.Build();
 // when ITS parameters change), so initializing from a layout's lifecycle
 // left leaf pages permanently stuck showing the "missing key" fallback.
 await host.Services.GetRequiredService<II18nService>().InitializeAsync();
+
+// "Coverbilder anzeigen": known before the first cover is requested.
+try
+{
+    var js = host.Services.GetRequiredService<Microsoft.JSInterop.IJSRuntime>();
+    var coverModule = await js.InvokeAsync<Microsoft.JSInterop.IJSObjectReference>("import", "./js/coverImages.js");
+    LuminaChronica.Client.Services.CoverPreferences.ShowImages = await coverModule.InvokeAsync<bool>("getShowCoverImages");
+}
+catch (Exception)
+{
+    // Blocked storage or module: covers stay on.
+}
 
 await host.RunAsync();

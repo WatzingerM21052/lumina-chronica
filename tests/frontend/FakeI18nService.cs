@@ -209,6 +209,8 @@ public class FakeI18nService : II18nService
         ["settings.languageGerman"] = "Deutsch",
         ["settings.languageEnglish"] = "English",
         ["settings.libraryTitle"] = "Bibliothek",
+        ["settings.coverImagesLabel"] = "Coverbilder anzeigen",
+        ["settings.coverImagesDescription"] = "aus: statt der Bilder stehen Titel und Autor auf jedem Cover – lädt auch weniger Daten",
         ["settings.showCoverTextLabel"] = "Titel/Autor auf Regal-Cover anzeigen",
         ["settings.showCoverTextDescription"] = "die meisten echten Cover-Bilder tragen Titel/Autor bereits selbst",
         ["settings.immersiveLabel"] = "Immersives Theme",

@@ -22,7 +22,14 @@
         else
         {
             <div class="catalog-card-cover-placeholder" aria-hidden="true">
-                <Icon Name="@(Kind == "project" ? "project" : "book")" Class="catalog-card-placeholder-icon" />
+                @if (Kind == "book")
+                {
+                    <TextCover Title="@Title" Author="@Subtitle" />
+                }
+                else
+                {
+                    <Icon Name="project" Class="catalog-card-placeholder-icon" />
+                }
             </div>
         }
     </div>

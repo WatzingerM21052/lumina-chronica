@@ -86,6 +86,14 @@
     </div>
 
     <h3 class="settings-subheading">@I18n.T("settings.libraryTitle")</h3>
+    @* Off: no cover picture is downloaded; covers show title and author. *@
+    <label class="preference-row cover-images-row">
+        <span class="preference-row-text">
+            <strong>@I18n.T("settings.coverImagesLabel")</strong>
+            <span class="text-muted">@I18n.T("settings.coverImagesDescription")</span>
+        </span>
+        <input type="checkbox" role="switch" class="switch" checked="@CoverPreferences.ShowImages" @onchange="e => SetShowCoverImagesAsync((bool)e.Value!)" />
+    </label>
     <label class="preference-row library-preference-row">
         <span class="preference-row-text">
             <strong>@I18n.T("settings.showCoverTextLabel")</strong>
@@ -205,6 +213,7 @@ else
     private NotificationPreferences? _preferences;
     private bool _showShelfCoverText;
     private IJSObjectReference? _shelfCoverTextModule;
+    private IJSObjectReference? _coverImagesModule;
     private bool _homeScrollShelf = true;
     private IJSObjectReference? _libraryPreferencesModule;
     // The stored choice; null = never chosen (then on only in the worlds).
@@ -242,6 +251,13 @@ else
         _homeScrollShelf = show;
         _libraryPreferencesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/libraryPreferences.js");
         await _libraryPreferencesModule.InvokeVoidAsync("setHomeScrollShelf", show);
+    }
+
+    private async Task SetShowCoverImagesAsync(bool show)
+    {
+        CoverPreferences.ShowImages = show;
+        _coverImagesModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/coverImages.js");
+        await _coverImagesModule.InvokeVoidAsync("setShowCoverImages", show);
     }
 
     private async Task SetShowShelfCoverTextAsync(bool show)

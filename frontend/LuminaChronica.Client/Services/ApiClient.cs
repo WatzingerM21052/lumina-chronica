@@ -208,6 +208,9 @@ public class ApiClient(HttpClient httpClient)
     // Blob (see BlobUrlService).
     public async Task<(byte[] Bytes, string ContentType)?> GetBytesAsync(string relativeUrl, CancellationToken cancellationToken = default)
     {
+        // "Coverbilder anzeigen" off: no cover is downloaded at all.
+        if (!CoverPreferences.ShowImages && CoverPreferences.IsBookCover(relativeUrl)) return null;
+
         try
         {
             var response = await httpClient.GetAsync(relativeUrl, cancellationToken);

@@ -1,0 +1,18 @@
+@namespace LuminaChronica.Client.Components
+
+@* A cover without a picture: the title and the author set like a bound
+   book's front (a frame and a rule in the theme's accent). Used wherever a
+   book has no cover image -- or when "Coverbilder anzeigen" is off. *@
+<span class="text-cover" aria-hidden="true">
+    <span class="text-cover-title">@Title</span>
+    <span class="text-cover-rule"></span>
+    @if (!string.IsNullOrWhiteSpace(Author))
+    {
+        <span class="text-cover-author">@Author</span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Author { get; set; }
+}
