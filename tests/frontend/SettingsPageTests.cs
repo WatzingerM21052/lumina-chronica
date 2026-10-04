@@ -265,7 +265,7 @@ public class SettingsPageTests : BunitContext
         Assert.False(cut.Find("label.home-scroll-shelf-row input[type=checkbox]").HasAttribute("checked"));
     }
 
-    // "Immersives Theme": Babylon and Alexandria only, on until switched off.
+    // "Immersives Theme": in every theme; never chosen = on in the worlds, off elsewhere.
     [Fact]
     public void Settings_ImmersiveSwitch_InTheWorlds_IsOnWhenNeverChosen_AndPersists()
     {
@@ -285,13 +285,20 @@ public class SettingsPageTests : BunitContext
     }
 
     [Fact]
-    public void Settings_ImmersiveSwitch_IsHiddenInTheClassicThemes()
+    public void Settings_ImmersiveSwitch_InTheClassicThemes_IsShownAndOffWhenNeverChosen()
     {
         UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+        JSInterop.SetupModule("./js/worldPreferences.js").Setup<bool?>("getImmersive", _ => true).SetResult(null);
+        var setHandler = JSInterop.SetupModule("./js/worldPreferences.js").SetupVoid("setImmersive", _ => true);
 
         var cut = Render<Settings>();
+        var toggle = cut.Find("label.immersive-theme-row input[type=checkbox]");
+        Assert.False(toggle.HasAttribute("checked"));
 
-        Assert.Empty(cut.FindAll("label.immersive-theme-row"));
+        toggle.Change(true);
+
+        Assert.Equal(true, Assert.Single(setHandler.Invocations).Arguments[0]);
+        Assert.True(cut.Find("label.immersive-theme-row input[type=checkbox]").HasAttribute("checked"));
     }
 
     // With the journey on, the scroll-shelf choice (a card-dashboard setting) waits.

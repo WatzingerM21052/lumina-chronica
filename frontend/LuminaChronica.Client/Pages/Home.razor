@@ -14,7 +14,7 @@
 
 
 <div class="home-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
-<div class="@(_world is not null && _immersive ? "home-hero home-hero--journey" : "home-hero")" @ref="_heroRef">
+<div class="@(_world is not null && _immersive ? (_world == "engraving" ? "home-hero home-hero--journey home-hero--engraving" : "home-hero home-hero--journey") : "home-hero")" @ref="_heroRef">
     <img src="images/dashboard-hero-layer1-background.webp" alt="" class="home-hero-layer home-hero-layer-1" fetchpriority="high" />
     <img src="images/dashboard-hero-layer2-lights.webp" alt="" class="home-hero-layer home-hero-layer-2" fetchpriority="low" decoding="async" />
     <img src="images/dashboard-hero-layer3-foreground.webp" alt="" class="home-hero-layer home-hero-layer-3" fetchpriority="low" decoding="async" />
@@ -186,12 +186,13 @@ else
     private bool _showScrollShelf;
     private IReadOnlyList<string> _genres = [];
 
-    // "babylon" / "alexandria" while one of the themed worlds is active:
-    // Home then uses the studio dashboard (WorldDashboard) and loads the
-    // goal, the calendar and the featured book's page count for it.
+    // "babylon" / "alexandria" while one of the themed worlds is active, or
+    // "engraving" when another theme has the immersive journey switched on:
+    // Home then uses the journey (or, in the worlds, the studio dashboard)
+    // and loads the goal, the calendar and the featured book's page count.
     private string? _world;
-    // Babylon/Alexandria: the immersive journey (default) or the card
-    // dashboard, per the "Immersives Theme" switch in Settings.
+    // The immersive journey or not, per the "Immersives Theme" switch in
+    // Settings: on by default in the two worlds, off by default elsewhere.
     private bool _immersive = true;
     // "Willkommen zurück, Matthias" -- the plain greeting until (or if) it loads.
     private string? _username;
@@ -202,7 +203,12 @@ else
     protected override async Task OnInitializedAsync()
     {
         _world = await WorldThemeAsync();
-        _immersive = _world is null || await ImmersivePreferenceAsync();
+        var immersive = await ImmersivePreferenceAsync();
+        if (_world is null && immersive == true)
+        {
+            _world = "engraving";
+        }
+        _immersive = _world is null || (immersive ?? true);
         _showScrollShelf = _world == "alexandria" && !_immersive && await ScrollShelfPreferenceAsync();
         var facetsTask = _showScrollShelf ? ApiClient.GetAsync<BookFacets>("/api/books/facets") : null;
         var statisticsTask = _world is not null ? ApiClient.GetAsync<StatisticsResponse>("/api/statistics") : null;
@@ -287,17 +293,17 @@ else
         return lead;
     }
 
-    private async Task<bool> ImmersivePreferenceAsync()
+    // null = never chosen (the journey in the worlds, the plain Home elsewhere).
+    private async Task<bool?> ImmersivePreferenceAsync()
     {
         try
         {
             var module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/worldPreferences.js");
-            // null = never chosen: the journey is the default.
-            return await module.InvokeAsync<bool?>("getImmersive") ?? true;
+            return await module.InvokeAsync<bool?>("getImmersive");
         }
         catch (Exception)
         {
-            return true;
+            return null;
         }
     }
 

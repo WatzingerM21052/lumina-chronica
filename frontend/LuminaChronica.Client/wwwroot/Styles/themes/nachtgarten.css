@@ -100,3 +100,12 @@ html[data-theme="nachtgarten"] .world-banner[data-page="impressum"] {
 html[data-theme="nachtgarten"] .world-banner[data-page="legal"] {
     --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-legal.webp");
 }
+
+/* ---------- The immersive Home (WorldJourney, data-world="engraving") ---------- */
+html[data-theme="nachtgarten"] {
+    --j-engr-hero: url("../../images/themes/nachtgarten/nachtgarten-library.webp");
+    --j-engr-reading: url("../../images/themes/nachtgarten/nachtgarten-profile.webp");
+    --j-engr-library: url("../../images/themes/nachtgarten/nachtgarten-shelves.webp");
+    --j-engr-world: url("../../images/themes/nachtgarten/nachtgarten-projects.webp");
+    --j-engr-finale: url("../../images/themes/nachtgarten/nachtgarten-discover.webp");
+}

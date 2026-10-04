@@ -1,5 +1,6 @@
 /* ------------------------------------------------------------------
-   WorldJourney: the immersive Home for Babylon and Alexandria.
+   WorldJourney: the immersive Home (Babylon, Alexandria, and every other
+   theme as data-world="engraving", see the end of this file).
    A fixed stage behind the page changes its mood per chapter; the
    chapters sit on a 12-column grid over it, edge to edge, without card
    boxes. journey.js adds the motion; without it everything is in place.
@@ -1654,4 +1655,109 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
         animation: none !important;
         transition: none !important;
     }
+}
+
+/* ---------- Every other theme: data-world="engraving" (2026-10-04) ----------
+   The journey in the classic themes and the alternative looks, when
+   "Immersives Theme" is on. No pictures of its own: moods are mixed from
+   the theme's tokens, so it works light or dark, and the decorations are
+   the theme's own engravings in its ink (--j-engr-*, see app.css). */
+.journey[data-world="engraving"] {
+    --j-accent: var(--color-secondary);
+    --j-accent-deep: color-mix(in srgb, var(--color-secondary) 70%, var(--color-bg-dark));
+    --j-line: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    --j-tip-bg: color-mix(in srgb, var(--color-bg-card) 97%, transparent);
+    --j-ink-engraving: color-mix(in srgb, var(--color-text-secondary) 65%, var(--color-primary));
+}
+
+.journey[data-world="engraving"] [data-mood="reading"] { background: radial-gradient(45% 50% at 24% 60%, color-mix(in srgb, var(--color-primary) 16%, transparent), transparent 70%); }
+.journey[data-world="engraving"] [data-mood="goal"] { background: radial-gradient(45% 55% at 72% 52%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 70%); }
+.journey[data-world="engraving"] [data-mood="sky"] { background: radial-gradient(75% 60% at 50% 48%, color-mix(in srgb, var(--color-secondary) 14%, transparent), transparent 75%), color-mix(in srgb, var(--color-bg-paper) 92%, var(--color-bg-dark)); }
+.journey[data-world="engraving"] [data-mood="sky"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    background-image: radial-gradient(circle at center, color-mix(in srgb, var(--color-primary) 35%, transparent) 1px, transparent 1.5px);
+    background-size: 28px 28px;
+    -webkit-mask-image: radial-gradient(70% 60% at 50% 50%, #000, transparent);
+    mask-image: radial-gradient(70% 60% at 50% 50%, #000, transparent);
+}
+.journey[data-world="engraving"] [data-mood="library"] { background: radial-gradient(50% 55% at 82% 30%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 70%); }
+.journey[data-world="engraving"] [data-mood="world"] { background: radial-gradient(70% 60% at 50% 55%, color-mix(in srgb, var(--color-secondary) 14%, transparent), transparent 75%); }
+.journey[data-world="engraving"] [data-mood="finale"] { background: radial-gradient(60% 50% at 50% 45%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 75%); }
+
+.journey[data-world="engraving"] .journey-pool {
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--color-primary) 24%, transparent), transparent);
+}
+
+.journey[data-world="engraving"] .journey-book-shadow {
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--color-bg-dark) 55%, transparent), transparent);
+}
+
+.journey[data-world="engraving"] .journey-field.is-lit {
+    filter: none;
+}
+
+.journey[data-world="engraving"] .journey-field:hover,
+.journey[data-world="engraving"] .journey-field.is-picked {
+    fill: color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+
+/* The theme's engravings, painted in its ink. */
+.journey-engraving {
+    background-color: var(--j-ink-engraving);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    pointer-events: none;
+}
+
+.journey-engraving--reading {
+    left: -2%;
+    bottom: 4%;
+    width: min(520px, 40vw);
+    aspect-ratio: 24 / 5.6;
+    opacity: 0.5;
+    filter: none;
+    -webkit-mask-image: var(--j-engr-reading);
+    mask-image: var(--j-engr-reading);
+    -webkit-mask-size: 260% auto;
+    mask-size: 260% auto;
+    -webkit-mask-position: 72% 100%;
+    mask-position: 72% 100%;
+}
+
+.journey-engraving--library {
+    position: absolute;
+    inset: 0 0 auto;
+    height: min(320px, 30vw);
+    opacity: 0.22;
+    -webkit-mask-image: var(--j-engr-library), linear-gradient(180deg, #000 30%, transparent);
+    mask-image: var(--j-engr-library), linear-gradient(180deg, #000 30%, transparent);
+    -webkit-mask-size: cover, 100% 100%;
+    mask-size: cover, 100% 100%;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+}
+
+.journey[data-world="engraving"] .journey-world-image.is-fallback {
+    background-color: var(--j-ink-engraving);
+    opacity: 0.7;
+    -webkit-mask: var(--j-engr-world) center / cover no-repeat;
+    mask: var(--j-engr-world) center / cover no-repeat;
+}
+
+.journey[data-world="engraving"] .journey-finale-bg {
+    background-color: var(--j-ink-engraving);
+    opacity: 0.3;
+    -webkit-mask-image: var(--j-engr-finale), linear-gradient(180deg, transparent, #000 38%, #000 72%, transparent), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: var(--j-engr-finale), linear-gradient(180deg, transparent, #000 38%, #000 72%, transparent), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    -webkit-mask-size: cover, 100% 100%, 100% 100%;
+    mask-size: cover, 100% 100%, 100% 100%;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-composite: source-in, source-in;
+    mask-composite: intersect;
 }

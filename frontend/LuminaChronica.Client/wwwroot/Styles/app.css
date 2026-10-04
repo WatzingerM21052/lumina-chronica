@@ -5480,3 +5480,97 @@ html[data-layout="world"] .lore-content {
         padding: 1rem;
     }
 }
+
+/* ---------- The journey in every other theme (2026-10-04) ----------
+   With "Immersives Theme" switched on, the classic themes and the
+   alternative looks get the immersive Home too (WorldJourney with
+   World="engraving"). Its pictures are the theme's own engravings as
+   masks in the theme's ink: these variables point at the classic set,
+   each alternative theme file sets its own. :where() keeps them weaker
+   than those files. */
+:where(html:not([data-theme="babylon"], [data-theme="alexandria"])) {
+    --j-engr-hero: url("../images/themes/classic/classic-library-bodleian.webp");
+    --j-engr-reading: url("../images/themes/classic/classic-profile-jerome.webp");
+    --j-engr-library: url("../images/themes/classic/classic-shelves-piana.webp");
+    --j-engr-world: url("../images/themes/classic/classic-projects-settala.webp");
+    --j-engr-finale: url("../images/themes/classic/classic-discover-blaeu.webp");
+}
+
+/* Home's hero for the journey: edge to edge like the worlds', the
+   engraving across it, the text on the page colour. */
+html .home-hero.home-hero--engraving,
+html .home-hero.home-hero--engraving.is-compact {
+    height: clamp(420px, 68vh, 680px);
+    margin: calc(-1 * var(--space-3)) calc(50% - 50vw) 0;
+    border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
+}
+
+.home-hero--engraving .home-hero-layer,
+.home-hero--engraving .home-hero-scrim {
+    display: none;
+}
+
+html .home-hero--engraving .home-hero-world {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+}
+
+.home-hero--engraving .home-hero-world-image {
+    position: absolute;
+    inset: 0;
+    background-color: color-mix(in srgb, var(--color-text-secondary) 65%, var(--color-primary));
+    opacity: 0.6;
+    -webkit-mask: var(--j-engr-hero) center / cover no-repeat;
+    mask: var(--j-engr-hero) center / cover no-repeat;
+}
+
+.home-hero--engraving .home-hero-world-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--color-bg-paper) 0%, color-mix(in srgb, var(--color-bg-paper) 80%, transparent) 34%, transparent 66%);
+}
+
+html .home-hero--engraving .home-hero-content {
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-start;
+    gap: var(--space-1);
+    padding: var(--space-3) max(var(--space-3), calc(50vw - 44rem + var(--space-3))) 3.4rem;
+}
+
+html .home-hero--engraving .home-hero-content h1 {
+    color: var(--color-text-primary);
+    text-shadow: none;
+}
+
+.home-hero--engraving .home-hero-lead {
+    color: var(--color-text-secondary);
+}
+
+.home-hero--engraving .home-hero-cta {
+    background: var(--color-primary);
+    color: var(--color-bg-paper);
+    box-shadow: 0 10px 28px -12px color-mix(in srgb, var(--color-primary) 70%, transparent);
+}
+
+.home-hero--engraving .home-hero-cta-go {
+    background: color-mix(in srgb, var(--color-bg-paper) 18%, transparent);
+}
+
+@media (max-width: 839.98px) {
+    html .home-hero.home-hero--engraving {
+        margin-top: calc(-1 * var(--space-2));
+        margin-inline: calc(-1 * var(--space-2));
+        height: clamp(300px, 52vh, 420px);
+    }
+
+    html .home-hero--engraving .home-hero-content {
+        padding: var(--space-2) var(--space-2) 2.6rem;
+    }
+}
