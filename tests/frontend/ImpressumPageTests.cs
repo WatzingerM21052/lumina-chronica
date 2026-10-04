@@ -20,7 +20,8 @@ public class ImpressumPageTests : BunitContext
         var cut = Render<Impressum>();
 
         Assert.Contains("Impressum", cut.Markup);
-        Assert.Contains("Angaben gemäß § 5 TMG", cut.Markup);
+        Assert.Contains("Angaben gemäß § 5 ECG", cut.Markup);
+        Assert.DoesNotContain("TMG", cut.Markup);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+import { WITHIN_RESTORE_WINDOW } from "./accountPurgeService";
 import { roleName } from "./authService";
 import { OAUTH_NO_PASSWORD_SENTINEL, randomToken, sha256Hex, signJwt } from "../utils/crypto";
 import { normalizeEmail } from "../utils/identity";
@@ -154,7 +155,7 @@ async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderN
         // ambiguous-collision scenario (multiple soft-deleted rows sharing
         // the same deleted_email) -- most-recently-deleted wins.
         const deletedMatch = await db
-            .prepare("SELECT id, deleted_username FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+            .prepare(`SELECT id, deleted_username FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL AND ${WITHIN_RESTORE_WINDOW} ORDER BY deleted_at DESC, id DESC`)
             .bind(normalizeEmail(profile.email))
             .first<{ id: number; deleted_username: string }>();
 

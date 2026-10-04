@@ -1,0 +1,45 @@
+@page "/datenschutz"
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inject II18nService I18n
+
+@* Privacy policy (point 9, 2026-10-04): what the app really stores and
+   sends where -- keep it in step with the code (providers, logs, rate
+   limits, the 90-day purge in accountPurgeService.ts). Reachable logged
+   out, like the Impressum. *@
+<PageTitle>@I18n.T("privacy.pageTitle") — Lumina Chronica</PageTitle>
+
+<WorldBanner Page="legal" Title="@I18n.T("privacy.pageTitle")" />
+<div class="page-header">
+    <h1>@I18n.T("privacy.pageTitle")</h1>
+</div>
+
+<div class="world-surface">
+    <LegalDocument Prefix="privacy" Sections="Sections" ContactSectionKey="rights" CurrentPath="datenschutz">
+        <p class="legal-related">
+            <a href="nutzungsbedingungen">@I18n.T("legal.termsLink")</a>
+            <a href="impressum">@I18n.T("nav.impressum")</a>
+        </p>
+    </LegalDocument>
+</div>
+
+@code {
+    private static readonly LegalDocument.Section[] Sections =
+    [
+        new("controller", 2),
+        new("overview", 1, 4),
+        new("hosting", 3),
+        new("account", 2),
+        new("content", 2),
+        new("public", 2, 4),
+        new("views", 1),
+        new("email", 1),
+        new("security", 2),
+        new("external", 1, 3),
+        new("browser", 2),
+        new("retention", 3),
+        new("transfers", 1),
+        new("rights", 2, 7),
+        new("changes", 1),
+    ];
+}

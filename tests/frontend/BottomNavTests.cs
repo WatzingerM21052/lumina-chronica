@@ -41,7 +41,7 @@ public class BottomNavTests : BunitContext
         Assert.NotNull(cut.Find(".dialog.dialog--bottomsheet"));
         Assert.Equal("true", cut.Find("#bottom-nav-more").GetAttribute("aria-expanded"));
         var hrefs = cut.FindAll(".bottom-nav-more-list a").Select(a => a.GetAttribute("href")).ToList();
-        Assert.Equal(new[] { "statistics", "offline", "impressum" }, hrefs);
+        Assert.Equal(new[] { "statistics", "offline", "impressum", "datenschutz" }, hrefs);
     }
 
     [Fact]
