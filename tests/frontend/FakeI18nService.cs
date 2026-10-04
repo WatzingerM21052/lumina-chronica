@@ -971,6 +971,7 @@ public class FakeI18nService : II18nService
         ["worldBanner.settingsSubtitle"] = "Darstellung, Sprache und Benachrichtigungen.",
         ["worldBanner.profileSubtitle"] = "So sehen dich andere Leser.",
         ["home.welcomeBackName"] = "Willkommen zurück, {0}",
+        ["home.loadingVeil"] = "Deine Bibliothek wird aufgeschlagen …",
         ["home.welcomeBack"] = "Willkommen zurück",
         ["statusWidget.unreachable"] = "Der Server ist gerade nicht erreichbar. Deine Offline-Bücher kannst du trotzdem lesen.",
         ["home.continueReadingTitle"] = "Weiterlesen",

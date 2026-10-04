@@ -12,6 +12,21 @@
 
 <PageTitle>Lumina Chronica</PageTitle>
 
+@* Loading veil (2026-10-04): covers Home under the header until the theme,
+   the data and the first pictures are ready (js/homeLoader.js, at most
+   3 s), then lifts -- no half-built page, and no flash of the plain Home
+   before the journey is chosen. *@
+@if (!_veilGone)
+{
+    <div class="home-veil @(_revealed ? "is-lifting" : null)" role="status" aria-live="polite">
+        <div class="home-veil-mark" aria-hidden="true">
+            <svg class="home-veil-ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" /></svg>
+            <img src="branding/logo-mark.svg" alt="" />
+        </div>
+        <p>@I18n.T("home.loadingVeil")</p>
+    </div>
+}
+
 
 <div class="home-hero-sentinel" @ref="_heroSentinelRef" aria-hidden="true"></div>
 <div class="@(_world is not null && _immersive ? (_world == "engraving" ? "home-hero home-hero--journey home-hero--engraving" : "home-hero home-hero--journey") : "home-hero")" @ref="_heroRef">
@@ -200,6 +215,14 @@ else
     private List<CalendarDay> _calendarDays = [];
     private int? _featuredPages;
 
+    // Loading veil: data loaded -> pictures ready (or 3 s) -> lifting -> gone.
+    private const int VeilTimeoutMs = 3000;
+    private const int VeilFadeMs = 650;
+    private bool _loaded;
+    private bool _veilStarted;
+    private bool _revealed;
+    private bool _veilGone;
+
     protected override async Task OnInitializedAsync()
     {
         _world = await WorldThemeAsync();
@@ -250,6 +273,28 @@ else
             var detail = await ApiClient.GetAsync<Book>($"/api/books/{featured.Book.Id}");
             _featuredPages = detail is { Success: true, Data.Pages: > 0 } ? detail.Data.Pages : null;
         }
+
+        _loaded = true;
+    }
+
+    // Runs once the loaded page has rendered (behind the veil).
+    private async Task LiftVeilAsync()
+    {
+        try
+        {
+            var module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/homeLoader.js");
+            await module.InvokeAsync<bool>("whenReady", null, VeilTimeoutMs);
+        }
+        catch (Exception)
+        {
+            // No module (tests, blocked script): lift right away.
+        }
+
+        _revealed = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(VeilFadeMs);
+        _veilGone = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task<string?> LoadUsernameAsync()
@@ -331,6 +376,12 @@ else
     // "progressive enhancement" shape as everywhere else this module is used.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_loaded && !_veilStarted)
+        {
+            _veilStarted = true;
+            _ = LiftVeilAsync();
+        }
+
         if (!firstRender) return;
 
         try

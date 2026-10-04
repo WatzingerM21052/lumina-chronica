@@ -514,4 +514,20 @@ public class HomePageTests : BunitContext
         Assert.Empty(cut.FindAll(".journey img[src*='themes/babylon'], .journey img[src*='themes/alexandria']"));
         Assert.NotEmpty(cut.FindAll(".journey-engraving--reading, .journey-engraving--library"));
     }
+
+    // The loading veil covers Home until the data and first pictures are
+    // ready, then lifts and is removed.
+    [Fact]
+    public void Home_LoadingVeil_ShowsFirst_AndLiftsOnceLoaded()
+    {
+        UseHandler(BooksHandler());
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = Render<Home>();
+
+        Assert.Contains("Deine Bibliothek wird aufgeschlagen", cut.Find(".home-veil").TextContent);
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".home-veil")), TimeSpan.FromSeconds(5));
+        Assert.Equal(2, cut.FindAll(".library-grid--strip .book-card").Count);
+    }
 }
