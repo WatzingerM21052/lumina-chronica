@@ -16,14 +16,63 @@
     margin: 0;
 }
 
-/* One centred column (design audit F7): every section is a card of the
-   same width, on the same axis as the centred seal above. */
+/* Rows (point 7): heading and explanation on the left, the card on the
+   right; hairlines between the rows. Stacked below 840px, where the
+   explanation sits above its card. */
 .profile-layout {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    max-width: 40rem;
+    max-width: 62rem;
     margin: 0 auto;
+}
+
+.profile-row {
+    display: grid;
+    grid-template-columns: minmax(12rem, 17rem) minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+    padding: var(--space-4) 0;
+}
+
+.profile-row:first-child {
+    padding-top: 0;
+}
+
+.profile-row + .profile-row {
+    border-top: 1px solid var(--color-border);
+}
+
+/* Stays beside its card while a long card (Anmeldung) scrolls past. */
+.profile-row-meta {
+    position: sticky;
+    top: 6rem;
+}
+
+.profile-row-meta h2 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--font-size-h3);
+}
+
+.profile-row-meta p {
+    margin: 0;
+    font-size: var(--font-size-small);
+    line-height: 1.55;
+}
+
+.profile-danger-heading {
+    color: var(--color-error);
+}
+
+@media (max-width: 839.98px) {
+    .profile-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-2);
+        padding: var(--space-3) 0;
+    }
+
+    .profile-row-meta {
+        position: static;
+    }
 }
 
 .profile-card {
@@ -34,9 +83,33 @@
     box-shadow: var(--shadow-card);
 }
 
-.profile-card h2 {
+/* Parts inside one card (account form under the avatar; password,
+   linked accounts, devices), divided by hairlines. */
+.profile-subsection + .profile-subsection,
+.profile-identity + .profile-subsection {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+}
+
+.profile-subsection h3 {
     margin: 0 0 var(--space-2);
-    font-size: var(--font-size-h3);
+    font-size: 1.05rem;
+}
+
+.profile-subsection > p {
+    margin: 0 0 var(--space-2);
+}
+
+/* Two short fields side by side where there's room. */
+.profile-field-pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--space-2);
+}
+
+.profile-card ::deep .form-actions {
+    justify-content: flex-end;
 }
 
 /* The forms already bring card chrome (.auth-form, shared with the login
@@ -141,8 +214,23 @@
     border-top: 1px solid var(--color-border);
 }
 
+.linked-account-row:first-child {
+    padding-top: 0;
+}
+
 .linked-account-row:last-child {
     padding-bottom: 0;
+}
+
+.linked-account-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.linked-account-email {
+    font-size: var(--font-size-small);
+    overflow-wrap: anywhere;
 }
 
 /* Danger zone: same card, red hairline and heading instead of a loose
@@ -166,9 +254,9 @@
     margin-bottom: 0;
 }
 
-.profile-danger-zone h2 {
-    margin-bottom: 0;
+.profile-danger-zone > summary {
     color: var(--color-error);
+    font-weight: 600;
 }
 
 .profile-danger-zone p {
@@ -194,10 +282,6 @@
 
 .profile-collapsible > summary::-webkit-details-marker {
     display: none;
-}
-
-.profile-collapsible > summary h2 {
-    margin: 0;
 }
 
 .profile-collapsible[open] > summary {

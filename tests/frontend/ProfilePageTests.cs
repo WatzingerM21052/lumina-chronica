@@ -405,7 +405,9 @@ public class ProfilePageTests : BunitContext
         var cut = Render<Profile>();
 
         Assert.Contains("Verknüpfte Konten", cut.Markup);
-        Assert.Contains("Google — alice@gmail.com", cut.Markup);
+        var googleRow = cut.FindAll(".linked-account-row")[0];
+        Assert.Equal("Google", googleRow.QuerySelector(".linked-account-name")!.TextContent);
+        Assert.Equal("alice@gmail.com", googleRow.QuerySelector(".linked-account-email")!.TextContent);
         Assert.Contains("Entfernen", cut.Markup);
         Assert.Contains("GitHub", cut.Markup);
         Assert.Contains("Verknüpfen", cut.Markup);
