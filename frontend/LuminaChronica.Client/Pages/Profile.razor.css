@@ -254,6 +254,22 @@
     margin-bottom: 0;
 }
 
+/* Field and button belong together here: a narrower field, the button
+   right under it instead of at the far right of the card. */
+.profile-danger-zone .form-group {
+    max-width: 24rem;
+}
+
+.profile-danger-zone .form-actions {
+    justify-content: flex-start;
+}
+
+/* Chrome lays out an open <details>' content in its own box, so the
+   card's flex gap never reaches these; spaced with margins instead. */
+.profile-danger-zone > :not(summary) + :not(summary) {
+    margin-top: var(--space-2);
+}
+
 .profile-danger-zone > summary {
     color: var(--color-error);
     font-weight: 600;
