@@ -6,7 +6,31 @@
 
 import { resolveAvatarUrl } from "./userService";
 
-export type DiscoverSort = "newest" | "rating";
+// Every sort runs either way (order); "oldest" is newest ascending, "worst
+// rated" rating ascending, "least viewed" views ascending.
+export type DiscoverSort = "newest" | "rating" | "views" | "title";
+export type DiscoverOrder = "asc" | "desc";
+
+// Unrated books sort last both ways (NULLs first under ASC would put every
+// book without a rating ahead of the worst-rated ones).
+function bookOrderClause(sort: DiscoverSort, order: DiscoverOrder): string {
+    const dir = order === "asc" ? "ASC" : "DESC";
+    switch (sort) {
+        case "rating": return `average_rating IS NULL, average_rating ${dir}, books.id DESC`;
+        case "views": return `books.view_count ${dir}, books.id DESC`;
+        case "title": return `books.title COLLATE NOCASE ${dir}, books.id DESC`;
+        default: return `books.created_at ${dir}, books.id ${dir}`;
+    }
+}
+
+function projectOrderClause(sort: DiscoverSort, order: DiscoverOrder): string {
+    const dir = order === "asc" ? "ASC" : "DESC";
+    switch (sort) {
+        case "views": return `projects.view_count ${dir}, projects.id DESC`;
+        case "title": return `projects.title COLLATE NOCASE ${dir}, projects.id DESC`;
+        default: return `projects.created_at ${dir}, projects.id ${dir}`;
+    }
+}
 
 export type DiscoverBookSummary = {
     id: number;
@@ -18,10 +42,12 @@ export type DiscoverBookSummary = {
     ratingCount: number;
     myRating: number | null;
     ownerUsername: string;
+    viewCount: number;
 };
 
 export type DiscoverBooksQuery = {
     sort: DiscoverSort;
+    order?: DiscoverOrder;
     page: number;
     pageSize: number;
     // Optional: only books whose title, author or genre contains it.
@@ -50,7 +76,7 @@ export async function discoverBooks(db: D1Database, query: DiscoverBooksQuery, v
     // same node:sqlite-vs-real-D1-adjacent gap documented for
     // dashboardService.ts), so two books created within the same second
     // would otherwise sort in SQLite's unspecified default order.
-    const orderClause = query.sort === "rating" ? "average_rating DESC, books.id DESC" : "books.created_at DESC, books.id DESC";
+    const orderClause = bookOrderClause(query.sort, query.order ?? "desc");
     const search = query.search?.trim();
     const searchClause = search
         ? "AND (books.title LIKE ? ESCAPE '\\' OR books.author LIKE ? ESCAPE '\\' OR books.genre LIKE ? ESCAPE '\\')"
@@ -60,7 +86,7 @@ export async function discoverBooks(db: D1Database, query: DiscoverBooksQuery, v
     const [rows, countRow] = await Promise.all([
         db
             .prepare(
-                `SELECT books.id, books.title, books.author, books.cover_url, books.genre, users.username AS owner_username,
+                `SELECT books.id, books.title, books.author, books.cover_url, books.genre, books.view_count, users.username AS owner_username,
                     (SELECT AVG(rating) FROM ratings WHERE book_id = books.id) AS average_rating,
                     (SELECT COUNT(*) FROM ratings WHERE book_id = books.id) AS rating_count,
                     (SELECT rating FROM ratings WHERE book_id = books.id AND user_id = ?) AS my_rating
@@ -77,6 +103,7 @@ export async function discoverBooks(db: D1Database, query: DiscoverBooksQuery, v
                 cover_url: string | null;
                 genre: string | null;
                 owner_username: string;
+                view_count: number;
                 average_rating: number | null;
                 rating_count: number;
                 my_rating: number | null;
@@ -98,6 +125,7 @@ export async function discoverBooks(db: D1Database, query: DiscoverBooksQuery, v
             ratingCount: row.rating_count,
             myRating: row.my_rating,
             ownerUsername: row.owner_username,
+            viewCount: row.view_count,
         })),
         total: countRow?.total ?? 0,
         page: query.page,
@@ -155,6 +183,7 @@ export type DiscoverProjectSummary = {
     type: string;
     coverUrl: string | null;
     ownerUsername: string;
+    viewCount: number;
 };
 
 export type DiscoverProjectsResult = {
@@ -166,7 +195,7 @@ export type DiscoverProjectsResult = {
 
 const PROJECT_DESCRIPTION_PREVIEW = 160;
 
-export async function discoverProjects(db: D1Database, search: string, page: number, pageSize: number): Promise<DiscoverProjectsResult> {
+export async function discoverProjects(db: D1Database, search: string, page: number, pageSize: number, sort: DiscoverSort = "newest", order: DiscoverOrder = "desc"): Promise<DiscoverProjectsResult> {
     const offset = (page - 1) * pageSize;
     const term = search.trim();
     const searchClause = term ? "AND (projects.title LIKE ? ESCAPE '\\' OR projects.description LIKE ? ESCAPE '\\' OR projects.type LIKE ? ESCAPE '\\')" : "";
@@ -175,14 +204,14 @@ export async function discoverProjects(db: D1Database, search: string, page: num
     const [rows, countRow] = await Promise.all([
         db
             .prepare(
-                `SELECT projects.id, projects.title, projects.description, projects.type, projects.cover_url, users.username AS owner_username
+                `SELECT projects.id, projects.title, projects.description, projects.type, projects.cover_url, projects.view_count, users.username AS owner_username
                  FROM projects JOIN users ON users.id = projects.owner_id
                  WHERE projects.visibility = 'PUBLIC' AND users.deleted_at IS NULL ${searchClause}
-                 ORDER BY projects.created_at DESC, projects.id DESC
+                 ORDER BY ${projectOrderClause(sort, order)}
                  LIMIT ? OFFSET ?`
             )
             .bind(...searchParams, pageSize, offset)
-            .all<{ id: number; title: string; description: string | null; type: string; cover_url: string | null; owner_username: string }>(),
+            .all<{ id: number; title: string; description: string | null; type: string; cover_url: string | null; view_count: number; owner_username: string }>(),
         db
             .prepare(`SELECT COUNT(*) AS total FROM projects JOIN users ON users.id = projects.owner_id WHERE projects.visibility = 'PUBLIC' AND users.deleted_at IS NULL ${searchClause}`)
             .bind(...searchParams)
@@ -198,6 +227,7 @@ export async function discoverProjects(db: D1Database, search: string, page: num
                 : row.description,
             type: row.type,
             coverUrl: row.cover_url ? `/api/projects/${row.id}/cover` : null,
+            viewCount: row.view_count,
             ownerUsername: row.owner_username,
         })),
         total: countRow?.total ?? 0,

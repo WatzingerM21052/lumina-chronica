@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
 import { optionalAuth, requireAuth } from "../middleware/auth";
+import { countProjectView, getPublicProject } from "../services/publicProjectService";
+import { runAfterResponse } from "../utils/background";
 import { conditionalCoverResponse, fileResponse } from "../utils/fileResponse";
 import {
     NotFoundError,
@@ -111,6 +113,20 @@ projectsRoute.post("/", requireAuth, async (c) => {
 projectsRoute.get("/", requireAuth, async (c) => {
     const projects = await listProjects(c.env.DB, c.get("userId"));
     return c.json(success(projects));
+});
+
+// A PUBLIC project's world for everyone, read-only (see
+// publicProjectService). 404 for anything else -- a private project's
+// existence isn't revealed. Opening it counts as a view unless it's the
+// owner looking.
+projectsRoute.get("/:id/public", optionalAuth, async (c) => {
+    const projectId = Number(c.req.param("id"));
+    const result = await getPublicProject(c.env.DB, projectId);
+    if (!result) return c.json(failure("NOT_FOUND", "Project not found."), 404);
+    if (c.get("userId") !== result.ownerId) {
+        await runAfterResponse(c, "count project view", () => countProjectView(c.env.DB, projectId));
+    }
+    return c.json(success(result.project));
 });
 
 projectsRoute.get("/:id", requireAuth, async (c) => {
@@ -301,10 +317,10 @@ projectsRoute.delete("/:id/characters/:characterId", requireAuth, async (c) => {
     }
 });
 
-projectsRoute.get("/:id/characters/:characterId/image", requireAuth, async (c) => {
+projectsRoute.get("/:id/characters/:characterId/image", optionalAuth, async (c) => {
     const projectId = Number(c.req.param("id"));
     const characterId = Number(c.req.param("characterId"));
-    const object = await getCharacterImageObject(c.env.DB, c.env.STORAGE, c.get("userId"), projectId, characterId);
+    const object = await getCharacterImageObject(c.env.DB, c.env.STORAGE, c.get("userId") ?? null, projectId, characterId);
     if (!object) return c.json(failure("NOT_FOUND", "Image not found."), 404);
 
     return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");
@@ -423,10 +439,10 @@ projectsRoute.delete("/:id/locations/:locationId", requireAuth, async (c) => {
     }
 });
 
-projectsRoute.get("/:id/locations/:locationId/image", requireAuth, async (c) => {
+projectsRoute.get("/:id/locations/:locationId/image", optionalAuth, async (c) => {
     const projectId = Number(c.req.param("id"));
     const locationId = Number(c.req.param("locationId"));
-    const object = await getLocationImageObject(c.env.DB, c.env.STORAGE, c.get("userId"), projectId, locationId);
+    const object = await getLocationImageObject(c.env.DB, c.env.STORAGE, c.get("userId") ?? null, projectId, locationId);
     if (!object) return c.json(failure("NOT_FOUND", "Image not found."), 404);
 
     return fileResponse(c, object.body, object.httpMetadata?.contentType ?? "application/octet-stream");

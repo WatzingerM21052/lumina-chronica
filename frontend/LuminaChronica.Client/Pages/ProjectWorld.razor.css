@@ -1,0 +1,119 @@
+/* A public project: header like a detail page, then one card per part of
+   the world (characters, places, timeline, lore, books). */
+.public-project-header {
+    margin-bottom: var(--space-3);
+}
+
+.public-project-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.4rem;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--color-text-secondary);
+}
+
+.public-project-counts strong {
+    font-family: var(--font-family-display);
+    font-size: 1.25rem;
+    color: var(--color-accent-text);
+    margin-right: 0.2rem;
+}
+
+.public-project-section {
+    margin-top: var(--space-3);
+}
+
+.public-project-section h2 {
+    margin: 0 0 var(--space-2);
+}
+
+/* Entry cards are buttons here (they open a dialog, not a page). */
+.public-project-section ::deep .entity-card {
+    width: 100%;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+}
+
+/* Timeline: date column beside the entry from 640px on. */
+.public-timeline {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.public-timeline li {
+    display: grid;
+    grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+    gap: 0.4rem var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.public-timeline li:last-child {
+    border-bottom: 0;
+}
+
+.public-timeline-date {
+    font-family: var(--font-family-display);
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+}
+
+.public-timeline-body {
+    grid-column: 2;
+}
+
+.public-timeline-body p {
+    margin: 0.3rem 0 0;
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 640px) {
+    .public-timeline li {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .public-timeline-body {
+        grid-column: 1;
+    }
+}
+
+/* The dialog with an entry's full text. */
+.public-entry h3 {
+    margin: var(--space-2) 0 0.3rem;
+    font-size: 1.05rem;
+}
+
+.public-entry-picture {
+    float: right;
+    width: min(220px, 40%);
+    margin: 0 0 var(--space-2) var(--space-3);
+    border-radius: 12px;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+}
+
+.public-entry-picture--wide {
+    float: none;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin: 0 0 var(--space-2);
+}
+
+.public-entry-relations {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.public-entry-relations em {
+    color: var(--color-accent-text);
+}

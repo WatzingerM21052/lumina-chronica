@@ -35,13 +35,26 @@
                 <option value="@scope">@ScopeOptionLabel(scope, labelKey)</option>
             }
         </select>
-        @if (_scope is "all" or "books")
+        @* Every sort runs both ways (user request): "oldest" is date
+           ascending, "worst rated" rating ascending, "least viewed" views
+           ascending -- one toggle instead of a doubled list. *@
+        @if (_scope is not "users")
         {
             <label class="visually-hidden" for="discover-sort">@I18n.T("discover.sortLabel")</label>
             <select id="discover-sort" class="discover-select" @bind="_sort" @bind:after="LoadAsync" title="@I18n.T("discover.sortLabel")">
-                <option value="newest">@I18n.T("discover.sortNewest")</option>
-                <option value="rating">@I18n.T("discover.sortBestRated")</option>
+                <option value="newest">@I18n.T("discover.sortDate")</option>
+                @if (_scope is not "projects")
+                {
+                    <option value="rating">@I18n.T("discover.sortRating")</option>
+                }
+                <option value="views">@I18n.T("discover.sortViews")</option>
+                <option value="title">@I18n.T("discover.sortTitle")</option>
             </select>
+            var orderLabel = I18n.T(_order == "desc" ? "library.orderDesc" : "library.orderAsc");
+            <button type="button" id="discover-order" class="btn library-sort-order" @onclick="ToggleOrderAsync"
+                    aria-label="@string.Format(I18n.T("library.orderToggleLabel"), orderLabel)" title="@orderLabel">
+                <Icon Name="@(_order == "desc" ? "sort-desc" : "sort-asc")" />
+            </button>
         }
     </div>
 
@@ -188,6 +201,7 @@
     [SupplyParameterFromQuery(Name = "in")] public string? QueryScope { get; set; }
 
     private string _sort = "newest";
+    private string _order = "desc";
     private string _searchTerm = string.Empty;
     private string _scope = "all";
     private bool _isSearching;
@@ -272,8 +286,8 @@
         var term = Uri.EscapeDataString(_searchTerm.Trim());
         _isLoading = true;
 
-        var booksTask = ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?search={term}&sort={_sort}&pageSize={SizeFor("books")}");
-        var projectsTask = ApiClient.GetAsync<DiscoverProjectListResponse>($"/api/discover/projects?search={term}&pageSize={SizeFor("projects")}");
+        var booksTask = ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?search={term}&sort={_sort}&order={_order}&pageSize={SizeFor("books")}");
+        var projectsTask = ApiClient.GetAsync<DiscoverProjectListResponse>($"/api/discover/projects?search={term}&sort={ProjectSort}&order={_order}&pageSize={SizeFor("projects")}");
         var usersTask = ApiClient.GetAsync<DiscoverUserListResponse>($"/api/discover/users?search={term}&pageSize={SizeFor("users")}");
 
         var books = await booksTask;
@@ -357,12 +371,22 @@
             Timeout.InfiniteTimeSpan);
     }
 
+    // Projects have no ratings: under that sort they fall back to the date.
+    private string ProjectSort => _sort == "rating" ? "newest" : _sort;
+
+    private async Task ToggleOrderAsync()
+    {
+        _order = _order == "desc" ? "asc" : "desc";
+        await LoadAsync();
+    }
+
     private Task OnScopeChanged(ChangeEventArgs e) => SetScopeAsync(e.Value?.ToString() ?? "all");
 
     private async Task SetScopeAsync(string scope)
     {
         if (_scope == scope || Scopes.All(s => s.Scope != scope)) return;
         _scope = scope;
+        if (_scope == "projects" && _sort == "rating") _sort = "newest";
         UpdateUrl();
         await LoadAsync();
     }
@@ -380,11 +404,11 @@
         switch (scope)
         {
             case "books" when _bookResults is { } current:
-                var nextBooks = await ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?search={term}&sort={_sort}&pageSize={PageSize}&page={current.Items.Count / PageSize + 1}");
+                var nextBooks = await ApiClient.GetAsync<DiscoverBookListResponse>($"/api/discover/books?search={term}&sort={_sort}&order={_order}&pageSize={PageSize}&page={current.Items.Count / PageSize + 1}");
                 if (nextBooks is { Success: true, Data: { } b }) current.Items.AddRange(b.Items);
                 break;
             case "projects" when _projectResults is { } current:
-                var nextProjects = await ApiClient.GetAsync<DiscoverProjectListResponse>($"/api/discover/projects?search={term}&pageSize={PageSize}&page={current.Items.Count / PageSize + 1}");
+                var nextProjects = await ApiClient.GetAsync<DiscoverProjectListResponse>($"/api/discover/projects?search={term}&sort={ProjectSort}&order={_order}&pageSize={PageSize}&page={current.Items.Count / PageSize + 1}");
                 if (nextProjects is { Success: true, Data: { } p }) current.Items.AddRange(p.Items);
                 await LoadProjectCoversAsync(current.Items);
                 break;
@@ -437,12 +461,10 @@
                      RatingAverage="@book.AverageRating" RatingCount="@book.RatingCount" />
     };
 
-    // Projects have no public detail page yet (ProjectDetail is the owner's
-    // workspace), so a project card opens its owner's public profile, where
-    // the project is listed.
+    // A project card opens the project's public page (its world, read-only).
     private RenderFragment ProjectCard(DiscoverProject project) => __builder =>
     {
-        <CatalogCard Kind="project" Href="@($"u/{project.OwnerUsername}")" Title="@project.Title" Subtitle="@project.Description"
+        <CatalogCard Kind="project" Href="@($"projects/{project.Id}/view")" Title="@project.Title" Subtitle="@project.Description"
                      CoverUrl="@ResultCover($"project-{project.Id}")" TypeLabel="@ProjectTypeLabel.For(project.Type, I18n)"
                      OwnerUsername="@project.OwnerUsername" OnOwnerClick="GoToProfile" ShowRating="false" />
     };

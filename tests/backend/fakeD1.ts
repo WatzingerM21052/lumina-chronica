@@ -35,7 +35,7 @@ const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as {
 class FakeD1PreparedStatement {
     constructor(
         private readonly db: SqliteDatabase,
-        private readonly sql: string,
+        readonly sql: string,
         private readonly params: unknown[] = []
     ) {}
 
@@ -81,9 +81,12 @@ export function createFakeD1(): D1Database {
         prepare(sql: string) {
             return new FakeD1PreparedStatement(db, sql);
         },
+        // Like real D1, a SELECT in a batch comes back with its rows.
         async batch(statements: FakeD1PreparedStatement[]) {
             const results = [];
-            for (const statement of statements) results.push(await statement.run());
+            for (const statement of statements) {
+                results.push(/^\s*(SELECT|WITH)\b/i.test(statement.sql) ? await statement.all() : await statement.run());
+            }
             return results;
         },
         // A single in-memory node:sqlite instance has no replicas to lag

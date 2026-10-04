@@ -76,6 +76,11 @@ else
                 <div class="form-actions">
                     <button type="button" id="project-edit-button" class="btn btn-icon" @onclick="StartEditing" title="@I18n.T("projectDetail.editButton")"><Icon Name="edit" /><span class="visually-hidden">@I18n.T("projectDetail.editButton")</span></button>
                     <button type="button" class="btn btn-icon btn-icon-danger" @onclick="() => _confirmingDelete = true" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
+                    @if (_project.Visibility == "PUBLIC")
+                    {
+                        @* What everyone else sees of this world. *@
+                        <a class="btn" id="project-public-view" href="@($"projects/{Id}/view")"><Icon Name="discover" />@I18n.T("projectDetail.publicViewLink")</a>
+                    }
                 </div>
             </div>
 
