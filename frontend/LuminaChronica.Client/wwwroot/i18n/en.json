@@ -195,6 +195,8 @@
   "settings.languageGerman": "Deutsch",
   "settings.languageEnglish": "English",
   "settings.libraryTitle": "Library",
+  "settings.coverImagesLabel": "Show cover images",
+  "settings.coverImagesDescription": "off: every cover shows its title and author instead of the picture – also loads less data",
   "settings.showCoverTextLabel": "Show title/author on shelf covers",
   "settings.showCoverTextDescription": "most real cover images already carry the title/author themselves",
   "settings.immersiveLabel": "Immersive theme",

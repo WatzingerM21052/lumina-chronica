@@ -162,12 +162,21 @@ public class CatalogCardTests : BunitContext
     }
 
     [Fact]
-    public void CatalogCard_NoCoverUrl_RendersPlaceholderIcon_NotEmoji()
+    public void CatalogCard_BookWithoutCover_ShowsATextCover_ProjectAnIcon()
     {
-        var cut = Render<CatalogCard>(parameters => parameters
+        var book = Render<CatalogCard>(parameters => parameters
             .Add(p => p.Kind, "book")
-            .Add(p => p.Title, "Book"));
+            .Add(p => p.Title, "Dune")
+            .Add(p => p.Subtitle, "Frank Herbert"));
 
-        Assert.NotEmpty(cut.FindAll(".catalog-card-cover-placeholder svg"));
+        Assert.Equal("Dune", book.Find(".catalog-card-cover-placeholder .text-cover-title").TextContent);
+        Assert.Equal("Frank Herbert", book.Find(".catalog-card-cover-placeholder .text-cover-author").TextContent);
+
+        var project = Render<CatalogCard>(parameters => parameters
+            .Add(p => p.Kind, "project")
+            .Add(p => p.Title, "Nimrud"));
+
+        Assert.NotEmpty(project.FindAll(".catalog-card-cover-placeholder svg"));
+        Assert.Empty(project.FindAll(".text-cover"));
     }
 }
