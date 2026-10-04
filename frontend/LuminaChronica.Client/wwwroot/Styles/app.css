@@ -5490,8 +5490,8 @@ html[data-layout="world"] .lore-content {
    than those files. */
 :where(html:not([data-theme="babylon"], [data-theme="alexandria"])) {
     --j-engr-hero: url("../images/themes/classic/classic-library-bodleian.webp");
-    --j-engr-reading: url("../images/themes/classic/classic-profile-jerome.webp");
-    --j-engr-library: url("../images/themes/classic/classic-shelves-piana.webp");
+    --j-engr-reading: url("../images/themes/classic/classic-journey-reading.webp");
+    --j-engr-library: url("../images/themes/classic/classic-journey-library.webp");
     --j-engr-world: url("../images/themes/classic/classic-projects-settala.webp");
     --j-engr-finale: url("../images/themes/classic/classic-discover-blaeu.webp");
 }

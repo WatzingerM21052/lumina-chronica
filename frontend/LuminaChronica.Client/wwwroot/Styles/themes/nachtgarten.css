@@ -104,8 +104,8 @@ html[data-theme="nachtgarten"] .world-banner[data-page="legal"] {
 /* ---------- The immersive Home (WorldJourney, data-world="engraving") ---------- */
 html[data-theme="nachtgarten"] {
     --j-engr-hero: url("../../images/themes/nachtgarten/nachtgarten-library.webp");
-    --j-engr-reading: url("../../images/themes/nachtgarten/nachtgarten-profile.webp");
-    --j-engr-library: url("../../images/themes/nachtgarten/nachtgarten-shelves.webp");
+    --j-engr-reading: url("../../images/themes/nachtgarten/nachtgarten-journey-reading.webp");
+    --j-engr-library: url("../../images/themes/nachtgarten/nachtgarten-journey-library.webp");
     --j-engr-world: url("../../images/themes/nachtgarten/nachtgarten-projects.webp");
     --j-engr-finale: url("../../images/themes/nachtgarten/nachtgarten-discover.webp");
 }

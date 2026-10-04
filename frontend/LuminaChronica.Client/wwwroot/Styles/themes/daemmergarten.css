@@ -103,8 +103,8 @@ html[data-theme="daemmergarten"] .world-banner[data-page="legal"] {
 /* ---------- The immersive Home (WorldJourney, data-world="engraving") ---------- */
 html[data-theme="daemmergarten"] {
     --j-engr-hero: url("../../images/themes/daemmergarten/daemmergarten-library.webp");
-    --j-engr-reading: url("../../images/themes/daemmergarten/daemmergarten-profile.webp");
-    --j-engr-library: url("../../images/themes/daemmergarten/daemmergarten-shelves.webp");
+    --j-engr-reading: url("../../images/themes/daemmergarten/daemmergarten-journey-reading.webp");
+    --j-engr-library: url("../../images/themes/daemmergarten/daemmergarten-journey-library.webp");
     --j-engr-world: url("../../images/themes/daemmergarten/daemmergarten-projects.webp");
     --j-engr-finale: url("../../images/themes/daemmergarten/daemmergarten-discover.webp");
 }

@@ -1712,30 +1712,34 @@ html:is([data-theme="babylon"], [data-theme="alexandria"]) .home-hero.home-hero-
     pointer-events: none;
 }
 
+/* Behind the book: one engraving, its own oval vignette (no edges), whole. */
 .journey-engraving--reading {
-    left: -2%;
-    bottom: 4%;
-    width: min(520px, 40vw);
-    aspect-ratio: 24 / 5.6;
-    opacity: 0.5;
+    left: 50%;
+    top: 50%;
+    width: min(640px, 52vw);
+    aspect-ratio: 9 / 10;
+    translate: -50% -50%;
+    opacity: 0.34;
     filter: none;
-    -webkit-mask-image: var(--j-engr-reading);
-    mask-image: var(--j-engr-reading);
-    -webkit-mask-size: 260% auto;
-    mask-size: 260% auto;
-    -webkit-mask-position: 72% 100%;
-    mask-position: 72% 100%;
+    -webkit-mask: var(--j-engr-reading) center / contain no-repeat;
+    mask: var(--j-engr-reading) center / contain no-repeat;
 }
 
+/* Over the library chapter: a wide engraving that fades out on every side
+   (the vignette is in the picture; the gradient lets it sink into the page). */
 .journey-engraving--library {
     position: absolute;
     inset: 0 0 auto;
-    height: min(320px, 30vw);
-    opacity: 0.22;
-    -webkit-mask-image: var(--j-engr-library), linear-gradient(180deg, #000 30%, transparent);
-    mask-image: var(--j-engr-library), linear-gradient(180deg, #000 30%, transparent);
-    -webkit-mask-size: cover, 100% 100%;
-    mask-size: cover, 100% 100%;
+    height: min(440px, 38vw);
+    opacity: 0.24;
+    -webkit-mask-image: var(--j-engr-library), linear-gradient(180deg, #000 45%, transparent);
+    mask-image: var(--j-engr-library), linear-gradient(180deg, #000 45%, transparent);
+    -webkit-mask-size: contain, 100% 100%;
+    mask-size: contain, 100% 100%;
+    -webkit-mask-position: center top, center;
+    mask-position: center top, center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
 }
