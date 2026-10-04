@@ -23,7 +23,7 @@
         var section = Sections[i];
         <section class="legal-section" id="@($"{Prefix}-{section.Key}")">
             <h2><span class="legal-section-number">@(i + 1).</span> @I18n.T($"{Prefix}.{section.Key}.title")</h2>
-            @for (var p = 1; p <= section.Paragraphs; p++)
+            @for (var p = 1; p <= section.Paragraphs - section.After; p++)
             {
                 <p>@I18n.T($"{Prefix}.{section.Key}.p{p}")</p>
             }
@@ -36,6 +36,10 @@
                     }
                 </ul>
             }
+            @for (var p = section.Paragraphs - section.After + 1; p <= section.Paragraphs; p++)
+            {
+                <p>@I18n.T($"{Prefix}.{section.Key}.p{p}")</p>
+            }
             @if (section.Key == ContactSectionKey)
             {
                 <p><a href="mailto:luminachronica@gmx.at">luminachronica@gmx.at</a></p>
@@ -47,7 +51,9 @@
 </div>
 
 @code {
-    public sealed record Section(string Key, int Paragraphs, int Items = 0);
+    // After: how many of the paragraphs (the last ones) follow the list
+    // instead of coming before it.
+    public sealed record Section(string Key, int Paragraphs, int Items = 0, int After = 0);
 
     [Parameter, EditorRequired] public string Prefix { get; set; } = "";
     [Parameter, EditorRequired] public IReadOnlyList<Section> Sections { get; set; } = [];

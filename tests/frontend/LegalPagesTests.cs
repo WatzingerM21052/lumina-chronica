@@ -59,4 +59,14 @@ public class LegalPagesTests : BunitContext
         Assert.Equal("mailto:luminachronica@gmx.at", cut.Find("#terms-report a[href^='mailto:']").GetAttribute("href"));
         Assert.Equal(new[] { "datenschutz", "impressum" }, cut.FindAll(".legal-related a").Select(a => a.GetAttribute("href")));
     }
+
+    [Fact]
+    public void Terms_ReportSection_ReadsIntroThenListThenClosingSentence()
+    {
+        var cut = Render<Terms>();
+
+        var children = cut.Find("#terms-report").Children.Select(c => c.TagName).ToArray();
+        Assert.Equal(new[] { "H2", "P", "UL", "P", "P" }, children);
+        Assert.StartsWith("Wir sehen uns jede Meldung an", cut.Find("#terms-report ul + p").TextContent);
+    }
 }
