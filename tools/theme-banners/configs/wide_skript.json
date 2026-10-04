@@ -1,0 +1,54 @@
+{
+ "skriptorium-shelves": {
+  "src": "src_a80.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.08
+  ],
+  "cy": 0.45
+ },
+ "skriptorium-statistics": {
+  "src": "src_12.jpg",
+  "mode": "band",
+  "cy": 0.5
+ },
+ "skriptorium-settings": {
+  "src": "src_17.jpg",
+  "mode": "band",
+  "cy": 0.5
+ },
+ "skriptorium-profile": {
+  "src": "src_10.jpg",
+  "mode": "band",
+  "cy": 0.5
+ },
+ "skriptorium-offline": {
+  "src": "src_13.jpg",
+  "mode": "band",
+  "cy": 0.5
+ },
+ "skriptorium-upload": {
+  "src": "src_a98.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.08
+  ],
+  "cy": 0.5
+ },
+ "skriptorium-impressum": {
+  "src": "src_15.jpg",
+  "mode": "band",
+  "cy": 0.5
+ },
+ "skriptorium-legal": {
+  "src": "src_11.jpg",
+  "mode": "band",
+  "cy": 0.55
+ }
+}

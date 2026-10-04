@@ -1,0 +1,138 @@
+{
+ "classic-statistics-uraniborg": {
+  "mode": "row",
+  "start": 0.28,
+  "items": [
+   {
+    "src": "src_45.jpg",
+    "trim": [
+     0,
+     0.1,
+     0.05,
+     0.36
+    ]
+   },
+   {
+    "src": "src_46.jpg",
+    "trim": [
+     0,
+     0.1,
+     0,
+     0.06
+    ]
+   },
+   {
+    "src": "src_44.jpg",
+    "trim": [
+     0,
+     0.06,
+     0.07,
+     0.5
+    ]
+   }
+  ]
+ },
+ "classic-settings-ramelli": {
+  "mode": "row",
+  "start": 0.28,
+  "items": [
+   {
+    "src": "src_ramelli.jpg",
+    "box": [
+     0.06,
+     0.05,
+     0.94,
+     0.93
+    ]
+   },
+   {
+    "src": "src_29.jpg",
+    "box": [
+     0.37,
+     0.22,
+     0.91,
+     0.77
+    ]
+   },
+   {
+    "src": "src_33.jpg",
+    "box": [
+     0.38,
+     0.25,
+     0.91,
+     0.78
+    ]
+   }
+  ]
+ },
+ "classic-profile-jerome": {
+  "mode": "row",
+  "start": 0.28,
+  "items": [
+   {
+    "src": "src_6.jpg"
+   },
+   {
+    "src": "src_jerome.jpg",
+    "box": [
+     0.03,
+     0.03,
+     0.97,
+     0.97
+    ]
+   },
+   {
+    "src": "src_14.jpg"
+   }
+  ]
+ },
+ "classic-offline-ship": {
+  "src": "src_36.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.17
+  ],
+  "cy": 0.5
+ },
+ "classic-impressum-faust": {
+  "src": "src_52.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.14
+  ],
+  "cy": 0.5
+ },
+ "classic-legal-justitia": {
+  "mode": "row",
+  "start": 0.28,
+  "items": [
+   {
+    "src": "src_74.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.05
+    ]
+   },
+   {
+    "src": "src_justitia.jpg",
+    "box": [
+     0.17,
+     0.255,
+     0.72,
+     0.8
+    ]
+   },
+   {
+    "src": "src_59.jpg"
+   }
+  ]
+ }
+}

@@ -1,0 +1,14 @@
+{
+ "classic-journey-reading": {"mode": "solo", "src": "classic_reading.jpg", "box": [0.03, 0.03, 0.97, 0.97], "size": [900, 1000], "inner": 0.45},
+ "classic-journey-library": {"mode": "solo", "src": "classic_library.jpg", "box": [0.23, 0.15, 0.80, 0.72], "size": [2400, 900], "inner": 0.55},
+ "skriptorium-journey-reading": {"mode": "solo", "src": "skriptorium_reading.jpg", "size": [900, 1000], "inner": 0.45},
+ "skriptorium-journey-library": {"mode": "solo", "src": "skriptorium_library.jpg", "trim": [0, 0, 0, 0.12], "size": [2400, 900], "inner": 0.55},
+ "abendhafen-journey-reading": {"mode": "solo", "src": "abendhafen_reading.jpg", "size": [900, 1000], "inner": 0.45},
+ "abendhafen-journey-library": {"mode": "solo", "src": "abendhafen_library.jpg", "size": [2400, 900], "inner": 0.55},
+ "ischtar-journey-reading": {"mode": "solo", "src": "ischtar_reading.jpg", "box": [0.0, 0.0, 0.5, 0.85], "size": [900, 900], "inner": 0.55},
+ "ischtar-journey-library": {"mode": "solo", "src": "ischtar_library.jpg", "box": [0.01, 0.02, 0.99, 0.98], "size": [2400, 900], "inner": 0.55},
+ "daemmergarten-journey-reading": {"mode": "solo", "src": "daemmergarten_reading.jpg", "trim": [0, 0, 0, 0.06], "size": [900, 1000], "inner": 0.5},
+ "daemmergarten-journey-library": {"mode": "solo", "src": "daemmergarten_library.jpg", "trim": [0, 0, 0, 0.06], "size": [2400, 900], "inner": 0.55},
+ "nachtgarten-journey-reading": {"mode": "solo", "src": "nachtgarten_reading.jpg", "size": [900, 1000], "inner": 0.5},
+ "nachtgarten-journey-library": {"mode": "solo", "src": "nachtgarten_library.jpg", "trim": [0, 0, 0, 0.14], "size": [2400, 900], "inner": 0.55}
+}

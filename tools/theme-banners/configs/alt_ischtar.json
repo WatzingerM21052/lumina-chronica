@@ -1,0 +1,188 @@
+{
+ "ischtar-library": {
+  "src": "src_37.jpg",
+  "mode": "band",
+  "box": [
+   0.03,
+   0.03,
+   0.97,
+   0.97
+  ],
+  "cy": 0.5
+ },
+ "ischtar-shelves": {
+  "src": "src_0.jpg",
+  "mode": "band",
+  "box": [
+   0.01,
+   0.02,
+   0.99,
+   0.98
+  ],
+  "cy": 0.5
+ },
+ "ischtar-statistics": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_41.jpg",
+    "box": [
+     0.02,
+     0.02,
+     0.98,
+     0.98
+    ]
+   },
+   {
+    "src": "src_9.jpg",
+    "trim": [
+     0,
+     0.12,
+     0,
+     0
+    ]
+   }
+  ]
+ },
+ "ischtar-discover": {
+  "src": "src_3.jpg",
+  "mode": "band",
+  "box": [
+   0.02,
+   0.1,
+   0.98,
+   0.95
+  ],
+  "cy": 0.5
+ },
+ "ischtar-projects": {
+  "src": "src_28.jpg",
+  "mode": "band",
+  "box": [
+   0.0,
+   0.0,
+   1.0,
+   1.0
+  ],
+  "cy": 0.45
+ },
+ "ischtar-settings": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_29.jpg",
+    "box": [
+     0.0,
+     0.0,
+     0.5,
+     0.85
+    ]
+   },
+   {
+    "src": "src_30.jpg",
+    "box": [
+     0.0,
+     0.0,
+     1.0,
+     0.88
+    ]
+   }
+  ]
+ },
+ "ischtar-profile": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_36.jpg",
+    "box": [
+     0.0,
+     0.0,
+     1.0,
+     0.95
+    ]
+   },
+   {
+    "src": "src_34.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   }
+  ]
+ },
+ "ischtar-offline": {
+  "src": "src_33.jpg",
+  "mode": "band",
+  "box": [
+   0.03,
+   0.06,
+   0.94,
+   0.86
+  ],
+  "cy": 0.55
+ },
+ "ischtar-upload": {
+  "src": "src_15.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.2
+  ],
+  "cy": 0.45
+ },
+ "ischtar-impressum": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_39.jpg",
+    "box": [
+     0.02,
+     0.02,
+     0.98,
+     0.98
+    ]
+   },
+   {
+    "src": "src_16.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   }
+  ]
+ },
+ "ischtar-legal": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_1.jpg",
+    "trim": [
+     0,
+     0.04,
+     0,
+     0.5
+    ]
+   },
+   {
+    "src": "src_12.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   }
+  ]
+ }
+}

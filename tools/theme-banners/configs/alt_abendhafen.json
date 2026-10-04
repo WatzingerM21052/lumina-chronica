@@ -1,0 +1,160 @@
+{
+ "abendhafen-library": {
+  "src": "src_31.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0.08,
+   0,
+   0.13
+  ],
+  "cy": 0.5
+ },
+ "abendhafen-shelves": {
+  "src": "src_34.jpg",
+  "mode": "band",
+  "cy": 0.55
+ },
+ "abendhafen-statistics": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_10.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   },
+   {
+    "src": "src_19.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   },
+   {
+    "src": "src_18.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   }
+  ]
+ },
+ "abendhafen-discover": {
+  "src": "src_4.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.08
+  ],
+  "cy": 0.6
+ },
+ "abendhafen-projects": {
+  "src": "src_33.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.1
+  ],
+  "cy": 0.5
+ },
+ "abendhafen-settings": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_28.jpg",
+    "trim": [
+     0,
+     0.06,
+     0,
+     0.02
+    ]
+   },
+   {
+    "src": "src_2.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.18
+    ]
+   }
+  ]
+ },
+ "abendhafen-profile": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_15.jpg"
+   },
+   {
+    "src": "src_40.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   }
+  ]
+ },
+ "abendhafen-offline": {
+  "src": "src_24.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.16
+  ],
+  "cy": 0.5
+ },
+ "abendhafen-upload": {
+  "src": "src_16.jpg",
+  "mode": "band",
+  "cy": 0.4
+ },
+ "abendhafen-impressum": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_12.jpg"
+   },
+   {
+    "src": "src_25.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.12
+    ]
+   }
+  ]
+ },
+ "abendhafen-legal": {
+  "src": "src_41.jpg",
+  "mode": "band",
+  "trim": [
+   0.09,
+   0.05,
+   0.14,
+   0.09
+  ],
+  "cy": 0.55
+ }
+}

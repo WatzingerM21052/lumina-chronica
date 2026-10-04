@@ -1,0 +1,22 @@
+{
+ "classic-statistics-uraniborg": {
+  "src": "src_6.jpg",
+  "mode": "band",
+  "cy": 0.5
+ },
+ "classic-settings-ramelli": {
+  "src": "src_3.jpg",
+  "mode": "band",
+  "cy": 0.55
+ },
+ "classic-profile-jerome": {
+  "src": "src_15.jpg",
+  "mode": "band",
+  "cy": 0.45
+ },
+ "classic-legal-justitia": {
+  "src": "src_0.jpg",
+  "mode": "band",
+  "cy": 0.18
+ }
+}

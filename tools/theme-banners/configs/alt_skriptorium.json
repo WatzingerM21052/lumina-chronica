@@ -1,0 +1,227 @@
+{
+ "skriptorium-library": {
+  "src": "src_77.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.16
+  ],
+  "cy": 0.55
+ },
+ "skriptorium-shelves": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_80.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.08
+    ]
+   },
+   {
+    "src": "src_37.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.32
+    ]
+   }
+  ]
+ },
+ "skriptorium-statistics": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_87.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.22
+    ]
+   },
+   {
+    "src": "src_10.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.1
+    ]
+   }
+  ]
+ },
+ "skriptorium-discover": {
+  "src": "src_17.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0.09,
+   0,
+   0
+  ],
+  "cy": 0.55
+ },
+ "skriptorium-projects": {
+  "src": "src_43.jpg",
+  "mode": "band",
+  "trim": [
+   0,
+   0,
+   0,
+   0.12
+  ],
+  "cy": 0.5
+ },
+ "skriptorium-settings": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_95.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.08
+    ]
+   },
+   {
+    "src": "src_35.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.14
+    ]
+   }
+  ]
+ },
+ "skriptorium-profile": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_82.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.1
+    ]
+   },
+   {
+    "src": "src_39.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  ]
+ },
+ "skriptorium-offline": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_98.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.08
+    ]
+   },
+   {
+    "src": "src_9.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.22
+    ]
+   }
+  ]
+ },
+ "skriptorium-upload": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_99.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.2
+    ]
+   },
+   {
+    "src": "src_62.jpg",
+    "trim": [
+     0,
+     0.1,
+     0,
+     0.2
+    ]
+   }
+  ]
+ },
+ "skriptorium-impressum": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_86.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.08
+    ]
+   },
+   {
+    "src": "src_2.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.1
+    ]
+   }
+  ]
+ },
+ "skriptorium-legal": {
+  "mode": "row",
+  "start": 0.3,
+  "items": [
+   {
+    "src": "src_81.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.22
+    ]
+   },
+   {
+    "src": "src_33.jpg",
+    "trim": [
+     0,
+     0,
+     0,
+     0.06
+    ]
+   }
+  ]
+ }
+}
