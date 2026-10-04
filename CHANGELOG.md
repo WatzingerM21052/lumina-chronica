@@ -4,6 +4,8 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-04
+
 ### Added
 
 - Five new looks besides the worlds and the classic themes (#584): Skriptorium, Abendhafen (evening harbour), Ischtar-Tor (Ishtar Gate), Gärten in der Dämmerung (gardens at dusk) and Nachtgarten (night garden), each with its own colours, header and set of engravings.
@@ -36,6 +38,9 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Editing a book, shelf or project, and adding characters, places, timeline events and lore entries (or editing a timeline event), happens in dialogs; closing one with unsaved input asks first.
 
 ### Changed
+
+- Imprint under Austrian law (media owner and publisher, basic orientation, users' responsibility for their content and notice-and-takedown under § 16 ECG) with picture credits and font licences; the privacy policy notes that fonts and pictures are self-hosted and that request logs are kept only a few days (#596).
+- Dependencies updated (hono, wrangler, vitest, Markdig, coverlet and others); no open security advisories.
 
 - The classic themes (Classic Library, Modern Light, Dark Library, System) use the world layout too (#583): a full-width banner per page -- a public-domain engraving painted in the theme's ink colour -- content on cards, the blurred cover behind detail pages. Every banner is one wide engraving across the full width (#586, #588, #593, #594).
 - Settings: the theme picker is grouped into Worlds, Classic and More looks, each card with a strip of the theme's own picture and one line on how it looks (#585).
