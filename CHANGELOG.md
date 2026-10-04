@@ -6,6 +6,10 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Added
 
+- Privacy policy and terms of use (#579, #581), in German and English and reachable without an account: linked in the footer, the phone "More" menu, the imprint and the registration form. The privacy policy describes what the app really stores and sends where; the terms say what may be made public (only your own or public-domain works) and how to report a violation.
+- A public project has its own read-only page (#578): characters, relationships, places, timeline, lore and the linked public books; files and the map stay private. Discover and public profiles open it.
+- Discover sorts by date, rating, views or title, each either way (#578). Opening someone else's public book or project counts one view; only the number is stored.
+
 - Babylon and Alexandria: the home page is a journey in chapters (#570–#574) -- the book you are reading as a bound 3D volume with its spine, page count and the other books in progress; the yearly goal as a rosette (Babylon) or a ring around an astrolabe (Alexandria), one field per book with an info card; the last 34 weeks of reading as a sky of stars with constellations; your newest books, your newest project with its picture and latest timeline entry, and the ways into the app. It greets you by name. Settings → "Immersive theme" switches back to the calmer card dashboard.
 - Discover searches books, projects and readers in one field (#564); a dropdown next to it picks the kind and shows how many there are, and also works without a search term: it then lists every public book or project, or the readers who share something (#567).
 - Reading calendar: hovering or tapping a day shows its pages and the books read that day (#558, #559).
@@ -27,6 +31,11 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Editing a book, shelf or project, and adding characters, places, timeline events and lore entries (or editing a timeline event), happens in dialogs; closing one with unsaved input asks first.
 
 ### Changed
+
+- Profile (#580, #581): every part is a row with its heading and a short explanation on the left and the card on the right (stacked on phones): profile picture, name and email; password, linked Google/GitHub sign-in and signed-in devices; account deletion with the delete button right under its password field.
+- A deleted account can be restored for 90 days; after that it is removed for good with everything it owned or wrote (#579).
+- The imprint cites the Austrian E-Commerce Act (§ 5 ECG) and media law (§ 25 MedienG) instead of the German TMG (#579).
+- Deleting a project removes all its rows in one step before its files (#577). "Back to login" after a password reset goes to the login page (#577). The backend deploy checks for missing secrets and pending migrations first (#577).
 
 - Babylon and Alexandria (#555, #560–#563, #575): every page has a full-width picture banner that fades into the page, cards are translucent glass or parchment, a book's or project's own picture sits blurred behind its detail page, and comments are two columns (list left, writing right). Upload, imprint and the public profile follow too.
 - Project pages (#566, #568): characters, places, projects and lore are compact cards that never run long; tabs show an icon and how many entries they hold; the overview's counts sit beside the title; the timeline reads like a chronicle with the dates in their own column; linked books are a cover grid; the map spans the full width, centred.
