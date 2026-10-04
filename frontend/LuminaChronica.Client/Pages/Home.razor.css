@@ -168,3 +168,92 @@
 .home-hero-greek {
     display: none;
 }
+
+
+/* ---------- Loading veil ----------
+   The page colour over Home, under the sticky header (z-index 10); the
+   Lumina mark with a gold ring that draws itself. It shows at once (to
+   hide the half-built page), its content only after a moment, so a fast
+   load never flickers. */
+.home-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.1rem;
+    background-color: var(--color-bg-paper);
+    transition: opacity 0.6s ease, visibility 0s linear 0.6s;
+}
+
+.home-veil.is-lifting {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.home-veil > * {
+    animation: home-veil-in 0.45s ease 0.25s both;
+}
+
+.home-veil-mark {
+    position: relative;
+    width: 104px;
+    height: 104px;
+}
+
+.home-veil-mark img {
+    position: absolute;
+    inset: 28px;
+    width: 48px;
+    height: 48px;
+}
+
+.home-veil-ring {
+    width: 100%;
+    height: 100%;
+    rotate: -90deg;
+}
+
+.home-veil-ring circle {
+    fill: none;
+    stroke: var(--color-gold-accent);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-dasharray: 340;
+    stroke-dashoffset: 340;
+    animation: home-veil-draw 2.4s ease-in-out infinite;
+}
+
+.home-veil p {
+    margin: 0;
+    font-family: var(--font-family-display);
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    color: var(--color-text-secondary);
+}
+
+@keyframes home-veil-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes home-veil-draw {
+    0% { stroke-dashoffset: 340; opacity: 0.35; }
+    50% { stroke-dashoffset: 0; opacity: 1; }
+    100% { stroke-dashoffset: -340; opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-veil,
+    .home-veil > * {
+        transition: none;
+        animation: none;
+    }
+
+    .home-veil-ring circle {
+        animation: none;
+        stroke-dashoffset: 0;
+    }
+}

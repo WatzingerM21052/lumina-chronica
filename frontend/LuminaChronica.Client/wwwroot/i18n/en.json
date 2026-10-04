@@ -974,6 +974,7 @@
   "worldBanner.settingsSubtitle": "Appearance, language and notifications.",
   "worldBanner.profileSubtitle": "How other readers see you.",
   "home.welcomeBackName": "Welcome back, {0}",
+  "home.loadingVeil": "Opening your library …",
   "home.welcomeBack": "Welcome back",
   "statusWidget.unreachable": "The server can't be reached right now. You can still read your offline books.",
   "home.continueReadingTitle": "Continue reading",
