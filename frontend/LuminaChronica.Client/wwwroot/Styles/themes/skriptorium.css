@@ -1,0 +1,101 @@
+/*
+  Skriptorium: a scribe's room by oil lamp -- cedar, copper and papyrus.
+   Signature: a cedar header closed by a double copper rule, warm lamplight
+   on the page.
+  An alternative look (point 6, 2026-10-04): the world layout with the
+  engraving banners of the classic themes (app.css), its own pictures in
+  images/themes/skriptorium (CREDITS.md) and its own colours. Text colours are
+  checked for at least 4.5:1 on the card.
+*/
+
+[data-theme="skriptorium"] {
+    color-scheme: dark;
+    --color-primary: #cf7d43;
+    --color-primary-hover: #ba703c;
+    --color-primary-active: #a66436;
+
+    --color-secondary: #a54a38;
+    --color-secondary-hover: #914131;
+
+    --color-gold-accent: #cf7d43;
+    --color-accent-text: #e0975f;
+    --color-info: #6fa8c9;
+    --color-success: #6fae6f;
+    --color-chart-1: #cf7d43;
+    --color-chart-2: #7fa7b5;
+    --color-chart-3: #c9b66a;
+    --color-chart-4: #8fae74;
+    --color-warning: #d9a441;
+    --color-error: #d9695c;
+
+    --color-bg-paper: #19130f;
+    --color-bg-light: #2d231c;
+    --color-bg-dark: #100b08;
+    --color-overlay-scrim: rgba(0, 0, 0, 0.6);
+    --color-bg-card: #241a13;
+    --color-bg-reader: #1e1611;
+
+    --color-text-primary: #ecdfc8;
+    --color-text-secondary: #c9b89c;
+    --color-text-muted: #968672;
+    --color-text-disabled: #635547;
+    --color-text-on-dark: #eadfca;
+
+    --color-border: #3a2a1e;
+}
+
+html[data-theme="skriptorium"] {
+    --font-family-display: "Literata", Georgia, serif;
+    background: radial-gradient(70% 45% at 85% 0%, rgba(207, 125, 67, 0.12), transparent 70%), var(--color-bg-paper);
+    background-attachment: fixed;
+}
+
+html[data-theme="skriptorium"] .app-header {
+    background: linear-gradient(180deg, #2a1d13, #1a120c);
+    border-bottom: 3px double var(--color-primary);
+}
+
+/* ---------- Banners: one engraving per page ---------- */
+html[data-theme="skriptorium"] .world-banner[data-page="library"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-library.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="shelves"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-shelves.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="statistics"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-statistics.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="discover"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-discover.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="projects"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-projects.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="settings"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-settings.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="profile"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-profile.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="offline"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-offline.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="upload"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-upload.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="impressum"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-impressum.webp");
+}
+
+html[data-theme="skriptorium"] .world-banner[data-page="legal"] {
+    --banner-mask: url("../../images/themes/skriptorium/skriptorium-legal.webp");
+}

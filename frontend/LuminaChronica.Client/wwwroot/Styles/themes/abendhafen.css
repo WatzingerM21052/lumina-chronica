@@ -1,0 +1,101 @@
+/*
+  Abendhafen: the harbour at dusk under the lighthouse's gold.
+   Signature: a dusk-blue header with a single beam of gold, the lamp's
+   glow over the page.
+  An alternative look (point 6, 2026-10-04): the world layout with the
+  engraving banners of the classic themes (app.css), its own pictures in
+  images/themes/abendhafen (CREDITS.md) and its own colours. Text colours are
+  checked for at least 4.5:1 on the card.
+*/
+
+[data-theme="abendhafen"] {
+    color-scheme: dark;
+    --color-primary: #e6b85c;
+    --color-primary-hover: #cfa653;
+    --color-primary-active: #b8934a;
+
+    --color-secondary: #d48a6a;
+    --color-secondary-hover: #bb795d;
+
+    --color-gold-accent: #e6b85c;
+    --color-accent-text: #ecc574;
+    --color-info: #6fa8c9;
+    --color-success: #6fae6f;
+    --color-chart-1: #e6b85c;
+    --color-chart-2: #6fb3d9;
+    --color-chart-3: #d48a6a;
+    --color-chart-4: #8fc29a;
+    --color-warning: #d9a441;
+    --color-error: #d9695c;
+
+    --color-bg-paper: #101828;
+    --color-bg-light: #202b3f;
+    --color-bg-dark: #0a111e;
+    --color-overlay-scrim: rgba(0, 0, 0, 0.6);
+    --color-bg-card: #172237;
+    --color-bg-reader: #141d30;
+
+    --color-text-primary: #eae7f0;
+    --color-text-secondary: #bcc2d4;
+    --color-text-muted: #8a93ab;
+    --color-text-disabled: #566077;
+    --color-text-on-dark: #e9e6ef;
+
+    --color-border: #283552;
+}
+
+html[data-theme="abendhafen"] {
+    --font-family-display: "Cinzel", Georgia, serif;
+    background: radial-gradient(60% 50% at 90% 0%, rgba(230, 184, 92, 0.14), transparent 70%), radial-gradient(80% 50% at 0% 100%, rgba(111, 179, 217, 0.08), transparent 70%), var(--color-bg-paper);
+    background-attachment: fixed;
+}
+
+html[data-theme="abendhafen"] .app-header {
+    background: linear-gradient(180deg, #16213a, #0a111e);
+    border-bottom: 1px solid var(--color-primary);
+}
+
+/* ---------- Banners: one engraving per page ---------- */
+html[data-theme="abendhafen"] .world-banner[data-page="library"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-library.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="shelves"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-shelves.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="statistics"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-statistics.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="discover"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-discover.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="projects"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-projects.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="settings"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-settings.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="profile"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-profile.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="offline"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-offline.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="upload"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-upload.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="impressum"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-impressum.webp");
+}
+
+html[data-theme="abendhafen"] .world-banner[data-page="legal"] {
+    --banner-mask: url("../../images/themes/abendhafen/abendhafen-legal.webp");
+}

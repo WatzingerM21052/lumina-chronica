@@ -165,7 +165,7 @@ public class SettingsPageTests : BunitContext
         var cut = Render<Settings>();
 
         var cards = cut.FindAll(".theme-card");
-        Assert.Equal(6, cards.Count);
+        Assert.Equal(11, cards.Count);
         Assert.Equal("true", cards[0].GetAttribute("aria-pressed"));
         // Each preview is painted by its own theme; System shows light and dark.
         Assert.Equal("dark-library", cards[2].QuerySelector(".theme-card-preview")!.GetAttribute("data-theme"));
@@ -173,6 +173,9 @@ public class SettingsPageTests : BunitContext
         // The two themed worlds follow the four classic themes.
         Assert.Equal("babylon", cards[4].QuerySelector(".theme-card-preview")!.GetAttribute("data-theme"));
         Assert.Equal("alexandria", cards[5].QuerySelector(".theme-card-preview")!.GetAttribute("data-theme"));
+        // Then the five alternative looks.
+        Assert.Equal(new[] { "skriptorium", "abendhafen", "ischtar", "daemmergarten", "nachtgarten" },
+            cards.Skip(6).Select(c => c.QuerySelector(".theme-card-preview")!.GetAttribute("data-theme")));
 
         cards[2].Click();
 

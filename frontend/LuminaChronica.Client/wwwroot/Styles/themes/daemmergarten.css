@@ -1,0 +1,101 @@
+/*
+  Gärten in der Dämmerung: sage, terracotta and warm sandstone -- garden
+   engravings. The one light alternative.
+   Signature: a sage header with a terracotta rule, evening light on the page.
+  An alternative look (point 6, 2026-10-04): the world layout with the
+  engraving banners of the classic themes (app.css), its own pictures in
+  images/themes/daemmergarten (CREDITS.md) and its own colours. Text colours are
+  checked for at least 4.5:1 on the card.
+*/
+
+[data-theme="daemmergarten"] {
+    color-scheme: light;
+    --color-primary: #3f6b4c;
+    --color-primary-hover: #396044;
+    --color-primary-active: #32563d;
+
+    --color-secondary: #b35d3a;
+    --color-secondary-hover: #9e5233;
+
+    --color-gold-accent: #b35d3a;
+    --color-accent-text: #8f4a2c;
+    --color-info: #2f6f9a;
+    --color-success: #2f7d45;
+    --color-chart-1: #3f6b4c;
+    --color-chart-2: #b35d3a;
+    --color-chart-3: #2a7f8c;
+    --color-chart-4: #9a7d2c;
+    --color-warning: #a8701a;
+    --color-error: #b0392b;
+
+    --color-bg-paper: #ecefe4;
+    --color-bg-light: #fcfcf8;
+    --color-bg-dark: #2f4336;
+    --color-overlay-scrim: rgba(47, 67, 54, 0.45);
+    --color-bg-card: #f8f8f1;
+    --color-bg-reader: #f2f4ea;
+
+    --color-text-primary: #1e2a22;
+    --color-text-secondary: #46554a;
+    --color-text-muted: #5b675d;
+    --color-text-disabled: #a2a8a0;
+    --color-text-on-dark: #eef1e6;
+
+    --color-border: #d3d8c6;
+}
+
+html[data-theme="daemmergarten"] {
+    --font-family-display: "Fraunces", Georgia, serif;
+    background: radial-gradient(70% 45% at 85% 0%, rgba(179, 93, 58, 0.10), transparent 70%), var(--color-bg-paper);
+    background-attachment: fixed;
+}
+
+html[data-theme="daemmergarten"] .app-header {
+    background: linear-gradient(180deg, #3a5242, #2f4336);
+    border-bottom: 3px solid var(--color-secondary);
+}
+
+/* ---------- Banners: one engraving per page ---------- */
+html[data-theme="daemmergarten"] .world-banner[data-page="library"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-library.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="shelves"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-shelves.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="statistics"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-statistics.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="discover"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-discover.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="projects"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-projects.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="settings"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-settings.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="profile"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-profile.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="offline"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-offline.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="upload"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-upload.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="impressum"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-impressum.webp");
+}
+
+html[data-theme="daemmergarten"] .world-banner[data-page="legal"] {
+    --banner-mask: url("../../images/themes/daemmergarten/daemmergarten-legal.webp");
+}
