@@ -6,6 +6,11 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Added
 
+- Five new looks besides the worlds and the classic themes (#584): Skriptorium, Abendhafen (evening harbour), Ischtar-Tor (Ishtar Gate), Gärten in der Dämmerung (gardens at dusk) and Nachtgarten (night garden), each with its own colours, header and set of engravings.
+- The immersive home page is available in every theme (#587): Settings → "Immersive theme" (on by default only in Babylon and Alexandria); the other themes use their own colours and engravings.
+- Home waits behind a short loading veil until the data and the first pictures are ready, at most three seconds (#589).
+- Settings → Library → "Show cover images" (#592): off, every cover shows its title and author instead of the picture, and no cover is downloaded. Books without a cover show title and author too, instead of a book icon.
+
 - Privacy policy and terms of use (#579, #581), in German and English and reachable without an account: linked in the footer, the phone "More" menu, the imprint and the registration form. The privacy policy describes what the app really stores and sends where; the terms say what may be made public (only your own or public-domain works) and how to report a violation.
 - A public project has its own read-only page (#578): characters, relationships, places, timeline, lore and the linked public books; files and the map stay private. Discover and public profiles open it.
 - Discover sorts by date, rating, views or title, each either way (#578). Opening someone else's public book or project counts one view; only the number is stored.
@@ -31,6 +36,10 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Editing a book, shelf or project, and adding characters, places, timeline events and lore entries (or editing a timeline event), happens in dialogs; closing one with unsaved input asks first.
 
 ### Changed
+
+- The classic themes (Classic Library, Modern Light, Dark Library, System) use the world layout too (#583): a full-width banner per page -- a public-domain engraving painted in the theme's ink colour -- content on cards, the blurred cover behind detail pages. Every banner is one wide engraving across the full width (#586, #588, #593, #594).
+- Settings: the theme picker is grouped into Worlds, Classic and More looks, each card with a strip of the theme's own picture and one line on how it looks (#585).
+- The immersive home in the other themes: the engraving sits centred behind the book you are reading, and the library chapter has a full-width picture (#590, #591).
 
 - Profile (#580, #581): every part is a row with its heading and a short explanation on the left and the card on the right (stacked on phones): profile picture, name and email; password, linked Google/GitHub sign-in and signed-in devices; account deletion with the delete button right under its password field.
 - A deleted account can be restored for 90 days; after that it is removed for good with everything it owned or wrote (#579).
