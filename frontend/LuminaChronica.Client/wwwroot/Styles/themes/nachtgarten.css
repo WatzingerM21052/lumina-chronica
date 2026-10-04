@@ -1,0 +1,102 @@
+/*
+  Nachtgarten: deep green, loam red and lantern gold -- botanical plates
+   of the flowers that open at night.
+   Signature: a deep green header with a lantern-gold rule and a faint
+   glow of lanterns on the page.
+  An alternative look (point 6, 2026-10-04): the world layout with the
+  engraving banners of the classic themes (app.css), its own pictures in
+  images/themes/nachtgarten (CREDITS.md) and its own colours. Text colours are
+  checked for at least 4.5:1 on the card.
+*/
+
+[data-theme="nachtgarten"] {
+    color-scheme: dark;
+    --color-primary: #d3a94e;
+    --color-primary-hover: #be9846;
+    --color-primary-active: #a9873e;
+
+    --color-secondary: #c0634a;
+    --color-secondary-hover: #a95741;
+
+    --color-gold-accent: #d3a94e;
+    --color-accent-text: #dfbd6c;
+    --color-info: #6fa8c9;
+    --color-success: #6fae6f;
+    --color-chart-1: #d3a94e;
+    --color-chart-2: #c0634a;
+    --color-chart-3: #5fb3a6;
+    --color-chart-4: #a3b8e0;
+    --color-warning: #d9a441;
+    --color-error: #d9695c;
+
+    --color-bg-paper: #0d1912;
+    --color-bg-light: #1d2d24;
+    --color-bg-dark: #08100c;
+    --color-overlay-scrim: rgba(0, 0, 0, 0.6);
+    --color-bg-card: #14241b;
+    --color-bg-reader: #101e16;
+
+    --color-text-primary: #e6ead8;
+    --color-text-secondary: #bcc6b2;
+    --color-text-muted: #8a9a86;
+    --color-text-disabled: #556556;
+    --color-text-on-dark: #e6ead8;
+
+    --color-border: #24382b;
+}
+
+html[data-theme="nachtgarten"] {
+    --font-family-display: "Literata", Georgia, serif;
+    background: radial-gradient(40% 30% at 92% 4%, rgba(211, 169, 78, 0.14), transparent 70%), radial-gradient(30% 25% at 8% 30%, rgba(95, 179, 166, 0.06), transparent 70%), var(--color-bg-paper);
+    background-attachment: fixed;
+}
+
+html[data-theme="nachtgarten"] .app-header {
+    background: linear-gradient(180deg, #13261b, #08100c);
+    border-bottom: 1px solid var(--color-primary);
+}
+
+/* ---------- Banners: one engraving per page ---------- */
+html[data-theme="nachtgarten"] .world-banner[data-page="library"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-library.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="shelves"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-shelves.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="statistics"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-statistics.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="discover"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-discover.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="projects"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-projects.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="settings"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-settings.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="profile"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-profile.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="offline"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-offline.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="upload"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-upload.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="impressum"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-impressum.webp");
+}
+
+html[data-theme="nachtgarten"] .world-banner[data-page="legal"] {
+    --banner-mask: url("../../images/themes/nachtgarten/nachtgarten-legal.webp");
+}

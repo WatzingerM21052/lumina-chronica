@@ -1,0 +1,117 @@
+/*
+  Ischtar-Tor: all in the gate's cobalt, with golden lions -- the Assyrian
+   and Babylonian engravings, not Babylon's photographs.
+   Signature: a cobalt header with a band of gold rosettes like the gate's.
+  An alternative look (point 6, 2026-10-04): the world layout with the
+  engraving banners of the classic themes (app.css), its own pictures in
+  images/themes/ischtar (CREDITS.md) and its own colours. Text colours are
+  checked for at least 4.5:1 on the card.
+*/
+
+[data-theme="ischtar"] {
+    color-scheme: dark;
+    --color-primary: #e3ba4f;
+    --color-primary-hover: #cca747;
+    --color-primary-active: #b6953f;
+
+    --color-secondary: #35b6c8;
+    --color-secondary-hover: #2fa0b0;
+
+    --color-gold-accent: #e3ba4f;
+    --color-accent-text: #ecc768;
+    --color-info: #6fa8c9;
+    --color-success: #6fae6f;
+    --color-chart-1: #e3ba4f;
+    --color-chart-2: #35b6c8;
+    --color-chart-3: #e07a6a;
+    --color-chart-4: #8fcf8f;
+    --color-warning: #d9a441;
+    --color-error: #d9695c;
+
+    --color-bg-paper: #0c1730;
+    --color-bg-light: #1c2c4e;
+    --color-bg-dark: #081025;
+    --color-overlay-scrim: rgba(0, 0, 0, 0.6);
+    --color-bg-card: #132347;
+    --color-bg-reader: #101d3c;
+
+    --color-text-primary: #eef0f6;
+    --color-text-secondary: #c0c9e2;
+    --color-text-muted: #8e9bbd;
+    --color-text-disabled: #576588;
+    --color-text-on-dark: #eef0f6;
+
+    --color-border: #25386b;
+}
+
+html[data-theme="ischtar"] {
+    --font-family-display: "Marcellus", Georgia, serif;
+    background: radial-gradient(70% 45% at 50% 0%, rgba(53, 182, 200, 0.10), transparent 70%), var(--color-bg-paper);
+    background-attachment: fixed;
+}
+
+html[data-theme="ischtar"] .app-header {
+    background: linear-gradient(180deg, #102256, #081025);
+    border-bottom: 0;
+}
+
+/* The gate's band: gold rosettes between two gold lines, drawn in CSS. */
+html[data-theme="ischtar"] .app-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -9px;
+    height: 9px;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 50% 50%, var(--color-primary) 0 2px, transparent 2.5px) 0 0 / 18px 9px repeat-x,
+        linear-gradient(var(--color-primary), var(--color-primary)) top / 100% 1px no-repeat,
+        linear-gradient(var(--color-primary), var(--color-primary)) bottom / 100% 1px no-repeat,
+        #0b1838;
+}
+
+/* ---------- Banners: one engraving per page ---------- */
+html[data-theme="ischtar"] .world-banner[data-page="library"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-library.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="shelves"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-shelves.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="statistics"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-statistics.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="discover"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-discover.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="projects"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-projects.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="settings"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-settings.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="profile"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-profile.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="offline"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-offline.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="upload"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-upload.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="impressum"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-impressum.webp");
+}
+
+html[data-theme="ischtar"] .world-banner[data-page="legal"] {
+    --banner-mask: url("../../images/themes/ischtar/ischtar-legal.webp");
+}
