@@ -28,26 +28,44 @@
     <h2>@I18n.T("settings.appearanceTitle")</h2>
 
     <h3 class="settings-subheading">@I18n.T("settings.themeTitle")</h3>
-    @* Each preview carries its own data-theme, so the theme files' own
-       tokens paint it: always the real colours, nothing duplicated here. *@
-    <div class="theme-cards" role="group" aria-label="@I18n.T("settings.themeTitle")">
-        @foreach (var (value, label) in Themes)
+    @* Three groups (2026-10-04): the two worlds first and larger, then the
+       calm classic themes, then the alternative looks. Each preview carries
+       its own data-theme, so the theme files' own tokens paint it -- always
+       the real colours -- and a strip of the theme's own banner picture
+       (small copies in images/themes/previews): a photo for the worlds,
+       an engraving in the theme's ink for the others. *@
+    <div class="theme-groups">
+        @foreach (var group in ThemeGroups)
         {
-            var isActive = _currentTheme == value;
-            <button type="button" class="theme-card @(isActive ? "is-active" : null)" aria-pressed="@(isActive ? "true" : "false")" @onclick="() => SetThemeAsync(value)">
-                @if (value == "system")
-                {
-                    <span class="theme-card-preview theme-card-preview--split" aria-hidden="true">
-                        <span class="theme-card-half" data-theme="modern-light">@ThemePreview</span>
-                        <span class="theme-card-half" data-theme="dark-library">@ThemePreview</span>
-                    </span>
-                }
-                else
-                {
-                    <span class="theme-card-preview" data-theme="@value" aria-hidden="true">@ThemePreview</span>
-                }
-                <span class="theme-card-label">@label</span>
-            </button>
+            <section class="theme-group theme-group--@group.Key" aria-labelledby="@($"theme-group-{group.Key}")">
+                <div class="theme-group-head">
+                    <h4 id="@($"theme-group-{group.Key}")">@I18n.T($"settings.themeGroup.{group.Key}")</h4>
+                    <p class="text-muted">@I18n.T($"settings.themeGroup.{group.Key}Hint")</p>
+                </div>
+                <div class="theme-cards" role="group" aria-labelledby="@($"theme-group-{group.Key}")">
+                    @foreach (var theme in group.Themes)
+                    {
+                        var isActive = _currentTheme == theme.Value;
+                        <button type="button" class="theme-card @(isActive ? "is-active" : null)" data-value="@theme.Value" aria-pressed="@(isActive ? "true" : "false")" @onclick="() => SetThemeAsync(theme.Value)">
+                            @if (theme.Value == "system")
+                            {
+                                <span class="theme-card-preview theme-card-preview--split" aria-hidden="true">
+                                    <span class="theme-card-half" data-theme="modern-light">@ThemePreview(theme)</span>
+                                    <span class="theme-card-half" data-theme="dark-library">@ThemePreview(theme)</span>
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="theme-card-preview" data-theme="@theme.Value" aria-hidden="true">@ThemePreview(theme)</span>
+                            }
+                            <span class="theme-card-text">
+                                <span class="theme-card-label">@I18n.T($"settings.themeName.{theme.Value}")</span>
+                                <span class="theme-card-tagline">@I18n.T($"settings.themeTagline.{theme.Value}")</span>
+                            </span>
+                        </button>
+                    }
+                </div>
+            </section>
         }
     </div>
 
@@ -121,19 +139,33 @@ else
 }
 
 @code {
-    private static readonly (string Value, string Label)[] Themes =
+    // Preview: the picture strip of the theme ("photo" = its own coloured
+    // picture, "ink" = an engraving mask painted in the theme's colours).
+    private sealed record ThemeOption(string Value, string Preview, bool Photo);
+    private sealed record ThemeGroup(string Key, ThemeOption[] Themes);
+
+    private static readonly ThemeGroup[] ThemeGroups =
     [
-        ("classic-library", "Classic Library"),
-        ("modern-light", "Modern Light"),
-        ("dark-library", "Dark Library"),
-        ("system", "System"),
-        ("babylon", "Babylon"),
-        ("alexandria", "Alexandria"),
-        ("skriptorium", "Skriptorium"),
-        ("abendhafen", "Abendhafen"),
-        ("ischtar", "Ischtar-Tor"),
-        ("daemmergarten", "Gärten in der Dämmerung"),
-        ("nachtgarten", "Nachtgarten"),
+        new("worlds",
+        [
+            new("babylon", "babylon", true),
+            new("alexandria", "alexandria", true),
+        ]),
+        new("classic",
+        [
+            new("classic-library", "classic", false),
+            new("modern-light", "classic", false),
+            new("dark-library", "classic", false),
+            new("system", "classic", false),
+        ]),
+        new("looks",
+        [
+            new("skriptorium", "skriptorium", false),
+            new("abendhafen", "abendhafen", false),
+            new("ischtar", "ischtar", false),
+            new("daemmergarten", "daemmergarten", false),
+            new("nachtgarten", "nachtgarten", false),
+        ]),
     ];
 
     // (preference type, label key, description key) -- FOLLOW/COMMENT/RATING/SHARE
@@ -170,7 +202,7 @@ else
 
     // A miniature page: dark header bar, a card with two text lines and an
     // accent button, all in the preview's own theme tokens.
-    private static readonly RenderFragment ThemePreview = @<text><span class="tp-bar"></span><span class="tp-card"><span class="tp-line"></span><span class="tp-line tp-line--short"></span><span class="tp-button"></span></span></text>;
+    private static RenderFragment ThemePreview(ThemeOption theme) => @<text><span class="tp-bar"></span><span class="tp-banner @(theme.Photo ? "tp-banner--photo" : "tp-banner--ink")" style="--tp-src: url('images/themes/previews/@(theme.Preview).webp')"></span><span class="tp-card"><span class="tp-line"></span><span class="tp-line tp-line--short"></span><span class="tp-button"></span></span></text>;
 
     private string? _currentTheme;
     private NotificationPreferences? _preferences;

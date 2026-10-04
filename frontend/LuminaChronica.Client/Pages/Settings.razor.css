@@ -73,11 +73,51 @@
 }
 
 /* Theme previews (plan A7): each card is a miniature page painted by its
-   own theme's tokens (data-theme on the preview), the label below. */
+   own theme's tokens (data-theme on the preview), name and one line below.
+   Grouped (2026-10-04): the worlds two to a row and larger, the classic
+   themes four, the alternative looks as many as fit. */
+.theme-groups {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.theme-group-head {
+    margin-bottom: var(--space-1);
+}
+
+.theme-group-head h4 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.theme-group-head p {
+    margin: 0.1rem 0 0;
+    font-size: var(--font-size-small);
+}
+
 .theme-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
     gap: var(--space-2);
+}
+
+.theme-group--worlds .theme-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.theme-group--classic .theme-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.theme-group--looks .theme-cards {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 1099.98px) {
+    .theme-group--looks .theme-cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 .theme-card {
@@ -104,10 +144,22 @@
     box-shadow: 0 0 0 1px var(--color-accent-text);
 }
 
+.theme-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0 0.2rem 0.15rem;
+}
+
 .theme-card-label {
-    padding: 0 0.15rem;
     font-size: var(--font-size-small);
     font-weight: 600;
+}
+
+.theme-card-tagline {
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--color-text-muted);
 }
 
 .theme-card.is-active .theme-card-label::after {
@@ -125,7 +177,7 @@
 }
 
 .theme-card-preview {
-    height: 4.75rem;
+    height: 5.5rem;
     overflow: hidden;
     border-radius: var(--radius);
     border: 1px solid color-mix(in srgb, var(--color-text-muted) 35%, transparent);
@@ -147,6 +199,33 @@
     flex-shrink: 0;
     background-color: var(--color-bg-dark);
     border-bottom: 1px solid var(--color-gold-accent);
+}
+
+/* The theme's own picture: a photo for the worlds, an engraving painted
+   in the theme's ink for the others (as on the page banners). */
+.tp-banner {
+    height: 1.7rem;
+    flex-shrink: 0;
+    margin-top: -6px;
+}
+
+.tp-banner--photo {
+    background: var(--tp-src) center / cover;
+}
+
+.tp-banner--ink {
+    background-color: color-mix(in srgb, var(--color-text-secondary) 65%, var(--color-primary));
+    opacity: 0.75;
+    -webkit-mask: var(--tp-src) center / cover;
+    mask: var(--tp-src) center / cover;
+}
+
+.theme-group--worlds .theme-card-preview {
+    height: 7.5rem;
+}
+
+.theme-group--worlds .tp-banner {
+    height: 3.4rem;
 }
 
 .tp-card {
@@ -191,6 +270,12 @@
 @media (max-width: 599.98px) {
     .settings-card {
         padding: var(--space-2);
+    }
+
+    .theme-group--classic .theme-cards,
+    .theme-group--looks .theme-cards,
+    .theme-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     /* Equal cells instead of 2 + 2 buttons of different widths. */

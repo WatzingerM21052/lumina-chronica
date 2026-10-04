@@ -164,23 +164,29 @@ public class SettingsPageTests : BunitContext
 
         var cut = Render<Settings>();
 
+        // Three groups: the two worlds, the four classic themes, the five looks.
+        var groups = cut.FindAll(".theme-group");
+        Assert.Equal(new[] { "Welten", "Klassisch", "Weitere Looks" }, groups.Select(g => g.QuerySelector("h4")!.TextContent));
+        string[] Themes(int g) => groups[g].QuerySelectorAll(".theme-card").Select(c => c.GetAttribute("data-value")!).ToArray();
+        Assert.Equal(new[] { "babylon", "alexandria" }, Themes(0));
+        // System shows light and dark side by side.
+        Assert.Equal(new[] { "classic-library", "modern-light", "dark-library", "system" }, Themes(1));
+        Assert.Equal(2, groups[1].QuerySelectorAll(".theme-card")[3].QuerySelectorAll(".theme-card-half").Length);
+        Assert.Equal(new[] { "skriptorium", "abendhafen", "ischtar", "daemmergarten", "nachtgarten" }, Themes(2));
+
+        // Every card names its theme and says in a line what it looks like.
         var cards = cut.FindAll(".theme-card");
         Assert.Equal(11, cards.Count);
-        Assert.Equal("true", cards[0].GetAttribute("aria-pressed"));
-        // Each preview is painted by its own theme; System shows light and dark.
-        Assert.Equal("dark-library", cards[2].QuerySelector(".theme-card-preview")!.GetAttribute("data-theme"));
-        Assert.Equal(2, cards[3].QuerySelectorAll(".theme-card-half").Length);
-        // The two themed worlds follow the four classic themes.
-        Assert.Equal("babylon", cards[4].QuerySelector(".theme-card-preview")!.GetAttribute("data-theme"));
-        Assert.Equal("alexandria", cards[5].QuerySelector(".theme-card-preview")!.GetAttribute("data-theme"));
-        // Then the five alternative looks.
-        Assert.Equal(new[] { "skriptorium", "abendhafen", "ischtar", "daemmergarten", "nachtgarten" },
-            cards.Skip(6).Select(c => c.QuerySelector(".theme-card-preview")!.GetAttribute("data-theme")));
+        Assert.All(cards, c => Assert.False(string.IsNullOrWhiteSpace(c.QuerySelector(".theme-card-tagline")!.TextContent)));
+        Assert.DoesNotContain("⚠️", cut.Markup);
+        Assert.Equal("Gärten in der Dämmerung", cards[9].QuerySelector(".theme-card-label")!.TextContent);
 
-        cards[2].Click();
+        // Classic Library is the default and active; a click switches.
+        Assert.Equal("true", cards[2].GetAttribute("aria-pressed"));
+        cards[4].Click();
 
-        Assert.Equal("true", cut.FindAll(".theme-card")[2].GetAttribute("aria-pressed"));
-        Assert.Equal("false", cut.FindAll(".theme-card")[0].GetAttribute("aria-pressed"));
+        Assert.Equal("true", cut.FindAll(".theme-card")[4].GetAttribute("aria-pressed"));
+        Assert.Equal("false", cut.FindAll(".theme-card")[2].GetAttribute("aria-pressed"));
     }
 
     [Fact]
