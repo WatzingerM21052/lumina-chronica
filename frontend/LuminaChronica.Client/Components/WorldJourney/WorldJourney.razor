@@ -32,9 +32,10 @@
                     }
                     else if (IsEngraving)
                     {
-                        @* The theme's own engraving (its profile banner), in its ink. *@
+                        @* The theme's own engraving, in its ink, centred behind the
+                           book (no parallax: it must stay behind it). *@
                         <div class="journey-lamp-glow"></div>
-                        <div class="journey-object journey-engraving journey-engraving--reading" data-speed="0.05"></div>
+                        <div class="journey-object journey-engraving journey-engraving--reading"></div>
                     }
                     else
                     {
@@ -257,7 +258,7 @@
         }
         else
         {
-            <div class="journey-deco journey-engraving journey-engraving--library" aria-hidden="true" data-speed="0.04"></div>
+            <div class="journey-deco journey-engraving journey-engraving--library" aria-hidden="true"></div>
         }
         <div class="journey-wrap">
             <div class="journey-library-head">

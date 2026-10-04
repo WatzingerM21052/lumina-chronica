@@ -104,7 +104,7 @@ html[data-theme="abendhafen"] .world-banner[data-page="legal"] {
 html[data-theme="abendhafen"] {
     --j-engr-hero: url("../../images/themes/abendhafen/abendhafen-library.webp");
     --j-engr-reading: url("../../images/themes/abendhafen/abendhafen-journey-reading.webp");
-    --j-engr-library: url("../../images/themes/abendhafen/abendhafen-journey-library.webp");
+    --j-engr-library: url("../../images/themes/abendhafen/abendhafen-shelves.webp");
     --j-engr-world: url("../../images/themes/abendhafen/abendhafen-projects.webp");
     --j-engr-finale: url("../../images/themes/abendhafen/abendhafen-discover.webp");
 }

@@ -120,7 +120,7 @@ html[data-theme="ischtar"] .world-banner[data-page="legal"] {
 html[data-theme="ischtar"] {
     --j-engr-hero: url("../../images/themes/ischtar/ischtar-library.webp");
     --j-engr-reading: url("../../images/themes/ischtar/ischtar-journey-reading.webp");
-    --j-engr-library: url("../../images/themes/ischtar/ischtar-journey-library.webp");
+    --j-engr-library: url("../../images/themes/ischtar/ischtar-shelves.webp");
     --j-engr-world: url("../../images/themes/ischtar/ischtar-projects.webp");
     --j-engr-finale: url("../../images/themes/ischtar/ischtar-discover.webp");
 }
