@@ -53,4 +53,16 @@ public class ImpressumPageTests : BunitContext
 
         Assert.False(hasAuthorizeAttribute);
     }
+
+    [Fact]
+    public void Impressum_NamesTheMediaOwner_UserContentRule_AndPictureCredits()
+    {
+        var cut = Render<Impressum>();
+
+        Assert.Contains("Medieninhaber und Herausgeber", cut.Markup);
+        Assert.Contains("§ 16 ECG", cut.Markup);
+        Assert.DoesNotContain("Portfolio", cut.Markup);
+        Assert.DoesNotContain("Audio", cut.Markup);
+        Assert.EndsWith("images/themes/CREDITS.md", cut.Find("a[href*='CREDITS.md']").GetAttribute("href"));
+    }
 }
