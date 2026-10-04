@@ -413,20 +413,16 @@ public class PublicProfilePageTests : BunitContext
     }
 
     [Fact]
-    public void PublicProfile_ProjectCard_HasNoHref()
+    public void PublicProfile_ProjectCard_OpensThePublicProjectPage()
     {
-        // ProjectDetail.razor is still the owner's private editing
-        // workspace (characters/locations/timeline/lore, all owner-only
-        // controls) -- no public read-only view exists yet, so linking a
-        // profile's project card there would leak those controls to any
-        // visitor. Regression guard: the card must stay non-interactive
-        // until a public project view exists.
+        // The project's world, read-only (ProjectWorld) -- never the owner's
+        // editing workspace.
         UseRoutes(ProfileWithContentJson);
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
 
         var projectCard = cut.FindAll("a.catalog-card").Single(a => a.TextContent.Contains("Public World"));
-        Assert.False(projectCard.HasAttribute("href"));
+        Assert.Equal("projects/2/view", projectCard.GetAttribute("href"));
     }
 
     [Fact]

@@ -361,7 +361,8 @@ public class DiscoverPageTests : BunitContext
         Assert.Equal("Alles (32)", cut.Find("#discover-scope option[value='all']").TextContent.Trim());
         Assert.Equal("Projekte (30)", cut.Find("#discover-scope option[value='projects']").TextContent.Trim());
         // No public project page yet: a project opens its owner's profile.
-        Assert.Contains(cut.FindAll("a.catalog-card"), a => a.GetAttribute("href") == "u/bob");
+        // A project opens its public page (its world, read-only).
+        Assert.Contains(cut.FindAll("a.catalog-card"), a => a.GetAttribute("href") == "projects/7/view");
         // More than the preview: a way into the full list.
         Assert.Contains(cut.FindAll(".discover-show-more"), b => b.TextContent.Contains("Alle 30 Projekte anzeigen"));
     }
@@ -405,8 +406,9 @@ public class DiscoverPageTests : BunitContext
         cut.Find("#discover-scope").Change("projects");
         cut.WaitForAssertion(() => Assert.Equal(["projects 30"], GroupHeadings(cut)), TimeSpan.FromSeconds(2));
         Assert.Contains("Die Gärten", cut.Markup);
-        // Books have no sort to offer outside their own lists.
-        Assert.Empty(cut.FindAll("#discover-sort"));
+        // Projects sort too, but have no ratings to sort by.
+        var sorts = cut.FindAll("#discover-sort option").Select(o => o.GetAttribute("value")).ToList();
+        Assert.Equal(["newest", "views", "title"], sorts);
 
         cut.Find("#discover-scope").Change("users");
         cut.WaitForAssertion(() => Assert.Equal(["users 1"], GroupHeadings(cut)), TimeSpan.FromSeconds(2));
@@ -466,5 +468,40 @@ public class DiscoverPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Die Gärten", cut.Markup), TimeSpan.FromSeconds(2));
         Assert.Contains("öffentliche Welten und Geschichten", cut.Markup);
+    }
+
+    // Every sort runs both ways: "least viewed" is views + ascending.
+    [Fact]
+    public void Discover_SortAndOrder_GoToBothLists()
+    {
+        var requests = new List<string>();
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .When(r => { requests.Add(r.RequestUri!.PathAndQuery); return false; }, _ => throw new InvalidOperationException())
+            .WhenPathEndsWith("/discover/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/discover/books", BooksJson));
+
+        var cut = Render<Discover>();
+        cut.Find("#discover-sort").Change("views");
+        cut.Find("#discover-order").Click();
+
+        Assert.Contains(requests, r => r.Contains("/discover/books") && r.Contains("sort=views") && r.Contains("order=asc"));
+        Assert.Contains(requests, r => r.Contains("/discover/projects") && r.Contains("sort=views") && r.Contains("order=asc"));
+    }
+
+    // Projects have no ratings: a rating sort asks for them by date.
+    [Fact]
+    public void Discover_RatingSort_AsksProjectsByDate()
+    {
+        var requests = new List<string>();
+        UseHandler(new RoutedFakeHttpMessageHandler()
+            .When(r => { requests.Add(r.RequestUri!.PathAndQuery); return false; }, _ => throw new InvalidOperationException())
+            .WhenPathEndsWith("/discover/projects", EmptyProjectsJson)
+            .WhenPathEndsWith("/discover/books", BooksJson));
+
+        var cut = Render<Discover>();
+        cut.Find("#discover-sort").Change("rating");
+
+        Assert.Contains(requests, r => r.Contains("/discover/books") && r.Contains("sort=rating"));
+        Assert.Contains(requests, r => r.Contains("/discover/projects") && r.Contains("sort=newest"));
     }
 }

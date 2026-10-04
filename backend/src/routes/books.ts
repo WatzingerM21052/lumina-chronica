@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { countBookView } from "../services/publicProjectService";
+import { runAfterResponse } from "../utils/background";
 import type { AppEnv } from "../models/env";
 import { failure, success } from "../models/response";
 import { optionalAuth, requireAuth } from "../middleware/auth";
@@ -128,6 +130,11 @@ booksRoute.get("/:id", requireAuth, async (c) => {
     const bookId = Number(c.req.param("id"));
     const book = await getBook(c.env.DB, c.get("userId"), bookId);
     if (!book) return c.json(failure("NOT_FOUND", "Book not found."), 404);
+    // Someone else opening a book counts as a view (Discover's "most
+    // viewed"); the owner reading their own doesn't.
+    if (!book.isOwner) {
+        await runAfterResponse(c, "count book view", () => countBookView(c.env.DB, bookId));
+    }
     return c.json(success(book));
 });
 

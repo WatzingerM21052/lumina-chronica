@@ -1,3 +1,4 @@
+import { canSeeProjectPictures } from "./publicProjectService";
 // Characters -- v2.0, Phase 2 (issue #255). See documentation/Architecture.md
 // and documentation/Database.md for the schema. R2 key layout:
 // projects/{project-id}/characters/{character-id}/image.{ext}.
@@ -191,9 +192,9 @@ export async function deleteCharacter(db: D1Database, storage: R2Bucket, ownerId
 // null (not a thrown NotFoundError) -- matching projectService.ts's
 // getProjectCoverObject, so the route can treat "not your project" and "no
 // image set" identically as a plain 404 with no try/catch needed.
-export async function getCharacterImageObject(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number, characterId: number): Promise<R2ObjectBody | null> {
-    const owns = await db.prepare("SELECT id FROM projects WHERE id = ? AND owner_id = ?").bind(projectId, ownerId).first();
-    if (!owns) return null;
+export async function getCharacterImageObject(db: D1Database, storage: R2Bucket, viewerId: number | null, projectId: number, characterId: number): Promise<R2ObjectBody | null> {
+    // The owner, or anyone while the project is PUBLIC (its public page).
+    if (!(await canSeeProjectPictures(db, viewerId, projectId))) return null;
     const row = await findCharacterRow(db, projectId, characterId);
     if (!row || !row.image_url) return null;
     return storage.get(row.image_url);

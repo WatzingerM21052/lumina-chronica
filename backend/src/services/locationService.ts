@@ -1,3 +1,4 @@
+import { canSeeProjectPictures } from "./publicProjectService";
 // Locations -- v2.0, Phase 3 (issue #256). See documentation/Architecture.md
 // and documentation/Database.md for the schema. R2 key layout:
 // projects/{project-id}/locations/{location-id}/image.{ext}.
@@ -178,9 +179,9 @@ export async function deleteLocation(db: D1Database, storage: R2Bucket, ownerId:
     }
 }
 
-export async function getLocationImageObject(db: D1Database, storage: R2Bucket, ownerId: number, projectId: number, locationId: number): Promise<R2ObjectBody | null> {
-    const owns = await db.prepare("SELECT id FROM projects WHERE id = ? AND owner_id = ?").bind(projectId, ownerId).first();
-    if (!owns) return null;
+export async function getLocationImageObject(db: D1Database, storage: R2Bucket, viewerId: number | null, projectId: number, locationId: number): Promise<R2ObjectBody | null> {
+    // The owner, or anyone while the project is PUBLIC (its public page).
+    if (!(await canSeeProjectPictures(db, viewerId, projectId))) return null;
     const row = await findLocationRow(db, projectId, locationId);
     if (!row || !row.image_url) return null;
     return storage.get(row.image_url);

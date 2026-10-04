@@ -1,0 +1,328 @@
+@page "/projects/{Id:int}/view"
+@implements IDisposable
+@using LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@using Markdig
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+@inject II18nService I18n
+
+@* A PUBLIC project's world for every visitor (user decision 2026-10-04):
+   characters, places, timeline, lore and the public linked books, all
+   read-only; files and the map stay with the owner. Signed out works too.
+   An entry opens in a dialog with its full text. *@
+<PageTitle>@(_project?.Title ?? I18n.T("publicProject.defaultTitle")) — Lumina Chronica</PageTitle>
+<WorldBackdrop Kind="project" ImageUrl="@_coverObjectUrl" Pending="@(_project is null || (_project.CoverUrl is not null && _coverObjectUrl is null))" />
+
+@if (_notFound)
+{
+    <EmptyState Ornament="❦" Message="@I18n.T("publicProject.notFound")" ActionText="@I18n.T("nav.discover")" ActionHref="discover" />
+}
+else if (_project is null)
+{
+    <LoadingIndicator Text="@I18n.T("publicProject.loading")" />
+}
+else
+{
+    <a class="back-link" href="@($"u/{_project.OwnerUsername}")">@string.Format(I18n.T("publicProject.backToOwner"), _project.OwnerUsername)</a>
+
+    <div class="book-detail public-project-header">
+        <div class="book-detail-cover">
+            @if (_coverObjectUrl is not null)
+            {
+                <img src="@_coverObjectUrl" alt="@_project.Title" />
+            }
+            else
+            {
+                <div class="book-card-cover-placeholder" aria-hidden="true"><Icon Name="project" /></div>
+            }
+        </div>
+        <div class="book-detail-info">
+            <h1>@_project.Title</h1>
+            <p class="text-muted">
+                @ProjectTypeLabel.For(_project.Type, I18n) ·
+                @I18n.T("publicProject.by") <a href="@($"u/{_project.OwnerUsername}")">@_project.OwnerUsername</a>
+            </p>
+            @if (!string.IsNullOrWhiteSpace(_project.Description))
+            {
+                <p class="user-text">@_project.Description</p>
+            }
+            <ul class="public-project-counts" aria-label="@I18n.T("publicProject.countsLabel")">
+                @foreach (var (count, key) in Counts)
+                {
+                    <li><strong>@count</strong> @I18n.T(key)</li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    @if (_project.Characters.Count > 0)
+    {
+        <section class="world-surface public-project-section" aria-labelledby="pp-characters">
+            <h2 id="pp-characters">@I18n.T("projectDetail.tabCharacters")</h2>
+            <div class="entity-grid entity-grid--rows">
+                @foreach (var character in _project.Characters)
+                {
+                    <button type="button" class="entity-card entity-card--character" @onclick="() => Open(character)">
+                        <span class="entity-card-avatar">
+                            @if (Picture($"c{character.Id}") is { } url)
+                            {
+                                <img src="@url" alt="" />
+                            }
+                            else
+                            {
+                                <span class="entity-card-initials" aria-hidden="true">@CardInitials.Of(character.Name)</span>
+                            }
+                        </span>
+                        <span class="entity-card-body">
+                            <span class="entity-card-title">@character.Name</span>
+                            @if (TextExcerpt.Join(character.Age, character.Origin) is { } meta)
+                            {
+                                <span class="entity-card-meta">@meta</span>
+                            }
+                            @if (TextExcerpt.Of(character.Description ?? character.Personality ?? character.Biography) is { } excerpt)
+                            {
+                                <span class="entity-card-excerpt">@excerpt</span>
+                            }
+                        </span>
+                    </button>
+                }
+            </div>
+        </section>
+    }
+
+    @if (_project.Locations.Count > 0)
+    {
+        <section class="world-surface public-project-section" aria-labelledby="pp-places">
+            <h2 id="pp-places">@I18n.T("publicProject.places")</h2>
+            <div class="entity-grid entity-grid--media">
+                @foreach (var location in _project.Locations)
+                {
+                    <button type="button" class="entity-card entity-card--location" @onclick="() => Open(location)">
+                        <span class="entity-card-media">
+                            @if (Picture($"l{location.Id}") is { } url)
+                            {
+                                <img src="@url" alt="" />
+                            }
+                            else
+                            {
+                                <span class="entity-card-initials" aria-hidden="true">@CardInitials.Of(location.Name)</span>
+                            }
+                        </span>
+                        <span class="entity-card-body">
+                            <span class="entity-card-title">@location.Name</span>
+                            @if (TextExcerpt.Of(location.Description) is { } excerpt)
+                            {
+                                <span class="entity-card-excerpt">@excerpt</span>
+                            }
+                        </span>
+                    </button>
+                }
+            </div>
+        </section>
+    }
+
+    @if (_project.Timeline.Count > 0)
+    {
+        <section class="world-surface public-project-section" aria-labelledby="pp-timeline">
+            <h2 id="pp-timeline">@I18n.T("projectDetail.tabTimeline")</h2>
+            <ol class="public-timeline">
+                @foreach (var entry in _project.Timeline)
+                {
+                    <li>
+                        @if (!string.IsNullOrWhiteSpace(entry.Date))
+                        {
+                            <span class="public-timeline-date">@entry.Date</span>
+                        }
+                        <div class="public-timeline-body">
+                            <strong>@entry.Title</strong>
+                            @if (!string.IsNullOrWhiteSpace(entry.Description))
+                            {
+                                <p class="user-text">@entry.Description</p>
+                            }
+                        </div>
+                    </li>
+                }
+            </ol>
+        </section>
+    }
+
+    @if (_project.Lore.Count > 0)
+    {
+        <section class="world-surface public-project-section" aria-labelledby="pp-lore">
+            <h2 id="pp-lore">@I18n.T("projectDetail.tabLore")</h2>
+            <div class="entity-grid entity-grid--text">
+                @foreach (var entry in _project.Lore)
+                {
+                    <button type="button" class="entity-card entity-card--lore" @onclick="() => Open(entry)">
+                        <span class="entity-card-body">
+                            <span class="entity-card-title">@entry.Title</span>
+                            @if (TextExcerpt.FromMarkdown(entry.Content, 320) is { } excerpt)
+                            {
+                                <span class="entity-card-excerpt">@excerpt</span>
+                            }
+                        </span>
+                    </button>
+                }
+            </div>
+        </section>
+    }
+
+    @if (_project.Books.Count > 0)
+    {
+        <section class="world-surface public-project-section" aria-labelledby="pp-books">
+            <h2 id="pp-books">@I18n.T("projectDetail.tabBooks")</h2>
+            <div class="catalog-grid">
+                @foreach (var book in _project.Books)
+                {
+                    <CatalogCard Kind="book" Href="@($"library/books/{book.Id}")" Title="@book.Title" Subtitle="@book.Author"
+                                 CoverUrl="@Picture($"b{book.Id}")" ShowRating="false" />
+                }
+            </div>
+        </section>
+    }
+
+    @if (IsEmpty)
+    {
+        <EmptyState Ornament="❦" Message="@I18n.T("publicProject.empty")" />
+    }
+
+    <Dialog IsOpen="_open is not null" Size="DialogSize.Large" Title="@OpenTitle" OnClose="() => _open = null">
+        <ChildContent>
+            <div class="public-entry">
+                @switch (_open)
+                {
+                    case PublicCharacter character:
+                        @if (Picture($"c{character.Id}") is { } characterPicture)
+                        {
+                            <img class="public-entry-picture" src="@characterPicture" alt="@character.Name" />
+                        }
+                        @if (TextExcerpt.Join(character.Age, character.Origin) is { } facts)
+                        {
+                            <p class="text-muted">@facts</p>
+                        }
+                        @foreach (var (key, text) in new[] { ("characterDetail.descriptionLabel", character.Description), ("characterDetail.personalityLabel", character.Personality), ("characterDetail.biographyLabel", character.Biography) })
+                        {
+                            @if (!string.IsNullOrWhiteSpace(text))
+                            {
+                                <h3>@I18n.T(key)</h3>
+                                <p class="user-text">@text</p>
+                            }
+                        }
+                        @if (RelationshipsOf(character.Id).ToList() is { Count: > 0 } relations)
+                        {
+                            <h3>@I18n.T("characterDetail.relationshipsTitle")</h3>
+                            <ul class="public-entry-relations">
+                                @foreach (var (type, other, note) in relations)
+                                {
+                                    <li><em>@type</em> <button type="button" class="btn-link" @onclick="() => Open(other)">@other.Name</button>@(note is null ? "" : $" — {note}")</li>
+                                }
+                            </ul>
+                        }
+                        break;
+                    case PublicLocation location:
+                        @if (Picture($"l{location.Id}") is { } placePicture)
+                        {
+                            <img class="public-entry-picture public-entry-picture--wide" src="@placePicture" alt="@location.Name" />
+                        }
+                        <p class="user-text">@(location.Description ?? I18n.T("publicProject.noDescription"))</p>
+                        break;
+                    case PublicLoreEntry entry:
+                        <article class="lore-content">@((MarkupString)Markdown.ToHtml(entry.Content, MarkdownPipeline))</article>
+                        break;
+                }
+            </div>
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    // HTML in a user's Markdown stays text, never markup (same as lore).
+    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().Build();
+
+    private PublicProjectWorld? _project;
+    private bool _notFound;
+    private string? _coverObjectUrl;
+    // Character, place and book pictures by "c12" / "l3" / "b7".
+    private readonly Dictionary<string, string> _pictures = [];
+    private object? _open;
+
+    private bool IsEmpty => _project is { Characters.Count: 0, Locations.Count: 0, Timeline.Count: 0, Lore.Count: 0, Books.Count: 0 };
+
+    private IEnumerable<(int Count, string Key)> Counts => _project is null ? [] : new (int, string)[]
+    {
+        (_project.Characters.Count, "projectDetail.tabCharacters"),
+        (_project.Locations.Count, "publicProject.places"),
+        (_project.Timeline.Count, "projectDetail.statEvents"),
+        (_project.Lore.Count, "projectDetail.tabLore"),
+        (_project.Books.Count, "projectDetail.tabBooks"),
+    }.Where(c => c.Item1 > 0);
+
+    private string? OpenTitle => _open switch
+    {
+        PublicCharacter c => c.Name,
+        PublicLocation l => l.Name,
+        PublicLoreEntry e => e.Title,
+        _ => null,
+    };
+
+    private string? Picture(string key) => _pictures.TryGetValue(key, out var url) ? url : null;
+
+    private void Open(object entry) => _open = entry;
+
+    // "Schüler von Ilvane": the relationship from this character's side.
+    private IEnumerable<(string Type, PublicCharacter Other, string? Note)> RelationshipsOf(int characterId)
+    {
+        if (_project is null) yield break;
+        foreach (var r in _project.Relationships)
+        {
+            var otherId = r.CharacterAId == characterId ? r.CharacterBId : r.CharacterBId == characterId ? r.CharacterAId : (int?)null;
+            if (otherId is null) continue;
+            if (_project.Characters.FirstOrDefault(c => c.Id == otherId) is { } other)
+            {
+                yield return (r.RelationshipType, other, r.Description);
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var response = await ApiClient.GetAsync<PublicProjectWorld>($"/api/projects/{Id}/public");
+        if (response is not { Success: true, Data: not null })
+        {
+            _notFound = true;
+            return;
+        }
+        _project = response.Data;
+        StateHasChanged();
+
+        if (_project.CoverUrl is { } coverUrl && await ApiClient.GetBytesAsync(coverUrl) is { } cover)
+        {
+            _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
+            StateHasChanged();
+        }
+
+        var pictures = _project.Characters.Where(c => c.ImageUrl is not null).Select(c => ($"c{c.Id}", c.ImageUrl!))
+            .Concat(_project.Locations.Where(l => l.ImageUrl is not null).Select(l => ($"l{l.Id}", l.ImageUrl!)))
+            .Concat(_project.Books.Where(b => b.CoverUrl is not null).Select(b => ($"b{b.Id}", b.CoverUrl!)));
+        foreach (var (key, url) in pictures)
+        {
+            if (await ApiClient.GetBytesAsync(url) is { } picture)
+            {
+                _pictures[key] = await BlobUrlService.CreateObjectUrlAsync(picture.Bytes, picture.ContentType);
+                StateHasChanged();
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        foreach (var url in _pictures.Values.Append(_coverObjectUrl).OfType<string>())
+        {
+            _ = BlobUrlService.RevokeObjectUrlAsync(url);
+        }
+    }
+}

@@ -139,15 +139,10 @@ else
             <div class="catalog-grid">
                 @foreach (var project in _profile.Projects)
                 {
-                    @* No Href: ProjectDetail.razor is still the owner's private
-                       editing workspace (characters/locations/timeline/lore,
-                       all owner-only) with no public read-only view yet --
-                       linking here would leak those controls to any visitor,
-                       the same permission gap fixed for books earlier this
-                       session. Matches the current (pre-redesign) behavior,
-                       which also doesn't link this card. Public project
-                       viewing is real scope, but a separate feature/story. *@
+                    @* Opens the project's public page (ProjectWorld): its world,
+                       read-only -- never the owner's editing workspace. *@
                     <CatalogCard Kind="project"
+                                 Href="@($"projects/{project.Id}/view")"
                                  Title="@project.Title"
                                  CoverUrl="@(_coverObjectUrls.TryGetValue($"project-{project.Id}", out var coverUrl) ? coverUrl : null)"
                                  TypeLabel="@ProjectTypeLabel.For(project.Type)" />
