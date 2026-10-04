@@ -1,3 +1,4 @@
+import { WITHIN_RESTORE_WINDOW } from "./accountPurgeService";
 import { hashPassword, signJwt, verifyPassword } from "../utils/crypto";
 import { InvalidUsernameError, USERNAME_PATTERN, normalizeEmail, normalizeIdentifier } from "../utils/identity";
 
@@ -73,7 +74,7 @@ export async function registerUser(
         // two deletions in the same second would otherwise tie and fall
         // back to SQLite's unspecified order.
         const deletedMatch = await db
-            .prepare("SELECT id FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+            .prepare(`SELECT id FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL AND ${WITHIN_RESTORE_WINDOW} ORDER BY deleted_at DESC, id DESC`)
             .bind(email)
             .first();
         if (deletedMatch) throw new DeletedAccountFoundError();
@@ -161,7 +162,7 @@ export async function restoreUser(
     // same email has been deleted-and-reclaimed-and-deleted-again.
     const email = normalizeEmail(input.email);
     const deletedMatch = await db
-        .prepare("SELECT id, role_id, deleted_username FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
+        .prepare(`SELECT id, role_id, deleted_username FROM users WHERE lower(deleted_email) = ? AND deleted_at IS NOT NULL AND ${WITHIN_RESTORE_WINDOW} ORDER BY deleted_at DESC, id DESC`)
         .bind(email)
         .first<{ id: number; role_id: number; deleted_username: string | null }>();
     if (!deletedMatch) throw new NoDeletedAccountError();
