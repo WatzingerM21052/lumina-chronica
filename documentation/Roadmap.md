@@ -1616,3 +1616,11 @@ Frontend: 537/537 (34 new). Backend unchanged.
 **Loading veil (#589)**: `Pages/Home.razor` covers itself (under the sticky header) until `OnInitializedAsync` finished and `js/homeLoader.js` reports the fonts, the first screen's `<img>`s and the CSS backgrounds/masks decoded -- at most 3 s -- then fades for 650 ms. Also removes the flash of the plain Home before the journey is chosen.
 
 **Cover images switch (#592)**: `js/coverImages.js` (`data-cover-images` on `<html>`, localStorage), `Services/CoverPreferences` (static, read in Program.cs before the first render) -- off, `ApiClient.GetBytesAsync` returns null for `/api/books/{id}/cover`, so every component falls back to its placeholder, now `Components/TextCover` (title + author on a framed front). Tests touching the static switch run in a non-parallel collection. Frontend 698/698.
+
+### Later (noted 2026-10-04)
+
+- **Library shelf rework**: a new design for the 3D bookshelf (wood, light, depth, free CC0/public-domain assets), in the spirit of the theme rounds.
+- **Polishing**: a pass over every page for spacing, motion and small inconsistencies across all eleven themes.
+- **Bug hunt**: a systematic pass through every flow (upload, reader, projects, sharing, Discover, settings) in Brave and at phone width.
+- Still open from before: AI tags/genres and book import via an external API (needs an API comparison first), logo decision (#497).
+- Legal: the privacy policy, terms and imprint follow the code as of 2026-10-04; a review by someone with legal training before wider promotion is advised.
