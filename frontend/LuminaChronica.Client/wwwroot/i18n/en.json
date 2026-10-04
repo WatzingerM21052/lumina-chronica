@@ -198,7 +198,7 @@
   "settings.showCoverTextLabel": "Show title/author on shelf covers",
   "settings.showCoverTextDescription": "most real cover images already carry the title/author themselves",
   "settings.immersiveLabel": "Immersive theme",
-  "settings.immersiveDescription": "Babylon and Alexandria only: the home page as an animated journey through your world. Off: the calmer card dashboard",
+  "settings.immersiveDescription": "Home as an animated journey through your library, with your theme's pictures. On by default in Babylon and Alexandria, off elsewhere",
   "journey.readingEyebrow": "Last read · {0}",
   "journey.pagesOf": "/ {0} pages",
   "journey.percentRead": "% read",

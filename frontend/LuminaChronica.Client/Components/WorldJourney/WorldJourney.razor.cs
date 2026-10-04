@@ -22,7 +22,9 @@ public partial class WorldJourney : IAsyncDisposable
     [Inject] private II18nService I18n { get; set; } = null!;
     [Inject] private IJSRuntime JsRuntime { get; set; } = null!;
 
-    // "babylon" or "alexandria".
+    // "babylon", "alexandria", or "engraving" for every other theme: its
+    // colours from the theme tokens, its pictures the theme's own engravings
+    // (CSS variables --j-engr-*, set in app.css and the theme files).
     [Parameter, EditorRequired] public string World { get; set; } = "babylon";
     [Parameter] public DashboardResponse? Dashboard { get; set; }
     [Parameter] public List<Book>? Books { get; set; }
@@ -47,6 +49,8 @@ public partial class WorldJourney : IAsyncDisposable
     private TimelineEvent? _lastEvent;
 
     private bool IsBabylon => World == "babylon";
+    private bool IsAlexandria => World == "alexandria";
+    private bool IsEngraving => !IsBabylon && !IsAlexandria;
     private ContinueReadingItem? Featured => Dashboard?.ContinueReading.FirstOrDefault();
     private IEnumerable<ContinueReadingItem> AlsoOpen => Dashboard?.ContinueReading.Skip(1).Take(2) ?? [];
     private Project? CurrentProject => Projects?.FirstOrDefault();
@@ -120,13 +124,14 @@ public partial class WorldJourney : IAsyncDisposable
 
     private int GoalTarget => Goal?.TargetBooks is { } t and > 0 ? t : 0;
     private int GoalDone => Math.Min(Goal?.BooksFinishedThisYear ?? 0, GoalTarget);
-    private bool UsePetals => IsBabylon && GoalTarget <= MaxPetals;
+    // The rosette everywhere but Alexandria (its astrolabe ring).
+    private bool UsePetals => !IsAlexandria && GoalTarget <= MaxPetals;
 
     private string GoalHeading()
     {
         var done = GoalDone;
         var key = done == 0 ? "0" : done >= GoalTarget ? "Full" : done == 1 ? "One" : "Many";
-        var prefix = IsBabylon ? "journey.goalHeadingBabylon" : "journey.goalHeadingAlexandria";
+        var prefix = IsAlexandria ? "journey.goalHeadingAlexandria" : "journey.goalHeadingBabylon";
         return string.Format(CultureInfo.InvariantCulture, I18n.T(prefix + key), done);
     }
 
@@ -375,7 +380,7 @@ public partial class WorldJourney : IAsyncDisposable
             "<span class=\"journey-tooling\" aria-hidden=\"true\">" +
             "<i class=\"journey-corner journey-corner--tl\"></i><i class=\"journey-corner journey-corner--tr\"></i>" +
             "<i class=\"journey-corner journey-corner--bl\"></i><i class=\"journey-corner journey-corner--br\"></i>" +
-            $"<i class=\"journey-medallion journey-medallion--{(IsBabylon ? "rosette" : "fleuron")}\"></i></span>");
+            $"<i class=\"journey-medallion journey-medallion--{(IsAlexandria ? "fleuron" : "rosette")}\"></i></span>");
     };
 
     // ---------- Library and finale ----------

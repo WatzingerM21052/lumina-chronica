@@ -30,6 +30,12 @@
                     {
                         <img class="journey-object journey-object--tablet" src="images/themes/babylon/tablet_letter.webp" alt="" data-speed="0.06" />
                     }
+                    else if (IsEngraving)
+                    {
+                        @* The theme's own engraving (its profile banner), in its ink. *@
+                        <div class="journey-lamp-glow"></div>
+                        <div class="journey-object journey-engraving journey-engraving--reading" data-speed="0.05"></div>
+                    }
                     else
                     {
                         <div class="journey-lamp-glow"></div>
@@ -154,7 +160,7 @@
                                   data-tip-title="@field.Title" data-tip-main="@field.Main" data-tip-note="@field.Note"
                                   aria-label="@($"{field.Title}: {field.Main}")" />
                         }
-                        @if (UsePetals || (IsBabylon && GoalTarget == 0))
+                        @if (UsePetals || (!IsAlexandria && GoalTarget == 0))
                         {
                             <circle class="journey-rosette-core" r="46" />
                             @for (var i = 0; i < 12; i++)
@@ -166,7 +172,7 @@
                         }
                     </g>
                 </svg>
-                @if (!IsBabylon)
+                @if (IsAlexandria)
                 {
                     <img class="journey-astrolabe" src="images/themes/alexandria/astrolabe_disc.webp" alt="" />
                 }
@@ -245,9 +251,13 @@
                 <img src="images/themes/babylon/wisteria_clean.webp" alt="" />
             </div>
         }
-        else
+        else if (IsAlexandria)
         {
             <div class="journey-deco journey-niche" aria-hidden="true" data-speed="0.04"><img src="images/themes/alexandria/ptolemaic_queen.webp" alt="" /></div>
+        }
+        else
+        {
+            <div class="journey-deco journey-engraving journey-engraving--library" aria-hidden="true" data-speed="0.04"></div>
         }
         <div class="journey-wrap">
             <div class="journey-library-head">

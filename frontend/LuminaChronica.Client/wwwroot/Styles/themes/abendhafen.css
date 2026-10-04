@@ -99,3 +99,12 @@ html[data-theme="abendhafen"] .world-banner[data-page="impressum"] {
 html[data-theme="abendhafen"] .world-banner[data-page="legal"] {
     --banner-mask: url("../../images/themes/abendhafen/abendhafen-legal.webp");
 }
+
+/* ---------- The immersive Home (WorldJourney, data-world="engraving") ---------- */
+html[data-theme="abendhafen"] {
+    --j-engr-hero: url("../../images/themes/abendhafen/abendhafen-library.webp");
+    --j-engr-reading: url("../../images/themes/abendhafen/abendhafen-profile.webp");
+    --j-engr-library: url("../../images/themes/abendhafen/abendhafen-shelves.webp");
+    --j-engr-world: url("../../images/themes/abendhafen/abendhafen-projects.webp");
+    --j-engr-finale: url("../../images/themes/abendhafen/abendhafen-discover.webp");
+}

@@ -484,8 +484,9 @@ public class HomePageTests : BunitContext
         Assert.Equal(2, cut.FindAll(".journey-tome").Count);
     }
 
+    // Every other theme: the plain Home unless "Immersives Theme" is on.
     [Fact]
-    public void Home_ClassicTheme_NeverShowsTheJourney()
+    public void Home_ClassicTheme_ShowsNoJourneyWhenNeverChosen()
     {
         UseHandler(BooksHandler());
         Services.AddSingleton<BlobUrlService>();
@@ -495,5 +496,22 @@ public class HomePageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-grid--strip .book-card").Count));
         Assert.Empty(cut.FindAll(".journey"));
+    }
+
+    [Fact]
+    public void Home_ClassicTheme_WithImmersiveOn_ShowsTheEngravingJourney()
+    {
+        UseHandler(BooksHandler());
+        Services.AddSingleton<BlobUrlService>();
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.SetupModule("./js/worldPreferences.js").Setup<bool?>("getImmersive", _ => true).SetResult(true);
+
+        var cut = Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".journey[data-world=engraving]")));
+        Assert.Contains("home-hero--engraving", cut.Find(".home-hero").ClassName);
+        // No Babylon or Alexandria pictures: the theme's own engravings instead.
+        Assert.Empty(cut.FindAll(".journey img[src*='themes/babylon'], .journey img[src*='themes/alexandria']"));
+        Assert.NotEmpty(cut.FindAll(".journey-engraving--reading, .journey-engraving--library"));
     }
 }

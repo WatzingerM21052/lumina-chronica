@@ -198,7 +198,7 @@
   "settings.showCoverTextLabel": "Titel/Autor auf Regal-Cover anzeigen",
   "settings.showCoverTextDescription": "die meisten echten Cover-Bilder tragen Titel/Autor bereits selbst",
   "settings.immersiveLabel": "Immersives Theme",
-  "settings.immersiveDescription": "nur Babylon und Alexandria: die Startseite als animierte Reise durch deine Welt. Aus: das ruhigere Dashboard mit Karten",
+  "settings.immersiveDescription": "die Startseite als animierte Reise durch deine Bibliothek, mit den Bildern deines Themes. In Babylon und Alexandria von Haus aus an, sonst aus",
   "journey.readingEyebrow": "Zuletzt gelesen · {0}",
   "journey.pagesOf": "/ {0} Seiten",
   "journey.percentRead": "% gelesen",
