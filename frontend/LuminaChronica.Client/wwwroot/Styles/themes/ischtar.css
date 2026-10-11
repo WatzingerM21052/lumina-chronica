@@ -124,3 +124,16 @@ html[data-theme="ischtar"] {
     --j-engr-world: url("../../images/themes/ischtar/ischtar-projects.webp");
     --j-engr-finale: url("../../images/themes/ischtar/ischtar-discover.webp");
 }
+
+/* Bookshelf styles (spec 2026-10-11 §4): wood, brass and light of the
+   library shelf in this theme. */
+[data-theme="ischtar"] {
+    --shelf-wood: #1c1210;
+    --shelf-wood-tint: rgba(30,40,90,.22);
+    --shelf-brass-hi: #f2d583;
+    --shelf-brass: #c9a03e;
+    --shelf-brass-lo: #7f5f1a;
+    --shelf-plaque-ink: #22170a;
+    --shelf-light: rgba(140,170,255,.16);
+    --shelf-room: radial-gradient(ellipse at 50% 0%, rgba(140,170,255,.16), transparent 65%);
+}

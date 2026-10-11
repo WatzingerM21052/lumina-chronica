@@ -10,6 +10,16 @@
 */
 
 :root {
+    /* Bookshelf styles (spec 2026-10-11 §4); each theme overrides these. */
+    --shelf-wood: #3a2315;
+    --shelf-wood-tint: rgba(0, 0, 0, 0);
+    --shelf-brass-hi: #f1d995;
+    --shelf-brass: #d2ab52;
+    --shelf-brass-lo: #9c7428;
+    --shelf-plaque-ink: #2b1a08;
+    --shelf-light: rgba(255, 190, 110, 0.22);
+    --shelf-room: transparent;
+
     /* Spacing (8px grid) */
     --space-1: 8px;
     --space-2: 16px;

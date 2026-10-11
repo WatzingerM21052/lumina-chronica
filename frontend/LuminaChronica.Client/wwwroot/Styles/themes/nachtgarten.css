@@ -109,3 +109,16 @@ html[data-theme="nachtgarten"] {
     --j-engr-world: url("../../images/themes/nachtgarten/nachtgarten-projects.webp");
     --j-engr-finale: url("../../images/themes/nachtgarten/nachtgarten-discover.webp");
 }
+
+/* Bookshelf styles (spec 2026-10-11 §4): wood, brass and light of the
+   library shelf in this theme. */
+[data-theme="nachtgarten"] {
+    --shelf-wood: #2a2019;
+    --shelf-wood-tint: rgba(20,40,40,.25);
+    --shelf-brass-hi: #e3c08a;
+    --shelf-brass: #b07f50;
+    --shelf-brass-lo: #6f4b2a;
+    --shelf-plaque-ink: #1f1208;
+    --shelf-light: rgba(170,220,190,.14);
+    --shelf-room: radial-gradient(ellipse at 50% 0%, rgba(170,220,190,.14), transparent 65%);
+}

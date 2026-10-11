@@ -108,3 +108,16 @@ html[data-theme="skriptorium"] {
     --j-engr-world: url("../../images/themes/skriptorium/skriptorium-projects.webp");
     --j-engr-finale: url("../../images/themes/skriptorium/skriptorium-discover.webp");
 }
+
+/* Bookshelf styles (spec 2026-10-11 §4): wood, brass and light of the
+   library shelf in this theme. */
+[data-theme="skriptorium"] {
+    --shelf-wood: #6b4a2b;
+    --shelf-wood-tint: rgba(255,230,190,.10);
+    --shelf-brass-hi: #e9cf95;
+    --shelf-brass: #b98d48;
+    --shelf-brass-lo: #7c5a26;
+    --shelf-plaque-ink: #24170a;
+    --shelf-light: rgba(255,214,150,.26);
+    --shelf-room: transparent;
+}
