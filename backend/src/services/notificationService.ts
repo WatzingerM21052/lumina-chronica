@@ -52,14 +52,21 @@ export function buildNotificationInsert(
     targetType: string | null,
     targetId: number | null
 ): D1PreparedStatement {
+    // Unsharing and sharing again (or unfollow/follow, re-rating) used to
+    // stack identical unread notifications. A comment is new content every
+    // time, so COMMENT always notifies.
     return db
         .prepare(
             `INSERT INTO notifications (user_id, type, actor_user_id, target_type, target_id)
-             SELECT ?, ?, ?, ?, ?
-             WHERE ? != ?
-               AND NOT EXISTS (SELECT 1 FROM user_preferences WHERE user_id = ? AND type = ? AND enabled = 0)`
+             SELECT ?1, ?2, ?3, ?4, ?5
+             WHERE ?1 != ?3
+               AND NOT EXISTS (SELECT 1 FROM user_preferences WHERE user_id = ?1 AND type = ?2 AND enabled = 0)
+               AND (?2 = 'COMMENT' OR NOT EXISTS (
+                    SELECT 1 FROM notifications
+                     WHERE user_id = ?1 AND type = ?2 AND actor_user_id = ?3
+                       AND target_type IS ?4 AND target_id IS ?5 AND read_at IS NULL))`
         )
-        .bind(recipientUserId, type, actorUserId, targetType, targetId, recipientUserId, actorUserId, recipientUserId, type);
+        .bind(recipientUserId, type, actorUserId, targetType, targetId);
 }
 
 // Used by activityService.recordRatingActivity to gate the ACTIVITY_RATING
