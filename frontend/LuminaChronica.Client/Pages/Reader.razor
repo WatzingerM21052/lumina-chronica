@@ -237,6 +237,11 @@ else
     private byte[]? _epubBytes;
     private string? _initialCfi;
     private EpubProgress? _latestEpubProgress;
+    // The first EPUB location after restoring a saved position. Until the
+    // reader moves away from it nothing is saved: the same CFI lands on a
+    // different page at another width, so just opening a finished book on a
+    // phone turned its saved 100% into 82% and it stopped counting as read.
+    private string? _restoredEpubCfi;
     private byte[]? _pdfBytes;
     private int _initialPage = 1;
     private PdfProgress? _latestPdfProgress;
@@ -638,6 +643,7 @@ else
 
     private Task HandleEpubProgress(EpubProgress progress)
     {
+        if (_latestEpubProgress is null && _initialCfi is not null) _restoredEpubCfi = progress.Cfi;
         _latestEpubProgress = progress;
         return Task.CompletedTask;
     }
@@ -704,6 +710,7 @@ else
     private async Task SaveProgressAsync()
     {
         if (_book?.File is null) return;
+        if (_restoredEpubCfi is not null && _latestEpubProgress?.Cfi == _restoredEpubCfi) return;
         if (await BuildCurrentLocationAsync() is not { } location) return;
 
         var request = new SaveProgressRequest { BookId = Id, Chapter = location.Chapter, Position = location.Position, Percentage = location.Percentage };

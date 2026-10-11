@@ -235,7 +235,10 @@ export async function init(elementId, realisticElementId, bytes, initialCfi, fon
 
     // Realistic View also renders "paginated" underneath -- see modeOf.
     const rendition = setupRendition(entry, elementId, flow === "scroll" ? "scrolled" : "paginated");
-    await rendition.display(initialCfi || undefined);
+    // Queued like every page turn: "Weiter" pressed while a book was still
+    // opening reached rendition.next() before epub.js had a manager and the
+    // reader fell over ("reading 'next'"). Early clicks now wait for it.
+    await runSerialized(entry, () => rendition.display(initialCfi || undefined));
 
     if (entry.mode === "realistic") await initRealisticView(elementId);
 }
@@ -854,7 +857,15 @@ function attachRelocatedListener(entry) {
     entry.rendition.on("relocated", (location) => {
         const index = location?.start?.index ?? 0;
         const total = entry.book.spine?.length || 1;
-        const percentage = Math.max(0, Math.min(100, Math.round((index / total) * 100)));
+        // Section index alone stayed at 0% for the whole first chapter and
+        // never reached 100% (the last chapter started at (n-1)/n) -- so a
+        // finished EPUB never counted as read in the statistics. Add how far
+        // into the section the visible page ends, and the book's last page
+        // is 100%, like the last PDF page.
+        const shown = location?.end?.displayed;
+        const withinSection = shown?.total ? Math.min(1, shown.page / shown.total) : 0;
+        const raw = location?.atEnd ? 100 : ((index + withinSection) / total) * 100;
+        const percentage = Math.max(0, Math.min(100, Math.round(raw * 10) / 10));
         entry.dotNetRef.invokeMethodAsync("OnRelocated", location.start.cfi, index, percentage);
     });
 }

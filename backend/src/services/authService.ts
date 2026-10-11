@@ -1,6 +1,6 @@
 import { WITHIN_RESTORE_WINDOW } from "./accountPurgeService";
 import { hashPassword, signJwt, verifyPassword } from "../utils/crypto";
-import { InvalidUsernameError, USERNAME_PATTERN, normalizeEmail, normalizeIdentifier } from "../utils/identity";
+import { InvalidUsernameError, USERNAME_PATTERN, USERNAME_TAKEN_SQL, normalizeEmail, normalizeIdentifier } from "../utils/identity";
 
 // 7 days, no refresh-token flow this phase — see documentation/Architecture.md.
 const TOKEN_EXPIRY_SECONDS = 60 * 60 * 24 * 7;
@@ -33,8 +33,8 @@ export async function findLiveUserByIdentifier(db: D1Database, identifier: strin
     return db
         .prepare(
             `SELECT id, email, password_hash, role_id FROM users
-              WHERE (lower(email) = ?1 OR username = ?2) AND deleted_at IS NULL
-              ORDER BY (lower(email) = ?1) DESC, (email = ?2) DESC, id ASC
+              WHERE (lower(email) = ?1 OR lower(username) = lower(?2)) AND deleted_at IS NULL
+              ORDER BY (lower(email) = ?1) DESC, (email = ?2) DESC, (username = ?2) DESC, id ASC
               LIMIT 1`
         )
         .bind(normalizeEmail(normalizeIdentifier(raw)), raw)
@@ -58,7 +58,7 @@ export async function registerUser(
 
     const [emailTaken, usernameTaken] = await Promise.all([
         db.prepare("SELECT id FROM users WHERE lower(email) = ?").bind(email).first(),
-        db.prepare("SELECT id FROM users WHERE username = ?").bind(input.username).first(),
+        db.prepare(USERNAME_TAKEN_SQL).bind(input.username, 0).first(),
     ]);
     if (emailTaken) throw new EmailTakenError();
     if (usernameTaken) throw new UsernameTakenError();
@@ -172,7 +172,7 @@ export async function restoreUser(
     if (input.username !== deletedMatch.deleted_username && !USERNAME_PATTERN.test(input.username)) throw new InvalidUsernameError();
 
     const usernameTaken = await db
-        .prepare("SELECT id FROM users WHERE username = ? AND id != ?")
+        .prepare(USERNAME_TAKEN_SQL)
         .bind(input.username, deletedMatch.id)
         .first();
     if (usernameTaken) throw new UsernameTakenError();

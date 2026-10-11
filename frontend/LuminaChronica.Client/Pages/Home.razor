@@ -333,7 +333,7 @@ else
         var lead = string.Format(I18n.T("home.heroLead"), when, item.Book.Title);
         if (_featuredPages is { } pages && CurrentPage(item) is { } page && pages - page > 0)
         {
-            lead += " " + string.Format(System.Globalization.CultureInfo.InvariantCulture, I18n.T("home.heroPagesLeft"), pages - page);
+            lead += " " + string.Format(System.Globalization.CultureInfo.InvariantCulture, I18n.T(pages - page == 1 ? "home.heroPagesLeftOne" : "home.heroPagesLeft"), pages - page);
         }
         return lead;
     }

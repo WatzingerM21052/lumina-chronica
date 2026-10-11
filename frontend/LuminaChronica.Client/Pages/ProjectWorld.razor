@@ -50,7 +50,7 @@ else
             <ul class="public-project-counts" aria-label="@I18n.T("publicProject.countsLabel")">
                 @foreach (var (count, key) in Counts)
                 {
-                    <li><strong>@count</strong> @I18n.T(key)</li>
+                    <li><strong>@count</strong> @I18n.T(count == 1 ? key + "One" : key)</li>
                 }
             </ul>
         </div>
@@ -252,11 +252,11 @@ else
 
     private IEnumerable<(int Count, string Key)> Counts => _project is null ? [] : new (int, string)[]
     {
-        (_project.Characters.Count, "projectDetail.tabCharacters"),
-        (_project.Locations.Count, "publicProject.places"),
-        (_project.Timeline.Count, "projectDetail.statEvents"),
-        (_project.Lore.Count, "projectDetail.tabLore"),
-        (_project.Books.Count, "projectDetail.tabBooks"),
+        (_project.Characters.Count, "publicProject.countCharacters"),
+        (_project.Locations.Count, "publicProject.countPlaces"),
+        (_project.Timeline.Count, "publicProject.countEvents"),
+        (_project.Lore.Count, "publicProject.countLore"),
+        (_project.Books.Count, "publicProject.countBooks"),
     }.Where(c => c.Item1 > 0);
 
     private string? OpenTitle => _open switch

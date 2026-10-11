@@ -114,7 +114,7 @@ public partial class EpubReader : ComponentBase, IAsyncDisposable
             // clicking into the text) is handled by epubReader.js's own
             // per-section keydown listener instead, since a keydown inside
             // the iframe's separate document never bubbles out to here.
-            await _frameElement.FocusAsync();
+            await _frameElement.FocusAsync(preventScroll: true);
             return;
         }
 

@@ -52,7 +52,10 @@
     top: calc(100% + var(--space-1));
     right: 0;
     z-index: 50;
-    width: 22rem;
+    /* Wide enough for all five filter chips in one row; at 22rem the
+       last one ("Freigaben") sat hidden behind the sideways scroll, which a
+       mouse user never finds. Phones still scroll. */
+    width: 29rem;
     max-width: 90vw;
     max-height: 28rem;
     overflow-y: auto;

@@ -4310,9 +4310,11 @@ input[type="checkbox"].switch:disabled {
    below it WorldDashboard lays its cards out in a grid that fills the
    width (1.55fr / 1fr like the studio): continue reading + goal, the
    reading calendar and the library across, recommendations + projects. */
+/* Full-bleed heroes, banners and backdrops are 100vw wide, which counts the
+   scrollbar. Clipping only <body> still left the detail pages' backdrop
+   5px of sideways scroll on <html> with a classic scrollbar; clip both. */
+html[data-layout="world"],
 html[data-layout="world"] body {
-    /* Full-bleed heroes and banners are 100vw wide, which counts the
-       scrollbar. */
     overflow-x: clip;
 }
 

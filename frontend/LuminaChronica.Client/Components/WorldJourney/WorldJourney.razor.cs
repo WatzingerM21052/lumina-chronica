@@ -386,7 +386,7 @@ public partial class WorldJourney : IAsyncDisposable
     // ---------- Library and finale ----------
 
     private string LibraryDoorText() =>
-        string.Format(CultureInfo.InvariantCulture, I18n.T("journey.doorLibrary"), Dashboard?.Overview.TotalBooks ?? TotalBooks, Dashboard?.Overview.FinishedBooks ?? 0);
+        string.Format(CultureInfo.InvariantCulture, I18n.T((Dashboard?.Overview.TotalBooks ?? TotalBooks) == 1 ? "journey.doorLibraryOne" : "journey.doorLibrary"), Dashboard?.Overview.TotalBooks ?? TotalBooks, Dashboard?.Overview.FinishedBooks ?? 0);
 
     private string ProjectsDoorText() => Projects is { Count: > 0 } p
         ? string.Format(CultureInfo.InvariantCulture, I18n.T(p.Count == 1 ? "journey.doorProjectsOne" : "journey.doorProjects"), p.Count)
