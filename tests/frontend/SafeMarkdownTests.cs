@@ -17,12 +17,20 @@ public class SafeMarkdownTests
     [InlineData("<javascript:alert(1)>")]
     [InlineData("[x][r]\n\n[r]: javascript:alert(1)")]
     [InlineData("![x](javascript:alert(1))")]
-    public void DangerousTargetsLoseTheirTarget(string markdown)
+    public void DangerousTargetsBecomePlainText(string markdown)
     {
         var html = SafeMarkdown.ToHtml(markdown);
 
-        Assert.DoesNotContain("script:", html, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("data:", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("href=", html);
+        Assert.DoesNotContain("src=", html);
+    }
+
+    [Fact]
+    public void ADroppedLinkKeepsItsText()
+    {
+        var html = SafeMarkdown.ToHtml("Siehe [die *Karte*](javascript:alert(1)) hier.");
+
+        Assert.Contains("Siehe die Karte hier.", html);
     }
 
     [Theory]

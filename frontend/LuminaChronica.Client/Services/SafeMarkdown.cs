@@ -11,8 +11,8 @@ namespace LuminaChronica.Client.Services;
 // [x](javascript:...) still became a real href and ran on click -- in a
 // public lore entry, a shared MD book or a project file that runs in the
 // reader's session (the token lives in localStorage). Links and images may
-// only point to http(s), mailto or a relative target; anything else keeps
-// its text and loses the target.
+// only point to http(s), mailto or a relative target; anything else is
+// rendered as its plain text.
 public static partial class SafeMarkdown
 {
     // HTML in a user's Markdown stays text, never markup.
@@ -30,13 +30,19 @@ public static partial class SafeMarkdown
     {
         pipeline ??= Default;
         var document = Markdown.Parse(markdown, pipeline);
-        foreach (var link in document.Descendants<LinkInline>())
+        // Collected first: replacing nodes while walking the tree would cut
+        // the walk short.
+        var unsafeLinks = document.Descendants<LinkInline>().Where(l => !IsSafeUrl(l.Url)).ToList();
+        var unsafeAutolinks = document.Descendants<AutolinkInline>().Where(a => !a.IsEmail && !IsSafeUrl(a.Url)).ToList();
+        // Plain text, not href="#": with <base href="/"> a "#" link would
+        // navigate to the home page.
+        foreach (var link in unsafeLinks)
         {
-            if (!IsSafeUrl(link.Url)) link.Url = "#";
+            link.ReplaceBy(new LiteralInline(string.Concat(link.Descendants<LiteralInline>().Select(l => l.Content.ToString()))), copyChildren: false);
         }
-        foreach (var autolink in document.Descendants<AutolinkInline>())
+        foreach (var autolink in unsafeAutolinks)
         {
-            if (!autolink.IsEmail && !IsSafeUrl(autolink.Url)) autolink.Url = "#";
+            autolink.ReplaceBy(new LiteralInline(autolink.Url), copyChildren: false);
         }
         return document.ToHtml(pipeline);
     }
