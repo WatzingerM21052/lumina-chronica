@@ -165,4 +165,66 @@ public class LibraryShelfGroupingTests
         Assert.Contains(result, g => g.Label == "Fantasy");
         Assert.Contains(result, g => g.Label == "Krimi");
     }
+
+    private static ContinueReadingItem Recent(Book book, double pct) => new() { Book = book, Percentage = pct };
+
+    [Fact]
+    public void GroupForShelf_PutsRecentFirst_ThenGenresAlphabetically_NoGenreLast()
+    {
+        var a = MakeBook(1, "A", genre: "Sci-Fi");
+        var b = MakeBook(2, "B", genre: "fantasy");
+        var c = MakeBook(3, "C");
+        var result = LibraryShelfGrouping.GroupForShelf([a, b, c], [Recent(c, 40)], "Zuletzt gelesen", "Ohne Genre");
+
+        Assert.Equal(["Zuletzt gelesen", "fantasy", "Sci-Fi", "Ohne Genre"], result.Select(s => s.Label));
+        Assert.Equal([ShelfSectionKind.Recent, ShelfSectionKind.Genre, ShelfSectionKind.Genre, ShelfSectionKind.NoGenre], result.Select(s => s.Kind));
+        Assert.Equal(40, result[0].Progress![3]);
+        Assert.Same(c, result[3].Books.Single());
+    }
+
+    [Fact]
+    public void GroupForShelf_KeepsServerOrderInsideAShelf()
+    {
+        var books = new List<Book> { MakeBook(5, "Zeta", genre: "F"), MakeBook(2, "Alpha", genre: "F"), MakeBook(9, "Mu", genre: "F") };
+        var result = LibraryShelfGrouping.GroupForShelf(books, [], "Zuletzt gelesen", "Ohne Genre");
+
+        Assert.Equal([5, 2, 9], result.Single().Books.Select(b => b.Id));
+    }
+
+    [Fact]
+    public void GroupForShelf_MergesGenreSpellingsThatDifferOnlyInCase()
+    {
+        var books = new List<Book> { MakeBook(1, "A", genre: "Fantasy"), MakeBook(2, "B", genre: "fantasy ") };
+        var result = LibraryShelfGrouping.GroupForShelf(books, [], "Zuletzt gelesen", "Ohne Genre");
+
+        var shelf = Assert.Single(result);
+        Assert.Equal("Fantasy", shelf.Label);
+        Assert.Equal(2, shelf.Books.Count);
+    }
+
+    [Fact]
+    public void GroupForShelf_DropsRecentBooksThatTheFilterHides()
+    {
+        var shown = MakeBook(1, "Shown", genre: "F");
+        var hidden = MakeBook(2, "Hidden", genre: "F");
+        var result = LibraryShelfGrouping.GroupForShelf([shown], [Recent(hidden, 10)], "Zuletzt gelesen", "Ohne Genre");
+
+        Assert.DoesNotContain(result, s => s.Kind == ShelfSectionKind.Recent);
+    }
+
+    [Fact]
+    public void GroupForShelf_MatchesRecentById_NotByReference()
+    {
+        var listed = MakeBook(7, "Same", genre: "F");
+        var fromDashboard = MakeBook(7, "Same", genre: "F");
+        var result = LibraryShelfGrouping.GroupForShelf([listed], [Recent(fromDashboard, 55)], "Zuletzt gelesen", "Ohne Genre");
+
+        Assert.Same(listed, result[0].Books.Single());
+    }
+
+    [Fact]
+    public void GroupForShelf_EmptyLibrary_ReturnsNoShelves()
+    {
+        Assert.Empty(LibraryShelfGrouping.GroupForShelf([], [], "Zuletzt gelesen", "Ohne Genre"));
+    }
 }
