@@ -44,7 +44,9 @@
     color: var(--color-text-disabled);
 }
 
-.follow-list-dialog-avatar-placeholder-icon {
+/* ::deep: the <svg> belongs to the Icon component, which this file's
+   scoped rules don't reach -- without it the size never applied. */
+::deep .follow-list-dialog-avatar-placeholder-icon {
     width: 60%;
     height: 60%;
 }

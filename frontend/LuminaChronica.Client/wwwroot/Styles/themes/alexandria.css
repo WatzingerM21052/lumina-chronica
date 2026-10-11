@@ -216,7 +216,7 @@ html[data-theme="alexandria"] .home-hero-eyebrow--alexandria {
     font-weight: 600;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: #8f6c22;
+    color: var(--color-accent-text);
 }
 
 html[data-theme="alexandria"] .home-hero-greek {
@@ -225,7 +225,7 @@ html[data-theme="alexandria"] .home-hero-greek {
     font-family: "Cinzel", Georgia, serif;
     font-size: 0.72rem;
     letter-spacing: 0.32em;
-    color: #8f6c22;
+    color: var(--color-accent-text);
 }
 
 @media (max-width: 599.98px) {
@@ -633,7 +633,7 @@ html[data-theme="alexandria"] .world-banner-content h1 {
     color: #1d3254;
 }
 
-html[data-theme="alexandria"] .world-banner-eyebrow { color: #8f6c22; }
+html[data-theme="alexandria"] .world-banner-eyebrow { color: var(--color-accent-text); }
 html[data-theme="alexandria"] .world-banner-subtitle { color: #3b3222; }
 
 @media (max-width: 599.98px) {

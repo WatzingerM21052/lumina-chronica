@@ -153,6 +153,9 @@
 
 .profile-identity-text a {
     font-size: var(--font-size-small);
+    /* 24px-tall target instead of the 22px line box. */
+    display: inline-block;
+    padding-block: 2px;
 }
 
 .profile-avatar-preview {
@@ -170,13 +173,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--color-bg-card);
-    color: var(--color-text-disabled);
-}
-
-.profile-avatar-placeholder-icon {
-    width: 40%;
-    height: 40%;
+    background-color: color-mix(in srgb, var(--color-accent-text) 12%, var(--color-bg-card));
+    color: var(--color-accent-text);
+    font-family: var(--font-family-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1;
 }
 
 /* Separated from the change-password form above it by a hairline, inside

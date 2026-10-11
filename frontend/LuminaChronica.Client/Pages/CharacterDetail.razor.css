@@ -59,7 +59,10 @@
     margin-top: var(--space-1);
 }
 
+/* inline-block: "Schwester von" wraps as one phrase instead of leaving
+   "von" alone on the next line. */
 .relationship-type {
+    display: inline-block;
     color: var(--color-accent-text);
     font-style: italic;
     padding: 0 var(--space-1);

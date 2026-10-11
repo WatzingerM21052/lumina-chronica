@@ -26,21 +26,23 @@
     animation: toast-enter var(--motion-reveal) var(--ease-standard);
 }
 
-.toast-icon {
+/* ::deep: the <svg> belongs to the Icon component, which this file's
+   scoped rules don't reach -- without it the size never applied. */
+::deep .toast-icon {
     width: 1.1rem;
     height: 1.1rem;
     flex-shrink: 0;
 }
 
-.toast-success .toast-icon {
+.toast-success ::deep .toast-icon {
     color: var(--color-success);
 }
 
-.toast-error .toast-icon {
+.toast-error ::deep .toast-icon {
     color: var(--color-error);
 }
 
-.toast-info .toast-icon {
+.toast-info ::deep .toast-icon {
     color: var(--color-info);
 }
 

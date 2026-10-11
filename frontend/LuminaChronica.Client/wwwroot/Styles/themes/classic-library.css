@@ -24,8 +24,9 @@
        need to actually be read (rating stars, focus ring) rather than just
        decorate -- --color-gold-accent itself is ~2.6:1 against
        --color-bg-paper/-card, well under WCAG's 3:1 floor for UI
-       components. Same value as --color-primary (issue #341 a11y audit). */
-    --color-accent-text: var(--color-primary);
+       components. A step darker than --color-primary: the primary gold
+       reached only 4.1:1 on the paper page background (2026-10-11 audit). */
+    --color-accent-text: #7e5f20;
     --color-info: #3e7a93;
     --color-success: #4f7942;
     /* Genre donut (statistics): four categorical hues, CVD-checked
@@ -49,7 +50,8 @@
 
     --color-text-primary: #241a12;
     --color-text-secondary: #5c4a37;
-    --color-text-muted: #8a7660;
+    /* #8a7660 was 3.6:1 on the page, 4.0:1 on cards; now >= 4.6:1 on both. */
+    --color-text-muted: #766552;
     --color-text-disabled: #b8ac9c;
     /* Fixed light text for content sitting on --color-bg-dark (the header),
        which stays dark regardless of the light/dark mode this theme is in. */
