@@ -313,4 +313,39 @@ public class SettingsPageTests : BunitContext
         Assert.Empty(cut.FindAll("label.home-scroll-shelf-row"));
         Assert.NotEmpty(cut.FindAll("label.immersive-theme-row"));
     }
+
+    [Fact]
+    public void Settings_ShelfStyle_ClassicIsSelectedWhenNeverChosen()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+
+        var cut = Render<Settings>();
+
+        Assert.Equal(["classic", "legacy"], cut.FindAll(".shelf-style-option").Select(b => b.GetAttribute("data-value")));
+        Assert.Equal("classic", cut.Find(".shelf-style-option[aria-pressed=true]").GetAttribute("data-value"));
+    }
+
+    [Fact]
+    public void Settings_ShelfStyle_ChoosingLegacy_Persists()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+        var setHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setShelfStyle", _ => true);
+
+        var cut = Render<Settings>();
+        cut.Find(".shelf-style-option[data-value=legacy]").Click();
+
+        Assert.Equal("legacy", Assert.Single(setHandler.Invocations).Arguments[0]);
+        Assert.Equal("true", cut.Find(".shelf-style-option[data-value=legacy]").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void Settings_ShelfStyle_ShowsTheStoredChoice()
+    {
+        UseHandler(new RoutedFakeHttpMessageHandler().WhenPathEndsWith("/preferences", AllEnabledPreferencesJson));
+        JSInterop.SetupModule("./js/libraryPreferences.js").Setup<string?>("getShelfStyle", _ => true).SetResult("legacy");
+
+        var cut = Render<Settings>();
+
+        Assert.Equal("legacy", cut.Find(".shelf-style-option[aria-pressed=true]").GetAttribute("data-value"));
+    }
 }
