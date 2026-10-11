@@ -7,6 +7,7 @@
 import { NotFoundError } from "./errors";
 import { buildNotificationInsert } from "./notificationService";
 import { resolveAvatarUrl } from "./userService";
+import { LIVE_USER_ID_BY_USERNAME } from "../utils/identity";
 
 export { NotFoundError };
 export class SelfShareError extends Error {}
@@ -17,7 +18,7 @@ async function requireOwnedBook(db: D1Database, ownerId: number, bookId: number)
 }
 
 async function resolveUserIdByUsername(db: D1Database, username: string): Promise<number> {
-    const row = await db.prepare("SELECT id FROM users WHERE username = ? AND deleted_at IS NULL").bind(username).first<{ id: number }>();
+    const row = await db.prepare(`SELECT id FROM users WHERE id = ${LIVE_USER_ID_BY_USERNAME}`).bind(username, username).first<{ id: number }>();
     if (!row) throw new NotFoundError();
     return row.id;
 }
