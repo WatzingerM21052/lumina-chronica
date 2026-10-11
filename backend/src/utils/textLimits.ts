@@ -44,3 +44,10 @@ export function assertTagLimits(tags: unknown): void {
         }
     }
 }
+
+// A required text field that is missing, not a string (null, a number from
+// a hand-written request) or only whitespace. Calling .trim() on the raw
+// value used to 500 for anything but a string.
+export function isBlank(value: unknown): boolean {
+    return typeof value !== "string" || !value.trim();
+}

@@ -28,13 +28,27 @@ export function normalizeEmail(email: string): string {
 }
 
 // For the login/reset identifier and every throttle key derived from it:
-// "Foo@x.at" and "foo@x.at" must hit the same account AND the same rate
-// limit bucket (otherwise changing case skips the 60s resend cooldown).
-// Contains "@" means email, since new usernames can't (N-5).
+// "Foo@x.at" and "foo@x.at" -- and "Anna" and "anna" -- must hit the same
+// account AND the same rate limit bucket (otherwise changing case skips the
+// 60s resend cooldown or the login throttle).
 export function normalizeIdentifier(identifier: string): string {
-    const trimmed = identifier.trim();
-    return trimmed.includes("@") ? trimmed.toLowerCase() : trimmed;
+    return identifier.trim().toLowerCase();
 }
+
+// Usernames are unique and found regardless of case: "anna" can't be
+// registered next to "Anna", and /u/anna, login, sharing and following all
+// find "Anna". The unique index is case-sensitive and older rows may already
+// differ only in case, so lookups prefer the exact spelling, then the oldest
+// account -- deterministic either way.
+//
+// A subquery for "the live user with this username"; bind the username
+// twice.
+export const LIVE_USER_ID_BY_USERNAME =
+    "(SELECT id FROM users WHERE lower(username) = lower(?) AND deleted_at IS NULL ORDER BY username = ? DESC, id ASC LIMIT 1)";
+
+// Uniqueness check for a new or changed username; bind the username, then
+// the id to ignore (0 for none).
+export const USERNAME_TAKEN_SQL = "SELECT id FROM users WHERE lower(username) = lower(?) AND id != ? LIMIT 1";
 
 // Request-body guard for N-3: a non-string (object, number) used to reach
 // the services and 500 there.

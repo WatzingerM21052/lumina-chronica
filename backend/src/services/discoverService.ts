@@ -5,6 +5,7 @@
 // followers/ratings before it.
 
 import { resolveAvatarUrl } from "./userService";
+import { likeClause, likePattern } from "../utils/search";
 
 // Every sort runs either way (order); "oldest" is newest ascending, "worst
 // rated" rating ascending, "least viewed" views ascending.
@@ -54,12 +55,6 @@ export type DiscoverBooksQuery = {
     search?: string;
 };
 
-// A user's term goes into LIKE as text: escape LIKE's own wildcards so a
-// search for "100%" or "a_b" means exactly that.
-export function likePattern(search: string): string {
-    return `%${search.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
-}
-
 export type DiscoverBooksResult = {
     items: DiscoverBookSummary[];
     total: number;
@@ -79,7 +74,7 @@ export async function discoverBooks(db: D1Database, query: DiscoverBooksQuery, v
     const orderClause = bookOrderClause(query.sort, query.order ?? "desc");
     const search = query.search?.trim();
     const searchClause = search
-        ? "AND (books.title LIKE ? ESCAPE '\\' OR books.author LIKE ? ESCAPE '\\' OR books.genre LIKE ? ESCAPE '\\')"
+        ? `AND (${likeClause("books.title")} OR ${likeClause("books.author")} OR ${likeClause("books.genre")})`
         : "";
     const searchParams = search ? [likePattern(search), likePattern(search), likePattern(search)] : [];
 
@@ -153,7 +148,7 @@ const SHARES_SOMETHING =
 
 export async function searchUsers(db: D1Database, search: string, page: number, pageSize: number, origin: string): Promise<SearchUsersResult> {
     const term = search.trim();
-    const where = term ? "deleted_at IS NULL AND username LIKE ? ESCAPE '\\'" : `deleted_at IS NULL AND ${SHARES_SOMETHING}`;
+    const where = term ? `deleted_at IS NULL AND ${likeClause("username")}` : `deleted_at IS NULL AND ${SHARES_SOMETHING}`;
     const params = term ? [likePattern(term)] : [];
     const offset = (page - 1) * pageSize;
 
@@ -198,7 +193,7 @@ const PROJECT_DESCRIPTION_PREVIEW = 160;
 export async function discoverProjects(db: D1Database, search: string, page: number, pageSize: number, sort: DiscoverSort = "newest", order: DiscoverOrder = "desc"): Promise<DiscoverProjectsResult> {
     const offset = (page - 1) * pageSize;
     const term = search.trim();
-    const searchClause = term ? "AND (projects.title LIKE ? ESCAPE '\\' OR projects.description LIKE ? ESCAPE '\\' OR projects.type LIKE ? ESCAPE '\\')" : "";
+    const searchClause = term ? `AND (${likeClause("projects.title")} OR ${likeClause("projects.description")} OR ${likeClause("projects.type")})` : "";
     const searchParams = term ? [likePattern(term), likePattern(term), likePattern(term)] : [];
 
     const [rows, countRow] = await Promise.all([
