@@ -3296,6 +3296,9 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     font-size: var(--font-size-h2);
     line-height: 1;
     color: var(--color-text-disabled);
+    /* At least a 28px square target; the glyph alone was 23px wide. */
+    min-width: 28px;
+    min-height: 28px;
     padding: 0;
 }
 

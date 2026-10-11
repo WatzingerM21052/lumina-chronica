@@ -103,8 +103,12 @@
     text-align: center;
 }
 
+/* Padded to a 24px-tall target (was the 19px line box) without moving the
+   text: the padding is taken back out of the margin. */
 .app-footer-link {
-    margin-left: var(--space-2);
+    display: inline-block;
+    margin-left: calc(var(--space-2) - 4px);
+    padding: 3px 4px;
     color: var(--color-text-muted);
 }
 

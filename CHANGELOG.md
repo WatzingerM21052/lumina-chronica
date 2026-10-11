@@ -22,6 +22,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Rating stars are 28 px targets; screen readers hear "1 Stern" in the singular.
 - The account menu shows a new username or picture right after saving the profile.
 - Paginated TXT/MD books save where in the text you are instead of the page number, so a phone reopens the same place as a desktop.
+- Polish across all themes: hint text and gold accents in Classic Library, Modern Light and Alexandria reach WCAG contrast; footer links, the favourite star and the profile link are at least 24 px targets; profile avatars without a picture show the initial; placeholder and toast icons have their intended size again; a relationship phrase ("Schwester von") wraps as one; settings descriptions are full sentences.
 
 ## [4.0.0] - 2026-10-04
 

@@ -52,7 +52,9 @@
     color: var(--color-text-disabled);
 }
 
-.catalog-card-placeholder-icon {
+/* ::deep: the <svg> belongs to the Icon component, which this file's
+   scoped rules don't reach -- without it the size never applied. */
+::deep .catalog-card-placeholder-icon {
     width: 40%;
     height: 40%;
 }

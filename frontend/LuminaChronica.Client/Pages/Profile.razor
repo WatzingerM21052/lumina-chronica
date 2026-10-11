@@ -44,9 +44,8 @@ else
                         }
                         else
                         {
-                            <div class="profile-avatar-preview profile-avatar-placeholder" aria-hidden="true">
-                                <Icon Name="person" Class="profile-avatar-placeholder-icon" />
-                            </div>
+                            @* The initial, like the account menu and the public profile. *@
+                            <div class="profile-avatar-preview profile-avatar-placeholder" aria-hidden="true">@(string.IsNullOrEmpty(_profile.Username) ? "?" : _profile.Username[..1].ToUpperInvariant())</div>
                         }
                         <div class="profile-identity-text">
                             <strong>@_profile.Username</strong>

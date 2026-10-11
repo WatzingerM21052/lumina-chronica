@@ -36,13 +36,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--color-bg-card);
-    color: var(--color-text-disabled);
-}
-
-.profile-hero-portrait-icon {
-    width: 40%;
-    height: 40%;
+    background-color: color-mix(in srgb, var(--color-accent-text) 12%, var(--color-bg-card));
+    color: var(--color-accent-text);
+    font-family: var(--font-family-display);
+    font-size: 3rem;
+    font-weight: 600;
+    line-height: 1;
 }
 
 .profile-hero-body {

@@ -439,14 +439,14 @@ public class PublicProfilePageTests : BunitContext
     }
 
     [Fact]
-    public void PublicProfile_AvatarPlaceholder_UsesIconNotEmoji()
+    public void PublicProfile_AvatarPlaceholder_ShowsTheInitial()
     {
         UseRoutes(EmptyProfileJson);
 
         var cut = Render<PublicProfile>(parameters => parameters.Add(p => p.Username, "alice"));
 
         Assert.DoesNotContain("👤", cut.Markup);
-        Assert.NotEmpty(cut.FindAll(".profile-hero-portrait-placeholder svg"));
+        Assert.Equal("A", cut.Find(".profile-hero-portrait-placeholder").TextContent.Trim());
     }
 
     [Fact]
