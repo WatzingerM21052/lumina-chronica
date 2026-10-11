@@ -81,11 +81,15 @@ authRoute.post("/register", async (c) => {
     const body = await c.req.json<Record<string, unknown>>().catch(() => null);
     const validationError = accountBodyError(body);
     if (validationError) return c.json(failure("VALIDATION_ERROR", validationError), 400);
-    if (body!.confirmNewAccount !== undefined && typeof body!.confirmNewAccount !== "boolean") {
+    // The frontend's RegisterRequest has a nullable bool and serializes the
+    // unset case as `null`, so null means "not given" -- rejecting it broke
+    // every normal sign-up.
+    const rawConfirm = body!.confirmNewAccount;
+    if (rawConfirm !== undefined && rawConfirm !== null && typeof rawConfirm !== "boolean") {
         return c.json(failure("VALIDATION_ERROR", "confirmNewAccount must be a boolean."), 400);
     }
     const { username, email, password } = body as AccountBody;
-    const confirmNewAccount = body!.confirmNewAccount as boolean | undefined;
+    const confirmNewAccount = rawConfirm === true;
 
     try {
         const result = await registerUser(c.env.DB, c.env.JWT_SECRET, { username, email, password, confirmNewAccount });

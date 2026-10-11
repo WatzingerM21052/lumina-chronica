@@ -484,6 +484,15 @@ describe("auth identity rules (review N-3/N-5/N-6, 6-char minimum)", () => {
         expect((await readJson(login)).data.userId).toBe(victimId);
     });
 
+    it("registers when confirmNewAccount is null, as the frontend sends it for a normal sign-up", async () => {
+        const res = await app.request(
+            "/api/auth/register",
+            jsonRequest({ username: "nullconfirm", email: "nullconfirm@example.com", password: "correct horse", confirmNewAccount: null }),
+            env,
+        );
+        expect(res.status).toBe(201);
+    });
+
     it("answers non-string or oversized fields with 400 instead of a 500", async () => {
         const cases: [string, unknown][] = [
             ["/api/auth/login", { identifier: { a: 1 }, password: "x" }],
