@@ -7,7 +7,8 @@
 ## 1. Ziel
 
 Die Regal-Ansicht der Bibliothek (`/library`, Ansichtsschalter „Regal“) bekommt vier
-auswählbare Stile. A ist der Standard, B–D wählt man in den Einstellungen. Alle vier
+neue Stile plus das bisherige Regal als „Legacy“. A ist der Standard, B–D und Legacy wählt man
+in den Einstellungen. Alle vier
 sollen auf jedem Theme, am Desktop und am Handy (390 px) fehlerfrei und hochwertig
 aussehen, mit echten, freien Assets als Deko.
 
@@ -17,10 +18,11 @@ aussehen, mit echten, freien Assets als Deko.
 | B | Lederrücken | flaches DOM, fotorealistische Rücken | Bünde, Goldlinien, Titelschild, Schimmer, schwebende Cover-Karte |
 | C | 3D-Raum | three.js (WebGL) | echtes Licht und Schatten, Kamera folgt der Maus, Buch kommt beim Klick nach vorne |
 | D | Rotunde | CSS-3D-Ring | runde Lesehalle, drehen, Laterne am Zeiger, Buch öffnet sich als Doppelseite |
+| – | Legacy | heutiges Regal | unverändert: heutige Optik **und** heutige Gruppierung (Woche/Monat, Anfangsbuchstabe, Genre je nach Sortierung) |
 
 Nicht Teil davon: Rasteransicht, Alexandrias Schriftrollen-Ansicht, Bibel, Home-Seite.
 
-## 2. Regalinhalt (für alle Stile gleich)
+## 2. Regalinhalt (für A–D gleich; Legacy behält seine Gruppierung)
 
 - **Oberstes Fach „Zuletzt gelesen“:** die Bücher aus `GET /api/dashboard` →
   `continueReading` (schon vorhanden, mit Prozent). Nur, wenn es welche gibt.
@@ -43,7 +45,7 @@ Ein Stil bekommt nur diese Liste und rendert sie, er kennt weder API noch Filter
 - Einstellungen → Karte „Darstellung“ → neue Zeile **„Regal-Stil“** mit vier kleinen
   Vorschaukacheln (statische Bilder je Stil, wie die Theme-Vorschauen).
 - Gespeichert in `localStorage` über `libraryPreferences.js` (`lumina_shelf_style`:
-  `classic|leather|room|rotunda`), Standard `classic`. Kein Backend.
+  `classic|leather|room|rotunda|legacy`), Standard `classic`. Kein Backend.
 - Die bestehenden Regal-Optionen bleiben: Buchgröße (Zoom) gilt für A und B; C und D
   zoomen über ihre Kamera und blenden den Zoom-Schalter aus. Der Cover-Text-Schalter
   gilt für A und B.
@@ -105,8 +107,10 @@ kommen aus `ShelfBook`s bestehender Logik (Blob-URL + `CoverColorService`-Farbe)
 Cover wird ein Einband aus Farbe + Titel gezeichnet. Fortschritt in „Zuletzt gelesen“ als
 dünne Linie am Rücken.
 
-**A · Klassisch.** Weiterentwicklung des bestehenden Regals (`shelf-physics.js` bleibt
-für Hover/Touch). Neu: Theme-Tokens statt fester Farben, Messingschilder mit Fach-Namen,
+**A · Klassisch.** Neue Komponente `ClassicShelf`, abgeleitet vom bestehenden Regal
+(`shelf-physics.js` wird für Hover/Touch mitbenutzt). Das bestehende `ShelfRow`/`ShelfBook`
+bleibt unverändert als Legacy erhalten; A darf deshalb nichts an dessen CSS ändern
+(eigene Klassen `classic-shelf-*`). Neu: Theme-Tokens statt fester Farben, Messingschilder mit Fach-Namen,
 korrekte 3D-Geometrie (Cover-Fläche, Oberkante, Seitenschnitt), Reihen werden bis zum
 Rand gefüllt, Deko am Schrankrand, Kerzen-/Lichtschein aus `--shelf-light`.
 
@@ -135,6 +139,7 @@ Fokus wird dabei gefangen und zurückgegeben (wie `Dialog`).
 
 ## 7. Qualitätssicherung
 
+- **Legacy-Schutz:** die bestehenden Regal-Tests laufen unverändert weiter grün.
 - **bUnit:** `GroupForShelf` (Reihenfolge, Ohne Genre unten, Sortierung im Fach, Filter,
   Doppelvorkommen), Einstellungszeile, Stil-Umschaltung rendert die richtige Komponente,
   zugängliche Linkliste in C/D.
@@ -148,8 +153,8 @@ Fokus wird dabei gefangen und zurückgegeben (wie `Dialog`).
 
 ## 8. Phasen (je ein PR)
 
-1. Fächer-Logik `GroupForShelf` + „Zuletzt gelesen“ + Stil-Einstellung (A = heutiges Regal) + Regal-Tokens je Theme
-2. A überarbeiten (Geometrie, Schilder, Füllung, Licht)
+1. Fächer-Logik `GroupForShelf` + „Zuletzt gelesen“ + Stil-Einstellung (vorerst nur Legacy wählbar) + Regal-Tokens je Theme
+2. A `ClassicShelf` (Geometrie, Schilder, Füllung, Licht) und als Standard schalten
 3. Assets: Texturen + gerenderte Deko, `CREDITS.md`, Deko in A
 4. B Lederrücken
 5. D Rotunde
