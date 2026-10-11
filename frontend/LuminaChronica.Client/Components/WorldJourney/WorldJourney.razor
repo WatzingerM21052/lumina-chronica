@@ -65,7 +65,7 @@
                     </a>
                 </div>
                 <div class="journey-copy">
-                    <div class="journey-mark"><b>II</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.readingEyebrow"), WorldDashboard.RelativeDay(I18n, featured.LastOpened))</p></div>
+                    <div class="journey-mark"><b>@Numeral("reading")</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.readingEyebrow"), WorldDashboard.RelativeDay(I18n, featured.LastOpened))</p></div>
                     <h2 id="journey-reading-title">@featured.Book.Title</h2>
                     @if (!string.IsNullOrWhiteSpace(featured.Book.Author))
                     {
@@ -120,7 +120,7 @@
     <section class="journey-chapter journey-goal" data-amb="goal" aria-labelledby="journey-goal-title">
         <div class="journey-wrap journey-grid">
             <div class="journey-goal-copy">
-                <div class="journey-mark"><b>III</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.goalEyebrow"), DateTime.UtcNow.Year)</p></div>
+                <div class="journey-mark"><b>@Numeral("goal")</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.goalEyebrow"), DateTime.UtcNow.Year)</p></div>
                 @if (GoalTarget > 0)
                 {
                     <p class="journey-goal-number"><span>@GoalDone</span><small>@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.goalOf"), GoalTarget)</small></p>
@@ -186,7 +186,7 @@
         <div class="journey-wrap">
             <div class="journey-grid journey-sky-head">
                 <div>
-                    <div class="journey-mark"><b>IV</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.skyEyebrow"), SkyWeeks)</p></div>
+                    <div class="journey-mark"><b>@Numeral("sky")</b><span></span><p class="journey-eyebrow">@string.Format(CultureInfo.InvariantCulture, I18n.T("journey.skyEyebrow"), SkyWeeks)</p></div>
                     <h2 id="journey-sky-title">@I18n.T("journey.skyTitle")</h2>
                     <p class="journey-lede">@(_skyReadDays > 0 ? I18n.T("journey.skyLede") : I18n.T("journey.skyEmpty"))</p>
                     <div class="journey-legend">
@@ -262,7 +262,7 @@
         }
         <div class="journey-wrap">
             <div class="journey-library-head">
-                <div class="journey-mark"><b>V</b><span></span><p class="journey-eyebrow">@I18n.T("journey.libraryEyebrow")</p></div>
+                <div class="journey-mark"><b>@Numeral("library")</b><span></span><p class="journey-eyebrow">@I18n.T("journey.libraryEyebrow")</p></div>
                 <h2 id="journey-library-title">@I18n.T(IsBabylon ? "journey.libraryTitleBabylon" : "journey.libraryTitleAlexandria")</h2>
                 <div class="journey-library-stats">
                     <div><strong>@(Dashboard?.Overview.TotalBooks ?? TotalBooks)</strong><span>@I18n.T("journey.statBooks")</span></div>
@@ -323,7 +323,7 @@
 
     @* ---------- VI · Welt ---------- *@
     <section class="journey-chapter journey-world" data-amb="world" aria-labelledby="journey-world-title">
-        <div class="journey-wrap"><div class="journey-mark"><b>VI</b><span></span><p class="journey-eyebrow">@I18n.T("journey.worldEyebrow")</p></div></div>
+        <div class="journey-wrap"><div class="journey-mark"><b>@Numeral("world")</b><span></span><p class="journey-eyebrow">@I18n.T("journey.worldEyebrow")</p></div></div>
         @if (CurrentProject is { } project)
         {
             <div class="journey-world-window">

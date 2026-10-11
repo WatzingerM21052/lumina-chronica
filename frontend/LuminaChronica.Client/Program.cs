@@ -25,6 +25,7 @@ builder.Services
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("LuminaChronicaApi"));
 
 builder.Services.AddScoped<ApiClient>();
+builder.Services.AddScoped<ProfileEvents>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<II18nService, I18nService>();
 builder.Services.AddScoped<BlobUrlService>();

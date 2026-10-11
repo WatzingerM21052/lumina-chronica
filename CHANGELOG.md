@@ -16,6 +16,12 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 - Uploading a TXT or MD file suggests the title from the file name; a missing title is reported next to the button (#607).
 - Singular forms ("1 book", "1 active day"), comment times in local time, the "Shares" notification filter no longer cut off, sharing no longer offers yourself and reports a failure, detail pages no longer scroll sideways (#606).
 - Texts: a public project's hint names everything that becomes public; deleting the account no longer says "cannot be undone" next to the 90-day restore window (#606).
+- Login and sign-up show title, form and the switch link in one centred column; the footer motto is in the UI language.
+- The back link on a character, place or lore page returns to that tab of the project; someone else's book links back to Discover.
+- Home chapter numerals count only the chapters shown (no "III" first for a new reader).
+- Rating stars are 28 px targets; screen readers hear "1 Stern" in the singular.
+- The account menu shows a new username or picture right after saving the profile.
+- Paginated TXT/MD books save where in the text you are instead of the page number, so a phone reopens the same place as a desktop.
 
 ## [4.0.0] - 2026-10-04
 

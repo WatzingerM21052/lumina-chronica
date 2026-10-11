@@ -755,6 +755,7 @@
 
   "bookDetail.defaultTitle": "Book",
   "bookDetail.backLink": "← Back to Library",
+  "bookDetail.backToDiscover": "← Back to Discover",
   "bookDetail.loading": "Loading book...",
   "bookDetail.borrowedFromPrefix": "Borrowed from",
   "bookDetail.averageRatingAriaLabel": "Average rating: {0} out of 5 stars, {1} {2}",
@@ -763,7 +764,9 @@
   "bookDetail.noRatingsMessage": "No ratings yet",
   "bookDetail.rateStarsAriaLabel": "Rate this book",
   "bookDetail.removeRatingAriaLabel": "Remove your {0}-star rating",
+  "bookDetail.removeRatingAriaLabelOne": "Remove your 1-star rating",
   "bookDetail.setRatingAriaLabel": "Rate {0} stars",
+  "bookDetail.setRatingAriaLabelOne": "Rate 1 star",
   "bookDetail.genreLabel": "Genre",
   "bookDetail.languageLabel": "Language",
   "bookDetail.publisherLabel": "Publisher",

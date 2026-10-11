@@ -11,7 +11,7 @@
 <PageTitle>@(_entry?.Title ?? I18n.T("loreEntryDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 <WorldBackdrop Kind="lore" Pending="@(_entry is null)" />
 
-<a class="back-link" href="@($"projects/{ProjectId}")">@I18n.T("loreEntryDetail.backLink")</a>
+<a class="back-link" href="@($"projects/{ProjectId}?tab=lore")">@I18n.T("loreEntryDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -140,7 +140,7 @@ else
         var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/lore/{Id}");
         if (succeeded)
         {
-            NavigationManager.NavigateTo($"projects/{ProjectId}");
+            NavigationManager.NavigateTo($"projects/{ProjectId}?tab=lore");
         }
         else
         {

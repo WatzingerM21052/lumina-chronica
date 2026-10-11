@@ -1625,6 +1625,8 @@ Frontend: 537/537 (34 new). Backend unchanged.
 - #607: `ApiClient` runs every error envelope through `Services/ApiErrorText` (codes and validation patterns → `apiError.*`; code untouched; RATE_LIMITED seconds in `ApiError.RetryAfterSeconds`). Upload: title from the TXT/MD file name, error next to the button.
 Not changed (design decisions, noted): English footer slogan in the German UI, login/register alignment, back links landing on the overview tab, Home chapter numbering starting at III for new users, 13 px rating stars, the account menu keeping an old username until reload. Technical: TXT/MD book-mode position is a page number, so it means a different place on another screen width; the EPUB reader once rendered blank at 390 px (not reproducible in three runs). Testing note: a background Brave tab reports `visibilityState: hidden` and epub.js caches `requestAnimationFrame` at load, so page turns there look stuck -- reader timing is checked in Playwright.
 
+**Open bug-hunt points (follow-up)**: `.auth-page` column for Login/Register; footer motto via `journey.motto` (German now); `ProjectDetail` takes `?tab=` (character/place/lore back links and their delete redirects use it), others' books link back to Discover; `WorldJourney.Numeral()` numbers only the shown chapters; `.star-button` 28 px; static `Services/ProfileEvents` (Profile publishes, AccountMenu listens); TXT/MD paginated book mode saves a fraction (`F4`, `ConvertSavedPositionToPage` already read both), chapter mode keeps the segment number.
+
 ### Later (noted 2026-10-04)
 
 - **Library shelf rework**: a new design for the 3D bookshelf (wood, light, depth, free CC0/public-domain assets), in the spirit of the theme rounds.

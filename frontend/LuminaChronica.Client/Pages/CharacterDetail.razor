@@ -14,7 +14,7 @@
 <PageTitle>@(_character?.Name ?? I18n.T("characterDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 <WorldBackdrop Kind="character" ImageUrl="@_imageObjectUrl" Pending="@(_character is null || (_character.ImageUrl is not null && _imageObjectUrl is null))" />
 
-<a class="back-link" href="@($"projects/{ProjectId}")">@I18n.T("characterDetail.backLink")</a>
+<a class="back-link" href="@($"projects/{ProjectId}?tab=characters")">@I18n.T("characterDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -426,7 +426,7 @@ else
         var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/characters/{Id}");
         if (succeeded)
         {
-            NavigationManager.NavigateTo($"projects/{ProjectId}");
+            NavigationManager.NavigateTo($"projects/{ProjectId}?tab=characters");
         }
         else
         {

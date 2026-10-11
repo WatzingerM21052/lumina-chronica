@@ -3,6 +3,8 @@
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Services
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceProvider ServiceProvider
 @inject ApiClient ApiClient
 @inject LuminaAuthStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
@@ -401,6 +403,7 @@ else
         if (response is { Success: true, Data: not null })
         {
             _profile = response.Data;
+            ServiceProvider.GetService<ProfileEvents>()?.Publish(response.Data);
             _profileForm.CurrentPassword = string.Empty;
             return true;
         }
@@ -510,6 +513,7 @@ else
     private void OnAvatarUploaded(UserProfile profile)
     {
         _profile = profile;
+        ServiceProvider.GetService<ProfileEvents>()?.Publish(profile);
         _isAvatarDialogOpen = false;
     }
 

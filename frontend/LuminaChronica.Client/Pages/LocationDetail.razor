@@ -16,7 +16,7 @@
 <PageTitle>@(_location?.Name ?? I18n.T("locationDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 <WorldBackdrop Kind="location" ImageUrl="@_imageObjectUrl" Pending="@(_location is null || (_location.ImageUrl is not null && _imageObjectUrl is null))" />
 
-<a class="back-link" href="@($"projects/{ProjectId}")">@I18n.T("locationDetail.backLink")</a>
+<a class="back-link" href="@($"projects/{ProjectId}?tab=map")">@I18n.T("locationDetail.backLink")</a>
 
 @if (_loadErrorMessage is not null)
 {
@@ -305,7 +305,7 @@ else
         var succeeded = await ApiClient.DeleteAsync($"/api/projects/{ProjectId}/locations/{Id}");
         if (succeeded)
         {
-            NavigationManager.NavigateTo($"projects/{ProjectId}");
+            NavigationManager.NavigateTo($"projects/{ProjectId}?tab=map");
         }
         else
         {
