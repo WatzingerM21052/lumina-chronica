@@ -120,6 +120,32 @@ describe("GET /api/notifications", () => {
         expect(data.notifications).toHaveLength(1);
     });
 
+    it("does not stack a second unread notification after unshare + share or unfollow + follow", async () => {
+        const bookId = await uploadBook(tokenA);
+        await shareBook(tokenA, bookId, "bob");
+        await app.request(`/api/books/${bookId}/shares/bob`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        await shareBook(tokenA, bookId, "bob");
+        await follow(tokenB, "alice");
+        await app.request("/api/users/alice/follow", { method: "DELETE", headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        await follow(tokenB, "alice");
+
+        const bob = await listNotifications(tokenB);
+        const alice = await listNotifications(tokenA);
+        expect(bob.data.notifications.filter((n: { type: string }) => n.type === "SHARE")).toHaveLength(1);
+        expect(alice.data.notifications.filter((n: { type: string }) => n.type === "FOLLOW")).toHaveLength(1);
+    });
+
+    it("notifies again once the earlier one was read", async () => {
+        await follow(tokenB, "alice");
+        await app.request("/api/notifications/read-all", { method: "POST", headers: { Authorization: `Bearer ${tokenA}` } }, env);
+        await app.request("/api/users/alice/follow", { method: "DELETE", headers: { Authorization: `Bearer ${tokenB}` } }, env);
+        await follow(tokenB, "alice");
+
+        const { data } = await listNotifications(tokenA);
+        expect(data.notifications).toHaveLength(2);
+        expect(data.unreadCount).toBe(1);
+    });
+
     it("notifies the book owner on RATING, not the rater", async () => {
         const bookId = await uploadBook(tokenA);
         await setBookVisibility(tokenA, bookId, "PUBLIC");

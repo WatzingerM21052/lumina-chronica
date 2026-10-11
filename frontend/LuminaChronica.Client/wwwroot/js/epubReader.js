@@ -207,12 +207,35 @@ function setupRendition(entry, elementId, flow) {
     rendition.themes.fontSize(`${entry.fontSize}px`);
 
     rendition.hooks.content.register((contents) => contents.addStylesheetRules(buildContentRules(entry)));
+    attachLayoutCheck(rendition, entry, elementId);
     stripPiracyWatermarks(rendition);
     attachSwipeHandler(rendition, elementId);
     attachKeyboardHandler(rendition, elementId);
     if (entry.dotNetRef) attachRelocatedListener(entry);
 
     return rendition;
+}
+
+// Seen once at 390px: the page stayed blank because the iframe was laid out
+// 2422px wide while its columns needed 5190px -- epub.js had measured before
+// the reader font arrived. Not reproducible since, so this only watches for
+// that exact mismatch once the section's fonts are ready and re-measures,
+// at most twice per book so a layout that never settles can't loop.
+const MAX_LAYOUT_FIXES = 2;
+
+function attachLayoutCheck(rendition, entry, elementId) {
+    rendition.hooks.content.register((contents) => {
+        const doc = contents.document;
+        const check = () => {
+            const frame = doc.defaultView?.frameElement;
+            if (!frame || entry.flow !== "paginated" || (entry.layoutFixes ?? 0) >= MAX_LAYOUT_FIXES) return;
+            if (doc.documentElement.scrollWidth > frame.getBoundingClientRect().width + 1) {
+                entry.layoutFixes = (entry.layoutFixes ?? 0) + 1;
+                resizeContent(elementId);
+            }
+        };
+        if (doc.fonts?.ready) doc.fonts.ready.then(check);
+    });
 }
 
 export async function init(elementId, realisticElementId, bytes, initialCfi, fontSize, fontFamily, lineHeight, flow) {
