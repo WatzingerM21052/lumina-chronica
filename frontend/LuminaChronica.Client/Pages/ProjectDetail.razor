@@ -186,7 +186,7 @@ else
                                 <div class="book-comment-header">
                                     <strong>@comment.Username</strong>
                                     <span class="book-comment-meta">
-                                        <span class="text-muted">@comment.CreatedAt</span>
+                                        <span class="text-muted">@DisplayDate.DateTime(comment.CreatedAt)</span>
                                         @if (comment.UserId == _currentUserId)
                                         {
                                             <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)" title="@I18n.T("projectDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("projectDetail.deleteButton")</span></button>
