@@ -2,6 +2,8 @@
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @implements IDisposable
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceProvider ServiceProvider
 @inject ApiClient ApiClient
 @inject LuminaAuthStateProvider AuthStateProvider
 @inject NavigationManager Navigation
@@ -73,6 +75,7 @@
 
 @code {
     private UserProfile? _profile;
+    private ProfileEvents? _profileEvents;
     private bool _isOpen;
 
     private string Initial => string.IsNullOrEmpty(_profile?.Username) ? "?" : _profile.Username[..1].ToUpperInvariant();
@@ -80,7 +83,8 @@
     protected override async Task OnInitializedAsync()
     {
         Navigation.LocationChanged += OnLocationChanged;
-        ProfileEvents.Changed += OnProfileChanged;
+        _profileEvents = ServiceProvider.GetService<ProfileEvents>();
+        if (_profileEvents is not null) _profileEvents.Changed += OnProfileChanged;
         await LoadProfileAsync();
     }
 
@@ -127,6 +131,6 @@
     public void Dispose()
     {
         Navigation.LocationChanged -= OnLocationChanged;
-        ProfileEvents.Changed -= OnProfileChanged;
+        if (_profileEvents is not null) _profileEvents.Changed -= OnProfileChanged;
     }
 }
