@@ -101,7 +101,7 @@
             <h2>@I18n.T("home.libraryTitle")</h2>
             @if (Dashboard is not null)
             {
-                <small>@string.Format(I18n.T("home.librarySummary"), Dashboard.Overview.TotalBooks, Dashboard.Overview.TotalFavorites, Dashboard.Overview.FinishedBooks)</small>
+                <small>@string.Join(" · ", I18n.Count("home.summaryBooks", Dashboard.Overview.TotalBooks), I18n.Count("home.summaryFavorites", Dashboard.Overview.TotalFavorites), I18n.Count("home.summaryFinished", Dashboard.Overview.FinishedBooks))</small>
             }
         </header>
         @if (Books is null)

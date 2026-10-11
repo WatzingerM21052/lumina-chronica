@@ -90,7 +90,7 @@ else
                         }
                         else
                         {
-                            <text>@string.Format(I18n.T("statistics.goalRemaining"), target - _stats.Goal.BooksFinishedThisYear)</text>
+                            <text>@I18n.Count("statistics.goalRemaining", target - _stats.Goal.BooksFinishedThisYear)</text>
                         }
                     </p>
                 }
@@ -174,7 +174,7 @@ else
                         <li class="yearly-row">
                             <span class="yearly-row-year">@year.Year</span>
                             <span class="yearly-row-bar" aria-hidden="true"><span style="width: @((year.BooksFinished * 100.0 / maxBooksPerYear).ToString("F0", CultureInfo.InvariantCulture))%"></span></span>
-                            <span class="yearly-row-detail">@string.Format(I18n.T("statistics.yearlyOverviewDetail"), year.BooksFinished, year.PagesRead, year.ActiveDays)</span>
+                            <span class="yearly-row-detail">@string.Join(" · ", I18n.Count("statistics.yearlyBooks", year.BooksFinished), I18n.Count("statistics.yearlyPages", year.PagesRead), I18n.Count("statistics.yearlyDays", year.ActiveDays))</span>
                         </li>
                     }
                 </ul>
@@ -240,7 +240,7 @@ else
             var monthIndex = m.Month.Length >= 7 && int.TryParse(m.Month.AsSpan(5, 2), NumberStyles.Integer, CultureInfo.InvariantCulture, out var mm) ? mm : 0;
             var label = monthIndex is >= 1 and <= 12 && months.Length == 12 ? months[monthIndex - 1] : m.Month;
             var value = _trendShowsBooks ? m.BooksFinished : m.ActiveDays;
-            var text = string.Format(I18n.T(_trendShowsBooks ? "statistics.trendValueBooks" : "statistics.trendValueDays"), value);
+            var text = I18n.Count(_trendShowsBooks ? "statistics.trendValueBooks" : "statistics.trendValueDays", value);
             return new LineChartPoint(label, value, text);
         }).ToList();
     }

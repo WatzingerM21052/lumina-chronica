@@ -119,7 +119,7 @@ public partial class PdfReader : ComponentBase, IAsyncDisposable
             // focusable by default (a plain div), hence tabindex="0" in the
             // markup, and needs an explicit focus call since nothing else on
             // the page would give it focus on its own.
-            await _viewportElement.FocusAsync();
+            await _viewportElement.FocusAsync(preventScroll: true);
             return;
         }
 

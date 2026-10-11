@@ -464,7 +464,7 @@ else
                             <div class="book-comment-header">
                                 <strong>@comment.Username</strong>
                                 <span class="book-comment-meta">
-                                    <span class="text-muted">@comment.CreatedAt</span>
+                                    <span class="text-muted">@DisplayDate.DateTime(comment.CreatedAt)</span>
                                     @if (comment.UserId == _currentUserId)
                                     {
                                         <button type="button" class="btn btn-icon btn-icon-sm btn-icon-danger" disabled="@_commentActionInProgress.Contains(comment.Id)" @onclick="() => DeleteCommentAsync(comment.Id)" title="@I18n.T("bookDetail.deleteButton")"><Icon Name="trash" /><span class="visually-hidden">@I18n.T("bookDetail.deleteButton")</span></button>
@@ -519,6 +519,9 @@ else
     private readonly HashSet<string> _shareActionInProgress = [];
     private string _shareSearchTerm = string.Empty;
     private List<DiscoverUser>? _shareSearchResults;
+    // The owner's own name, loaded on the first share search: the user
+    // search lists everyone, and picking yourself failed without a word.
+    private string? _ownUsername;
     private ITimer? _shareSearchDebounceTimer;
 
     private bool _isLookingUpEnrichment;
@@ -930,10 +933,16 @@ else
             return;
         }
 
+        if (_ownUsername is null)
+        {
+            var me = await ApiClient.GetAsync<UserProfile>("/api/users/me");
+            _ownUsername = me is { Success: true, Data: not null } ? me.Data.Username : null;
+        }
         var response = await ApiClient.GetAsync<DiscoverUserListResponse>($"/api/discover/users?search={Uri.EscapeDataString(_shareSearchTerm)}");
-        var alreadyShared = (_shareUsers ?? []).Select(u => u.Username).ToHashSet();
+        var excluded = (_shareUsers ?? []).Select(u => u.Username).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (_ownUsername is not null) excluded.Add(_ownUsername);
         _shareSearchResults = response is { Success: true, Data: not null }
-            ? response.Data.Items.Where(u => !alreadyShared.Contains(u.Username)).ToList()
+            ? response.Data.Items.Where(u => !excluded.Contains(u.Username)).ToList()
             : [];
     }
 
@@ -942,8 +951,13 @@ else
         if (!_shareActionInProgress.Add(username)) return;
 
         var succeeded = await ApiClient.PostAsync($"/api/books/{Id}/shares", new { username });
-        if (succeeded) await LoadSharesAsync();
         _shareActionInProgress.Remove(username);
+        if (!succeeded)
+        {
+            ToastService.Show(I18n.T("bookDetail.addShareError"), ToastKind.Error);
+            return;
+        }
+        await LoadSharesAsync();
         _shareSearchResults = _shareSearchResults?.Where(u => u.Username != username).ToList();
     }
 

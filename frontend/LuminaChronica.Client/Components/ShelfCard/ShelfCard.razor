@@ -24,6 +24,6 @@
     </div>
     <div class="shelf-card-info">
         <div class="shelf-card-name">@Shelf.Name</div>
-        <div class="shelf-card-count">@string.Format(I18n.T("shelfCard.bookCount"), Shelf.BookCount)</div>
+        <div class="shelf-card-count">@I18n.Count("shelfCard.bookCount", Shelf.BookCount)</div>
     </div>
 </a>
