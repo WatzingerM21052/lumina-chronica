@@ -9,6 +9,7 @@
 
 <PageTitle>@I18n.T("register.title") — Lumina Chronica</PageTitle>
 
+<div class="auth-page">
 <h1>@I18n.T("register.title")</h1>
 
 <EditForm Model="_form" OnValidSubmit="SubmitAsync" class="auth-form">
@@ -74,7 +75,8 @@
 
 <OAuthButtons ApiBaseUrl="@(HttpClient.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty)" />
 
-<p class="text-muted">@I18n.T("register.alreadyHaveAccount") <a href="login">@I18n.T("register.loginLink")</a></p>
+<p class="text-muted auth-page-switch">@I18n.T("register.alreadyHaveAccount") <a href="login">@I18n.T("register.loginLink")</a></p>
+</div>
 
 @code {
     private readonly RegisterFormModel _form = new();

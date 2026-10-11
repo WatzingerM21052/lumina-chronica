@@ -22,7 +22,16 @@
 <PageTitle>@(_book?.Title ?? I18n.T("bookDetail.defaultTitle")) — Lumina Chronica</PageTitle>
 <WorldBackdrop Kind="book" ImageUrl="@_coverObjectUrl" Pending="@(_book is null || (_book.CoverUrl is not null && CoverPreferences.ShowImages && _coverObjectUrl is null))" />
 
-<a class="back-link" href="library">@I18n.T("bookDetail.backLink")</a>
+@* Someone else's book isn't in your library; it was most likely opened
+   from Discover. *@
+@if (_book is { IsOwner: false })
+{
+    <a class="back-link" href="discover">@I18n.T("bookDetail.backToDiscover")</a>
+}
+else
+{
+    <a class="back-link" href="library">@I18n.T("bookDetail.backLink")</a>
+}
 
 @if (_loadErrorMessage is not null)
 {
@@ -101,7 +110,7 @@ else
                                     <button type="button" class="star-button @(starValue <= (_book.MyRating ?? 0) ? "is-filled" : "")"
                                             disabled="@_isRatingInProgress"
                                             aria-pressed="@(starValue <= (_book.MyRating ?? 0) ? "true" : "false")"
-                                            aria-label="@(isCurrentRating ? string.Format(I18n.T("bookDetail.removeRatingAriaLabel"), starValue) : string.Format(I18n.T("bookDetail.setRatingAriaLabel"), starValue))"
+                                            aria-label="@I18n.Count(isCurrentRating ? "bookDetail.removeRatingAriaLabel" : "bookDetail.setRatingAriaLabel", starValue)"
                                             @onclick="() => RateBookAsync(starValue)">★</button>
                                 }
                             </div>

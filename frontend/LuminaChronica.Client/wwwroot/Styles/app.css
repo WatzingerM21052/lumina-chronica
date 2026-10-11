@@ -688,6 +688,29 @@ select:focus-visible,
     outline-offset: 1px;
 }
 
+/* Login and sign-up: title, form, providers and the "no account yet?" line
+   in one centred column. The title used to sit at the page's left edge and
+   the switch line under it, with the form floating alone in the middle. */
+.auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 24rem;
+    margin: 0 auto;
+}
+
+/* Their own "margin: auto" centring would stop them stretching. */
+.auth-page > .auth-form,
+.auth-page > .auth-divider,
+.auth-page > .auth-oauth-buttons {
+    align-self: stretch;
+    margin-inline: 0;
+}
+
+.auth-page-switch {
+    text-align: center;
+}
+
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -4187,12 +4210,20 @@ html[data-shelf-cover-text="show"] .shelf-book-cover-author {
     white-space: nowrap;
 }
 
+/* At 1rem with no padding a star was a 13px target -- hard to hit and below
+   WCAG's 24px minimum. The glyph is a little larger and the button pads it
+   out to a 28px square; the stars still sit close together. */
 .star-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 28px;
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 1.25rem;
     line-height: 1;
     color: var(--color-border);
 }

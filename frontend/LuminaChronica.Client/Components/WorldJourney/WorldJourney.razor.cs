@@ -52,6 +52,17 @@ public partial class WorldJourney : IAsyncDisposable
     private bool IsAlexandria => World == "alexandria";
     private bool IsEngraving => !IsBabylon && !IsAlexandria;
     private ContinueReadingItem? Featured => Dashboard?.ContinueReading.FirstOrDefault();
+
+    // Chapter numerals count only the chapters that are shown: without a
+    // book in progress the reading chapter is hidden and the next one used
+    // to open with "III". I is the greeting.
+    private static readonly string[] Numerals = ["I", "II", "III", "IV", "V", "VI", "VII"];
+
+    private string Numeral(string chapter)
+    {
+        string[] shown = Featured is null ? ["goal", "sky", "library", "world"] : ["reading", "goal", "sky", "library", "world"];
+        return Numerals[Array.IndexOf(shown, chapter) + 1];
+    }
     private IEnumerable<ContinueReadingItem> AlsoOpen => Dashboard?.ContinueReading.Skip(1).Take(2) ?? [];
     private Project? CurrentProject => Projects?.FirstOrDefault();
     private IEnumerable<Book> ShelfSelection => (Books ?? []).Take(ShelfBooks);

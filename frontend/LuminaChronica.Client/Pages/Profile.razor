@@ -401,6 +401,7 @@ else
         if (response is { Success: true, Data: not null })
         {
             _profile = response.Data;
+            ProfileEvents.Publish(response.Data);
             _profileForm.CurrentPassword = string.Empty;
             return true;
         }
@@ -510,6 +511,7 @@ else
     private void OnAvatarUploaded(UserProfile profile)
     {
         _profile = profile;
+        ProfileEvents.Publish(profile);
         _isAvatarDialogOpen = false;
     }
 

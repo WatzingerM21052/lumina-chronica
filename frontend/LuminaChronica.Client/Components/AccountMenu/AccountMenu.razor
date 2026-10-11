@@ -80,6 +80,7 @@
     protected override async Task OnInitializedAsync()
     {
         Navigation.LocationChanged += OnLocationChanged;
+        ProfileEvents.Changed += OnProfileChanged;
         await LoadProfileAsync();
     }
 
@@ -117,5 +118,15 @@
         InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+    private void OnProfileChanged(UserProfile profile)
+    {
+        _profile = profile;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        ProfileEvents.Changed -= OnProfileChanged;
+    }
 }

@@ -778,6 +778,11 @@ else
     [Parameter]
     public int Id { get; set; }
 
+    // ?tab=characters etc.: the character, place and lore pages link back
+    // into the tab they were opened from instead of the overview.
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? Tab { get; set; }
+
     private Project? _project;
     private string? _loadErrorMessage;
     private string? _coverObjectUrl;
@@ -888,7 +893,13 @@ else
     private string? _commentErrorMessage;
     private readonly HashSet<int> _commentActionInProgress = [];
 
-    protected override Task OnParametersSetAsync() =>
+    protected override Task OnParametersSetAsync()
+    {
+        if (Tabs.Any(t => t.Tab == Tab)) _activeTab = Tab!;
+        return LoadAllAsync();
+    }
+
+    private Task LoadAllAsync() =>
         Task.WhenAll(
             LoadProjectAsync(), LoadCharactersAsync(), LoadLocationsAsync(), LoadTimelineEventsAsync(),
             LoadLoreEntriesAsync(), LoadLinkedBooksAsync(), LoadProjectFilesAsync(), LoadCurrentUserIdAsync(), LoadCommentsAsync());

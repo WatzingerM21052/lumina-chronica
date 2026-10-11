@@ -696,9 +696,18 @@ else
 
         if (_readerMode == "book")
         {
+            // Paginated book mode saves where in the text the page is, not
+            // its number: the page count depends on the screen, so "page 5"
+            // opened a different place on a phone than on a desktop.
+            // ConvertSavedPositionToPage reads both, so older saved page
+            // numbers still work. One page per chapter keeps the number --
+            // the segments don't change with the screen.
+            var position = _pagePerChapter
+                ? _txtMdCurrentPage.ToString(CultureInfo.InvariantCulture)
+                : (_txtMdPageCount > 1 ? (double)(_txtMdCurrentPage - 1) / (_txtMdPageCount - 1) : 0).ToString("F4", CultureInfo.InvariantCulture);
             return (
                 null,
-                _txtMdCurrentPage.ToString(CultureInfo.InvariantCulture),
+                position,
                 _txtMdPageCount > 0 ? Math.Round(_txtMdCurrentPage * 100.0 / _txtMdPageCount, 1) : 0
             );
         }
