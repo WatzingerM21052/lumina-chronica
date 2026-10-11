@@ -235,7 +235,10 @@ export async function init(elementId, realisticElementId, bytes, initialCfi, fon
 
     // Realistic View also renders "paginated" underneath -- see modeOf.
     const rendition = setupRendition(entry, elementId, flow === "scroll" ? "scrolled" : "paginated");
-    await rendition.display(initialCfi || undefined);
+    // Queued like every page turn: "Weiter" pressed while a book was still
+    // opening reached rendition.next() before epub.js had a manager and the
+    // reader fell over ("reading 'next'"). Early clicks now wait for it.
+    await runSerialized(entry, () => rendition.display(initialCfi || undefined));
 
     if (entry.mode === "realistic") await initRealisticView(elementId);
 }
