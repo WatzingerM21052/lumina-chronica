@@ -21,11 +21,6 @@
 </div>
 
 <EditForm Model="_form" OnValidSubmit="SubmitAsync" class="book-form-card">
-    @if (_errorMessage is not null)
-    {
-        <p class="form-error">@_errorMessage</p>
-    }
-
     <h2 class="book-form-step-title">@I18n.T("bookUpload.stepFileTitle")</h2>
     <p class="text-muted book-form-step-hint">@I18n.T("bookUpload.stepFileHint")</p>
 
@@ -213,6 +208,12 @@
     }
     else
     {
+        @* The form is long: an error only at the top sat out of sight and the
+           button seemed to do nothing. *@
+        @if (_errorMessage is not null)
+        {
+            <p class="form-error" role="alert">@_errorMessage</p>
+        }
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">@I18n.T("bookUpload.uploadButton")</button>
         </div>
@@ -263,7 +264,10 @@
         var extension = Path.GetExtension(e.File.Name).ToLowerInvariant();
         if (extension is not (".epub" or ".pdf"))
         {
-            // TXT/MD carry no container-level metadata to extract.
+            // TXT/MD carry no container-level metadata to extract; the file
+            // name is the best title guess ("Der_Leuchtturm.txt" -> "Der
+            // Leuchtturm"). Without it the upload failed on the empty title.
+            if (string.IsNullOrWhiteSpace(_form.Title)) _form.Title = TitleFromFileName(e.File.Name);
             return;
         }
 
@@ -577,6 +581,9 @@
         return null;
     }
 
+    private static string TitleFromFileName(string fileName) =>
+        Path.GetFileNameWithoutExtension(fileName).Replace('_', ' ').Trim();
+
     private async Task SubmitAsync()
     {
         _errorMessage = null;
@@ -584,6 +591,11 @@
         if (_selectedFile is null)
         {
             _errorMessage = I18n.T("bookUpload.fileRequiredError");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_form.Title))
+        {
+            _errorMessage = I18n.T("bookUpload.titleRequiredError");
             return;
         }
         if (_fileError is not null || _coverError is not null)

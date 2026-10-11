@@ -101,7 +101,7 @@ public class RegisterPageTests : BunitContext
         cut.Find("#confirmPassword").Change("correct horse");
         cut.Find("form").Submit();
 
-        Assert.Contains("This email is already registered.", cut.Markup);
+        Assert.Contains("Diese E-Mail-Adresse ist schon registriert.", cut.Markup);
     }
 
     [Fact]
