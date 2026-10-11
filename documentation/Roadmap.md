@@ -1617,6 +1617,14 @@ Frontend: 537/537 (34 new). Backend unchanged.
 
 **Cover images switch (#592)**: `js/coverImages.js` (`data-cover-images` on `<html>`, localStorage), `Services/CoverPreferences` (static, read in Program.cs before the first render) -- off, `ApiClient.GetBytesAsync` returns null for `/api/books/{id}/cover`, so every component falls back to its placeholder, now `Components/TextCover` (title + author on a framed front). Tests touching the static switch run in a non-parallel collection. Frontend 698/698.
 
+**Bug hunt (2026-10-11, #603–#607)**: every flow with two fresh accounts in Brave plus 390 px (Playwright). Live and deployed (backend cb97732).
+- #603: `POST /auth/register` rejected `confirmNewAccount: null`, which is what the frontend's `bool?` serializes to -- every normal sign-up failed since #504; null now means "not given". Lesson: the N-3 type checks were tested with hand-written bodies, not the frontend's real one.
+- #604: `Services/SafeMarkdown` (all four Markdown renderers) turns links/images/autolinks whose scheme isn't http(s)/mailto/relative into plain text; `[x](javascript:...)` ran on click.
+- #605: `LIVE_USER_ID_BY_USERNAME` / `USERNAME_TAKEN_SQL` in `utils/identity.ts` (lower(), exact spelling first, then oldest -- deterministic if live rows already differ only in case); throttle keys lowercase usernames. `utils/search.ts` folds umlaut/accent capitals on both sides of LIKE (REPLACE chain; D1 has no ICU) with ESCAPE. Tags deduped case-insensitively per input. `isBlank` instead of `.trim()` on raw input (null/number → 400).
+- #606: EPUB percentage = (section + end page/pages)/sections, `atEnd` = 100; no save while still at the restored CFI; the first `display()` runs in the reader's op queue; reader focus with `preventScroll`. `I18n.Count` (key + "One"), `DisplayDate`, `overflow-x: clip` on `<html>` too.
+- #607: `ApiClient` runs every error envelope through `Services/ApiErrorText` (codes and validation patterns → `apiError.*`; code untouched; RATE_LIMITED seconds in `ApiError.RetryAfterSeconds`). Upload: title from the TXT/MD file name, error next to the button.
+Not changed (design decisions, noted): English footer slogan in the German UI, login/register alignment, back links landing on the overview tab, Home chapter numbering starting at III for new users, 13 px rating stars, the account menu keeping an old username until reload. Technical: TXT/MD book-mode position is a page number, so it means a different place on another screen width; the EPUB reader once rendered blank at 390 px (not reproducible in three runs). Testing note: a background Brave tab reports `visibilityState: hidden` and epub.js caches `requestAnimationFrame` at load, so page turns there look stuck -- reader timing is checked in Playwright.
+
 ### Later (noted 2026-10-04)
 
 - **Library shelf rework**: a new design for the 3D bookshelf (wood, light, depth, free CC0/public-domain assets), in the spirit of the theme rounds.

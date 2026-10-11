@@ -4,6 +4,19 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+### Fixed
+
+- Sign-up works again: since #504 every normal registration was rejected ("confirmNewAccount must be a boolean.") (#603).
+- Security: a Markdown link to `javascript:` in lore, a project file or an MD book ran in the visitor's session when clicked; such links are now plain text (#604).
+- A finished EPUB counts as read: progress reaches 100% on the last page and moves within a chapter. Opening a book on another device no longer lowers its saved progress, and pressing "Next" while a book is still opening no longer breaks the reader (#606).
+- Usernames ignore case: "anna" can't be registered next to "Anna", and sign-in, profile links, following and sharing find a name in any case (#605).
+- Search finds umlauts and accents regardless of case ("KÜSTEN" finds "Küstenmann") in the library and Discover; "%" and "_" are searched as text (#605).
+- Tags that differ only in case become one tag (#605).
+- Error messages from the server appear in the UI language instead of English (#607).
+- Uploading a TXT or MD file suggests the title from the file name; a missing title is reported next to the button (#607).
+- Singular forms ("1 book", "1 active day"), comment times in local time, the "Shares" notification filter no longer cut off, sharing no longer offers yourself and reports a failure, detail pages no longer scroll sideways (#606).
+- Texts: a public project's hint names everything that becomes public; deleting the account no longer says "cannot be undone" next to the 90-day restore window (#606).
+
 ## [4.0.0] - 2026-10-04
 
 ### Added
