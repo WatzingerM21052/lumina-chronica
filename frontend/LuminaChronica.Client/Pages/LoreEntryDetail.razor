@@ -1,6 +1,5 @@
 @page "/projects/{ProjectId:int}/lore/{Id:int}"
 @attribute [Authorize]
-@using Markdig
 @using Microsoft.AspNetCore.Authorization
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
@@ -35,7 +34,7 @@ else
     </header>
     @if (!string.IsNullOrWhiteSpace(_entry.Content))
     {
-        <article class="lore-content">@((MarkupString)Markdown.ToHtml(_entry.Content, MarkdownPipeline))</article>
+        <article class="lore-content">@((MarkupString)SafeMarkdown.ToHtml(_entry.Content))</article>
     }
     <ConfirmDialog IsOpen="_confirmingDelete" Message="@I18n.T("loreEntryDetail.deleteConfirmMessage")"
                    OnConfirm="DeleteEntryAsync" OnCancel="() => _confirmingDelete = false" />
@@ -80,7 +79,6 @@ else
     // DisableHtml matches the reader's Markdown pipeline (Reader.razor) --
     // keeps the "no untrusted user-generated HTML anywhere" premise that
     // the localStorage JWT storage decision relies on, see Architecture.md.
-    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().Build();
 
     private LoreEntry? _entry;
     private string? _loadErrorMessage;

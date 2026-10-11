@@ -4,8 +4,6 @@
 @using System.Globalization
 @using System.Text
 @using System.Text.RegularExpressions
-@using Markdig
-@using Markdig.Extensions.AutoIdentifiers
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
 @using LuminaChronica.Client.Components
@@ -216,16 +214,6 @@ else
 }
 
 @code {
-    // UseAutoIdentifiers: without it, Markdig headings get no id attribute at
-    // all, so a hand-written TOC's #kapitel-1--... links have nothing to
-    // target -- confirmed via a real MD file with such a TOC, reported live.
-    // GitHub option specifically: Markdig's *default* slug algorithm collapses
-    // "Kapitel 1 – Der..." to a single hyphen (kapitel-1-der-...), but a TOC
-    // written assuming GitHub's own preview renderer expects GitHub's algorithm
-    // (kapitel-1--der..., double hyphen from " – ") -- verified directly
-    // against the reported file's exact heading text before picking this,
-    // not assumed.
-    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().UseAutoIdentifiers(AutoIdentifierOptions.GitHub).Build();
     private static readonly TimeSpan SaveInterval = TimeSpan.FromSeconds(15);
 
     [Parameter]
@@ -420,7 +408,7 @@ else
         var text = Encoding.UTF8.GetString(fileBytes);
         if (_book.File.Format == "MD")
         {
-            _renderedMarkdown = Markdown.ToHtml(text, MarkdownPipeline);
+            _renderedMarkdown = SafeMarkdown.ToHtml(text, SafeMarkdown.WithHeadingIds);
             _mdSegments = Regex.Split(_renderedMarkdown, @"<hr\s*/?>", RegexOptions.IgnoreCase)
                 .Select(segment => segment.Trim())
                 .Where(segment => segment.Length > 0)
