@@ -1,7 +1,7 @@
 import { WITHIN_RESTORE_WINDOW } from "./accountPurgeService";
 import { roleName } from "./authService";
 import { OAUTH_NO_PASSWORD_SENTINEL, randomToken, sha256Hex, signJwt } from "../utils/crypto";
-import { normalizeEmail } from "../utils/identity";
+import { USERNAME_TAKEN_SQL, normalizeEmail } from "../utils/identity";
 import { OAuthExchangeError, type OAuthProfile, type OAuthProviderName, providerFor } from "./oauthProviders";
 
 // 7 days -- mirrors authService.ts's TOKEN_EXPIRY_SECONDS exactly, so an
@@ -164,7 +164,7 @@ async function findOrCreateUserForOAuth(db: D1Database, provider: OAuthProviderN
             // different active account -- fall back to a fresh generated one
             // in that case, same as a brand-new account would get.
             let restoredUsername = deletedMatch.deleted_username;
-            const usernameTaken = await db.prepare("SELECT id FROM users WHERE username = ? AND id != ?").bind(restoredUsername, deletedMatch.id).first();
+            const usernameTaken = await db.prepare(USERNAME_TAKEN_SQL).bind(restoredUsername, deletedMatch.id).first();
             if (usernameTaken) {
                 restoredUsername = await generateUniqueUsername(db, profile);
             }
@@ -227,7 +227,7 @@ async function generateUniqueUsername(db: D1Database, profile: OAuthProfile): Pr
 
     let candidate = base;
     for (let attempt = 0; attempt < 20; attempt++) {
-        const taken = await db.prepare("SELECT id FROM users WHERE username = ?").bind(candidate).first();
+        const taken = await db.prepare(USERNAME_TAKEN_SQL).bind(candidate, 0).first();
         if (!taken) return candidate;
         candidate = `${base}${randomToken(3)}`.slice(0, 32);
     }

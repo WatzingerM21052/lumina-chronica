@@ -4,7 +4,9 @@
 
 import { ALLOWED_COVER_EXTENSIONS, COVER_MIME_HINTS, MAX_COVER_FILE_BYTES, ValidationError, validateFile } from "./fileValidation";
 import { recordBookPublicActivity } from "./activityService";
-import { TEXT_LIMITS, assertMaxLengths, assertTagLimits } from "../utils/textLimits";
+import { TEXT_LIMITS, assertMaxLengths, assertTagLimits, isBlank } from "../utils/textLimits";
+import { LIVE_USER_ID_BY_USERNAME } from "../utils/identity";
+import { likeClause, likePattern } from "../utils/search";
 
 export class NotFoundError extends Error {}
 export { ValidationError };
@@ -179,9 +181,21 @@ export type CreateBookInput = {
     cover?: File;
 };
 
+// "Sterne, Abenteuer, sterne" used to become two tags that differ only in
+// case; the first spelling wins.
+function distinctTags(tagNames: string[]): string[] {
+    const seen = new Set<string>();
+    return tagNames.filter((name) => {
+        const key = name.toLocaleLowerCase("de");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
 async function findOrCreateTagIds(db: D1Database, tagNames: string[]): Promise<number[]> {
     const ids: number[] = [];
-    for (const name of tagNames) {
+    for (const name of distinctTags(tagNames)) {
         await db.prepare("INSERT OR IGNORE INTO tags (name) VALUES (?)").bind(name).run();
         const row = await db.prepare("SELECT id FROM tags WHERE name = ?").bind(name).first<{ id: number }>();
         if (row) ids.push(row.id);
@@ -190,7 +204,7 @@ async function findOrCreateTagIds(db: D1Database, tagNames: string[]): Promise<n
 }
 
 export async function createBook(db: D1Database, storage: R2Bucket, ownerId: number, input: CreateBookInput): Promise<BookDetail> {
-    if (!input.title.trim()) throw new ValidationError("title is required.");
+    if (isBlank(input.title)) throw new ValidationError("title is required.");
     assertMaxLengths(input, { title: TEXT_LIMITS.title, author: TEXT_LIMITS.shortText, description: TEXT_LIMITS.description, genre: TEXT_LIMITS.shortText, language: TEXT_LIMITS.code, isbn: TEXT_LIMITS.code, publisher: TEXT_LIMITS.shortText, releaseDate: TEXT_LIMITS.code });
     assertTagLimits(input.tags);
 
@@ -310,8 +324,8 @@ export async function listBooks(db: D1Database, ownerId: number, query: ListBook
         conditions.push("EXISTS (SELECT 1 FROM favorites WHERE book_id = books.id AND user_id = books.owner_id)");
     }
     if (query.search) {
-        conditions.push("(title LIKE ? OR author LIKE ?)");
-        const like = `%${query.search}%`;
+        conditions.push(`(${likeClause("title")} OR ${likeClause("author")})`);
+        const like = likePattern(query.search);
         params.push(like, like);
     }
 
@@ -474,6 +488,10 @@ export async function updateBook(db: D1Database, ownerId: number, bookId: number
     assertTagLimits(input.tags);
     if (input.visibility !== undefined && !VISIBILITY_VALUES.includes(input.visibility as (typeof VISIBILITY_VALUES)[number])) {
         throw new ValidationError(`visibility must be one of ${VISIBILITY_VALUES.join(", ")}.`);
+    }
+    if (input.title !== undefined && isBlank(input.title)) throw new ValidationError("title cannot be empty.");
+    if (input.tags !== undefined && (!Array.isArray(input.tags) || input.tags.some((tag) => typeof tag !== "string"))) {
+        throw new ValidationError("tags must be a list of strings.");
     }
 
     const sets: string[] = [];
@@ -684,14 +702,14 @@ export async function listPublicBooksByUsername(db: D1Database, username: string
                     ELSE 0
                 END AS can_read
              FROM books JOIN users ON users.id = books.owner_id
-             WHERE users.username = ? AND users.deleted_at IS NULL
+             WHERE users.id = ${LIVE_USER_ID_BY_USERNAME}
                AND (
                     books.visibility = 'PUBLIC'
                     OR (books.visibility = 'SHARED' AND (books.shared_teaser_visible = 1 OR EXISTS (SELECT 1 FROM book_shares WHERE book_id = books.id AND user_id = ?)))
                )
              ORDER BY books.created_at DESC`
         )
-        .bind(viewerId, viewerId, viewerId, viewerId, username, viewerId)
+        .bind(viewerId, viewerId, viewerId, viewerId, username, username, viewerId)
         .all<{
             id: number;
             title: string;

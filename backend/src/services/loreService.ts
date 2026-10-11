@@ -5,7 +5,7 @@
 
 import { ValidationError } from "./fileValidation";
 import { NotFoundError } from "./errors";
-import { TEXT_LIMITS, assertMaxLengths } from "../utils/textLimits";
+import { TEXT_LIMITS, assertMaxLengths, isBlank } from "../utils/textLimits";
 
 export { NotFoundError, ValidationError };
 
@@ -51,7 +51,7 @@ export type CreateLoreEntryInput = {
 
 export async function createLoreEntry(db: D1Database, ownerId: number, projectId: number, input: CreateLoreEntryInput): Promise<LoreEntrySummary> {
     await assertOwnsProject(db, ownerId, projectId);
-    if (!input.title.trim()) throw new ValidationError("title is required.");
+    if (isBlank(input.title)) throw new ValidationError("title is required.");
     assertMaxLengths(input, { title: TEXT_LIMITS.title, content: TEXT_LIMITS.loreContent });
 
     const insert = await db
@@ -87,7 +87,7 @@ export async function updateLoreEntry(db: D1Database, ownerId: number, projectId
     await assertOwnsProject(db, ownerId, projectId);
     const row = await findLoreEntryRow(db, projectId, entryId);
     if (!row) throw new NotFoundError();
-    if (input.title !== undefined && !input.title.trim()) throw new ValidationError("title cannot be empty.");
+    if (input.title !== undefined && isBlank(input.title)) throw new ValidationError("title cannot be empty.");
     assertMaxLengths(input, { title: TEXT_LIMITS.title, content: TEXT_LIMITS.loreContent });
 
     await db

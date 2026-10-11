@@ -1,6 +1,6 @@
 import type { Bindings } from "../models/env";
 import { OAUTH_NO_PASSWORD_SENTINEL, hashPassword, verifyPassword } from "../utils/crypto";
-import { InvalidUsernameError, USERNAME_PATTERN, normalizeEmail } from "../utils/identity";
+import { InvalidUsernameError, LIVE_USER_ID_BY_USERNAME, USERNAME_PATTERN, USERNAME_TAKEN_SQL, normalizeEmail } from "../utils/identity";
 import { renderEmailChangedEmail } from "../emails/emailChanged";
 import type { EmailLanguage } from "../emails/strings";
 import { formatEmailTimestamp } from "../emails/strings";
@@ -83,8 +83,8 @@ export type PublicUserProfile = {
 // /u/{username}) rather than id.
 export async function getUserByUsername(db: D1Database, username: string, origin: string): Promise<PublicUserProfile | null> {
     const row = await db
-        .prepare("SELECT id, username, avatar_url, avatar_key FROM users WHERE username = ? AND deleted_at IS NULL")
-        .bind(username)
+        .prepare(`SELECT id, username, avatar_url, avatar_key FROM users WHERE id = ${LIVE_USER_ID_BY_USERNAME}`)
+        .bind(username, username)
         .first<{ id: number; username: string; avatar_url: string | null; avatar_key: string | null }>();
 
     return row ? { id: row.id, username: row.username, avatarUrl: resolveAvatarUrl(row.avatar_url, row.avatar_key, row.username, origin) } : null;
@@ -175,7 +175,7 @@ export async function updateUserProfile(
     }
 
     if (usernameChanging) {
-        const taken = await db.prepare("SELECT id FROM users WHERE username = ? AND id != ?").bind(input.username, userId).first();
+        const taken = await db.prepare(USERNAME_TAKEN_SQL).bind(input.username, userId).first();
         if (taken) throw new UsernameTakenError();
     }
     if (emailChanging) {
@@ -275,8 +275,8 @@ export async function updateUserAvatar(db: D1Database, storage: R2Bucket, userId
 // an avatar has no concept of private/shared, it's either set or it isn't.
 export async function getUserAvatarObject(db: D1Database, storage: R2Bucket, username: string): Promise<R2ObjectBody | null> {
     const row = await db
-        .prepare("SELECT avatar_key FROM users WHERE username = ? AND deleted_at IS NULL")
-        .bind(username)
+        .prepare(`SELECT avatar_key FROM users WHERE id = ${LIVE_USER_ID_BY_USERNAME}`)
+        .bind(username, username)
         .first<{ avatar_key: string | null }>();
     if (!row || !row.avatar_key) return null;
 
