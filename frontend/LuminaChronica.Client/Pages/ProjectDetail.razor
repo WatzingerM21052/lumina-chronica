@@ -7,7 +7,6 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using LuminaChronica.Client.Components
-@using Markdig
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
 @inject ApiClient ApiClient
@@ -746,7 +745,7 @@ else
                             }
                             else if (doc.Kind == DocumentViewKind.Markdown)
                             {
-                                <article class="file-viewer-text file-viewer-markdown">@((MarkupString)Markdown.ToHtml(doc.Text, FileMarkdownPipeline))</article>
+                                <article class="file-viewer-text file-viewer-markdown">@((MarkupString)SafeMarkdown.ToHtml(doc.Text))</article>
                             }
                             else
                             {
@@ -1713,7 +1712,6 @@ else
     private sealed record ViewedDocument(ProjectFile File, DocumentViewKind Kind, byte[] Bytes, string Text);
 
     // HTML in a user's .md is shown as text, never run (same as lore entries).
-    private static readonly MarkdownPipeline FileMarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().Build();
 
     private bool _lightboxOpen;
     private int _lightboxIndex;

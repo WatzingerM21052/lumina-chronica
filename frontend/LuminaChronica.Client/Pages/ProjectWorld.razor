@@ -3,7 +3,6 @@
 @using LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
 @using LuminaChronica.Client.Services
-@using Markdig
 @inject ApiClient ApiClient
 @inject BlobUrlService BlobUrlService
 @inject II18nService I18n
@@ -229,7 +228,7 @@ else
                         <p class="user-text">@(location.Description ?? I18n.T("publicProject.noDescription"))</p>
                         break;
                     case PublicLoreEntry entry:
-                        <article class="lore-content">@((MarkupString)Markdown.ToHtml(entry.Content, MarkdownPipeline))</article>
+                        <article class="lore-content">@((MarkupString)SafeMarkdown.ToHtml(entry.Content))</article>
                         break;
                 }
             </div>
@@ -241,7 +240,6 @@ else
     [Parameter] public int Id { get; set; }
 
     // HTML in a user's Markdown stays text, never markup (same as lore).
-    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder().DisableHtml().Build();
 
     private PublicProjectWorld? _project;
     private bool _notFound;
