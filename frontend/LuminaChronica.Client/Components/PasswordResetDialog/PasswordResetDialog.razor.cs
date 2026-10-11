@@ -250,7 +250,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
 
         if (response?.Error?.Code == "RATE_LIMITED")
         {
-            _requestError = FormatRateLimitMessage(response.Error.Message);
+            _requestError = FormatRateLimitMessage(response.Error);
         }
         else if (response is not { Success: true })
         {
@@ -258,15 +258,19 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
         }
     }
 
-    private string FormatRateLimitMessage(string backendMessage)
+    private string FormatRateLimitMessage(ApiError error)
     {
-        // The backend's own message is English and seconds-based
-        // (rateLimitedResponse in routes/auth.ts: "Too many attempts. Try
-        // again in {N} seconds."). Never show that raw string in a German
-        // UI -- parse the number back out and format the app's own,
-        // localized, minutes-based copy instead.
-        var match = Regex.Match(backendMessage, @"(\d+)\s*seconds");
-        var minutes = match.Success ? Math.Max(1, (int)Math.Ceiling(int.Parse(match.Groups[1].Value) / 60.0)) : 1;
+        // The app's own minutes-based copy; the seconds come from the
+        // backend's "Try again in {N} seconds." (ApiErrorText reads them out
+        // before it localizes the message, the regex covers a client
+        // without i18n).
+        var seconds = error.RetryAfterSeconds;
+        if (seconds is null)
+        {
+            var match = Regex.Match(error.Message, @"(\d+)\s*seconds");
+            if (match.Success) seconds = int.Parse(match.Groups[1].Value);
+        }
+        var minutes = seconds is { } s ? Math.Max(1, (int)Math.Ceiling(s / 60.0)) : 1;
         return string.Format(I18n.T("passwordReset.rateLimited"), minutes);
     }
 
@@ -364,7 +368,7 @@ public partial class PasswordResetDialog : ComponentBase, IAsyncDisposable
             // The generous per-(ip,identifier) cap meant to survive normal
             // typing (§3.5) -- not the row-level attempt cap. Surface as a
             // transient request error, not a code-state change.
-            _requestError = FormatRateLimitMessage(response.Error.Message);
+            _requestError = FormatRateLimitMessage(response.Error);
             _codeState = CodeCheckState.Idle;
             _lastCheckedCode = string.Empty; // the de-dup guard only protects real server verdicts -- a retry of the same digits must still check (review M-2)
             return;

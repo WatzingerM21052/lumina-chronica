@@ -320,7 +320,7 @@ public class ProfilePageTests : BunitContext
         cut.Find("#confirmDeleteAccount").Click();
         cut.Find("#deleteAccountButton").Click();
 
-        Assert.Contains("Current password is incorrect.", cut.Markup);
+        Assert.Contains("Das aktuelle Passwort stimmt nicht.", cut.Markup);
     }
 
     [Fact]
@@ -502,7 +502,7 @@ public class ProfilePageTests : BunitContext
         var unlinkButton = cut.FindAll(".linked-account-row button").First(b => b.TextContent == "Entfernen");
         unlinkButton.Click();
 
-        Assert.Contains("Du kannst dein letztes Anmeldeverfahren nicht entfernen.", cut.Markup);
+        Assert.Contains("Du brauchst mindestens eine Anmeldemöglichkeit: Setz zuerst ein Passwort.", cut.Markup);
         Assert.Contains("form-error", cut.Markup);
     }
 

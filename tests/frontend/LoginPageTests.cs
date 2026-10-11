@@ -59,7 +59,8 @@ public class LoginPageTests : BunitContext
         cut.Find("#password").Change("wrong password");
         cut.Find("form").Submit();
 
-        Assert.Contains("Username/email or password is incorrect.", cut.Markup);
+        // The backend's English text arrives in the UI language (ApiErrorText).
+        Assert.Contains("Benutzername/E-Mail oder Passwort stimmt nicht.", cut.Markup);
     }
 
     [Fact]

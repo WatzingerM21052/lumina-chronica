@@ -6,13 +6,22 @@ namespace LuminaChronica.Client.Services;
 // Thin wrapper around HttpClient for calls to the backend API.
 // HttpClient.BaseAddress is configured in Program.cs from appsettings.json
 // (ApiBaseUrl), so this class only knows about relative paths.
-public class ApiClient(HttpClient httpClient)
+//
+// With i18n (always, via DI) every error message is turned into the UI
+// language's text by ApiErrorText; the code stays as the backend sent it.
+public class ApiClient(HttpClient httpClient, II18nService? i18n = null)
 {
+    private ApiResponse<T>? Localized<T>(ApiResponse<T>? response)
+    {
+        if (i18n is not null) ApiErrorText.Localize(response?.Error, i18n);
+        return response;
+    }
+
     public async Task<ApiResponse<T>?> GetAsync<T>(string relativeUrl, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await httpClient.GetFromJsonAsync<ApiResponse<T>>(relativeUrl, cancellationToken);
+            return Localized(await httpClient.GetFromJsonAsync<ApiResponse<T>>(relativeUrl, cancellationToken));
         }
         catch (HttpRequestException ex)
         {
@@ -25,17 +34,17 @@ public class ApiClient(HttpClient httpClient)
             // caught live while wiring up BookDetail's ErrorMessage/retry
             // for exactly this failure path). A friendly message per
             // status code, or a generic fallback, replaces it.
-            var message = ex.StatusCode switch
+            var (code, message) = ex.StatusCode switch
             {
-                System.Net.HttpStatusCode.NotFound => "Nicht gefunden.",
-                System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "Keine Berechtigung.",
-                _ => "Verbindung zum Server fehlgeschlagen. Bitte versuche es erneut.",
+                System.Net.HttpStatusCode.NotFound => ("NOT_FOUND", "Nicht gefunden."),
+                System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => ("FORBIDDEN", "Keine Berechtigung."),
+                _ => ("NETWORK_ERROR", "Verbindung zum Server fehlgeschlagen. Bitte versuche es erneut."),
             };
-            return new ApiResponse<T>
+            return Localized(new ApiResponse<T>
             {
                 Success = false,
-                Error = new ApiError { Code = "NETWORK_ERROR", Message = message }
-            };
+                Error = new ApiError { Code = code, Message = message }
+            });
         }
     }
 
@@ -48,15 +57,15 @@ public class ApiClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.PostAsJsonAsync(relativeUrl, body, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+            return Localized(await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken));
         }
         catch (HttpRequestException ex)
         {
-            return new ApiResponse<TResponse>
+            return Localized(new ApiResponse<TResponse>
             {
                 Success = false,
                 Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
-            };
+            });
         }
     }
 
@@ -66,15 +75,15 @@ public class ApiClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.PutAsJsonAsync(relativeUrl, body, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+            return Localized(await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken));
         }
         catch (HttpRequestException ex)
         {
-            return new ApiResponse<TResponse>
+            return Localized(new ApiResponse<TResponse>
             {
                 Success = false,
                 Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
-            };
+            });
         }
     }
 
@@ -89,15 +98,15 @@ public class ApiClient(HttpClient httpClient)
         {
             var request = new HttpRequestMessage(HttpMethod.Delete, relativeUrl) { Content = JsonContent.Create(body) };
             var response = await httpClient.SendAsync(request, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+            return Localized(await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken));
         }
         catch (HttpRequestException ex)
         {
-            return new ApiResponse<TResponse>
+            return Localized(new ApiResponse<TResponse>
             {
                 Success = false,
                 Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
-            };
+            });
         }
     }
 
@@ -156,15 +165,15 @@ public class ApiClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.PostAsync(relativeUrl, content, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+            return Localized(await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken));
         }
         catch (HttpRequestException ex)
         {
-            return new ApiResponse<TResponse>
+            return Localized(new ApiResponse<TResponse>
             {
                 Success = false,
                 Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
-            };
+            });
         }
     }
 
@@ -176,15 +185,15 @@ public class ApiClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.PutAsync(relativeUrl, content, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+            return Localized(await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken));
         }
         catch (HttpRequestException ex)
         {
-            return new ApiResponse<TResponse>
+            return Localized(new ApiResponse<TResponse>
             {
                 Success = false,
                 Error = new ApiError { Code = "NETWORK_ERROR", Message = ex.Message }
-            };
+            });
         }
     }
 

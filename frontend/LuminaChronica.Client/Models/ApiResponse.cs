@@ -22,4 +22,9 @@ public class ApiError
 
     [JsonPropertyName("message")]
     public string Message { get; set; } = string.Empty;
+
+    // RATE_LIMITED only: the wait the backend asked for, read before the
+    // message is localized (ApiErrorText) -- callers format their own copy.
+    [JsonIgnore]
+    public int? RetryAfterSeconds { get; set; }
 }

@@ -702,7 +702,7 @@ public class ReaderPageTests : BunitContext
 
         var cut = Render<Reader>(parameters => parameters.Add(p => p.Id, 1));
 
-        Assert.Contains("Buch nicht gefunden.", cut.Markup);
+        Assert.Contains("Nicht gefunden.", cut.Markup);
     }
 
     [Fact]
