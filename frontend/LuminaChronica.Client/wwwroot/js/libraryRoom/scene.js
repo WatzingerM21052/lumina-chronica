@@ -3,6 +3,8 @@ import { chooseQuality, watchFps } from "./quality.js";
 import { readTheme } from "./theme.js";
 import { createAssets } from "./assets.js";
 import { buildRotunda } from "./rotunda.js";
+import { buildCase, caseMaterials, setSpineTextures } from "./shelf.js";
+import { attachPicking } from "./pick.js";
 
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -34,6 +36,7 @@ export async function createScene(container, dotNet, data) {
         onFrame: (fn) => { frameHooks.add(fn); return () => frameHooks.delete(fn); },
         // Something changed: render now, and at full rate for `ms`.
         wake: (ms = 0) => { room.busyUntil = Math.max(room.busyUntil, performance.now() + ms); schedule(); },
+        addCleanup: (fn) => listeners.push(fn),
         on: (target, type, fn, options) => {
             target.addEventListener(type, fn, options);
             listeners.push(() => target.removeEventListener(type, fn, options));
@@ -49,6 +52,32 @@ export async function createScene(container, dotNet, data) {
 
     room.architecture = await buildRotunda(room, data);
     scene.add(room.architecture.group);
+
+    // The bookcases; spine textures only near the camera.
+    room.materials = await caseMaterials(room);
+    const buildCases = async (d) => {
+        room.cases = await Promise.all(d.cases.map((c) => buildCase(room, c, room.materials)));
+        room.cases.forEach((c) => scene.add(c.group));
+    };
+    await buildCases(data);
+    room.books = () => room.cases.flatMap((c) => c.books);
+    let lastSpineCheck = 0;
+    const spineCheck = (now) => {
+        if (now - lastSpineCheck < 400) return;
+        lastSpineCheck = now;
+        for (const c of room.cases) setSpineTextures(c, c.center.distanceTo(camera.position) < 5.2, room.theme);
+    };
+    room.onFrame(spineCheck);
+    room.rebuild = async (next) => {
+        for (const c of room.cases) {
+            scene.remove(c.group);
+            c.group.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); [].concat(o.material).forEach((m) => { if (!Object.values(room.materials).includes(m)) { m.map?.dispose(); m.dispose(); } }); } });
+        }
+        await buildCases(next);
+        lastSpineCheck = 0;
+        room.wake(300);
+    };
+    attachPicking(room, room.books);
 
     const resize = () => {
         const w = stage.clientWidth, h = stage.clientHeight;
@@ -111,7 +140,8 @@ export async function createScene(container, dotNet, data) {
         renderer.domElement.remove();
     };
     // Filled in by shelf/pick/camera/lighting.
-    room.focusBook = room.pickBook = room.goTo = room.goHome = () => {};
+    room.focusBook = (id) => { room.focusedId = id; room.wake(600); };
+    room.goTo = room.goHome = () => {};
 
     camera.position.set(0, 1.7, 2.2);
     camera.lookAt(0, 1.45, -5);
