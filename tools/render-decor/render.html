@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+// render(id, opts) -> dataURL of a transparent PNG, model framed from a
+// slightly raised 3/4 view, warm key light from the upper left.
+window.renderDecor = async (id, opts = {}) => {
+  const W = opts.w || 700, H = opts.h || 900;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1); renderer.setSize(W, H); renderer.setClearColor(0x000000, 0);
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = opts.exposure ?? 1.0;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.innerHTML = ''; document.body.appendChild(renderer.domElement);
+  const scene = new THREE.Scene();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = opts.env ?? 0.55;
+  const gltf = await new GLTFLoader().loadAsync(`${id}.glb`);
+  const model = gltf.scene;
+  if (opts.pick) { model.traverse(o => { if (o.parent === model || o.parent?.parent === model) { if (!opts.pick.some(p => o.name === p)) { if (o.parent === model && !o.children.some(c => opts.pick.includes(c.name))) o.visible = false; } } }); }
+  // Flames ship as opaque JPEGs meant for additive blending: use their
+  // brightness as alpha so the transparent background stays clean.
+  model.traverse(o => { if (o.isMesh && /flame|fire/i.test(o.material.name)) { const m = o.material; m.alphaMap = m.map || m.emissiveMap; m.transparent = true; m.depthWrite = false; m.needsUpdate = true; } });
+  model.rotation.y = (opts.rotY ?? -25) * Math.PI / 180;
+  scene.add(model);
+  model.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  const shown = o => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
+  model.traverse(o => { if (o.isMesh && shown(o)) { o.castShadow = o.receiveShadow = true; box.expandByObject(o); } });
+  const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+  // warm key from upper left, cool faint rim from the right, soft fill
+  const key = new THREE.DirectionalLight(0xffd9a8, 2.6); key.position.set(-1.2, 1.6, 1.1).multiplyScalar(size.length() * 2).add(center); key.target.position.copy(center);
+  key.castShadow = true; const r = size.length(); Object.assign(key.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 0.01, far: r * 10 }); key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0005;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(0xbfd2ff, 0.7); rim.position.set(1.5, 0.8, -1).multiplyScalar(r * 2).add(center); scene.add(rim);
+  scene.add(new THREE.HemisphereLight(0xfff1dc, 0x2a1a10, 0.35));
+  const fov = 22; const camera = new THREE.PerspectiveCamera(fov, W / H, r / 100, r * 20);
+  const elev = (opts.elev ?? 12) * Math.PI / 180;
+  const fitH = size.y / 2 / Math.tan(fov * Math.PI / 360), fitW = Math.max(size.x, size.z) / 2 / Math.tan(fov * Math.PI / 360) / (W / H);
+  const dist = Math.max(fitH, fitW) * 1.25 + Math.max(size.x, size.z);
+  camera.position.set(center.x, center.y + Math.sin(elev) * dist, center.z + Math.cos(elev) * dist); camera.lookAt(center);
+  renderer.render(scene, camera);
+  let tex = 0, meshes = 0; model.traverse(o => { if (o.isMesh && shown(o)) { meshes++; if (o.material.map && o.material.map.image) tex++; } });
+  return { tex, meshes, names: model.children.map(c => c.name) };
+};
+window.ready = true;
+</script></body></html>

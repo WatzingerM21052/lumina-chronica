@@ -1,0 +1,47 @@
+/* Bookshelf decor per theme (spec 2026-10-11 §4/§5): two objects at the
+   cabinet's edge, rendered from CC0 Poly Haven models
+   (images/shelf-decor/CREDITS.md, tools/render-decor). Used by the shelf
+   styles through .shelf-decor--left / --right; --decor is the picture,
+   --decor-h its height at full size. Kept in one file (not the theme files)
+   so the url()s resolve against this stylesheet. */
+
+.shelf-decor {
+    position: absolute;
+    z-index: 2;
+    width: 240px;
+    height: var(--decor-h, 0px);
+    background: var(--decor, none) center bottom / contain no-repeat;
+    pointer-events: none;
+    filter: drop-shadow(4px 6px 5px rgba(0, 0, 0, 0.55));
+}
+
+html[data-theme="classic-library"] .shelf-decor--left { --decor: url("../images/shelf-decor/mantel-clock.webp"); --decor-h: 96px; }
+html[data-theme="classic-library"] .shelf-decor--right { --decor: url("../images/shelf-decor/candelabra.webp"); --decor-h: 150px; }
+html[data-theme="dark-library"] .shelf-decor--left { --decor: url("../images/shelf-decor/marble-bust.webp"); --decor-h: 138px; }
+html[data-theme="dark-library"] .shelf-decor--right { --decor: url("../images/shelf-decor/ship-lantern.webp"); --decor-h: 140px; }
+html[data-theme="skriptorium"] .shelf-decor--left { --decor: url("../images/shelf-decor/wooden-candlestick.webp"); --decor-h: 132px; }
+html[data-theme="skriptorium"] .shelf-decor--right { --decor: url("../images/shelf-decor/brass-pot.webp"); --decor-h: 78px; }
+html[data-theme="alexandria"] .shelf-decor--left { --decor: url("../images/shelf-decor/marble-bust.webp"); --decor-h: 138px; }
+html[data-theme="alexandria"] .shelf-decor--right { --decor: url("../images/shelf-decor/brass-vase.webp"); --decor-h: 150px; }
+html[data-theme="babylon"] .shelf-decor--left { --decor: url("../images/shelf-decor/brass-pot.webp"); --decor-h: 80px; }
+html[data-theme="babylon"] .shelf-decor--right { --decor: url("../images/shelf-decor/brass-goblets.webp"); --decor-h: 76px; }
+html[data-theme="ischtar"] .shelf-decor--left { --decor: url("../images/shelf-decor/antique-vase.webp"); --decor-h: 130px; }
+html[data-theme="ischtar"] .shelf-decor--right { --decor: url("../images/shelf-decor/brass-goblets.webp"); --decor-h: 76px; }
+html[data-theme="abendhafen"] .shelf-decor--left { --decor: url("../images/shelf-decor/compass.webp"); --decor-h: 96px; }
+html[data-theme="abendhafen"] .shelf-decor--right { --decor: url("../images/shelf-decor/ship-lantern.webp"); --decor-h: 140px; }
+html[data-theme="daemmergarten"] .shelf-decor--left { --decor: url("../images/shelf-decor/potted-plant-02.webp"); --decor-h: 118px; }
+html[data-theme="daemmergarten"] .shelf-decor--right { --decor: url("../images/shelf-decor/wooden-lantern.webp"); --decor-h: 118px; }
+html[data-theme="nachtgarten"] .shelf-decor--left { --decor: url("../images/shelf-decor/potted-plant-04.webp"); --decor-h: 108px; }
+html[data-theme="nachtgarten"] .shelf-decor--right { --decor: url("../images/shelf-decor/wooden-lantern.webp"); --decor-h: 118px; }
+html[data-theme="modern-light"] .shelf-decor--left { --decor: url("../images/shelf-decor/potted-plant-04.webp"); --decor-h: 108px; }
+html[data-theme="modern-light"] .shelf-decor--right { --decor: url("../images/shelf-decor/ceramic-vase-01.webp"); --decor-h: 120px; }
+
+@media (prefers-color-scheme: light) {
+    html[data-theme="system"] .shelf-decor--left { --decor: url("../images/shelf-decor/potted-plant-04.webp"); --decor-h: 108px; }
+    html[data-theme="system"] .shelf-decor--right { --decor: url("../images/shelf-decor/ceramic-vase-01.webp"); --decor-h: 120px; }
+}
+
+@media (prefers-color-scheme: dark) {
+    html[data-theme="system"] .shelf-decor--left { --decor: url("../images/shelf-decor/marble-bust.webp"); --decor-h: 138px; }
+    html[data-theme="system"] .shelf-decor--right { --decor: url("../images/shelf-decor/ship-lantern.webp"); --decor-h: 140px; }
+}
