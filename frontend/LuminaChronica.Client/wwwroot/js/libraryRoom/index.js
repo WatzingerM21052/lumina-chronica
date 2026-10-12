@@ -33,3 +33,6 @@ export function dispose(container) {
     rooms.get(container)?.dispose();
     rooms.delete(container);
 }
+
+// For measurements in browser checks only (not used by the app).
+export function inspect(container) { return rooms.get(container); }
