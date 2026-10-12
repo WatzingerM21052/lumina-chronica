@@ -15,7 +15,17 @@ public static class ShelfLineLayout
         return new ShelfBookSize(26 + (int)(hash % 19), 176 + (int)((hash >> 8) % 47));
     }
 
-    public static List<List<Book>> Lines(IReadOnlyList<Book> books, double availableWidth, double zoom)
+    // "Zuletzt gelesen" stands cover-forward: every book is a cover this wide.
+    public const int CoverWidth = 136;
+
+    public static List<List<Book>> Lines(IReadOnlyList<Book> books, double availableWidth, double zoom) =>
+        Lines(books, availableWidth, zoom, book => SizeFor(book).Width);
+
+    // Width of a line's books including the gaps between them.
+    public static double UsedWidth(IReadOnlyList<Book> line, double zoom, Func<Book, int> widthOf) =>
+        line.Sum(b => widthOf(b) * zoom) + Gap * Math.Max(0, line.Count - 1);
+
+    public static List<List<Book>> Lines(IReadOnlyList<Book> books, double availableWidth, double zoom, Func<Book, int> widthOf)
     {
         var lines = new List<List<Book>>();
         if (books.Count == 0) return lines;
@@ -25,7 +35,7 @@ public static class ShelfLineLayout
         double used = 0;
         foreach (var book in books)
         {
-            var width = SizeFor(book).Width * zoom;
+            var width = widthOf(book) * zoom;
             var needed = line.Count == 0 ? width : used + Gap + width;
             if (line.Count > 0 && needed > availableWidth)
             {

@@ -23,6 +23,14 @@ public partial class ClassicShelfBook : ComponentBase, IDisposable
     [Parameter]
     public double? ProgressPercentage { get; set; }
 
+    // "Zuletzt gelesen" shows the cover instead of the spine.
+    [Parameter]
+    public bool CoverForward { get; set; }
+
+    // Width of a cover-forward book at zoom 1 (ClassicShelf picks it).
+    [Parameter]
+    public int CoverWidth { get; set; } = ShelfLineLayout.CoverWidth;
+
     private string? _coverObjectUrl;
     private string? _loadedCoverUrl;
     private string? _tint;
@@ -33,8 +41,13 @@ public partial class ClassicShelfBook : ComponentBase, IDisposable
     {
         get
         {
-            var size = ShelfLineLayout.SizeFor(Book);
             var colour = _tint ?? Leathers[Book.Id % Leathers.Length];
+            if (CoverForward)
+            {
+                return string.Create(CultureInfo.InvariantCulture,
+                    $"--w: {CoverWidth * Zoom:0.##}px; --h: {CoverWidth * 1.44 * Zoom:0.##}px; --c: {colour}");
+            }
+            var size = ShelfLineLayout.SizeFor(Book);
             return string.Create(CultureInfo.InvariantCulture,
                 $"--w: {size.Width * Zoom:0.##}px; --h: {size.Height * Zoom:0.##}px; --d: {140 * Zoom:0.##}px; --c: {colour}");
         }

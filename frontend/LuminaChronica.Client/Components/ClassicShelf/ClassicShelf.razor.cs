@@ -29,6 +29,22 @@ public partial class ClassicShelf : ComponentBase, IAsyncDisposable
     private static double? ProgressOf(ShelfSection section, Book book) =>
         section.Progress is { } progress && progress.TryGetValue(book.Id, out var percentage) ? percentage : null;
 
+    // A brass bookend closes a line that doesn't reach the end of the
+    // compartment (only once the width is known).
+    private const int BookendWidth = 22;
+
+    // Cover-forward books of "Zuletzt gelesen": smaller on a phone, so two
+    // stand side by side.
+    private int CoverWidth => _width is > 0 and < 520 ? ShelfLineLayout.CoverWidth * 3 / 4 : ShelfLineLayout.CoverWidth;
+
+    private bool HasRoomForBookend(IReadOnlyList<Book> line, Func<Book, int> widthOf) =>
+        _width > 0 && ShelfLineLayout.UsedWidth(line, Zoom, widthOf) + (ShelfLineLayout.Gap + BookendWidth) * Zoom <= _width;
+
+    // The cover-forward compartment is only as tall as its covers.
+    private string? BayStyle(ShelfSection bay) => bay.Kind == ShelfSectionKind.Recent
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"--classic-row-height: {CoverWidth * 1.44 * Zoom + 26:0.##}px")
+        : null;
+
     [JSInvokable]
     public void OnShelfWidth(double width)
     {

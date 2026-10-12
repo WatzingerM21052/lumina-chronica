@@ -8,6 +8,39 @@
 @* One book of the classic shelf: a 3D body (spine in front, cover on the
    right side, page edges on top) that turns its cover towards the reader
    on hover/focus. The link is the slot; everything inside is decoration. *@
+@if (CoverForward)
+{
+    @* "Zuletzt gelesen": the book stands cover-forward like in a shop window. *@
+    <a class="classic-shelf-slot classic-shelf-slot--display" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" style="@SlotStyle">
+        <span class="classic-shelf-display" aria-hidden="true">
+            <span class="classic-shelf-display-cover @(_coverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
+                @if (_coverObjectUrl is not null)
+                {
+                    <img src="@_coverObjectUrl" alt="" />
+                }
+                else
+                {
+                    <span class="classic-shelf-display-rosette"></span>
+                }
+                <span class="classic-shelf-cover-title">@Book.Title</span>
+                @if (!string.IsNullOrWhiteSpace(Book.Author))
+                {
+                    <span class="classic-shelf-cover-author">@Book.Author</span>
+                }
+                @if (ProgressPercentage is { } displayProgress)
+                {
+                    <span class="classic-shelf-progress"><span style="width: @Percent(displayProgress)"></span></span>
+                }
+            </span>
+            <span class="classic-shelf-display-pages"></span>
+        </span>
+        @if (ProgressPercentage is { } percent)
+        {
+            <span class="classic-shelf-display-percent" aria-hidden="true">@Math.Round(Math.Clamp(percent, 0, 100)) %</span>
+        }
+    </a>
+    return;
+}
 <a class="classic-shelf-slot" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" style="@SlotStyle">
     <span class="classic-shelf-book" aria-hidden="true">
         <span class="classic-shelf-face classic-shelf-spine">

@@ -50,4 +50,13 @@ public class ShelfLineLayoutTests
         Assert.Single(ShelfLineLayout.Lines(Books(10), 0, 1));
         Assert.Equal(10, ShelfLineLayout.Lines(Books(10), 5, 1).Count);
     }
+
+    [Fact]
+    public void Lines_CoverForwardWidths_PutFewerBooksOnALine()
+    {
+        var lines = ShelfLineLayout.Lines(Books(5), 300, 1, _ => ShelfLineLayout.CoverWidth);
+
+        Assert.Equal([2, 2, 1], lines.Select(l => l.Count));
+        Assert.Equal(2 * ShelfLineLayout.CoverWidth + ShelfLineLayout.Gap, ShelfLineLayout.UsedWidth(lines[0], 1, _ => ShelfLineLayout.CoverWidth));
+    }
 }

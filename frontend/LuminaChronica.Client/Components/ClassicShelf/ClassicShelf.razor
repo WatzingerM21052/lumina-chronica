@@ -12,16 +12,24 @@
         <div class="classic-shelf-measure" @ref="_measureRef" aria-hidden="true"></div>
         @foreach (var bay in Sections)
         {
-            <section class="classic-shelf-bay classic-shelf-bay--@bay.Kind.ToString().ToLowerInvariant()" aria-label="@bay.Label" @key="bay.Label">
+            <section class="classic-shelf-bay classic-shelf-bay--@bay.Kind.ToString().ToLowerInvariant()" aria-label="@bay.Label" @key="bay.Label" style="@BayStyle(bay)">
                 <span class="classic-shelf-plaque" title="@bay.Label">@bay.Label</span>
-                @foreach (var line in ShelfLineLayout.Lines(bay.Books, _width, Zoom))
+                @{
+                    var coverForward = bay.Kind == ShelfSectionKind.Recent;
+                    Func<Book, int> widthOf = coverForward ? _ => CoverWidth : b => ShelfLineLayout.SizeFor(b).Width;
+                }
+                @foreach (var line in ShelfLineLayout.Lines(bay.Books, _width, Zoom, widthOf))
                 {
                     <div class="classic-shelf-back">
                         <div class="classic-shelf-row">
                             @foreach (var book in line)
                             {
-                                <ClassicShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText"
+                                <ClassicShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText" CoverForward="coverForward" CoverWidth="CoverWidth"
                                                   ProgressPercentage="@ProgressOf(bay, book)" />
+                            }
+                            @if (HasRoomForBookend(line, widthOf))
+                            {
+                                <span class="classic-shelf-bookend" aria-hidden="true"></span>
                             }
                         </div>
                     </div>
