@@ -6,6 +6,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Added
 
+- Shelf style "Rotunde": the library as a round, dark reading room — the compartments stand as bays in a ring you turn through (drag, wheel, arrow buttons or ← →), a lantern follows the mouse and makes the gilt spines gleam, and a book opens into a two-page spread with cover, description, progress, "Weiterlesen" and "Details".
 - Shelf style "Lederrücken" (Settings > Library > Shelf style): open wall shelves of worn leather volumes with raised bands, gilt lines, a title piece and an embossed ornament; a book tips out on hover with its cover and progress beside it, recently read books carry a silk ribbon.
 - New shelf style "Klassisch" for the library's shelf view, now the default: a wooden cabinet in the theme's wood and brass, recently read books standing cover-forward with their progress, one compartment per genre, books that slide out and turn their cover towards you, brass bookends and two objects per theme on the cornice (a mantel clock and candelabra, a marble bust, a compass and ship's lantern, potted plants …, rendered from CC0 Poly Haven models). The previous shelf stays available as "Legacy" in Settings > Library > Shelf style.
 

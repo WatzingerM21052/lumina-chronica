@@ -395,6 +395,31 @@
         linear-gradient(180deg, transparent 10%, rgba(0, 0, 0, 0.6) 10% 14%, transparent 14% 30%, color-mix(in srgb, var(--shelf-brass) 80%, #000) 30% 60%, transparent 60% 84%, rgba(0, 0, 0, 0.6) 84% 88%, transparent 88%);
 }
 
+/* The rotunda: bays curving away, lit in the middle by the lantern. */
+.shelf-style-thumb--rotunda {
+    gap: 3px;
+    padding-top: 0.9rem;
+    background:
+        radial-gradient(circle at 50% 55%, rgba(255, 190, 100, 0.45), transparent 45%),
+        linear-gradient(0deg, color-mix(in srgb, var(--shelf-wood) 70%, #000) 0 5px, transparent 5px),
+        #0b0705;
+    perspective: 60px;
+}
+
+.shelf-style-thumb--rotunda i {
+    opacity: 0.85;
+}
+
+.shelf-style-thumb--rotunda i:nth-child(1),
+.shelf-style-thumb--rotunda i:nth-child(6) {
+    opacity: 0.35;
+}
+
+.shelf-style-thumb--rotunda i:nth-child(1) { transform: rotateY(40deg); }
+.shelf-style-thumb--rotunda i:nth-child(2) { transform: rotateY(20deg); }
+.shelf-style-thumb--rotunda i:nth-child(5) { transform: rotateY(-20deg); }
+.shelf-style-thumb--rotunda i:nth-child(6) { transform: rotateY(-40deg); }
+
 .shelf-style-thumb--legacy {
     background:
         linear-gradient(0deg, #8a6440 0 7px, transparent 7px),

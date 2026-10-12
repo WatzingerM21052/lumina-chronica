@@ -68,4 +68,17 @@ public class LibraryShelfStyleTests : BunitContext
         Assert.Empty(cut.FindAll(".classic-shelf"));
         Assert.Equal(3, cut.FindAll("a.leather-shelf-book").Count);
     }
+
+    [Fact]
+    public void ShelfView_RotundaStyle_RendersTheRing()
+    {
+        JSInterop.SetupModule("./js/libraryPreferences.js").Setup<string?>("getShelfStyle", _ => true).SetResult("rotunda");
+        var cut = Render<Library>();
+
+        cut.Find("#view-shelf").Click();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".rotunda")));
+        Assert.Equal(3, cut.FindAll("a.rotunda-spine").Count);
+        Assert.Empty(cut.FindAll(".shelf-load-more-sentinel"));
+    }
 }

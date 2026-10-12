@@ -1,0 +1,70 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@inherits ShelfBookBase
+@inject II18nService I18n
+
+@* The opened book of the rotunda: it flies forward, its cover swings open
+   and shows a two-page spread -- cover on the left; title, author,
+   description, genre, progress and the ways on on the right. *@
+<div class="rotunda-open" role="dialog" aria-modal="true" aria-labelledby="rotunda-tome-title" tabindex="-1" @onkeydown="OnKeyDown">
+    <button type="button" class="rotunda-close" @ref="_closeRef" @onclick="OnClose">@I18n.T("rotunda.close") <span aria-hidden="true">✕</span></button>
+    <div class="rotunda-tome" style="--c: @Colour">
+        <div class="rotunda-page rotunda-page--left">
+            <div class="rotunda-mini @(CoverObjectUrl is not null ? "has-image" : null)">
+                @if (CoverObjectUrl is not null)
+                {
+                    <img src="@CoverObjectUrl" alt="" />
+                }
+                else
+                {
+                    <b>@Book.Title</b>
+                }
+            </div>
+        </div>
+        <div class="rotunda-page rotunda-page--right">
+            <h3 id="rotunda-tome-title">@Book.Title</h3>
+            @if (!string.IsNullOrWhiteSpace(Book.Author))
+            {
+                <div class="rotunda-by">@Book.Author</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Book.Description))
+            {
+                <p class="rotunda-description">@Book.Description</p>
+            }
+            <div class="rotunda-facts">
+                <span>@(string.IsNullOrWhiteSpace(Book.Genre) ? I18n.T("library.noGenreLabel") : Book.Genre)</span>
+                @if (ProgressPercentage is { } progress)
+                {
+                    <span>@string.Format(I18n.T("library.shelfProgress"), Math.Round(Math.Clamp(progress, 0, 100)))</span>
+                }
+            </div>
+            <div class="rotunda-actions">
+                <a class="rotunda-action rotunda-action--primary" href="library/books/@Book.Id/read">@I18n.T(ProgressPercentage is null ? "rotunda.read" : "rotunda.continue")</a>
+                <a class="rotunda-action" href="library/books/@Book.Id">@I18n.T("rotunda.details")</a>
+            </div>
+        </div>
+        <div class="rotunda-coverflap" aria-hidden="true"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public EventCallback OnClose { get; set; }
+
+    private ElementReference _closeRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            await _closeRef.FocusAsync();
+        }
+        catch (Exception)
+        {
+            // No focusable DOM in tests.
+        }
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs e) => e.Key == "Escape" ? OnClose.InvokeAsync() : Task.CompletedTask;
+}
