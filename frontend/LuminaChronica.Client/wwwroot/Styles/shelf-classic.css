@@ -7,7 +7,9 @@
 .classic-shelf {
     --shelf-texture: url("../images/library/shelf-wood-texture.webp");
     --shelf-leather: url("../images/themes/books/leather_grain.webp");
-    --classic-row-height: calc(236px * var(--zoom, 1));
+    /* The tallest book (222 px) plus a fixed band, so the plaque above a
+       compartment keeps clear of its books at every zoom. */
+    --classic-row-height: calc(222px * var(--zoom, 1) + 24px);
     --classic-cabinet-pad: 30px;
     --classic-row-inset: 18px;
     position: relative;
@@ -297,8 +299,8 @@
     position: absolute;
     left: 13%;
     right: 13%;
-    top: 22%;
-    bottom: 38%;
+    top: 18%;
+    bottom: 25%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -311,22 +313,26 @@
     transform: rotate(180deg);
 }
 
+/* Size and lines are set per book (ShelfBookBase.TitleFit). */
 .classic-shelf-label span {
+    display: -webkit-box;
     overflow: hidden;
     max-height: 100%;
     color: var(--shelf-brass-hi);
-    font: 700 calc(11px * var(--zoom, 1)) / 1.1 "Cormorant Garamond", Georgia, serif;
+    font: 700 var(--title-size, calc(11px * var(--zoom, 1))) / 1.05 "Cormorant Garamond", Georgia, serif;
     letter-spacing: 0.05em;
-    text-overflow: ellipsis;
+    text-align: center;
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
-    white-space: nowrap;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--title-lines, 1);
+    overflow-wrap: anywhere;
 }
 
 .classic-shelf-ornament {
     position: absolute;
     left: 50%;
-    top: 67%;
-    width: 60%;
+    top: 77.5%;
+    width: 44%;
     aspect-ratio: 1;
     transform: translateX(-50%);
     background: linear-gradient(180deg, var(--shelf-brass-hi), var(--shelf-brass-lo));
@@ -514,8 +520,9 @@
 .classic-shelf-display-percent {
     position: absolute;
     z-index: 5;
-    left: 6px;
-    top: -9px;
+    /* inside the cover's top corner, clear of the plaque above */
+    left: 8px;
+    top: 8px;
     padding: 1px 7px;
     border-radius: 999px;
     background: linear-gradient(180deg, var(--shelf-brass-hi), var(--shelf-brass));

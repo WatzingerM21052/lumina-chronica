@@ -29,7 +29,9 @@ public partial class ClassicShelfBook
                 return $"--w: {Px(CoverWidth * Zoom)}; --h: {Px(CoverWidth * 1.44 * Zoom)}; --c: {Colour}";
             }
             var size = ShelfLineLayout.SizeFor(Book);
-            return $"--w: {Px(size.Width * Zoom)}; --h: {Px(size.Height * Zoom)}; --c: {Colour}";
+            // title piece: 57 % of the height less its padding, 74 % of the width less its rule
+            var title = TitleFit(size.Height * Zoom * 0.57 - 12, size.Width * Zoom * 0.74 - 6, 11);
+            return $"--w: {Px(size.Width * Zoom)}; --h: {Px(size.Height * Zoom)}; --c: {Colour}; {title}";
         }
     }
 }

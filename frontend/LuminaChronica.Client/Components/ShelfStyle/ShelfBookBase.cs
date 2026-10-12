@@ -50,6 +50,25 @@ public abstract class ShelfBookBase : ComponentBase, IDisposable
 
     protected static string Px(double value) => value.ToString("0.##", CultureInfo.InvariantCulture) + "px";
 
+    // Sets a spine title the way a binder would: at the full size if it fits
+    // the title piece, smaller for a long title (down to a readable minimum),
+    // then in two lines if the spine is wide enough; only beyond that it is
+    // cut. labelLength/labelWidth are the title piece's inner size in px.
+    protected string TitleFit(double labelLength, double labelWidth, double basePx)
+    {
+        const double charEm = 0.5; // Cormorant Garamond bold, letter-spaced
+        var full = basePx * Zoom;
+        var min = 8.5 * Zoom;
+        var length = Math.Max(1, Book.Title.Length);
+        var oneLine = labelLength / (length * charEm);
+        if (oneLine >= min) return $"--title-size: {Px(Math.Min(full, oneLine))}; --title-lines: 1";
+        // Two lines: as large as both the length and the spine's width allow.
+        var size = Math.Min(Math.Min(full, labelLength * 2 / (length * charEm)), (labelWidth - 2) / 2.15);
+        return size >= min
+            ? $"--title-size: {Px(size)}; --title-lines: 2"
+            : $"--title-size: {Px(min)}; --title-lines: 1";
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if (Book.CoverUrl == _loadedCoverUrl) return;
