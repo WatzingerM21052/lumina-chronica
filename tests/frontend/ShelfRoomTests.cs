@@ -38,14 +38,17 @@ public class ShelfRoomTests : BunitContext
     }
 
     [Fact]
-    public void WithWebGl_EveryBookIsInTheIndex_AndPickingShowsTheCard()
+    public async Task WithWebGl_EveryBookIsInTheIndex_AndTheSceneOpensBooks()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         var module = JSInterop.SetupModule("./js/shelfRoom.js");
         module.Setup<bool>("supported").SetResult(true);
         var pick = module.SetupVoid("pickBook", _ => true);
+        BookOpenRequest? opened = null;
 
-        var cut = Render<ShelfRoom>(p => p.Add(x => x.Sections, Sections));
+        var cut = Render<ShelfRoom>(p => p
+            .Add(x => x.Sections, Sections)
+            .Add(x => x.OnOpen, (BookOpenRequest r) => opened = r));
 
         var links = cut.FindAll(".shelf-room-index a");
         Assert.Equal(3, links.Count);
@@ -55,12 +58,12 @@ public class ShelfRoomTests : BunitContext
         links[0].Click();
         Assert.Equal(1, Assert.Single(pick.Invocations).Arguments[1]);
 
-        cut.InvokeAsync(() => cut.Instance.OnPicked(1));
-        Assert.Equal("Momo", cut.Find("#shelf-room-card-title").TextContent);
-        Assert.Contains("80 % gelesen", cut.Find(".shelf-room-card").TextContent);
-        Assert.Equal("library/books/1/read", cut.Find(".shelf-room-card-actions a").GetAttribute("href"));
-
-        cut.InvokeAsync(() => cut.Instance.OnReleased());
+        // The scene reports the book it took and where it was on screen.
+        await cut.InvokeAsync(() => cut.Instance.Open(1, 10, 20, 30, 40));
+        Assert.NotNull(opened);
+        Assert.Equal("Momo", opened!.Book.Title);
+        Assert.Equal(80, opened.Progress);
+        Assert.Equal(new BookSpreadSource(null, 10, 20, 30, 40), opened.Source);
         Assert.Empty(cut.FindAll(".shelf-room-card"));
     }
 }

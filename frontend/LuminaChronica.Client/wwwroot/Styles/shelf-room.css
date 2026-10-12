@@ -1,134 +1,36 @@
-/* Shelf style C "3D-Raum" (spec 2026-10-11 §6, component ShelfRoom, scene
-   in js/shelfRoom.js). The component is as tall as the scroll it takes to
-   travel down the cabinet (--shelf-room-travel, set by the scene); the
-   stage with the canvas stays in view meanwhile. */
+/* Shelf style C "3D-Raum" (spec 2026-10-11 §6, polish 2026-10-12;
+   component ShelfRoom, scene in js/shelfRoom.js). The component is as tall
+   as the cabinet at page scale (set by the scene). The stage is a
+   transparent, window-high canvas that stays in view while the component
+   scrolls past; the scene draws the cabinet exactly where it is on the
+   page, so there is no frame and nothing to scroll inside. */
 
 .shelf-room {
-    --shelf-room-stage-height: min(76vh, 760px);
     position: relative;
-    height: calc(var(--shelf-room-stage-height) + var(--shelf-room-travel, 0px));
+    min-height: 320px;
+    /* the window-high canvas never reaches past the cabinet */
+    overflow: clip;
 }
 
 .shelf-room-stage {
     position: sticky;
-    top: 72px;
-    height: var(--shelf-room-stage-height);
-    overflow: clip;
-    border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--shelf-wood) 28%, #000);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    margin-bottom: -100vh;
+    margin-bottom: -100dvh;
+    pointer-events: none;
 }
 
 .shelf-room-stage canvas {
     display: block;
     width: 100%;
     height: 100%;
-    touch-action: pan-y;
 }
 
-/* Only there for the scene to read the theme's decor pictures. */
-.shelf-room-decor-probe {
-    visibility: hidden;
-}
-
-.shelf-room-hint {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    padding: 7px 11px;
-    border: 1px solid color-mix(in srgb, var(--shelf-brass) 30%, transparent);
-    border-radius: 8px;
-    background: rgba(10, 6, 3, 0.62);
-    color: #e8dcc2;
-    font: 500 12px/1.3 var(--font-family-ui);
-    pointer-events: none;
-}
-
-/* ---- The picked book's card ---- */
-
-.shelf-room-card {
-    position: absolute;
-    z-index: 3;
-    right: 20px;
-    bottom: 20px;
-    width: min(320px, calc(100% - 40px));
-    padding: 18px 20px 16px;
-    border: 1px solid color-mix(in srgb, var(--shelf-brass) 40%, transparent);
-    border-radius: 12px;
-    background: rgba(16, 10, 5, 0.88);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
-    color: #eadfc6;
-    outline: none;
-    animation: shelf-room-card-in 0.35s ease both;
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
-}
-
-@keyframes shelf-room-card-in {
-    from { opacity: 0; transform: translateY(10px); }
-}
-
-.shelf-room-card h3 {
-    margin: 0;
-    color: var(--shelf-brass-hi);
-    font: 700 22px/1.15 "Cormorant Garamond", Georgia, serif;
-    overflow-wrap: anywhere;
-}
-
-.shelf-room-card-author {
-    margin: 4px 0 0;
-    color: #cdbf9f;
-    font: italic 500 15px/1.3 "Cormorant Garamond", Georgia, serif;
-}
-
-.shelf-room-card-progress {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin: 12px 0 0;
-    font: 500 12px/1.3 var(--font-family-ui);
-}
-
-.shelf-room-card-bar {
-    display: block;
-    height: 3px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.shelf-room-card-bar span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--shelf-brass-hi);
-}
-
-.shelf-room-card-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 14px;
-}
-
-.shelf-room-card .btn {
-    border-color: color-mix(in srgb, var(--shelf-brass) 55%, transparent);
-    background: transparent;
-    color: #eadfc6;
-}
-
-.shelf-room-card .btn:hover {
-    border-color: var(--shelf-brass-hi);
-    background: rgba(255, 240, 210, 0.06);
-}
-
-.shelf-room-card .btn-primary {
-    border-color: var(--shelf-brass);
-    background: linear-gradient(180deg, var(--shelf-brass-hi), var(--shelf-brass));
-    color: var(--shelf-plaque-ink);
-}
-
-.shelf-room-card .btn-primary:hover {
-    background: linear-gradient(180deg, var(--shelf-brass-hi), var(--shelf-brass-hi));
+/* Only there for the scene to read the theme's pictures. */
+.shelf-room-probe {
+    display: none;
 }
 
 /* ---- Keyboard / screen-reader index: hidden until a link has focus ---- */
@@ -150,9 +52,10 @@
 }
 
 .shelf-room-index a:focus-visible {
+    position: fixed;
     z-index: 4;
-    left: 16px;
-    bottom: 16px;
+    left: 50%;
+    bottom: 24px;
     width: auto;
     max-width: calc(100% - 32px);
     height: auto;
@@ -165,36 +68,10 @@
     font: 600 13px/1.3 var(--font-family-ui);
     text-decoration: none;
     text-overflow: ellipsis;
+    transform: translateX(-50%);
     outline: none;
 }
 
 .shelf-room-fallback {
     margin: 0 0 var(--space-2);
-}
-
-@media (max-width: 720px) {
-    .shelf-room {
-        --shelf-room-stage-height: min(68vh, 560px);
-    }
-
-    .shelf-room-stage {
-        top: 64px;
-    }
-
-    .shelf-room-hint {
-        display: none;
-    }
-
-    .shelf-room-card {
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        width: auto;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .shelf-room-card {
-        animation: none;
-    }
 }

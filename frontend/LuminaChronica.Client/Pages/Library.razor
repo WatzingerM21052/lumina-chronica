@@ -181,7 +181,7 @@ else
         }
         else if (_shelfStyle == ShelfStyles.Room)
         {
-            <ShelfRoom Sections="@sections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" />
+            <ShelfRoom Sections="@sections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" OnOpen="OpenBookAsync" />
         }
         else if (_shelfStyle == ShelfStyles.Leather)
         {
