@@ -1,5 +1,7 @@
 # Bücherregal-Feinschliff — Analyse und Konzept
 
+> **Hinweis:** Umgesetzt in #618–#623 (v4.1.0-beta.1). „3D-Raum“ und „Rotunde“ werden durch die „3D-Bibliothek“ ersetzt, siehe `2026-10-12-library-room-design.md`.
+
 **Datum:** 2026-10-12
 **Anlass:** User-Feedback nach #612–#617 (sieben Punkte, siehe §1).
 **Basis:** `2026-10-11-bookshelf-rework-design.md`
