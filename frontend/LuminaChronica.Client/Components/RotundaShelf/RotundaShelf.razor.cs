@@ -23,6 +23,7 @@ public partial class RotundaShelf
     private IJSObjectReference? _module;
     private int _renderedBayCount;
     private int? _returnFocusTo;
+    private bool _focusBack;
 
     protected override void OnParametersSet()
     {
@@ -43,20 +44,13 @@ public partial class RotundaShelf
         _returnFocusTo = book.Id;
     }
 
-    private async Task CloseAsync()
+    // Focus goes back to the spine once the ring is no longer inert, i.e.
+    // after the render that removed the open book.
+    private Task CloseAsync()
     {
         _open = null;
-        StateHasChanged();
-        if (_module is not null && _returnFocusTo is { } id)
-        {
-            try
-            {
-                await _module.InvokeVoidAsync("focusBook", _roomRef, id);
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-        }
+        _focusBack = true;
+        return Task.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -73,6 +67,12 @@ public partial class RotundaShelf
             {
                 _renderedBayCount = _bays.Count;
                 await _module.InvokeVoidAsync("update", _roomRef, _bays.Count);
+            }
+
+            if (_focusBack && _module is not null && _returnFocusTo is { } id)
+            {
+                _focusBack = false;
+                await _module.InvokeVoidAsync("focusBook", _roomRef, id);
             }
         }
         catch (Exception)
