@@ -411,8 +411,12 @@
         z-index: 20;
     }
 
+    /* The turned-out book is part of the link while it is out, so its
+       cover can be clicked; at rest only the spine is (neighbouring
+       covers would otherwise steal the hover). */
     .classic-shelf-slot:hover .classic-shelf-book {
-        transform: translateY(-14px) translateZ(calc(150px * var(--zoom, 1))) rotateY(-78deg);
+        pointer-events: auto;
+        transform: translateX(var(--shift, 0px)) translateY(-14px) translateZ(calc(150px * var(--zoom, 1))) rotateY(-78deg);
     }
 
     .classic-shelf-slot:hover .classic-shelf-spine {
@@ -425,7 +429,7 @@
 }
 
 .classic-shelf-slot:focus-visible .classic-shelf-book {
-    transform: translateY(-14px) translateZ(calc(150px * var(--zoom, 1))) rotateY(-78deg);
+    transform: translateX(var(--shift, 0px)) translateY(-14px) translateZ(calc(150px * var(--zoom, 1))) rotateY(-78deg);
 }
 
 .classic-shelf-slot:focus-visible .classic-shelf-cover {

@@ -22,10 +22,12 @@
                 {
                     <div class="classic-shelf-back">
                         <div class="classic-shelf-row">
+                            @{ double left = 0; }
                             @foreach (var book in line)
                             {
                                 <ClassicShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText" CoverForward="coverForward" CoverWidth="CoverWidth"
-                                                  ProgressPercentage="@ProgressOf(bay, book)" />
+                                                  ProgressPercentage="@ProgressOf(bay, book)" HoverShift="@HoverShift(left)" />
+                                left += widthOf(book) * Zoom + ShelfLineLayout.Gap;
                             }
                             @if (HasRoomForBookend(line, widthOf))
                             {

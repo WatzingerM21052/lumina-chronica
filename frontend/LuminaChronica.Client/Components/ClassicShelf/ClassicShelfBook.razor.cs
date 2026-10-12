@@ -27,6 +27,13 @@ public partial class ClassicShelfBook : ComponentBase, IDisposable
     [Parameter]
     public bool CoverForward { get; set; }
 
+    // Sideways slide while the cover is turned out (see ClassicShelf).
+    [Parameter]
+    public double HoverShift { get; set; }
+
+    // How deep a book reaches into the shelf, at zoom 1.
+    public const int Depth = 140;
+
     // Width of a cover-forward book at zoom 1 (ClassicShelf picks it).
     [Parameter]
     public int CoverWidth { get; set; } = ShelfLineLayout.CoverWidth;
@@ -49,7 +56,7 @@ public partial class ClassicShelfBook : ComponentBase, IDisposable
             }
             var size = ShelfLineLayout.SizeFor(Book);
             return string.Create(CultureInfo.InvariantCulture,
-                $"--w: {size.Width * Zoom:0.##}px; --h: {size.Height * Zoom:0.##}px; --d: {140 * Zoom:0.##}px; --c: {colour}");
+                $"--w: {size.Width * Zoom:0.##}px; --h: {size.Height * Zoom:0.##}px; --d: {Depth * Zoom:0.##}px; --c: {colour}; --shift: {HoverShift:0.##}px");
         }
     }
 

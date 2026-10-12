@@ -45,6 +45,11 @@ public partial class ClassicShelf : ComponentBase, IAsyncDisposable
         ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"--classic-row-height: {CoverWidth * 1.44 * Zoom + 26:0.##}px")
         : null;
 
+    // A book turning its cover out swings it to the left by about its
+    // depth; near the left wall it slides right first, so the cover stays
+    // inside the compartment.
+    private double HoverShift(double left) => Math.Max(0, ClassicShelfBook.Depth * Zoom * 0.95 - left);
+
     [JSInvokable]
     public void OnShelfWidth(double width)
     {
