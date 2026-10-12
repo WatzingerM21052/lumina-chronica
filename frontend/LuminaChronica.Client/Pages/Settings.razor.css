@@ -379,6 +379,22 @@
     background-image: linear-gradient(180deg, transparent 18%, var(--shelf-brass) 18% 21%, transparent 21% 79%, var(--shelf-brass) 79% 82%, transparent 82%);
 }
 
+.shelf-style-thumb--leather {
+    gap: 1px;
+    background:
+        linear-gradient(0deg, var(--shelf-wood) 0 6px, transparent 6px),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.45)),
+        var(--shelf-wood);
+}
+
+.shelf-style-thumb--leather i {
+    max-width: 15px;
+    border-radius: 2px 2px 1px 1px;
+    background-image:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(255, 240, 215, 0.25) 30%, rgba(0, 0, 0, 0.5)),
+        linear-gradient(180deg, transparent 10%, rgba(0, 0, 0, 0.6) 10% 14%, transparent 14% 30%, color-mix(in srgb, var(--shelf-brass) 80%, #000) 30% 60%, transparent 60% 84%, rgba(0, 0, 0, 0.6) 84% 88%, transparent 88%);
+}
+
 .shelf-style-thumb--legacy {
     background:
         linear-gradient(0deg, #8a6440 0 7px, transparent 7px),

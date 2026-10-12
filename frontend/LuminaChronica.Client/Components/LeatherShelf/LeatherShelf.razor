@@ -1,0 +1,34 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@inherits ShelfBase
+
+@* Shelf style B "Lederrücken" (spec 2026-10-11 §6): open wall shelves of
+   worn leather volumes -- raised bands, gilt lines, a title piece and an
+   embossed ornament on every spine. A book tips out on hover and its cover
+   appears beside it; recently read books carry a ribbon. *@
+<div class="leather-shelf" style="--zoom: @Zoom.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+    <div class="leather-shelf-crown" aria-hidden="true">
+        <span class="shelf-decor shelf-decor--left leather-shelf-decor"></span>
+        <span class="shelf-decor shelf-decor--right leather-shelf-decor"></span>
+    </div>
+    <div class="leather-shelf-measure" @ref="MeasureRef" aria-hidden="true"></div>
+    @foreach (var bay in Sections)
+    {
+        <section class="leather-shelf-bay" aria-label="@bay.Label" @key="bay.Label">
+            <span class="shelf-plaque leather-shelf-plaque" title="@bay.Label">@bay.Label</span>
+            @foreach (var line in ShelfLineLayout.Lines(bay.Books, Width, Zoom, WidthOf))
+            {
+                <div class="leather-shelf-row">
+                    @{ double left = 0; }
+                    @foreach (var book in line)
+                    {
+                        <LeatherShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText"
+                                          ProgressPercentage="@ProgressOf(bay, book)" CardOnLeft="@(Width > 0 && left > Width / 2)" />
+                        left += WidthOf(book) * Zoom + ShelfLineLayout.Gap;
+                    }
+                </div>
+                <div class="leather-shelf-plank" aria-hidden="true"></div>
+            }
+        </section>
+    }
+</div>

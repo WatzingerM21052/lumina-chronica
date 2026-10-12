@@ -1,9 +1,5 @@
 @namespace LuminaChronica.Client.Components
-@using LuminaChronica.Client.Services
-@implements IDisposable
-@inject ApiClient ApiClient
-@inject BlobUrlService BlobUrlService
-@inject CoverColorService CoverColorService
+@inherits ShelfBookBase
 
 @* One book of the classic shelf: a 3D body (spine in front, cover on the
    right side, page edges on top) that turns its cover towards the reader
@@ -13,10 +9,10 @@
     @* "Zuletzt gelesen": the book stands cover-forward like in a shop window. *@
     <a class="classic-shelf-slot classic-shelf-slot--display" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" style="@SlotStyle">
         <span class="classic-shelf-display" aria-hidden="true">
-            <span class="classic-shelf-display-cover @(_coverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
-                @if (_coverObjectUrl is not null)
+            <span class="classic-shelf-display-cover @(CoverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
+                @if (CoverObjectUrl is not null)
                 {
-                    <img src="@_coverObjectUrl" alt="" />
+                    <img src="@CoverObjectUrl" alt="" />
                 }
                 else
                 {
@@ -55,10 +51,10 @@
                 <span class="classic-shelf-spine-progress" style="height: @Percent(spineProgress)"></span>
             }
         </span>
-        <span class="classic-shelf-face classic-shelf-cover @(_coverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
-            @if (_coverObjectUrl is not null)
+        <span class="classic-shelf-face classic-shelf-cover @(CoverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
+            @if (CoverObjectUrl is not null)
             {
-                <img src="@_coverObjectUrl" alt="" />
+                <img src="@CoverObjectUrl" alt="" />
             }
             <span class="classic-shelf-cover-title">@Book.Title</span>
             @if (!string.IsNullOrWhiteSpace(Book.Author))

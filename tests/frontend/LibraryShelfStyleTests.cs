@@ -55,4 +55,17 @@ public class LibraryShelfStyleTests : BunitContext
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".shelf-cabinet")));
         Assert.Empty(cut.FindAll(".classic-shelf"));
     }
+
+    [Fact]
+    public void ShelfView_LeatherStyle_RendersLeatherVolumes()
+    {
+        JSInterop.SetupModule("./js/libraryPreferences.js").Setup<string?>("getShelfStyle", _ => true).SetResult("leather");
+        var cut = Render<Library>();
+
+        cut.Find("#view-shelf").Click();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".leather-shelf")));
+        Assert.Empty(cut.FindAll(".classic-shelf"));
+        Assert.Equal(3, cut.FindAll("a.leather-shelf-book").Count);
+    }
 }
