@@ -1639,9 +1639,21 @@ Not changed (design decisions, noted): English footer slogan in the German UI, l
 - **Legacy**: the previous shelf (`ShelfRow`/`ShelfBook`/`shelf-physics.js`, its grouping) unchanged.
 - Rotunde and 3D-Raum get the whole library at once (no batch reveal). Lesson: after changing a JS module run `dotnet build` again -- the fingerprinted import map's integrity hash otherwise blocks the changed module. Frontend 767/767.
 
+**Bookshelf polish (2026-10-12, #618–#623)**: spec `docs/superpowers/specs/2026-10-12-bookshelf-polish-design.md`, after user feedback on the four styles.
+- #618: Home's recently read book waits for its cover (no blink); ribbons gone; no mouse tilt in the 3D-Raum.
+- #619: `BookSpread` -- a clicked book flies from its place to the middle, turns its cover and opens (all styles, rendered outside `.world-surface`); "Klassisch" with shared boards (`ShelfLineLayout.Pack`), plaques per compartment, decor with baked contact shadows.
+- #620: Lederrücken and Rotunde open books through `BookSpread`; the Rotunde is an arc of exactly as many bays as compartments, with a bay list.
+- #621: 3D-Raum frameless on a transparent sticky canvas, camera mapped 1:1 to the page.
+- #622: every style tips a book out by its top (foot stays on the board, own perspective per book -- a shared CSS perspective made "Klassisch" drift into its neighbour, the three.js pivot was inverted); per-row objects removed, cornice decor smaller, Rotunde lantern sprite removed, `BookSpread` without overshoot.
+- #623: a fixed plaque band above every row (zoom-independent), progress badge inside the cover, spine titles sized per book (`ShelfBookBase.TitleFit`: full size, smaller, two lines, then cut).
+- Checked by measurement, not only screenshots: hovered rects (foot ±0 px, no overlap with neighbours) and a plaque/book overlap audit over two accounts × two styles × 1440/390 px. Lesson: with `core.autocrlf` a `git checkout` rewrites JS files, so a local build's integrity hash no longer matches and the module (e.g. `rotunda.js`) is blocked -- rebuild after every checkout.
+- Saved as prerelease **v4.1.0-beta.1 "Regaloptionen Beta"**.
+
+**Planned: 3D-Bibliothek (spec `docs/superpowers/specs/2026-10-12-library-room-design.md`)**: one walk-through library room replaces "3D-Raum" and "Rotunde" (user: the 3D-Raum was only a copy of "Klassisch", the Rotunde looked flat). Guided camera (click a shelf, the camera moves there, look around a little), real three.js room built from parts with CC0 models, PBR materials, HDRI and real-time light; the theme colours the room; automatic quality level, Klassisch without WebGL. Built in stages: 1 = foundation + rotunda, 2 = reading room for small libraries, 3 = hall for very large ones. Later: a real 3D book opening in the room, a quality switch in Settings.
+
 ### Later (noted 2026-10-04)
 
-- ~~Library shelf rework~~ -- done, four shelf styles (#612–#616).
+- ~~Library shelf rework~~ -- done, four shelf styles (#612–#616), polish #618–#623 (v4.1.0-beta.1); next: 3D-Bibliothek (see above).
 - ~~Polishing~~ -- done (#611).
 - ~~Bug hunt~~ -- done (#603–#610).
 - Still open from before: AI tags/genres and book import via an external API (needs an API comparison first), logo decision (#497).

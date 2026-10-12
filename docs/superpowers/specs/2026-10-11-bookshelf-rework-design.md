@@ -1,5 +1,7 @@
 # Bücherregal-Rework: vier Regal-Stile — Design
 
+> **Hinweis (2026-10-12):** Die Stile „3D-Raum“ und „Rotunde“ werden durch die „3D-Bibliothek“ ersetzt, siehe `2026-10-12-library-room-design.md`.
+
 **Datum:** 2026-10-11
 **Status:** Entwurf, wartet auf Freigabe
 **Vorschau:** `.superpowers/brainstorm/…/regal-vorschau-abcd.html` (lokal, nicht im Repo)
