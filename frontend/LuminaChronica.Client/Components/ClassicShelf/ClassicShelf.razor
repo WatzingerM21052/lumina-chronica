@@ -1,6 +1,6 @@
 @namespace LuminaChronica.Client.Components
 @using LuminaChronica.Client.Models
-@implements IAsyncDisposable
+@inherits ShelfBase
 
 @* Shelf style A "Klassisch" (spec 2026-10-11 §6): a wooden cabinet, one
    compartment per ShelfSection with a brass plaque and the theme's decor on the cornice, books broken into
@@ -9,16 +9,16 @@
     <div class="classic-shelf-cabinet">
         <span class="classic-shelf-post classic-shelf-post--left" aria-hidden="true"></span>
         <span class="classic-shelf-post classic-shelf-post--right" aria-hidden="true"></span>
-        <div class="classic-shelf-measure" @ref="_measureRef" aria-hidden="true"></div>
+        <div class="classic-shelf-measure" @ref="MeasureRef" aria-hidden="true"></div>
         @foreach (var bay in Sections)
         {
             <section class="classic-shelf-bay classic-shelf-bay--@bay.Kind.ToString().ToLowerInvariant()" aria-label="@bay.Label" @key="bay.Label" style="@BayStyle(bay)">
-                <span class="classic-shelf-plaque" title="@bay.Label">@bay.Label</span>
+                <span class="shelf-plaque classic-shelf-plaque" title="@bay.Label">@bay.Label</span>
                 @{
                     var coverForward = bay.Kind == ShelfSectionKind.Recent;
                     Func<Book, int> widthOf = coverForward ? _ => CoverWidth : b => ShelfLineLayout.SizeFor(b).Width;
                 }
-                @foreach (var line in ShelfLineLayout.Lines(bay.Books, _width, Zoom, widthOf))
+                @foreach (var line in ShelfLineLayout.Lines(bay.Books, Width, Zoom, widthOf))
                 {
                     <div class="classic-shelf-back">
                         <div class="classic-shelf-row">

@@ -7,7 +7,8 @@ export function observeWidth(element, dotNetRef, method) {
     let frame = 0;
     const report = () => {
         frame = 0;
-        const width = element.clientWidth;
+        const style = getComputedStyle(element);
+        const width = element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
         if (Math.abs(width - last) < 1) return;
         last = width;
         dotNetRef.invokeMethodAsync(method, width);

@@ -171,7 +171,15 @@ else
     @if (_viewMode == LibraryViewMode.Grid && _shelfStyle != ShelfStyles.Legacy)
     {
         var sections = LibraryShelfGrouping.GroupForShelf(_allItems ?? [], _recent, I18n.T("library.recentShelfLabel"), I18n.T("library.noGenreLabel"));
-        <ClassicShelf Sections="@TakeSectionsUpTo(sections, _visibleBookCount)" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" />
+        var visibleSections = TakeSectionsUpTo(sections, _visibleBookCount);
+        @if (_shelfStyle == ShelfStyles.Leather)
+        {
+            <LeatherShelf Sections="@visibleSections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" />
+        }
+        else
+        {
+            <ClassicShelf Sections="@visibleSections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" />
+        }
         @if (_visibleBookCount < (_allItems?.Count ?? 0))
         {
             <div class="shelf-load-more-sentinel" @ref="_loadMoreSentinelRef"></div>

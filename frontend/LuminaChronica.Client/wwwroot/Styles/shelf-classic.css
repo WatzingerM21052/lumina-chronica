@@ -84,35 +84,7 @@
     left: 26px;
     top: 4px;
     max-width: calc(100% - 52px);
-    overflow: hidden;
-    padding: 4px 18px 5px;
-    border-radius: 3px;
-    background: linear-gradient(180deg, var(--shelf-brass-hi) 0%, var(--shelf-brass) 50%, var(--shelf-brass-lo) 130%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.25), 0 3px 6px rgba(0, 0, 0, 0.55);
-    color: var(--shelf-plaque-ink);
-    font: 600 0.8rem/1.2 "Cinzel", var(--font-family-display);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
-
-/* Two brass rivets. */
-.classic-shelf-plaque::before,
-.classic-shelf-plaque::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    width: 5px;
-    height: 5px;
-    margin-top: -2.5px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, var(--shelf-brass-hi), var(--shelf-brass-lo));
-    box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
-}
-
-.classic-shelf-plaque::before { left: 6px; }
-.classic-shelf-plaque::after { right: 6px; }
 
 .classic-shelf-back {
     position: relative;

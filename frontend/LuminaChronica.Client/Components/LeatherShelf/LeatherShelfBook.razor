@@ -1,0 +1,63 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@inherits ShelfBookBase
+@inject II18nService I18n
+
+@* One leather volume: the spine tips out on hover; the card beside it shows
+   the cover and, for a recently read book, the progress. *@
+<a class="leather-shelf-book" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" style="@BookStyle">
+    <span class="leather-shelf-spine" aria-hidden="true">
+        <span class="leather-shelf-gilt leather-shelf-gilt--top"></span>
+        <span class="leather-shelf-rib leather-shelf-rib--1"></span>
+        <span class="leather-shelf-rib leather-shelf-rib--2"></span>
+        <span class="leather-shelf-title"><span>@Book.Title</span></span>
+        <span class="leather-shelf-emboss"></span>
+        <span class="leather-shelf-rib leather-shelf-rib--3"></span>
+        <span class="leather-shelf-rib leather-shelf-rib--4"></span>
+        <span class="leather-shelf-gilt leather-shelf-gilt--bottom"></span>
+    </span>
+    @if (ProgressPercentage is not null)
+    {
+        <span class="leather-shelf-ribbon" aria-hidden="true"></span>
+    }
+    <span class="leather-shelf-card @(CardOnLeft ? "is-left" : null)" aria-hidden="true">
+        <span class="leather-shelf-card-cover @(CoverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
+            @if (CoverObjectUrl is not null)
+            {
+                <img src="@CoverObjectUrl" alt="" />
+            }
+            <span class="leather-shelf-card-title">@Book.Title</span>
+            @if (!string.IsNullOrWhiteSpace(Book.Author))
+            {
+                <span class="leather-shelf-card-author">@Book.Author</span>
+            }
+        </span>
+        @if (ProgressPercentage is { } progress)
+        {
+            <span class="leather-shelf-card-meta">
+                <span>@string.Format(I18n.T("library.shelfProgress"), Math.Round(Math.Clamp(progress, 0, 100)))</span>
+                <span class="leather-shelf-card-bar"><span style="width: @Percent(progress)"></span></span>
+            </span>
+        }
+        else if (!string.IsNullOrWhiteSpace(Book.Genre))
+        {
+            <span class="leather-shelf-card-meta"><span>@Book.Genre</span></span>
+        }
+    </span>
+</a>
+
+@code {
+    // The card opens towards the middle of the shelf.
+    [Parameter]
+    public bool CardOnLeft { get; set; }
+
+    private string BookStyle
+    {
+        get
+        {
+            var size = ShelfLineLayout.SizeFor(Book);
+            return $"--w: {Px(LeatherShelf.WidthOf(Book) * Zoom)}; --h: {Px((size.Height + 10) * Zoom)}; --c: {Colour}";
+        }
+    }
+}

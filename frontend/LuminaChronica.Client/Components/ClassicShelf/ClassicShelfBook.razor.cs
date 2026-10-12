@@ -1,92 +1,35 @@
-using System.Globalization;
 using LuminaChronica.Client.Models;
 using Microsoft.AspNetCore.Components;
 
 namespace LuminaChronica.Client.Components;
 
-public partial class ClassicShelfBook : ComponentBase, IDisposable
+public partial class ClassicShelfBook
 {
-    // Leather colours for books without a cover tint (the shelf preview's
-    // palette); picked by id so a book keeps its colour.
-    private static readonly string[] Leathers =
-        ["#5b1f2a", "#1f3a4d", "#2d4a2b", "#6b3a1e", "#3b2a4f", "#55222d", "#1d3b3b", "#4b3a17", "#203048", "#3a1414", "#24384a", "#5a3a12"];
-
-    [Parameter, EditorRequired]
-    public Book Book { get; set; } = null!;
-
-    [Parameter]
-    public double Zoom { get; set; } = 1;
-
-    [Parameter]
-    public bool ShowCoverText { get; set; } = true;
-
-    [Parameter]
-    public double? ProgressPercentage { get; set; }
+    // How deep a book reaches into the shelf, at zoom 1.
+    public const int Depth = 140;
 
     // "Zuletzt gelesen" shows the cover instead of the spine.
     [Parameter]
     public bool CoverForward { get; set; }
 
-    // Sideways slide while the cover is turned out (see ClassicShelf).
-    [Parameter]
-    public double HoverShift { get; set; }
-
-    // How deep a book reaches into the shelf, at zoom 1.
-    public const int Depth = 140;
-
     // Width of a cover-forward book at zoom 1 (ClassicShelf picks it).
     [Parameter]
     public int CoverWidth { get; set; } = ShelfLineLayout.CoverWidth;
 
-    private string? _coverObjectUrl;
-    private string? _loadedCoverUrl;
-    private string? _tint;
-
-    private string AccessibleLabel => string.IsNullOrWhiteSpace(Book.Author) ? Book.Title : $"{Book.Title}, {Book.Author}";
+    // Sideways slide while the cover is turned out (see ClassicShelf).
+    [Parameter]
+    public double HoverShift { get; set; }
 
     private string SlotStyle
     {
         get
         {
-            var colour = _tint ?? Leathers[Book.Id % Leathers.Length];
             if (CoverForward)
             {
-                return string.Create(CultureInfo.InvariantCulture,
-                    $"--w: {CoverWidth * Zoom:0.##}px; --h: {CoverWidth * 1.44 * Zoom:0.##}px; --c: {colour}");
+                return $"--w: {Px(CoverWidth * Zoom)}; --h: {Px(CoverWidth * 1.44 * Zoom)}; --c: {Colour}";
             }
             var size = ShelfLineLayout.SizeFor(Book);
-            return string.Create(CultureInfo.InvariantCulture,
-                $"--w: {size.Width * Zoom:0.##}px; --h: {size.Height * Zoom:0.##}px; --d: {Depth * Zoom:0.##}px; --c: {colour}; --shift: {HoverShift:0.##}px");
+            return $"--w: {Px(size.Width * Zoom)}; --h: {Px(size.Height * Zoom)}; --d: {Px(Depth * Zoom)}; --c: {Colour}; --shift: {Px(HoverShift)}";
         }
     }
-
-    private static string Percent(double value) =>
-        Math.Clamp(value, 0, 100).ToString("0.#", CultureInfo.InvariantCulture) + "%";
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (Book.CoverUrl == _loadedCoverUrl) return;
-
-        RevokeCover();
-        _loadedCoverUrl = Book.CoverUrl;
-        _tint = null;
-        if (Book.CoverUrl is null) return;
-
-        var requested = Book.CoverUrl;
-        var result = await ApiClient.GetBytesAsync(requested);
-        if (result is { } cover && requested == _loadedCoverUrl)
-        {
-            _coverObjectUrl = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
-            _tint = await CoverColorService.ExtractDominantColorAsync(requested, _coverObjectUrl);
-        }
-    }
-
-    private void RevokeCover()
-    {
-        if (_coverObjectUrl is null) return;
-        _ = BlobUrlService.RevokeObjectUrlAsync(_coverObjectUrl);
-        _coverObjectUrl = null;
-    }
-
-    public void Dispose() => RevokeCover();
 }
