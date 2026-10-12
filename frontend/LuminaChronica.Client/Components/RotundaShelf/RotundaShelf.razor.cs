@@ -16,18 +16,23 @@ public partial class RotundaShelf
     [Parameter, EditorRequired]
     public IReadOnlyList<ShelfSection> Sections { get; set; } = [];
 
+    // A book was clicked: the library takes it out and opens it (BookSpread).
+    [Parameter]
+    public EventCallback<BookOpenRequest> OnOpen { get; set; }
+
     private List<RotundaBay> _bays = [];
     private double _radius;
-    private (Book Book, double? Progress)? _open;
+    private double _step;
     private ElementReference _roomRef;
     private IJSObjectReference? _module;
-    private int _renderedBayCount;
-    private int? _returnFocusTo;
-    private bool _focusBack;
+    private string? _renderedKey;
+
+    private bool Partial => _bays.Count < RotundaLayout.FullRing;
 
     protected override void OnParametersSet()
     {
         _bays = RotundaLayout.Bays(Sections);
+        _step = RotundaLayout.Step(_bays.Count);
         _radius = RotundaLayout.Radius(_bays.Count, BayWidth);
     }
 
@@ -37,43 +42,26 @@ public partial class RotundaShelf
 
     private static string Label(Book book) => string.IsNullOrWhiteSpace(book.Author) ? book.Title : $"{book.Title}, {book.Author}";
 
-    private void Open(Book book, RotundaBay bay)
+    private static string SpreadKey(int bay, Book book) => $"rotunda-{bay}-{book.Id}";
+
+    private Task OpenAsync(int index, RotundaBay bay, Book book)
     {
         double? progress = bay.Progress is { } p && p.TryGetValue(book.Id, out var value) ? value : null;
-        _open = (book, progress);
-        _returnFocusTo = book.Id;
-    }
-
-    // Focus goes back to the spine once the ring is no longer inert, i.e.
-    // after the render that removed the open book.
-    private Task CloseAsync()
-    {
-        _open = null;
-        _focusBack = true;
-        return Task.CompletedTask;
+        return OnOpen.InvokeAsync(new BookOpenRequest(book, progress, new BookSpreadSource(SpreadKey(index, book))));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The ring is (re)initialised whenever its bays change.
+        var key = string.Join("|", _bays.Select(b => $"{b.Label}:{b.Rows.Sum(r => r.Count)}"));
+        if (key == _renderedKey) return;
+        _renderedKey = key;
         try
         {
-            if (firstRender)
-            {
-                _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/rotunda.js");
-                await _module.InvokeVoidAsync("init", _roomRef, _bays.Count, BayWidth);
-                _renderedBayCount = _bays.Count;
-            }
-            else if (_module is not null && _bays.Count != _renderedBayCount)
-            {
-                _renderedBayCount = _bays.Count;
-                await _module.InvokeVoidAsync("update", _roomRef, _bays.Count);
-            }
-
-            if (_focusBack && _module is not null && _returnFocusTo is { } id)
-            {
-                _focusBack = false;
-                await _module.InvokeVoidAsync("focusBook", _roomRef, id);
-            }
+            _module ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/rotunda.js");
+            // An arc starts in its middle, a ring at its first bay.
+            var start = Partial ? (_bays.Count - 1) / 2 : 0;
+            await _module.InvokeVoidAsync("init", _roomRef, _bays.Count, BayWidth, _step, start, Partial);
         }
         catch (Exception)
         {

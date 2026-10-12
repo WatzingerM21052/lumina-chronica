@@ -22,13 +22,12 @@ public class RotundaLayoutTests
     }
 
     [Fact]
-    public void SmallLibrary_StillFillsTheRing_WithEmptyBays()
+    public void SmallLibrary_GetsExactlyItsBays_InAnArc()
     {
-        var bays = RotundaLayout.Bays([new ShelfSection("Fantasy", ShelfSectionKind.Genre, Books(1, 5))]);
+        var bays = RotundaLayout.Bays([new ShelfSection("Fantasy", ShelfSectionKind.Genre, Books(1, 5)), new ShelfSection("Roman", ShelfSectionKind.Genre, Books(10, 2))]);
 
-        Assert.Equal(RotundaLayout.MinBays, bays.Count);
-        Assert.Equal("Fantasy", bays[0].Label);
-        Assert.All(bays.Skip(1), b => { Assert.Null(b.Label); Assert.Empty(b.Rows); });
+        Assert.Equal(["Fantasy", "Roman"], bays.Select(b => b.Label));
+        Assert.Equal(RotundaLayout.ArcStep, RotundaLayout.Step(bays.Count));
     }
 
     [Fact]
@@ -52,9 +51,13 @@ public class RotundaLayoutTests
     }
 
     [Fact]
-    public void Radius_GrowsWithTheNumberOfBays()
+    public void Radius_ClosesTheRingFromTwelveBays_AndKeepsBaysEdgeToEdge()
     {
-        Assert.True(RotundaLayout.Radius(20, 280) > RotundaLayout.Radius(10, 280));
-        Assert.Equal(10 * 280 / (2 * Math.PI), RotundaLayout.Radius(10, 280), 3);
+        Assert.Equal(30, RotundaLayout.Step(5));
+        Assert.Equal(360.0 / 20, RotundaLayout.Step(20));
+        Assert.True(RotundaLayout.Radius(20, 276) > RotundaLayout.Radius(12, 276));
+        // edge to edge: the chord between two bay centres is the bay width
+        var r = RotundaLayout.Radius(5, 276);
+        Assert.Equal(276, 2 * r * Math.Sin(15 * Math.PI / 180), 3);
     }
 }

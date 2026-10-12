@@ -1,16 +1,20 @@
 namespace LuminaChronica.Client.Models;
 
 // One bay of the rotunda: three shelf rows. A compartment that doesn't fit
-// continues in the next bay (Continued = true); bays without books only
-// carry decor and close the ring.
+// continues in the next bay (Continued = true).
 public record RotundaBay(string? Label, ShelfSectionKind? Kind, List<List<Book>> Rows, IReadOnlyDictionary<int, double>? Progress, bool Continued);
 
-// The rotunda shelf style (spec 2026-10-11 §6 D): compartments laid into
-// bays standing in a ring.
+// The rotunda shelf style (spec 2026-10-11 §6 D, polish 2026-10-12):
+// compartments laid into bays standing in a ring -- or, with fewer than
+// FullRing bays, in an arc of exactly as many bays as needed.
 public static class RotundaLayout
 {
     public const int RowsPerBay = 3;
-    public const int MinBays = 10;
+
+    // From this many bays they close a full ring; below, an arc with bays
+    // ArcStep degrees apart.
+    public const int FullRing = 12;
+    public const double ArcStep = 30;
 
     // Inner width of one bay row in px; spines are narrower than the
     // classic books so a bay holds a good handful per row.
@@ -35,13 +39,13 @@ public static class RotundaLayout
             }
         }
 
-        while (bays.Count < MinBays)
-        {
-            bays.Add(new RotundaBay(null, null, [], null, false));
-        }
         return bays;
     }
 
-    // Ring radius so the bays (BayWidth px wide) stand edge to edge.
-    public static double Radius(int bayCount, double bayWidth) => bayCount * bayWidth / (2 * Math.PI);
+    // Degrees between two bays.
+    public static double Step(int bayCount) => bayCount >= FullRing ? 360.0 / bayCount : ArcStep;
+
+    // Radius at which bays BayWidth px wide stand edge to edge, Step apart.
+    public static double Radius(int bayCount, double bayWidth) =>
+        bayWidth / (2 * Math.Sin(Step(bayCount) * Math.PI / 360));
 }

@@ -6,7 +6,8 @@
 
 @* One leather volume: the spine tips out on hover; the card beside it shows
    the cover and, for a recently read book, the progress. *@
-<a class="leather-shelf-book" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" style="@BookStyle">
+<a class="leather-shelf-book" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" data-spread-key="@SpreadKey"
+   style="@BookStyle" @onclick="OnOpen" @onclick:preventDefault="true">
     <span class="leather-shelf-spine" aria-hidden="true">
         <span class="leather-shelf-gilt leather-shelf-gilt--top"></span>
         <span class="leather-shelf-rib leather-shelf-rib--1"></span>
@@ -47,6 +48,13 @@
     // The card opens towards the middle of the shelf.
     [Parameter]
     public bool CardOnLeft { get; set; }
+
+    // data-spread-key: where BookSpread takes the book from.
+    [Parameter]
+    public string? SpreadKey { get; set; }
+
+    [Parameter]
+    public EventCallback OnOpen { get; set; }
 
     private string BookStyle
     {
