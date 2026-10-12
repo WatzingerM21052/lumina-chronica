@@ -177,7 +177,7 @@ else
             @* The rotunda and the 3D room hold the whole library at once (the
                ring and the cabinet are sized from all of it), so they aren't
                revealed in batches. *@
-            <RotundaShelf Sections="@sections" />
+            <RotundaShelf Sections="@sections" OnOpen="OpenBookAsync" />
         }
         else if (_shelfStyle == ShelfStyles.Room)
         {

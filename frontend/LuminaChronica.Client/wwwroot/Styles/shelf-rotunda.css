@@ -75,7 +75,7 @@
     left: calc(var(--bay-w) / -2 + 8px);
     width: calc(var(--bay-w) - 16px);
     /* Every bay stands on the ring facing its centre, where the reader is. */
-    transform: rotateY(calc(var(--i) * -360deg / var(--n))) translateZ(calc(var(--r) * -1));
+    transform: rotateY(calc(var(--i) * var(--step) * -1deg)) translateZ(calc(var(--r) * -1));
     transform-style: preserve-3d;
     backface-visibility: hidden;
     pointer-events: none;
@@ -168,12 +168,6 @@
     }
 }
 
-.rotunda-decor {
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    background-position: center bottom;
-}
 
 /* ---- The dark and the lantern ---- */
 
@@ -243,19 +237,16 @@
     pointer-events: none;
 }
 
-.rotunda-hint {
-    padding: 6px 10px;
-    border: 1px solid color-mix(in srgb, var(--shelf-brass) 30%, transparent);
-    border-radius: 8px;
-    background: rgba(10, 6, 3, 0.65);
-    color: #e8dcc2;
-    font: 500 12px/1.3 var(--font-family-ui);
-}
 
 .rotunda-arrows {
     display: flex;
     gap: 8px;
     pointer-events: auto;
+}
+
+.rotunda-ui,
+.rotunda.has-lantern .rotunda-ui {
+    cursor: default;
 }
 
 .rotunda-turn {
@@ -280,221 +271,142 @@
     outline-offset: 2px;
 }
 
-/* ---- The opened book ---- */
+/* ---- Crown over each bay: its plaque, decor at the ends ---- */
 
-.rotunda-open {
+.rotunda-crown {
+    position: relative;
+    height: 26px;
+    margin: 0 -8px;
+    background: linear-gradient(180deg, rgba(255, 226, 175, 0.32) 0 2px, rgba(0, 0, 0, 0.2) 2px 70%, rgba(0, 0, 0, 0.55)), var(--shelf-texture) center / 320px, var(--shelf-wood);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.6);
+}
+
+.rotunda-crown::after {
+    content: "";
     position: absolute;
-    z-index: 20;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    perspective: 1600px;
-    background: rgba(4, 2, 1, 0.8);
-    cursor: default;
-    outline: none;
-    animation: rotunda-dim 0.5s ease both;
+    left: 6px;
+    right: 6px;
+    top: 9px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--shelf-brass), var(--shelf-brass-hi), var(--shelf-brass), transparent);
+    opacity: 0.8;
 }
 
-@keyframes rotunda-dim {
-    from { background: rgba(4, 2, 1, 0); }
-}
-
-.rotunda-close {
+.rotunda-plaque {
     position: absolute;
     z-index: 2;
-    top: 18px;
-    right: 20px;
-    padding: 8px 12px;
-    border: 1px solid color-mix(in srgb, var(--shelf-brass) 45%, transparent);
-    border-radius: 8px;
-    background: rgba(10, 6, 3, 0.6);
-    color: #eadfc6;
-    font: 500 13px/1.2 var(--font-family-ui);
-    cursor: pointer;
+    left: 50%;
+    top: -16px;
+    max-width: 220px;
+    transform: translateX(-50%);
 }
 
-.rotunda-close:focus-visible {
+.rotunda-decor {
+    bottom: 100%;
+    height: calc(var(--decor-h) * 0.85);
+}
+
+.rotunda-decor.shelf-decor--left {
+    left: 4px;
+    background-position: left bottom;
+}
+
+.rotunda-decor.shelf-decor--right {
+    right: 4px;
+    background-position: right bottom;
+}
+
+/* An arc closes with broad end pillars. */
+.rotunda.is-arc .rotunda-bay:first-child .rotunda-pillar--left,
+.rotunda.is-arc .rotunda-bay:last-child .rotunda-pillar--right {
+    width: 34px;
+}
+
+/* Gilt title up the spine. */
+.rotunda-spine-title {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 18%;
+    bottom: 18%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--shelf-brass-hi);
+    font: 700 10px/1 "Cormorant Garamond", Georgia, serif;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+/* Title and author of the spine under the pointer. */
+.rotunda-tip {
+    position: absolute;
+    z-index: 10;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--shelf-brass) 40%, transparent);
+    border-radius: 8px;
+    background: rgba(16, 10, 5, 0.92);
+    pointer-events: none;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate(-50%, -100%) translateY(-14px);
+    transition: opacity 0.2s ease;
+}
+
+.rotunda-tip.is-shown {
+    opacity: 1;
+}
+
+.rotunda-tip strong {
+    display: block;
+    color: var(--shelf-brass-hi);
+    font: 700 16px/1.2 "Cormorant Garamond", Georgia, serif;
+}
+
+.rotunda-tip span {
+    color: #cdbf9f;
+    font: 12px/1.3 var(--font-family-ui);
+}
+
+/* The bay list: every compartment, the one in front highlighted. */
+.rotunda-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    pointer-events: auto;
+}
+
+.rotunda-nav-item {
+    padding: 6px 12px;
+    border: 1px solid color-mix(in srgb, var(--shelf-brass) 35%, transparent);
+    border-radius: 999px;
+    background: rgba(10, 6, 3, 0.7);
+    color: #e2d3b3;
+    font: 500 12px/1.2 var(--font-family-ui);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.rotunda-nav-item:hover {
+    border-color: var(--shelf-brass-hi);
+}
+
+.rotunda-nav-item.is-active {
+    border-color: var(--shelf-brass);
+    background: linear-gradient(180deg, var(--shelf-brass-hi), var(--shelf-brass));
+    color: var(--shelf-plaque-ink);
+}
+
+.rotunda-nav-item:focus-visible {
     outline: 2px solid var(--shelf-brass-hi);
     outline-offset: 2px;
 }
 
-.rotunda-tome {
-    position: relative;
-    width: 640px;
-    height: 420px;
-    transform-style: preserve-3d;
-    animation: rotunda-tome-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-@keyframes rotunda-tome-in {
-    from { transform: translateY(40px) scale(0.4) rotateX(25deg); opacity: 0; }
-}
-
-.rotunda-page {
-    position: absolute;
-    top: 0;
-    width: 320px;
-    height: 420px;
-    box-sizing: border-box;
-    background: linear-gradient(90deg, #e9dcbc, #f6eedb 12%, #f3e8d0);
-    color: #3b2a16;
-}
-
-.rotunda-page--left {
-    left: 0;
-    display: grid;
-    place-items: center;
-    border-radius: 6px 0 0 6px;
-    box-shadow: inset -12px 0 24px rgba(120, 90, 40, 0.25);
-}
-
-.rotunda-page--right {
-    left: 320px;
-    display: flex;
-    flex-direction: column;
-    padding: 34px 32px 28px;
-    border-radius: 0 6px 6px 0;
-    box-shadow: inset 12px 0 24px rgba(120, 90, 40, 0.25);
-    font-family: "Cormorant Garamond", Georgia, serif;
-}
-
-.rotunda-page h3 {
-    margin: 0;
-    font: 700 28px/1.05 "Cormorant Garamond", Georgia, serif;
-    overflow-wrap: anywhere;
-}
-
-.rotunda-by {
-    margin: 6px 0 14px;
-    color: #6f5228;
-    font: italic 500 16px/1.2 "Cormorant Garamond", Georgia, serif;
-}
-
-.rotunda-description {
-    display: -webkit-box;
-    margin: 0 0 10px;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 6;
-    font-size: 16px;
-    line-height: 1.45;
-}
-
-.rotunda-facts {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 6px 12px;
-    margin-top: auto;
-    padding-top: 8px;
-    border-top: 1px solid rgba(122, 90, 44, 0.3);
-    color: #6f5228;
-    font: 500 12px/1.3 var(--font-family-ui);
-}
-
-.rotunda-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 16px;
-}
-
-.rotunda-action {
-    padding: 8px 14px;
-    border: 1px solid #3b2a16;
-    border-radius: 6px;
-    color: #3b2a16;
-    font: 600 13px/1.2 var(--font-family-ui);
-    text-decoration: none;
-    transition: background-color 0.2s ease;
-}
-
-.rotunda-action:hover {
-    background: rgba(59, 42, 22, 0.08);
-}
-
-.rotunda-action--primary {
-    background: #3b2a16;
-    color: #f3e2b5;
-}
-
-.rotunda-action--primary:hover {
-    background: #4b371e;
-}
-
-.rotunda-action:focus-visible {
-    outline: 2px solid #8c6a24;
-    outline-offset: 2px;
-}
-
-.rotunda-mini {
-    position: relative;
-    display: block;
-    width: 180px;
-    height: 260px;
-    overflow: hidden;
-    border-radius: 3px 8px 8px 3px;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), transparent 9%), var(--leather-texture) center / 240px, var(--c);
-    background-blend-mode: normal, overlay, normal;
-    box-shadow: 0 18px 30px rgba(60, 40, 10, 0.45);
-}
-
-.rotunda-mini img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.rotunda-mini:not(.has-image)::before {
-    content: "";
-    position: absolute;
-    inset: 9px;
-    border: 1.5px solid color-mix(in srgb, var(--shelf-brass-hi) 75%, transparent);
-    border-radius: 3px;
-}
-
-.rotunda-mini b {
-    position: absolute;
-    top: 24px;
-    left: 14px;
-    right: 14px;
-    color: var(--shelf-brass-hi);
-    font: 700 19px/1.1 "Cormorant Garamond", Georgia, serif;
-    text-align: center;
-}
-
-/* The cover swings open to reveal the spread. */
-.rotunda-coverflap {
-    position: absolute;
-    top: 0;
-    left: 320px;
-    width: 320px;
-    height: 420px;
-    border-radius: 0 6px 6px 0;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), transparent 8%), var(--leather-texture) center / 300px, var(--c);
-    background-blend-mode: normal, overlay, normal;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-    transform-origin: left center;
-    backface-visibility: hidden;
-    pointer-events: none;
-    animation: rotunda-cover-open 1.1s 0.35s cubic-bezier(0.6, 0.05, 0.2, 1) both;
-}
-
-.rotunda-coverflap::before {
-    content: "";
-    position: absolute;
-    inset: 14px;
-    border: 2px solid color-mix(in srgb, var(--shelf-brass-hi) 75%, transparent);
-    border-radius: 4px;
-}
-
-@keyframes rotunda-cover-open {
-    to { transform: rotateY(-178deg); }
-}
-
-/* ---- Narrow screens: the open book stacks its pages ---- */
+/* ---- Narrow screens ---- */
 
 @media (max-width: 720px) {
     .rotunda {
@@ -505,53 +417,12 @@
         perspective: 700px;
     }
 
-    .rotunda-hint {
+    .rotunda-nav {
         display: none;
     }
 
     .rotunda-ui {
         justify-content: flex-end;
-    }
-
-    .rotunda-tome {
-        width: min(320px, calc(100vw - 48px));
-        height: auto;
-        transform-style: flat;
-    }
-
-    .rotunda-page {
-        position: static;
-        width: 100%;
-        height: auto;
-    }
-
-    .rotunda-page--left {
-        padding: 16px 0;
-        border-radius: 6px 6px 0 0;
-        box-shadow: inset 0 -12px 24px rgba(120, 90, 40, 0.2);
-    }
-
-    .rotunda-page--right {
-        padding: 20px 20px 18px;
-        border-radius: 0 0 6px 6px;
-        box-shadow: none;
-    }
-
-    .rotunda-mini {
-        width: 120px;
-        height: 172px;
-    }
-
-    .rotunda-page h3 {
-        font-size: 22px;
-    }
-
-    .rotunda-description {
-        -webkit-line-clamp: 3;
-    }
-
-    .rotunda-coverflap {
-        display: none;
     }
 }
 
@@ -561,15 +432,8 @@
         transition: none;
     }
 
-    .rotunda-tome,
-    .rotunda-coverflap,
-    .rotunda-open,
     .rotunda-lantern-flame,
     .rotunda-spine.is-lit .rotunda-shine {
         animation: none;
-    }
-
-    .rotunda-coverflap {
-        display: none;
     }
 }

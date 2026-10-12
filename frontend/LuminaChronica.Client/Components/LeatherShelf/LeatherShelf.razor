@@ -5,30 +5,45 @@
 @* Shelf style B "Lederrücken" (spec 2026-10-11 §6): open wall shelves of
    worn leather volumes -- raised bands, gilt lines, a title piece and an
    embossed ornament on every spine. A book tips forward on hover and its
-   cover appears beside it. *@
+   cover appears beside it; small compartments share a board; a click
+   takes the book out (OnOpen → BookSpread). *@
 <div class="leather-shelf" style="--zoom: @Zoom.ToString(System.Globalization.CultureInfo.InvariantCulture)">
     <div class="leather-shelf-crown" aria-hidden="true">
         <span class="shelf-decor shelf-decor--left leather-shelf-decor"></span>
         <span class="shelf-decor shelf-decor--right leather-shelf-decor"></span>
     </div>
     <div class="leather-shelf-measure" @ref="MeasureRef" aria-hidden="true"></div>
-    @foreach (var bay in Sections)
+    @{ var rowIndex = 0; }
+    @foreach (var row in Rows)
     {
-        <section class="leather-shelf-bay" aria-label="@bay.Label" @key="bay.Label">
-            <span class="shelf-plaque leather-shelf-plaque" title="@bay.Label">@bay.Label</span>
-            @foreach (var line in ShelfLineLayout.Lines(bay.Books, Width, Zoom, WidthOf))
-            {
-                <div class="leather-shelf-row">
-                    @{ double left = 0; }
-                    @foreach (var book in line)
-                    {
-                        <LeatherShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText"
-                                          ProgressPercentage="@ProgressOf(bay, book)" CardOnLeft="@(Width > 0 && left > Width / 2)" />
-                        left += WidthOf(book) * Zoom + ShelfLineLayout.Gap;
-                    }
-                </div>
-                <div class="leather-shelf-plank" aria-hidden="true"></div>
-            }
-        </section>
+        <div class="leather-shelf-bay">
+            <div class="leather-shelf-row">
+                @{ double left = 0; }
+                @foreach (var segment in row)
+                {
+                    <section class="leather-shelf-group" aria-label="@segment.Section.Label" style="@GroupStyle(segment)">
+                        @if (segment.First)
+                        {
+                            <span class="shelf-plaque leather-shelf-plaque" title="@segment.Section.Label">@segment.Section.Label</span>
+                        }
+                        @foreach (var book in segment.Books)
+                        {
+                            var sec = segment.Section;
+                            <LeatherShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText"
+                                              ProgressPercentage="@ProgressOf(sec, book)" CardOnLeft="@(Width > 0 && left > Width / 2)"
+                                              SpreadKey="@SpreadKey(Style, sec, book)" OnOpen="@(() => OpenAsync(sec, book, Style))" />
+                            left += WidthOf(book) * Zoom + ShelfLineLayout.Gap;
+                        }
+                    </section>
+                    left += GroupGap * Zoom;
+                }
+                @if (ObjectFits(row))
+                {
+                    <span class="shelf-object shelf-object--@(rowIndex % 3 + 1) leather-shelf-object" aria-hidden="true"></span>
+                }
+            </div>
+            <div class="leather-shelf-plank" aria-hidden="true"></div>
+        </div>
+        rowIndex++;
     }
 </div>

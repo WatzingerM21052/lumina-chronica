@@ -1,31 +1,45 @@
-// The rotunda shelf style (RotundaShelf): turning the ring of bays by drag,
-// wheel, arrow buttons and keys, the lantern that follows the pointer, the
-// gilt shine on spines it passes, and naming the bay in front.
+// The rotunda shelf style (RotundaShelf): turning the bays by drag, wheel,
+// arrow buttons, keys or the bay list -- a full ring, or an arc that stops
+// at its ends -- the lantern that follows the pointer, the gilt shine on
+// spines it passes, a title hint over the spine under the pointer, and the
+// name of the bay in front.
 const states = new WeakMap();
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export function init(room, bayCount, bayWidth) {
+export function init(room, bayCount, bayWidth, step, start, partial) {
+    dispose(room);
     const world = room.querySelector(".rotunda-world");
     const title = room.querySelector(".rotunda-title-text");
-    const state = { angle: 0, count: bayCount, bayWidth, drag: null, frame: 0, pointer: null, listeners: [] };
+    const tip = room.querySelector(".rotunda-tip");
+    const radius = bayWidth / (2 * Math.sin(step * Math.PI / 360));
+    const state = { index: start, drag: null, frame: 0, pointer: null, listeners: [] };
     states.set(room, state);
 
-    const step = () => 360 / state.count;
-    const radius = () => state.count * state.bayWidth / (2 * Math.PI);
+    const bays = () => [...room.querySelectorAll(".rotunda-bay")];
+    const clamp = (i) => partial ? Math.max(0, Math.min(bayCount - 1, i)) : ((i % bayCount) + bayCount) % bayCount;
 
-    const apply = (animate = true) => {
+    // Bay i stands at -i steps; the world turns by +angle to bring it front.
+    state.angle = start * step;
+    const show = (animate = true) => {
         world.style.transition = animate && !reduceMotion() ? "" : "none";
-        world.style.transform = `translateZ(${radius() - 40}px) rotateY(${state.angle}deg)`;
-        const front = ((Math.round(state.angle / step()) % state.count) + state.count) % state.count;
-        const bay = room.querySelectorAll(".rotunda-bay")[front];
-        title.textContent = bay?.dataset.label ?? "";
+        world.style.transform = `translateZ(${radius - 40}px) rotateY(${state.angle}deg)`;
+        const front = clamp(Math.round(state.angle / step));
+        state.index = front;
+        const bay = bays()[front];
+        title.textContent = bay ? `${bay.dataset.label} · ${front + 1} / ${bayCount}` : "";
+        // the bay list marks the compartment in front
+        let current = front;
+        while (current > 0 && !room.querySelector(`.rotunda-nav-item[data-index="${current}"]`)) current--;
+        room.querySelectorAll(".rotunda-nav-item").forEach((b) => b.classList.toggle("is-active", +b.dataset.index === current));
     };
-    state.apply = apply;
-
-    const turn = (bays) => {
-        state.angle = Math.round(state.angle / step()) * step() + bays * step();
-        apply();
+    const turnTo = (i) => {
+        const target = clamp(i);
+        // the nearest equivalent angle, so a ring never spins round
+        const want = target * step;
+        state.angle = partial ? want : want + Math.round((state.angle - want) / 360) * 360;
+        show();
     };
+    const turn = (d) => turnTo(Math.round(state.angle / step) + d);
 
     const on = (target, type, handler, options) => {
         target.addEventListener(type, handler, options);
@@ -34,35 +48,36 @@ export function init(room, bayCount, bayWidth) {
 
     on(room.querySelector(".rotunda-turn--prev"), "click", () => turn(-1));
     on(room.querySelector(".rotunda-turn--next"), "click", () => turn(1));
+    on(room.querySelector(".rotunda-nav"), "click", (e) => {
+        const item = e.target.closest(".rotunda-nav-item");
+        if (item) turnTo(+item.dataset.index);
+    });
 
     on(room, "wheel", (e) => {
-        if (e.target.closest(".rotunda-open")) return;
+        if (e.target.closest(".rotunda-ui")) return;
         e.preventDefault();
-        state.angle += (e.deltaY > 0 ? 1 : -1) * step() / 2;
-        apply();
+        turn(e.deltaY > 0 ? 1 : -1);
     }, { passive: false });
 
     on(room, "keydown", (e) => {
-        if (e.target.closest(".rotunda-open")) return;
         if (e.key === "ArrowLeft") { e.preventDefault(); turn(-1); }
         if (e.key === "ArrowRight") { e.preventDefault(); turn(1); }
     });
 
-    // Bays run left to right: bay i stands at -i steps, so the ring turns
-    // by +i steps to bring it to the front. Dragging turns the ring; a drag never also counts as a click.
+    // Dragging turns; a drag never also counts as a click.
     on(room, "pointerdown", (e) => {
-        if (e.button !== 0 || e.target.closest(".rotunda-open, .rotunda-arrows")) return;
+        if (e.button !== 0 || e.target.closest(".rotunda-ui")) return;
         state.drag = { x: e.clientX, angle: state.angle, moved: false };
     });
     on(window, "pointerup", () => {
-        if (state.drag?.moved) apply();
+        if (state.drag?.moved) turnTo(Math.round(state.angle / step));
         setTimeout(() => { state.drag = null; }, 0);
     });
     on(room, "click", (e) => {
         if (state.drag?.moved) { e.preventDefault(); e.stopPropagation(); }
     }, { capture: true });
 
-    // Lantern: follows the pointer; spines it passes catch the light.
+    // Lantern and shine follow the pointer; the hint names the spine under it.
     const light = () => {
         state.frame = 0;
         const p = state.pointer;
@@ -75,14 +90,32 @@ export function init(room, bayCount, bayWidth) {
             spine.classList.add("is-lit");
             setTimeout(() => spine.classList.remove("is-lit"), 1500);
         }
+        if (spine && !state.drag) {
+            const r = spine.getBoundingClientRect();
+            tip.querySelector("strong").textContent = spine.dataset.title || "";
+            tip.querySelector("span").textContent = spine.dataset.author || "";
+            tip.style.left = `${r.left + r.width / 2 - rect.left}px`;
+            tip.style.top = `${r.top - rect.top}px`;
+            tip.classList.add("is-shown");
+        } else {
+            tip.classList.remove("is-shown");
+        }
     };
     on(room, "pointermove", (e) => {
         if (state.drag) {
             const dx = e.clientX - state.drag.x;
             if (Math.abs(dx) > 4) state.drag.moved = true;
-            state.angle = state.drag.angle - dx * 0.12;
+            let angle = state.drag.angle - dx * 0.12;
+            if (partial) angle = Math.max(0, Math.min((bayCount - 1) * step, angle));
+            state.angle = angle;
             world.style.transition = "none";
-            world.style.transform = `translateZ(${radius() - 40}px) rotateY(${state.angle}deg)`;
+            world.style.transform = `translateZ(${radius - 40}px) rotateY(${state.angle}deg)`;
+        }
+        // Over the controls the pointer is a pointer, not the lantern.
+        if (e.target.closest(".rotunda-ui")) {
+            room.classList.remove("has-lantern");
+            tip.classList.remove("is-shown");
+            return;
         }
         if (e.pointerType === "mouse") {
             state.pointer = { x: e.clientX, y: e.clientY };
@@ -90,31 +123,15 @@ export function init(room, bayCount, bayWidth) {
             if (!state.frame) state.frame = requestAnimationFrame(light);
         }
     });
-    on(room, "pointerleave", () => room.classList.remove("has-lantern"));
+    on(room, "pointerleave", () => { room.classList.remove("has-lantern"); tip.classList.remove("is-shown"); });
 
     // Keyboard focus on a spine turns its bay to the front.
     on(room, "focusin", (e) => {
         const bay = e.target.closest?.(".rotunda-bay");
-        if (!bay || e.target.closest(".rotunda-open")) return;
-        const index = [...room.querySelectorAll(".rotunda-bay")].indexOf(bay);
-        const target = index * step();
-        // the nearest equivalent angle, so focus never spins the ring round
-        state.angle = target + Math.round((state.angle - target) / 360) * 360;
-        apply();
+        if (bay) turnTo(bays().indexOf(bay));
     });
 
-    apply(false);
-}
-
-export function update(room, bayCount) {
-    const state = states.get(room);
-    if (!state) return;
-    state.count = bayCount;
-    state.apply(false);
-}
-
-export function focusBook(room, bookId) {
-    room.querySelector(`.rotunda-spine[data-book-id="${bookId}"]`)?.focus();
+    show(false);
 }
 
 export function dispose(room) {
