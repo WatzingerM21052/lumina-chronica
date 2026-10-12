@@ -22,7 +22,7 @@ export function attachCamera(room) {
 
     const floorY = (tier) => room.architecture.floorY(tier);
     const homePose = () => {
-        const pos = new THREE.Vector3(0, EYE, 0.9);
+        const pos = new THREE.Vector3(Math.sin(state.yaw) * -2.3, EYE, Math.cos(state.yaw) * 2.3);
         const dir = new THREE.Vector3(Math.sin(state.yaw) * Math.cos(state.pitch), Math.sin(state.pitch), -Math.cos(state.yaw) * Math.cos(state.pitch));
         return { pos, look: pos.clone().add(dir.multiplyScalar(5)) };
     };
@@ -45,7 +45,7 @@ export function attachCamera(room) {
         const via = from.pos.clone().add(to.pos).multiplyScalar(0.5);
         const r = Math.hypot(via.x, via.z);
         if (r < 2.2) { const k = r > 0.01 ? 2.2 / r : 0; via.x *= k; via.z *= k; if (k === 0) via.z = 2.2; }
-        state.tween = { from, to, via, t: 0, duration: 1.05, done };
+        state.tween = { from, to, via, start: performance.now(), duration: 1050, done };
         room.wake(1200);
     };
 
@@ -115,7 +115,7 @@ export function attachCamera(room) {
     container.tabIndex = 0;
     room.on(container, "keydown", (e) => {
         if (e.target.closest("a, button")) return;
-        if (e.key === "Escape" && !document.querySelector(".book-spread")) { room.goHome(); }
+        if (e.key === "Escape" && room.takenId === null && !document.querySelector(".book-spread")) { room.goHome(); }
         if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
             e.preventDefault();
             const n = room.cases.length;
@@ -125,22 +125,32 @@ export function attachCamera(room) {
         }
     });
     room.on(document, "keydown", (e) => {
-        if (e.key === "Escape" && state.mode === "case" && container.contains(document.activeElement) && !document.querySelector(".book-spread")) room.goHome();
+        if (e.key === "Escape" && state.mode === "case" && container.contains(document.activeElement) && room.takenId === null && !document.querySelector(".book-spread")) room.goHome();
     });
 
     room.onFrame((now, dt) => {
         const tw = state.tween;
         if (!tw) return false;
-        tw.t = Math.min(1, tw.t + dt / tw.duration);
-        const k = ease(tw.t);
+        // wall-clock time, so a slow device still arrives on time
+        const t = Math.min(1, (now - tw.start) / tw.duration);
+        const k = ease(t);
         // quadratic bezier through `via` for the position, straight for the look
         const a = tw.from.pos.clone().lerp(tw.via, k), b = tw.via.clone().lerp(tw.to.pos, k);
         camera.position.copy(a.lerp(b, k));
         target.copy(tw.from.look).lerp(tw.to.look, k);
         camera.lookAt(target);
-        if (tw.t >= 1) { state.tween = null; apply(tw.to); tw.done?.(); }
+        if (t >= 1) { state.tween = null; apply(tw.to); tw.done?.(); }
         return true;
     });
 
-    apply(homePose());
+    // After a theme change the room is rebuilt: stand where one stood.
+    const restore = room.restore;
+    if (restore?.mode === "case" && room.cases[restore.caseIndex]) {
+        state.mode = "case";
+        state.caseIndex = restore.caseIndex;
+        apply(casePose(room.cases[restore.caseIndex]));
+    } else {
+        if (restore) { state.yaw = restore.yaw; state.pitch = restore.pitch; }
+        apply(homePose());
+    }
 }

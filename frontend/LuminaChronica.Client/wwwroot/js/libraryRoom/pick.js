@@ -93,7 +93,7 @@ export function attachPicking(room, getBooks) {
             book.visible = u.id !== room.takenId;
             const target = book === room.hovered || u.id === room.focusedId ? 1 : 0;
             if (Math.abs(target - u.out) < 0.002) u.out = target;
-            else { u.out += (target - u.out) * (reduceMotion() ? 1 : Math.min(1, dt * 10)); moving = true; }
+            else { u.out += (target - u.out) * (reduceMotion() ? 1 : 1 - Math.exp(-dt * 10)); moving = true; }
             book.rotation.x = u.recent ? u.lean * (1 - u.out) : u.out * 0.2;
         }
         if (room.hovered && moving) showTip(room.hovered);

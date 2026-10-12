@@ -6,6 +6,7 @@ import { buildRotunda } from "./rotunda.js";
 import { buildCase, caseMaterials, setSpineTextures } from "./shelf.js";
 import { attachPicking } from "./pick.js";
 import { attachCamera } from "./camera.js";
+import { attachLighting } from "./lighting.js";
 
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -13,7 +14,7 @@ const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matche
 // something changes (the candles keep a throttled 20 fps; nothing at all
 // with reduced motion), plus resizing, visibility and theme changes. The
 // other modules hook in through room.onFrame and the room's methods.
-export async function createScene(container, dotNet, data) {
+export async function createScene(container, dotNet, data, restore) {
     const stage = container.querySelector(".library-room-stage");
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     const quality = chooseQuality(renderer);
@@ -31,7 +32,7 @@ export async function createScene(container, dotNet, data) {
     let last = performance.now();
     const listeners = [];
     const room = {
-        container, stage, dotNet, data, renderer, scene, camera, quality,
+        container, stage, dotNet, data, restore, renderer, scene, camera, quality,
         theme: readTheme(), assets: createAssets(renderer), visible: true, disposed: false,
         raf: 0, timer: 0, busyUntil: 0,
         onFrame: (fn) => { frameHooks.add(fn); return () => frameHooks.delete(fn); },
@@ -98,7 +99,8 @@ export async function createScene(container, dotNet, data) {
     listeners.push(() => io.disconnect());
     room.on(document, "visibilitychange", () => { if (!document.hidden) room.wake(); });
 
-    const themeObserver = new MutationObserver(() => room.retheme?.());
+    // A new theme rebuilds the room in its dress (index.js).
+    const themeObserver = new MutationObserver(() => { if (readTheme().key !== room.theme.key) room.onRetheme?.(); });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     listeners.push(() => themeObserver.disconnect());
 
@@ -112,7 +114,7 @@ export async function createScene(container, dotNet, data) {
     function frame(now) {
         room.raf = 0;
         if (room.disposed || !room.visible || document.hidden) return;
-        const dt = Math.min(0.05, (now - last) / 1000);
+        const dt = Math.min(0.25, (now - last) / 1000);
         last = now;
         let moving = false;
         for (const hook of frameHooks) moving = hook(now, dt) === true || moving;
@@ -142,6 +144,7 @@ export async function createScene(container, dotNet, data) {
     };
     // Filled in by shelf/pick/camera/lighting.
     attachCamera(room);
+    await attachLighting(room);
     // Keyboard focus on a book in the list: walk to its case, lift it out.
     room.focusBook = (id) => {
         const entry = room.cases.find((c) => c.books.some((b) => b.userData.id === id));

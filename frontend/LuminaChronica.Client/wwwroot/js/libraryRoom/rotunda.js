@@ -122,7 +122,22 @@ export async function buildRotunda(room, data) {
 
     // Free places on the floor: tall arched windows, decor before them.
     const used = new Set(data.cases.filter((c) => c.tier === 0).map((c) => Math.round(c.angle / (360 / slots))));
-    const glass = new THREE.MeshBasicMaterial({ color: sky.clone().multiplyScalar(theme.night ? 0.35 : 1.15), toneMapped: false });
+    // Glass: a soft sky -- brighter low (the light outside), leaded panes.
+    const glassCanvas = document.createElement("canvas");
+    glassCanvas.width = 128; glassCanvas.height = 256;
+    {
+        const g = glassCanvas.getContext("2d");
+        const top = sky.clone().multiplyScalar(theme.night ? 0.25 : 0.75), low = sky.clone().multiplyScalar(theme.night ? 0.45 : 1.1);
+        const grad = g.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0, `#${top.getHexString()}`); grad.addColorStop(1, `#${low.getHexString()}`);
+        g.fillStyle = grad; g.fillRect(0, 0, 128, 256);
+        g.strokeStyle = "rgba(40,30,20,.55)"; g.lineWidth = 1.5;
+        for (let y = 0; y < 256; y += 21) { g.beginPath(); g.moveTo(0, y); g.lineTo(128, y); g.stroke(); }
+        for (let x = 0; x < 128; x += 21) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke(); }
+    }
+    const glassMap = new THREE.CanvasTexture(glassCanvas);
+    glassMap.colorSpace = THREE.SRGBColorSpace;
+    const glass = new THREE.MeshBasicMaterial({ map: glassMap, toneMapped: false });
     const frame = wood;
     const windows = [];
     let propIndex = 0;

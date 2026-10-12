@@ -12,15 +12,28 @@ export function supported() {
     }
 }
 
-export async function init(container, dotNet, data) {
+export async function init(container, dotNet, data, restore) {
     try {
-        const room = await createScene(container, dotNet, data);
+        const room = await createScene(container, dotNet, data, restore);
         rooms.set(container, room);
+        room.onRetheme = () => retheme(container, dotNet);
         dotNet.invokeMethodAsync("Ready");
     } catch (error) {
         console.error("[library-room]", error);
         dotNet.invokeMethodAsync("Failed");
     }
+}
+
+// The theme changed: build the room again in the new theme's dress.
+async function retheme(container, dotNet) {
+    const old = rooms.get(container);
+    if (!old || old.rebuilding) return;
+    old.rebuilding = true;
+    const data = old.data;
+    const { mode, caseIndex, yaw, pitch } = old.cameraState;
+    old.dispose();
+    rooms.delete(container);
+    await init(container, dotNet, data, { mode, caseIndex, yaw, pitch });
 }
 
 export function update(container, data) { rooms.get(container)?.update(data); }
