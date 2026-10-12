@@ -18,10 +18,10 @@ export async function attachLighting(room) {
     // The image light only fills; the lamps make the mood.
     const fillOnly = (root) => root.traverse((o) => {
         if (!o.isMesh) return;
-        for (const m of [].concat(o.material)) if (m.isMeshStandardMaterial) m.envMapIntensity = theme.night ? 0.14 : 0.28;
+        for (const m of [].concat(o.material)) if (m.isMeshStandardMaterial) m.envMapIntensity = theme.night ? 0.24 : 0.36;
     });
     fillOnly(scene);
-    room.base.intensity = theme.night ? 0.05 : 0.12;
+    room.base.intensity = theme.night ? 0.1 : 0.16;
 
     // Oculus: a spot straight down, a beam, dust.
     const sky = new THREE.Color(theme.sky);
@@ -72,8 +72,8 @@ export async function attachLighting(room) {
     placeDust(0);
 
     // Reading lamp on the table.
-    const lamp = new THREE.PointLight(0xffb36a, 9, 6, 2);
-    lamp.position.copy(architecture.lamp);
+    const lamp = new THREE.PointLight(0xffb36a, 3.2, 6, 2);
+    lamp.position.copy(architecture.lamp).add(new THREE.Vector3(0, 0.12, 0));
     group.add(lamp);
     const flame = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false }));
     flame.position.copy(architecture.lamp);
@@ -159,10 +159,10 @@ export async function attachLighting(room) {
             near.forEach(({ c }, i) => {
                 const on = i < 4;
                 const flicker = still ? 1 : 1 + Math.sin(t * 9 + c.phase) * 0.08 + Math.sin(t * 23 + c.phase * 2) * 0.05 + Math.sin(t * 51 + c.phase) * 0.03;
-                c.light.intensity = on ? 2.6 * flicker : 0;
+                c.light.intensity = on ? (theme.night ? 3.4 : 2.6) * flicker : 0;
                 c.glow.scale.setScalar(still ? 1 : flicker);
             });
-            lamp.intensity = 9 * (still ? 1 : 1 + Math.sin(t * 7) * 0.03);
+            lamp.intensity = 3.2 * (still ? 1 : 1 + Math.sin(t * 7) * 0.03);
             if (dust.visible) placeDust(t);
         }
         return Math.abs(caseLight.intensity - (entry ? 5.5 : 0)) > 0.05;

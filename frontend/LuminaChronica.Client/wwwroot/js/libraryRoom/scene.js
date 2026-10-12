@@ -87,6 +87,7 @@ export async function createScene(container, dotNet, data, restore) {
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
+        room.reapplyCamera?.();
         room.wake();
     };
     const ro = new ResizeObserver(resize);

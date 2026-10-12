@@ -152,6 +152,18 @@
     margin: 0 0 var(--space-2);
 }
 
+/* Phones: the way back above the list of cases. */
+@media (max-width: 600px) {
+    .library-room-ui {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .library-room-home {
+        align-self: flex-end;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .library-room-stage canvas {
         transition: none;

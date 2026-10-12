@@ -40,7 +40,7 @@ export async function buildRotunda(room, data) {
         assets.material(theme.floor, { repeat: [(R + 0.6) * 2 / 1.6, (R + 0.6) * 2 / 1.6] }),
         assets.material(theme.wall, { repeat: [Math.round(2 * Math.PI * WALL / 2.4), wallHeight / 2.4], tint: wallTint }),
         assets.material(theme.dome, { repeat: [10, 4], tint: wallTint }),
-        assets.material(theme.rug, { repeat: [3, 3], tint: new THREE.Color(theme.wood).lerp(new THREE.Color(0x8a2d22), 0.6).multiplyScalar(1.8) }),
+        assets.material(theme.rug, { repeat: [3, 3], tint: new THREE.Color(theme.wood).lerp(new THREE.Color(0x6a2a22), 0.5).multiplyScalar(0.72) }),
         assets.material("walnut_veneer", { repeat: [1, 2], tint: woodTint, roughness: 0.8 }),
     ]);
     const brass = new THREE.MeshStandardMaterial({ color: new THREE.Color(theme.brass), metalness: 1, roughness: 0.32 });
@@ -132,8 +132,8 @@ export async function buildRotunda(room, data) {
         grad.addColorStop(0, `#${top.getHexString()}`); grad.addColorStop(1, `#${low.getHexString()}`);
         g.fillStyle = grad; g.fillRect(0, 0, 128, 256);
         g.strokeStyle = "rgba(40,30,20,.55)"; g.lineWidth = 1.5;
-        for (let y = 0; y < 256; y += 21) { g.beginPath(); g.moveTo(0, y); g.lineTo(128, y); g.stroke(); }
-        for (let x = 0; x < 128; x += 21) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke(); }
+        // diamond leading
+        for (let k = -256; k < 384; k += 32) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + 256, 256); g.stroke(); g.beginPath(); g.moveTo(k + 256, 0); g.lineTo(k, 256); g.stroke(); }
     }
     const glassMap = new THREE.CanvasTexture(glassCanvas);
     glassMap.colorSpace = THREE.SRGBColorSpace;
@@ -175,7 +175,9 @@ export async function buildRotunda(room, data) {
     // Decor before the windows (on a small pedestal), cycling the theme's props.
     const decor = [];
     for (const { frame: f } of windows) {
-        const id = theme.props[propIndex++ % theme.props.length];
+        // the clock stands against a wall, not before glass
+        const props = theme.props.filter((p) => p !== "vintage_grandfather_clock_01");
+        const id = props[propIndex++ % props.length];
         const tall = id === "vintage_grandfather_clock_01";
         decor.push((async () => {
             const object = await assets.place(id, tall ? 2.1 : id === "marble_bust_01" ? 0.62 : 0.45, "height");

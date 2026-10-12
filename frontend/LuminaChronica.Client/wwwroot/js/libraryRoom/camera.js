@@ -15,23 +15,32 @@ export function attachCamera(room) {
         mode: "home",          // "home" | "case"
         caseIndex: -1,
         yaw: 0, pitch: -0.04,  // home: where one looks
-        offYaw: 0, offPitch: 0, distance: 2.75, // case: looking around
+        offYaw: 0, offPitch: 0, distance: 1, // case: looking around
         tween: null,
     };
     const target = new THREE.Vector3();
 
     const floorY = (tier) => room.architecture.floorY(tier);
     const homePose = () => {
-        const pos = new THREE.Vector3(Math.sin(state.yaw) * -2.3, EYE, Math.cos(state.yaw) * 2.3);
+        const back = camera.aspect < 1 ? 3.3 : 2.3;
+        const pos = new THREE.Vector3(Math.sin(state.yaw) * -back, EYE + (camera.aspect < 1 ? 0.25 : 0), Math.cos(state.yaw) * back);
         const dir = new THREE.Vector3(Math.sin(state.yaw) * Math.cos(state.pitch), Math.sin(state.pitch), -Math.cos(state.yaw) * Math.cos(state.pitch));
         return { pos, look: pos.clone().add(dir.multiplyScalar(5)) };
+    };
+    // Far enough that the whole case (2 m wide, 2.6 m high) fits the view,
+    // whatever the shape of the screen; the wheel adds or takes from that.
+    const fitDistance = () => {
+        const v = THREE.MathUtils.degToRad(camera.fov) / 2;
+        const h = Math.atan(Math.tan(v) * camera.aspect);
+        return Math.max(1.35 / Math.tan(v), 1.05 / Math.tan(h)) + 0.25;
     };
     const casePose = (entry) => {
         const look = entry.center.clone();
         look.y = floorY(entry.tier) + 1.36;
         const n = entry.normal.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), state.offYaw);
-        const pos = look.clone().addScaledVector(n, state.distance);
-        pos.y = floorY(entry.tier) + EYE - 0.12 + Math.sin(state.offPitch) * state.distance;
+        const distance = fitDistance() * state.distance;
+        const pos = look.clone().addScaledVector(n, distance);
+        pos.y = floorY(entry.tier) + EYE - 0.12 + Math.sin(state.offPitch) * distance;
         return { pos, look };
     };
     const pose = () => (state.mode === "case" ? casePose(room.cases[state.caseIndex]) : homePose());
@@ -55,7 +64,7 @@ export function attachCamera(room) {
         // a continued case: go to the first case of its compartment's run
         state.mode = "case";
         state.caseIndex = index;
-        state.offYaw = 0; state.offPitch = 0; state.distance = 2.75;
+        state.offYaw = 0; state.offPitch = 0; state.distance = 1;
         fly(casePose(entry), () => room.dotNet.invokeMethodAsync("CaseChanged", index));
     };
     room.goHome = () => {
@@ -69,6 +78,8 @@ export function attachCamera(room) {
         fly(homePose(), () => room.dotNet.invokeMethodAsync("CaseChanged", -1));
     };
     room.cameraState = state;
+    // the screen changed shape: keep the case fitting the view
+    room.reapplyCamera = () => { if (!state.tween) apply(pose()); };
 
     // Drag to look around (pointer capture so it keeps working off-canvas).
     let drag = null;
@@ -106,7 +117,7 @@ export function attachCamera(room) {
     room.on(container, "wheel", (e) => {
         if (state.mode !== "case" || e.target.closest(".library-room-ui")) return;
         e.preventDefault();
-        state.distance = THREE.MathUtils.clamp(state.distance + e.deltaY * 0.0015, 1.2, 3.4);
+        state.distance = THREE.MathUtils.clamp(state.distance + e.deltaY * 0.0006, 0.45, 1.25);
         if (!state.tween) apply(pose());
         room.wake(100);
     }, { passive: false });
