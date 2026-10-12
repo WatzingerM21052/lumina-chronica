@@ -395,6 +395,21 @@
         linear-gradient(180deg, transparent 10%, rgba(0, 0, 0, 0.6) 10% 14%, transparent 14% 30%, color-mix(in srgb, var(--shelf-brass) 80%, #000) 30% 60%, transparent 60% 84%, rgba(0, 0, 0, 0.6) 84% 88%, transparent 88%);
 }
 
+/* The 3D room: a cabinet in warm light, seen slightly from the side. */
+.shelf-style-thumb--room {
+    background:
+        radial-gradient(ellipse at 85% 20%, rgba(255, 176, 96, 0.55), transparent 50%),
+        linear-gradient(0deg, color-mix(in srgb, var(--shelf-wood) 85%, #fff) 0 5px, transparent 5px),
+        linear-gradient(90deg, color-mix(in srgb, var(--shelf-wood) 80%, #000) 0 6px, transparent 6px calc(100% - 6px), color-mix(in srgb, var(--shelf-wood) 80%, #000) calc(100% - 6px)),
+        color-mix(in srgb, var(--shelf-wood) 40%, #000);
+    perspective: 120px;
+}
+
+.shelf-style-thumb--room i {
+    transform: rotateY(-14deg);
+    box-shadow: 2px 0 2px rgba(0, 0, 0, 0.5);
+}
+
 /* The rotunda: bays curving away, lit in the middle by the lantern. */
 .shelf-style-thumb--rotunda {
     gap: 3px;
