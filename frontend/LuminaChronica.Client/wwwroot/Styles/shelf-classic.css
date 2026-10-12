@@ -134,8 +134,6 @@
     position: relative;
     height: calc(var(--classic-row-height) + 26px);
     border-radius: 2px;
-    perspective: 1400px;
-    perspective-origin: 50% 30%;
     background:
         radial-gradient(ellipse at 50% 0%, var(--shelf-light), transparent 70%),
         linear-gradient(180deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.78)),
@@ -152,7 +150,6 @@
     height: var(--classic-row-height);
     display: flex;
     align-items: flex-end;
-    transform-style: preserve-3d;
 }
 
 /* Contact shadow along the board, behind the books. */
@@ -184,7 +181,6 @@
     align-items: flex-end;
     gap: 3px;
     height: 100%;
-    transform-style: preserve-3d;
 }
 
 .classic-shelf-group + .classic-shelf-group {
@@ -198,18 +194,6 @@
     left: 0;
     top: -24px;
     max-width: 320px;
-    transform: translateZ(2px);
-}
-
-/* One of the theme's small objects at the free end of a board. */
-.classic-shelf-object {
-    position: relative;
-    flex: none;
-    margin: 0 calc(20px * var(--zoom, 1)) 0 auto;
-    height: calc(var(--obj-h, 60px) * var(--zoom, 1));
-    width: calc(150px * var(--zoom, 1));
-    background-position: right bottom;
-    transform: translateZ(20px);
 }
 
 /* ---- Books ---- */
@@ -221,7 +205,6 @@
     height: var(--h);
     color: inherit;
     text-decoration: none;
-    transform-style: preserve-3d;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -230,12 +213,29 @@
 }
 
 .classic-shelf-book {
+    --classic-tip: perspective(900px) translateY(calc(var(--h) / 2)) rotateX(-13deg) translateY(calc(var(--h) / -2));
     position: absolute;
     inset: 0;
     pointer-events: none;
     transform-style: preserve-3d;
-    transform-origin: 50% 100% 0;
-    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.3, 1);
+}
+
+/* The top edge of the book: boards and the page block, lying back into the
+   shelf. Seen only once the book is tipped out (from below it faces away). */
+.classic-shelf-top {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: calc(110px * var(--zoom, 1));
+    transform-origin: 50% 100%;
+    transform: rotateX(90deg);
+    backface-visibility: hidden;
+    background:
+        linear-gradient(0deg, transparent, rgba(0, 0, 0, 0.55)),
+        repeating-linear-gradient(90deg, rgba(120, 95, 60, 0.18) 0 1px, transparent 1px 3px),
+        linear-gradient(90deg, var(--c) 0 3px, #e8dcbd 3px calc(100% - 3px), var(--c) calc(100% - 3px));
 }
 
 .classic-shelf-spine {
@@ -335,16 +335,16 @@
     opacity: 0.9;
 }
 
-/* Hover and keyboard focus: the book slides a little towards the reader
-   and tips forward about its bottom edge -- it stays under the pointer, so
-   its neighbours are as easy to reach. */
+/* Hover and keyboard focus: the book is tipped out by its top, as a finger
+   would -- it turns about its foot, which stays on the board, with its own
+   perspective (eye at its middle), so it never drifts into a neighbour. */
 @media (hover: hover) {
     .classic-shelf-slot:hover {
         z-index: 20;
     }
 
     .classic-shelf-slot:hover .classic-shelf-book {
-        transform: translateZ(26px) translateY(-6px) rotateX(-7deg);
+        transform: var(--classic-tip);
     }
 
     .classic-shelf-slot:hover .classic-shelf-spine {
@@ -358,7 +358,7 @@
 }
 
 .classic-shelf-slot:focus-visible .classic-shelf-book {
-    transform: translateZ(26px) translateY(-6px) rotateX(-7deg);
+    transform: var(--classic-tip);
 }
 
 .classic-shelf-slot:focus-visible .classic-shelf-spine {
@@ -526,13 +526,13 @@
 
 @media (hover: hover) {
     .classic-shelf-slot--display:hover .classic-shelf-display {
-        transform: rotateX(0deg) translateZ(18px);
+        transform: rotateX(0deg);
         filter: brightness(1.08);
     }
 }
 
 .classic-shelf-slot--display:focus-visible .classic-shelf-display {
-    transform: rotateX(0deg) translateZ(18px);
+    transform: rotateX(0deg);
 }
 
 .classic-shelf-slot--display:focus-visible .classic-shelf-display-cover {
@@ -571,7 +571,7 @@
 
     .classic-shelf-decor.shelf-decor--left {
         left: 18px;
-        height: calc(var(--decor-h) * 0.72);
+        height: calc(var(--decor-h) * 0.6);
     }
 
     .classic-shelf-decor.shelf-decor--right,

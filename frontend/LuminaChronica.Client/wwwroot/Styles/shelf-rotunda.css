@@ -24,9 +24,6 @@
     box-shadow: 0 0 0 2px var(--shelf-brass-hi);
 }
 
-.rotunda.has-lantern {
-    cursor: none;
-}
 
 .rotunda-title {
     position: absolute;
@@ -121,12 +118,10 @@
         var(--leather-texture) center / 160px,
         var(--c);
     background-blend-mode: normal, overlay, normal;
-    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform-origin: 50% 100%;
+    transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.3, 1);
 }
 
-.rotunda.has-lantern .rotunda-spine {
-    cursor: none;
-}
 
 .rotunda-spine:focus-visible {
     outline: 2px solid var(--shelf-brass-hi);
@@ -164,7 +159,8 @@
 
 @media (hover: hover) {
     .rotunda-spine:hover {
-        transform: translateZ(26px) translateY(-8px);
+        /* tipped out by its top; the foot stays on the board */
+        transform: rotateX(-12deg);
     }
 }
 
@@ -188,38 +184,16 @@
     background: radial-gradient(circle 220px at var(--mx, 50%) var(--my, 45%), rgba(255, 190, 100, 0.85), transparent 70%);
 }
 
-.rotunda-lantern {
-    position: absolute;
-    z-index: 8;
-    left: var(--mx, 50%);
-    top: var(--my, 45%);
-    width: 34px;
-    height: 52px;
-    margin: -14px 0 0 -17px;
-    pointer-events: none;
-    opacity: 0;
-    filter: drop-shadow(0 0 14px rgba(255, 190, 100, 0.9));
-    transition: opacity 0.3s ease;
-}
-
-.rotunda.has-lantern .rotunda-lantern {
-    opacity: 1;
-}
-
-.rotunda-lantern-metal {
-    fill: var(--shelf-brass-lo);
-}
-
-.rotunda-lantern-flame {
-    transform-box: fill-box;
-    transform-origin: 50% 90%;
-    animation: rotunda-flicker 2.6s infinite ease-in-out;
+/* The light itself flickers a little, like a flame. */
+.rotunda.has-lantern .rotunda-warm {
+    animation: rotunda-flicker 3.2s infinite ease-in-out;
 }
 
 @keyframes rotunda-flicker {
-    0%, 100% { transform: scale(1, 1); }
-    30% { transform: scale(0.94, 1.06); }
-    60% { transform: scale(1.04, 0.96); }
+    0%, 100% { opacity: 1; }
+    23% { opacity: 0.9; }
+    41% { opacity: 0.97; }
+    67% { opacity: 0.86; }
 }
 
 /* ---- Hint and turn buttons ---- */
@@ -303,7 +277,7 @@
 
 .rotunda-decor {
     bottom: 100%;
-    height: calc(var(--decor-h) * 0.85);
+    height: calc(var(--decor-h) * 0.7);
 }
 
 .rotunda-decor.shelf-decor--left {
@@ -432,7 +406,7 @@
         transition: none;
     }
 
-    .rotunda-lantern-flame,
+    .rotunda.has-lantern .rotunda-warm,
     .rotunda-spine.is-lit .rotunda-shine {
         animation: none;
     }

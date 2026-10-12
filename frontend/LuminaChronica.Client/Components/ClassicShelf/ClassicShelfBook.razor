@@ -2,8 +2,7 @@
 @inherits ShelfBookBase
 
 @* One book of the classic shelf. At rest only its spine shows; on hover it
-   slides a little towards the reader and tips forward, staying under the
-   pointer. A click takes it out (OnOpen); the link stays for keyboard,
+   is tipped out by its top (foot on the board), showing its top edge. A click takes it out (OnOpen); the link stays for keyboard,
    middle click and screen readers. *@
 @if (CoverForward)
 {
@@ -39,6 +38,7 @@
 <a class="classic-shelf-slot" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" data-spread-key="@SpreadKey"
    style="@SlotStyle" @onclick="OnOpen" @onclick:preventDefault="true">
     <span class="classic-shelf-book" aria-hidden="true">
+        <span class="classic-shelf-top"></span>
         <span class="classic-shelf-spine">
             <span class="classic-shelf-band classic-shelf-band--1"></span>
             <span class="classic-shelf-band classic-shelf-band--2"></span>

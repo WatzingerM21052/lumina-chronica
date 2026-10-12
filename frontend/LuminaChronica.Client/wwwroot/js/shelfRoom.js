@@ -128,7 +128,7 @@ export function focusBook(container, id) {
     room.focused = book;
     // Bring its row into the middle of the window.
     const r = container.getBoundingClientRect();
-    const y = r.top + window.scrollY + (TOP_ROOM - book.userData.base.y) * room.px - window.innerHeight / 2;
+    const y = r.top + window.scrollY + (TOP_ROOM - book.userData.base.y - book.userData.height / 2) * room.px - window.innerHeight / 2;
     window.scrollTo({ top: y, behavior: reduceMotion() ? "auto" : "smooth" });
     wake(room);
 }
@@ -267,7 +267,7 @@ function build(room) {
     rows.forEach((row, index) => {
         const floor = -(index + 1) * ROW_HEIGHT;
         box(inner, PLANK, DEPTH, m.wood, 0, floor - PLANK / 2, 0);
-        const rowInfo = { index, floor, books: [], textured: false, slot: null };
+        const rowInfo = { index, floor, books: [], textured: false };
         room.rows.push(rowInfo);
         let x = -inner / 2 + 0.3;
         row.forEach((segment, s) => {
@@ -283,12 +283,15 @@ function build(room) {
                 // (+z), a recent one leans against the back, cover out.
                 const front = recent ? tooledCover(b, room.tokens) : spine;
                 const faces = recent ? [m.paper, m.paper, m.paper, m.paper, front, cover] : [cover, cover, m.paper, m.paper, spine, m.paper];
-                const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), faces);
-                const lean = recent ? -0.08 : 0;
-                mesh.position.set(x + w / 2, floor + h / 2 * Math.cos(lean), recent ? -DEPTH / 2 + 0.2 : 0.02);
+                // Pivot on the bottom front edge: a book is tipped out by
+                // its top, its foot stays on the board.
+                const geometry = new THREE.BoxGeometry(w, h, d).translate(0, h / 2, -d / 2);
+                const mesh = new THREE.Mesh(geometry, faces);
+                const lean = recent ? -0.1 : 0;
+                mesh.position.set(x + w / 2, floor, recent ? -DEPTH / 2 + 0.42 : 0.02 + d / 2);
                 mesh.rotation.x = lean;
                 mesh.castShadow = mesh.receiveShadow = true;
-                mesh.userData = { ...b, recent, row: index, base: mesh.position.clone(), lean, out: 0, spine };
+                mesh.userData = { ...b, recent, row: index, base: mesh.position.clone(), height: h, lean, out: 0, spine };
                 cabinet.add(mesh);
                 room.books.push(mesh);
                 rowInfo.books.push(mesh);
@@ -296,9 +299,6 @@ function build(room) {
             }
             x = start + Math.max(x - start, segment.width);
         });
-        // One of the theme's objects in the free space at the end of a board.
-        const free = inner / 2 - 0.25 - x;
-        if (free >= 1.5) rowInfo.slot = { kind: index % 3, right: inner / 2 - 0.25, free };
     });
 
     room.scene.add(cabinet);
@@ -334,7 +334,7 @@ function addPlaque(room, cabinet, label, x, y, maxWidth) {
     cabinet.add(plaque);
 }
 
-// The theme's pictures (decor on the cornice, objects on boards), read from
+// The theme's decor pictures on the cornice, read from
 // the probe elements so they follow shelf-shared.css. Their contact shadow
 // is in the picture.
 function probe(room, selector, sizeVar) {
@@ -368,15 +368,10 @@ function addProps(room) {
     };
     const edge = room.inner / 2 - 0.1;
     const narrow = room.inner < 6;
-    const decorH = narrow ? 0.75 : 1;
+    const decorH = narrow ? 0.6 : 0.8;
     const scaled = (pic, k) => pic && { ...pic, h: pic.h * k };
     place(scaled(probe(room, ".shelf-decor--left.shelf-room-probe", "--decor-h"), decorH), -edge, 0.34, 0.1, -1, room.inner / 2 - 0.2);
     place(scaled(probe(room, ".shelf-decor--right.shelf-room-probe", "--decor-h"), decorH), edge, 0.34, 0.1, 1, room.inner / 2 - 0.2);
-    room.rows.forEach((row) => {
-        if (!row.slot) return;
-        const pic = probe(room, `.shelf-object--${row.slot.kind + 1}.shelf-room-probe`, "--obj-h");
-        place(scaled(pic, 1.15), row.slot.right, row.floor, 0.2, 1, row.slot.free - 0.2);
-    });
 }
 
 // Spine textures only exist for rows near the view (big libraries).
@@ -583,10 +578,9 @@ function loop(room) {
             const target = book === room.hovered || book === room.focused ? 1 : 0;
             if (Math.abs(target - u.out) < 0.002) u.out = target;
             else { u.out += (target - u.out) * (still ? 1 : Math.min(1, dt * 10)); moving = true; }
-            // Slides out towards the reader and tips forward a little;
-            // a recent book comes off the back wall.
-            book.position.set(u.base.x, u.base.y + u.out * 0.05, u.base.z + u.out * (u.recent ? 0.3 : 0.32));
-            book.rotation.x = u.lean * (1 - u.out) - (u.recent ? 0 : u.out * 0.1);
+            // The top tips towards the reader (about 9 degrees) while the foot
+            // stays on the board; a recent book stands up off the back wall.
+            book.rotation.x = u.recent ? u.lean * (1 - u.out) + u.out * 0.04 : u.out * 0.16;
         }
 
         renderer.render(room.scene, camera);

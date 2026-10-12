@@ -19,7 +19,6 @@
         <span class="classic-shelf-post classic-shelf-post--left" aria-hidden="true"></span>
         <span class="classic-shelf-post classic-shelf-post--right" aria-hidden="true"></span>
         <div class="classic-shelf-measure" @ref="MeasureRef" aria-hidden="true"></div>
-        @{ var rowIndex = 0; }
         @foreach (var row in Rows)
         {
             var recent = row[0].Section.Kind == ShelfSectionKind.Recent;
@@ -42,15 +41,10 @@
                                 }
                             </section>
                         }
-                        @if (ObjectFits(row))
-                        {
-                            <span class="shelf-object shelf-object--@(rowIndex % 3 + 1) classic-shelf-object" aria-hidden="true"></span>
-                        }
                     </div>
                 </div>
                 <div class="classic-shelf-plank" aria-hidden="true"></div>
             </div>
-            rowIndex++;
         }
     </div>
 </div>

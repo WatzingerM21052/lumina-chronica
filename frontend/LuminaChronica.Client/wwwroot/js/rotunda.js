@@ -1,6 +1,6 @@
 // The rotunda shelf style (RotundaShelf): turning the bays by drag, wheel,
 // arrow buttons, keys or the bay list -- a full ring, or an arc that stops
-// at its ends -- the lantern that follows the pointer, the gilt shine on
+// at its ends -- the warm light that follows the pointer, the gilt shine on
 // spines it passes, a title hint over the spine under the pointer, and the
 // name of the bay in front.
 const states = new WeakMap();
@@ -111,7 +111,7 @@ export function init(room, bayCount, bayWidth, step, start, partial) {
             world.style.transition = "none";
             world.style.transform = `translateZ(${radius - 40}px) rotateY(${state.angle}deg)`;
         }
-        // Over the controls the pointer is a pointer, not the lantern.
+        // Over the controls the light rests.
         if (e.target.closest(".rotunda-ui")) {
             room.classList.remove("has-lantern");
             tip.classList.remove("is-shown");
