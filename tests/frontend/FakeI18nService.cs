@@ -456,6 +456,7 @@ public class FakeI18nService : II18nService
         ["library.nextPage"] = "Weiter →",
         ["library.loadError"] = "Bibliothek konnte nicht geladen werden.",
         ["library.noGenreLabel"] = "Ohne Genre",
+        ["library.recentShelfLabel"] = "Zuletzt gelesen",
         ["library.thisWeekLabel"] = "Diese Woche",
         ["library.thisMonthLabel"] = "Diesen Monat",
         ["library.thisYearLabel"] = "Dieses Jahr",

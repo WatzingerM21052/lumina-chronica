@@ -20,7 +20,15 @@ public class LibraryPageTests : BunitContext
     {
         Services.AddSingleton<TimeProvider>(_timeProvider);
         Services.AddSingleton<IThemeService>(new FakeThemeService());
+        // These tests cover the legacy shelf; the shelf styles have their
+        // own tests (LibraryShelfStyleTests).
+        _libraryPreferences = JSInterop.SetupModule("./js/libraryPreferences.js");
+        _libraryPreferences.Setup<string?>("getShelfStyle", _ => true).SetResult("legacy");
     }
+
+    // One module double for every test: a second SetupModule call for the
+    // same module would drop the legacy-style setup above.
+    private readonly BunitJSModuleInterop _libraryPreferences;
 
     private void UseApiResponse(string responseJson)
     {
@@ -631,7 +639,7 @@ public class LibraryPageTests : BunitContext
         Services.AddSingleton<II18nService, FakeI18nService>();
         Services.AddSingleton<BlobUrlService>();
         Services.AddSingleton<CoverColorService>();
-        var setSizeHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setRasterPageSize", _ => true);
+        var setSizeHandler = _libraryPreferences.SetupVoid("setRasterPageSize", _ => true);
 
         var cut = Render<Library>();
         cut.Find("#view-raster").Click();
@@ -651,7 +659,7 @@ public class LibraryPageTests : BunitContext
     {
         UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":100}}""");
         JSInterop.Mode = JSRuntimeMode.Loose;
-        JSInterop.SetupModule("./js/libraryPreferences.js")
+        _libraryPreferences
             .Setup<int?>("getRasterPageSize", _ => true)
             .SetResult(40);
 
@@ -666,7 +674,7 @@ public class LibraryPageTests : BunitContext
     {
         UseApiResponse("""{"success":true,"data":{"items":[],"total":0,"page":1,"pageSize":100}}""");
         JSInterop.Mode = JSRuntimeMode.Loose;
-        JSInterop.SetupModule("./js/libraryPreferences.js")
+        _libraryPreferences
             .Setup<int?>("getRasterPageSize", _ => true)
             .SetResult(99); // not one of RasterPageSizeOptions -- stale/tampered value
 
@@ -703,7 +711,7 @@ public class LibraryPageTests : BunitContext
     {
         UseApiResponse(OneBookResponse);
         JSInterop.Mode = JSRuntimeMode.Loose;
-        var setZoomHandler = JSInterop.SetupModule("./js/libraryPreferences.js").SetupVoid("setShelfBookZoom", _ => true);
+        var setZoomHandler = _libraryPreferences.SetupVoid("setShelfBookZoom", _ => true);
 
         var cut = Render<Library>();
         cut.Find("#view-shelf").Click(); // Raster is the default now
@@ -722,7 +730,7 @@ public class LibraryPageTests : BunitContext
     {
         UseApiResponse(OneBookResponse);
         JSInterop.Mode = JSRuntimeMode.Loose;
-        JSInterop.SetupModule("./js/libraryPreferences.js")
+        _libraryPreferences
             .Setup<string?>("getShelfBookZoom", _ => true)
             .SetResult("1.25");
 
@@ -738,7 +746,7 @@ public class LibraryPageTests : BunitContext
     {
         UseApiResponse(OneBookResponse);
         JSInterop.Mode = JSRuntimeMode.Loose;
-        JSInterop.SetupModule("./js/libraryPreferences.js")
+        _libraryPreferences
             .Setup<string?>("getShelfBookZoom", _ => true)
             .SetResult("2"); // not one of ShelfBookZoomOptions -- stale/tampered value
 

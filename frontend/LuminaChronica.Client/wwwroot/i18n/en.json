@@ -401,6 +401,7 @@
   "library.nextPage": "Next →",
   "library.loadError": "Library could not be loaded.",
   "library.noGenreLabel": "No Genre",
+  "library.recentShelfLabel": "Recently read",
   "library.thisWeekLabel": "This Week",
   "library.thisMonthLabel": "This Month",
   "library.thisYearLabel": "This Year",
