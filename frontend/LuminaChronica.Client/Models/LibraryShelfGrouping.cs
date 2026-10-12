@@ -55,6 +55,45 @@ public static class LibraryShelfGrouping
         };
     }
 
+    // The shelf styles' compartments (spec 2026-10-11 §2): recently read
+    // first, then one per genre, books without one last. Books arrive in
+    // the toolbar's sort order and keep it inside every compartment; a
+    // recently read book also stays on its genre's shelf.
+    public static List<ShelfSection> GroupForShelf(
+        IReadOnlyList<Book> books,
+        IReadOnlyList<ContinueReadingItem> recent,
+        string recentLabel,
+        string noGenreLabel)
+    {
+        var sections = new List<ShelfSection>();
+        if (books.Count == 0) return sections;
+
+        var byId = books.DistinctBy(b => b.Id).ToDictionary(b => b.Id);
+        var recentShown = recent.Where(r => byId.ContainsKey(r.Book.Id)).DistinctBy(r => r.Book.Id).ToList();
+        if (recentShown.Count > 0)
+        {
+            sections.Add(new ShelfSection(
+                recentLabel,
+                ShelfSectionKind.Recent,
+                recentShown.Select(r => byId[r.Book.Id]).ToList(),
+                recentShown.ToDictionary(r => r.Book.Id, r => r.Percentage)));
+        }
+
+        sections.AddRange(books
+            .Where(b => !string.IsNullOrWhiteSpace(b.Genre))
+            .GroupBy(b => b.Genre!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new ShelfSection(g.First().Genre!.Trim(), ShelfSectionKind.Genre, g.ToList())));
+
+        var noGenre = books.Where(b => string.IsNullOrWhiteSpace(b.Genre)).ToList();
+        if (noGenre.Count > 0)
+        {
+            sections.Add(new ShelfSection(noGenreLabel, ShelfSectionKind.NoGenre, noGenre));
+        }
+
+        return sections;
+    }
+
     private static List<BookGroup> GroupByGenre(IReadOnlyList<Book> books, string noGenreLabel)
     {
         return books

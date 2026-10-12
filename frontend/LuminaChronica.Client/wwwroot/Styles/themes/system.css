@@ -73,3 +73,31 @@
         --color-border: #3c2f22;
     }
 }
+
+/* Bookshelf styles (spec 2026-10-11 §4): wood, brass and light of the
+   library shelf in this theme. */
+@media (prefers-color-scheme: light) {
+    [data-theme="system"] {
+        --shelf-wood: #8a6a4c;
+        --shelf-wood-tint: rgba(255,255,255,.12);
+        --shelf-brass-hi: #e6e8ec;
+        --shelf-brass: #b9bec7;
+        --shelf-brass-lo: #7d838d;
+        --shelf-plaque-ink: #1f2329;
+        --shelf-light: rgba(255,240,215,.3);
+        --shelf-room: transparent;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] {
+        --shelf-wood: #24150d;
+        --shelf-wood-tint: rgba(10,6,4,.35);
+        --shelf-brass-hi: #d9c48a;
+        --shelf-brass: #b08f45;
+        --shelf-brass-lo: #6f5523;
+        --shelf-plaque-ink: #1e1408;
+        --shelf-light: rgba(255,170,90,.18);
+        --shelf-room: radial-gradient(ellipse at 50% 0%, rgba(255,170,90,.18), transparent 65%);
+    }
+}

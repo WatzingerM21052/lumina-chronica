@@ -1,0 +1,56 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@implements IAsyncDisposable
+
+@* Shelf style A "Klassisch" (spec 2026-10-11 §6): a wooden cabinet, one
+   compartment per ShelfSection with a brass plaque, books broken into
+   planks by ShelfLineLayout once shelfLayout.js has reported the width. *@
+<div class="classic-shelf" style="--zoom: @Zoom.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+    <div class="classic-shelf-cabinet">
+        <span class="classic-shelf-post classic-shelf-post--left" aria-hidden="true"></span>
+        <span class="classic-shelf-post classic-shelf-post--right" aria-hidden="true"></span>
+        <div class="classic-shelf-measure" @ref="_measureRef" aria-hidden="true"></div>
+        @foreach (var bay in Sections)
+        {
+            <section class="classic-shelf-bay classic-shelf-bay--@bay.Kind.ToString().ToLowerInvariant()" aria-label="@bay.Label" @key="bay.Label" style="@BayStyle(bay)">
+                <span class="classic-shelf-plaque" title="@bay.Label">@bay.Label</span>
+                @{
+                    var coverForward = bay.Kind == ShelfSectionKind.Recent;
+                    Func<Book, int> widthOf = coverForward ? _ => CoverWidth : b => ShelfLineLayout.SizeFor(b).Width;
+                }
+                @foreach (var line in ShelfLineLayout.Lines(bay.Books, _width, Zoom, widthOf))
+                {
+                    <div class="classic-shelf-back">
+                        <div class="classic-shelf-row">
+                            @{ double left = 0; }
+                            @foreach (var book in line)
+                            {
+                                <ClassicShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText" CoverForward="coverForward" CoverWidth="CoverWidth"
+                                                  ProgressPercentage="@ProgressOf(bay, book)" HoverShift="@HoverShift(left)" />
+                                left += widthOf(book) * Zoom + ShelfLineLayout.Gap;
+                            }
+                            @if (HasRoomForBookend(line, widthOf))
+                            {
+                                <span class="classic-shelf-bookend" aria-hidden="true"></span>
+                            }
+                        </div>
+                    </div>
+                    <div class="classic-shelf-plank" aria-hidden="true"></div>
+                }
+            </section>
+        }
+        <svg class="classic-shelf-candle" viewBox="0 0 46 150" aria-hidden="true" focusable="false">
+            <defs>
+                <radialGradient id="classic-shelf-glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffcf7a" stop-opacity=".95" /><stop offset=".4" stop-color="#ffb04a" stop-opacity=".35" /><stop offset="1" stop-color="#ff9a30" stop-opacity="0" /></radialGradient>
+                <linearGradient id="classic-shelf-brass" x1="0" x2="1"><stop offset="0" class="classic-shelf-candle-brass-lo" /><stop offset=".45" class="classic-shelf-candle-brass-hi" /><stop offset="1" class="classic-shelf-candle-brass-lo" /></linearGradient>
+                <linearGradient id="classic-shelf-wax" x1="0" x2="1"><stop offset="0" stop-color="#d9caa6" /><stop offset=".5" stop-color="#f8efd9" /><stop offset="1" stop-color="#cbb991" /></linearGradient>
+            </defs>
+            <circle class="classic-shelf-candle-glow" cx="23" cy="20" r="23" fill="url(#classic-shelf-glow)" />
+            <path class="classic-shelf-candle-flame" d="M23 6c4 6 4 11 0 15-4-4-4-9 0-15z" fill="#ffe6a3" />
+            <rect x="17" y="24" width="12" height="62" rx="2" fill="url(#classic-shelf-wax)" />
+            <path d="M8 88h30l-4 8H12z" fill="url(#classic-shelf-brass)" />
+            <rect x="20" y="96" width="6" height="34" fill="url(#classic-shelf-brass)" />
+            <path d="M5 130h36l-3 10H8z" fill="url(#classic-shelf-brass)" />
+        </svg>
+    </div>
+</div>

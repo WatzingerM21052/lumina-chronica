@@ -40,3 +40,15 @@ export function getHomeScrollShelf() {
 export function setHomeScrollShelf(value) {
     localStorage.setItem(HOME_SCROLL_SHELF_KEY, String(value));
 }
+
+// Which style the library's Regal view uses (classic, legacy, ...).
+// null = never chosen; ShelfStyles.Normalize picks the default.
+const SHELF_STYLE_KEY = "lumina_shelf_style";
+
+export function getShelfStyle() {
+    return localStorage.getItem(SHELF_STYLE_KEY);
+}
+
+export function setShelfStyle(value) {
+    localStorage.setItem(SHELF_STYLE_KEY, value);
+}

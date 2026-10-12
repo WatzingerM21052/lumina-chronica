@@ -108,3 +108,16 @@ html[data-theme="daemmergarten"] {
     --j-engr-world: url("../../images/themes/daemmergarten/daemmergarten-projects.webp");
     --j-engr-finale: url("../../images/themes/daemmergarten/daemmergarten-discover.webp");
 }
+
+/* Bookshelf styles (spec 2026-10-11 §4): wood, brass and light of the
+   library shelf in this theme. */
+[data-theme="daemmergarten"] {
+    --shelf-wood: #3b2a1e;
+    --shelf-wood-tint: rgba(60,40,80,.18);
+    --shelf-brass-hi: #e8c28f;
+    --shelf-brass: #b8835a;
+    --shelf-brass-lo: #7a4f30;
+    --shelf-plaque-ink: #221208;
+    --shelf-light: rgba(255,180,140,.2);
+    --shelf-room: transparent;
+}

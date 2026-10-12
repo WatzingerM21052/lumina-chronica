@@ -48,3 +48,16 @@
 
     --color-border: #e2e5ea;
 }
+
+/* Bookshelf styles (spec 2026-10-11 §4): wood, brass and light of the
+   library shelf in this theme. */
+[data-theme="modern-light"] {
+    --shelf-wood: #8a6a4c;
+    --shelf-wood-tint: rgba(255,255,255,.12);
+    --shelf-brass-hi: #e6e8ec;
+    --shelf-brass: #b9bec7;
+    --shelf-brass-lo: #7d838d;
+    --shelf-plaque-ink: #1f2329;
+    --shelf-light: rgba(255,240,215,.3);
+    --shelf-room: transparent;
+}

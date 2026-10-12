@@ -4,6 +4,10 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ## [Unreleased]
 
+### Added
+
+- New shelf style "Klassisch" for the library's shelf view, now the default: a wooden cabinet in the theme's wood and brass, recently read books standing cover-forward with their progress, one compartment per genre, books that slide out and turn their cover towards you, brass bookends and a candle. The previous shelf stays available as "Legacy" in Settings > Library > Shelf style.
+
 ### Fixed
 
 - Sign-up works again: since #504 every normal registration was rejected ("confirmNewAccount must be a boolean.") (#603).

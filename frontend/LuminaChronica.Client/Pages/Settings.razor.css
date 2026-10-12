@@ -284,3 +284,103 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+/* Shelf style (spec 2026-10-11): text above, the styles as small cards
+   with a CSS miniature of each shelf. */
+.shelf-style-row {
+    flex-direction: column;
+    align-items: stretch;
+    cursor: default;
+}
+
+.shelf-style-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: var(--space-2);
+}
+
+.shelf-style-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: none;
+    color: var(--color-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--motion-micro) var(--ease-standard), box-shadow var(--motion-micro) var(--ease-standard);
+}
+
+.shelf-style-option:hover {
+    border-color: var(--color-text-muted);
+}
+
+.shelf-style-option.is-active {
+    border-color: var(--color-accent-text);
+    box-shadow: 0 0 0 1px var(--color-accent-text);
+}
+
+.shelf-style-name {
+    padding: 0 0.2rem;
+    font-size: var(--font-size-small);
+    font-weight: 600;
+}
+
+.shelf-style-option.is-active .shelf-style-name::after {
+    content: " ✓";
+    color: var(--color-accent-text);
+}
+
+.shelf-style-hint {
+    padding: 0 0.2rem 0.15rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--color-text-muted);
+}
+
+/* Miniature: a compartment with six spines standing on a plank. */
+.shelf-style-thumb {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 4.5rem;
+    margin-bottom: 0.25rem;
+    padding: 0.55rem 0.7rem 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.shelf-style-thumb i {
+    flex: 1;
+    max-width: 14px;
+    border-radius: 1px 1px 0 0;
+}
+
+.shelf-style-thumb i:nth-child(1) { height: 78%; background: #6e1f1a; }
+.shelf-style-thumb i:nth-child(2) { height: 92%; background: #1f3a5a; }
+.shelf-style-thumb i:nth-child(3) { height: 70%; background: #2d4a2a; }
+.shelf-style-thumb i:nth-child(4) { height: 88%; background: #4a2a52; }
+.shelf-style-thumb i:nth-child(5) { height: 82%; background: #7a5a1e; }
+.shelf-style-thumb i:nth-child(6) { height: 74%; background: #3d1f14; }
+
+.shelf-style-thumb--classic {
+    background:
+        linear-gradient(0deg, var(--shelf-brass-lo) 0 2px, var(--shelf-wood) 2px 7px, transparent 7px),
+        radial-gradient(ellipse at 50% 0%, var(--shelf-light), transparent 70%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.8)),
+        var(--shelf-wood);
+    box-shadow: inset 0 0 0 4px var(--shelf-wood), inset 0 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.shelf-style-thumb--classic i {
+    background-image: linear-gradient(180deg, transparent 18%, var(--shelf-brass) 18% 21%, transparent 21% 79%, var(--shelf-brass) 79% 82%, transparent 82%);
+}
+
+.shelf-style-thumb--legacy {
+    background:
+        linear-gradient(0deg, #8a6440 0 7px, transparent 7px),
+        #c9b08a;
+}

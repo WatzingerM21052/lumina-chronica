@@ -108,3 +108,16 @@ html[data-theme="abendhafen"] {
     --j-engr-world: url("../../images/themes/abendhafen/abendhafen-projects.webp");
     --j-engr-finale: url("../../images/themes/abendhafen/abendhafen-discover.webp");
 }
+
+/* Bookshelf styles (spec 2026-10-11 §4): wood, brass and light of the
+   library shelf in this theme. */
+[data-theme="abendhafen"] {
+    --shelf-wood: #4a3628;
+    --shelf-wood-tint: rgba(60,80,110,.18);
+    --shelf-brass-hi: #ebcf92;
+    --shelf-brass: #b8904c;
+    --shelf-brass-lo: #7a5a26;
+    --shelf-plaque-ink: #22160a;
+    --shelf-light: rgba(255,170,110,.22);
+    --shelf-room: transparent;
+}
