@@ -321,7 +321,7 @@ public class SettingsPageTests : BunitContext
 
         var cut = Render<Settings>();
 
-        Assert.Equal(["classic", "leather", "legacy"], cut.FindAll(".shelf-style-option").Select(b => b.GetAttribute("data-value")));
+        Assert.Equal(["classic", "leather", "rotunda", "legacy"], cut.FindAll(".shelf-style-option").Select(b => b.GetAttribute("data-value")));
         Assert.Equal("classic", cut.Find(".shelf-style-option[aria-pressed=true]").GetAttribute("data-value"));
     }
 
