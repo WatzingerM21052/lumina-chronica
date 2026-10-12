@@ -37,7 +37,6 @@ public class RotundaShelfTests : BunitContext
         Assert.Equal(3, spines.Count);
         Assert.Equal("library/books/1", spines[0].GetAttribute("href"));
         Assert.Equal("Momo, Michael Ende", spines[0].GetAttribute("aria-label"));
-        Assert.Single(cut.FindAll(".rotunda-ribbon"));
         Assert.Equal(8, cut.FindAll(".rotunda-bay.is-empty").Count);
     }
 

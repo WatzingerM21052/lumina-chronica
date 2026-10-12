@@ -356,6 +356,30 @@
     background: var(--shelf-brass-hi);
 }
 
+/* At rest a book shows only its spine: from the front its cover side and
+   top can't be seen, and in perspective they otherwise poke out as
+   slanted flags over shorter neighbours and slivers in the gaps. They
+   appear as the book turns out and fade once it is back. */
+.classic-shelf-cover,
+.classic-shelf-top {
+    opacity: 0;
+    transition: opacity 0.15s ease 0.4s;
+}
+
+.classic-shelf-slot:focus-visible .classic-shelf-cover,
+.classic-shelf-slot:focus-visible .classic-shelf-top {
+    opacity: 1;
+    transition-delay: 0s;
+}
+
+@media (hover: hover) {
+    .classic-shelf-slot:hover .classic-shelf-cover,
+    .classic-shelf-slot:hover .classic-shelf-top {
+        opacity: 1;
+        transition-delay: 0s;
+    }
+}
+
 /* Page edges on top. */
 .classic-shelf-top {
     top: 0;
@@ -666,7 +690,9 @@
 @media (prefers-reduced-motion: reduce) {
     .classic-shelf-book,
     .classic-shelf-spine,
-    .classic-shelf-display {
+    .classic-shelf-display,
+    .classic-shelf-cover,
+    .classic-shelf-top {
         transition: none;
     }
 }

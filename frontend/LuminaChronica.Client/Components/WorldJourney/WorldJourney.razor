@@ -23,7 +23,9 @@
         var page = CurrentPage(featured);
         <section class="journey-chapter journey-reading" data-amb="reading" aria-labelledby="journey-reading-title">
             <div class="journey-wrap journey-grid">
-                <div class="journey-book-col" data-tilt data-enter>
+                @* data-cover-pending holds the entrance until the cover is
+                   there, so the book doesn't fly in and then swap its face. *@
+                <div class="journey-book-col" data-tilt data-enter data-cover-pending="@(CoverPending(featured.Book) ? "true" : null)">
                     <div class="journey-pool"></div>
                     <div class="journey-book-shadow"></div>
                     @if (IsBabylon)
@@ -48,18 +50,16 @@
                         <span class="journey-book-pages"></span>
                         <span class="journey-book-top"></span>
                         <span class="journey-book-front">
+                            @Tooling
+                            <span class="journey-book-title">@featured.Book.Title</span>
+                            @if (!string.IsNullOrWhiteSpace(featured.Book.Author))
+                            {
+                                <span class="journey-book-author">@featured.Book.Author</span>
+                            }
+                            @* Over the tooled front, fading in -- never a hard swap. *@
                             @if (CoverOf(featured.Book) is { } cover)
                             {
-                                <img src="@cover" alt="" />
-                            }
-                            else
-                            {
-                                @Tooling
-                                <span class="journey-book-title">@featured.Book.Title</span>
-                                @if (!string.IsNullOrWhiteSpace(featured.Book.Author))
-                                {
-                                    <span class="journey-book-author">@featured.Book.Author</span>
-                                }
+                                <img class="journey-book-cover" src="@cover" alt="" />
                             }
                         </span>
                     </a>

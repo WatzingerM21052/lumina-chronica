@@ -97,6 +97,9 @@
 .leather-shelf-book {
     position: relative;
     flex: none;
+    /* Depth for tipping the spine out towards the reader. */
+    perspective: 700px;
+    perspective-origin: 50% 100%;
     width: var(--w);
     height: var(--h);
     color: inherit;
@@ -200,20 +203,6 @@
     -webkit-mask: url("../images/themes/books/corner.svg") center / contain no-repeat;
     mask: url("../images/themes/books/corner.svg") center / contain no-repeat;
     filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
-}
-
-/* "Zuletzt gelesen": a silk ribbon hangs out over the plank. */
-.leather-shelf-ribbon {
-    position: absolute;
-    z-index: 7;
-    left: 32%;
-    bottom: -18px;
-    width: 7px;
-    height: 26px;
-    background: linear-gradient(90deg, #5e0f16, #a8202c 45%, #6d121a);
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
-    box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.5);
-    pointer-events: none;
 }
 
 /* ---- The cover card beside a book ---- */
@@ -343,15 +332,16 @@
     background: var(--shelf-brass-hi);
 }
 
-/* Hover (mouse) and keyboard focus: the book tips out of the row, the
-   sheen runs over it and its card appears. */
+/* Hover (mouse) and keyboard focus: the book tips forward out of the row
+   about its bottom edge, as if pulled out by the top -- towards the reader,
+   never into its neighbour -- the sheen runs over it and its card appears. */
 @media (hover: hover) {
     .leather-shelf-book:hover {
         z-index: 30;
     }
 
     .leather-shelf-book:hover .leather-shelf-spine {
-        transform: rotate(-9deg) translateY(-10px);
+        transform: rotateX(-20deg) translateY(-6px);
         filter: brightness(1.12);
     }
 
@@ -370,7 +360,7 @@
 }
 
 .leather-shelf-book:focus-visible .leather-shelf-spine {
-    transform: rotate(-9deg) translateY(-10px);
+    transform: rotateX(-20deg) translateY(-6px);
     box-shadow: 0 0 0 2px var(--shelf-brass-hi);
 }
 

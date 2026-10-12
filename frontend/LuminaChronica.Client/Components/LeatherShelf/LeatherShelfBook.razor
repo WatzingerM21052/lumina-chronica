@@ -17,10 +17,6 @@
         <span class="leather-shelf-rib leather-shelf-rib--4"></span>
         <span class="leather-shelf-gilt leather-shelf-gilt--bottom"></span>
     </span>
-    @if (ProgressPercentage is not null)
-    {
-        <span class="leather-shelf-ribbon" aria-hidden="true"></span>
-    }
     <span class="leather-shelf-card @(CardOnLeft ? "is-left" : null)" aria-hidden="true">
         <span class="leather-shelf-card-cover @(CoverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
             @if (CoverObjectUrl is not null)
