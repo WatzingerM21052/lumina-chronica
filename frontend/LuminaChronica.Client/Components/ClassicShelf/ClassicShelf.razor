@@ -2,45 +2,55 @@
 @using LuminaChronica.Client.Models
 @inherits ShelfBase
 
-@* Shelf style A "Klassisch" (spec 2026-10-11 §6): a wooden cabinet, one
-   compartment per ShelfSection with a brass plaque and the theme's decor on the cornice, books broken into
-   planks by ShelfLineLayout once shelfLayout.js has reported the width. *@
+@* Shelf style A "Klassisch" (spec 2026-10-11 §6, polish 2026-10-12): a
+   wooden cabinet with the theme's decor on its cornice. Small compartments
+   share a board (each with its brass plaque); free space at the end of a
+   board holds one of the theme's small objects. A click takes the book out
+   (OnOpen → BookSpread). *@
 <div class="classic-shelf" style="--zoom: @Zoom.ToString(System.Globalization.CultureInfo.InvariantCulture)">
     <div class="classic-shelf-cabinet">
+        <div class="classic-shelf-cornice" aria-hidden="true">
+            <span class="classic-shelf-cornice-top"></span>
+            <span class="classic-shelf-cornice-front"></span>
+            <span class="shelf-decor shelf-decor--left classic-shelf-decor"></span>
+            <span class="shelf-decor shelf-decor--right classic-shelf-decor"></span>
+            <span class="shelf-decor-glow classic-shelf-glow"></span>
+        </div>
         <span class="classic-shelf-post classic-shelf-post--left" aria-hidden="true"></span>
         <span class="classic-shelf-post classic-shelf-post--right" aria-hidden="true"></span>
         <div class="classic-shelf-measure" @ref="MeasureRef" aria-hidden="true"></div>
-        @foreach (var bay in Sections)
+        @{ var rowIndex = 0; }
+        @foreach (var row in Rows)
         {
-            <section class="classic-shelf-bay classic-shelf-bay--@bay.Kind.ToString().ToLowerInvariant()" aria-label="@bay.Label" @key="bay.Label" style="@BayStyle(bay)">
-                <span class="shelf-plaque classic-shelf-plaque" title="@bay.Label">@bay.Label</span>
-                @{
-                    var coverForward = bay.Kind == ShelfSectionKind.Recent;
-                    Func<Book, int> widthOf = coverForward ? _ => CoverWidth : b => ShelfLineLayout.SizeFor(b).Width;
-                }
-                @foreach (var line in ShelfLineLayout.Lines(bay.Books, Width, Zoom, widthOf))
-                {
-                    <div class="classic-shelf-back">
-                        <div class="classic-shelf-row">
-                            @{ double left = 0; }
-                            @foreach (var book in line)
-                            {
-                                <ClassicShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText" CoverForward="coverForward" CoverWidth="CoverWidth"
-                                                  ProgressPercentage="@ProgressOf(bay, book)" HoverShift="@HoverShift(left)" />
-                                left += widthOf(book) * Zoom + ShelfLineLayout.Gap;
-                            }
-                            @if (HasRoomForBookend(line, widthOf))
-                            {
-                                <span class="classic-shelf-bookend" aria-hidden="true"></span>
-                            }
-                        </div>
+            var recent = row[0].Section.Kind == ShelfSectionKind.Recent;
+            <div class="classic-shelf-bay @(recent ? "classic-shelf-bay--recent" : null)" style="@BayStyle(recent)">
+                <div class="classic-shelf-back">
+                    <div class="classic-shelf-row">
+                        @foreach (var segment in row)
+                        {
+                            <section class="classic-shelf-group" aria-label="@segment.Section.Label" style="@GroupStyle(segment)">
+                                @if (segment.First)
+                                {
+                                    <span class="shelf-plaque classic-shelf-plaque" title="@segment.Section.Label">@segment.Section.Label</span>
+                                }
+                                @foreach (var book in segment.Books)
+                                {
+                                    var sec = segment.Section;
+                                    <ClassicShelfBook @key="book.Id" Book="book" Zoom="Zoom" ShowCoverText="ShowCoverText" CoverForward="recent" CoverWidth="CoverWidth"
+                                                      ProgressPercentage="@ProgressOf(sec, book)" SpreadKey="@SpreadKey(Style, sec, book)"
+                                                      OnOpen="@(() => OpenAsync(sec, book, Style))" />
+                                }
+                            </section>
+                        }
+                        @if (ObjectFits(row))
+                        {
+                            <span class="shelf-object shelf-object--@(rowIndex % 3 + 1) classic-shelf-object" aria-hidden="true"></span>
+                        }
                     </div>
-                    <div class="classic-shelf-plank" aria-hidden="true"></div>
-                }
-            </section>
+                </div>
+                <div class="classic-shelf-plank" aria-hidden="true"></div>
+            </div>
+            rowIndex++;
         }
-        @* Theme decor standing on the cornice (shelf-decor.css). *@
-        <span class="shelf-decor shelf-decor--left classic-shelf-decor" aria-hidden="true"></span>
-        <span class="shelf-decor shelf-decor--right classic-shelf-decor" aria-hidden="true"></span>
     </div>
 </div>

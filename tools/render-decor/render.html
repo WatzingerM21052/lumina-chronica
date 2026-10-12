@@ -13,7 +13,7 @@ window.renderDecor = async (id, opts = {}) => {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(1); renderer.setSize(W, H); renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = opts.exposure ?? 1.0;
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   document.body.innerHTML = ''; document.body.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -25,6 +25,25 @@ window.renderDecor = async (id, opts = {}) => {
   // Flames ship as opaque JPEGs meant for additive blending: use their
   // brightness as alpha so the transparent background stays clean.
   model.traverse(o => { if (o.isMesh && /flame|fire/i.test(o.material.name)) { const m = o.material; m.alphaMap = m.map || m.emissiveMap; m.transparent = true; m.depthWrite = false; m.needsUpdate = true; } });
+  // Lay picked nodes flat and stack them (a pile of books lying down).
+  if (opts.stack) {
+    model.updateMatrixWorld(true);
+    const parts = opts.stack.map(n => model.getObjectByName(n)).filter(Boolean);
+    model.children.forEach(c => { if (!parts.includes(c)) c.visible = false; });
+    let y = 0;
+    parts.forEach((p, i) => {
+      p.position.set(0, 0, 0); p.rotation.set(0, 0, 0);
+      p.rotation.z = Math.PI / 2;
+      p.rotation.y = ((i * 37) % 11 - 5) * Math.PI / 180;
+      p.updateMatrixWorld(true);
+      const bb = new THREE.Box3().setFromObject(p);
+      p.position.y += y - bb.min.y;
+      p.position.x -= (bb.min.x + bb.max.x) / 2 + (i % 2 ? 0.012 : -0.008);
+      p.position.z -= (bb.min.z + bb.max.z) / 2;
+      p.updateMatrixWorld(true);
+      y = new THREE.Box3().setFromObject(p).max.y;
+    });
+  }
   model.rotation.y = (opts.rotY ?? -25) * Math.PI / 180;
   scene.add(model);
   model.updateMatrixWorld(true);
@@ -32,14 +51,23 @@ window.renderDecor = async (id, opts = {}) => {
   const shown = o => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
   model.traverse(o => { if (o.isMesh && shown(o)) { o.castShadow = o.receiveShadow = true; box.expandByObject(o); } });
   const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+  // A floor that only catches the shadow, so the picture carries its own
+  // contact shadow in its alpha and stands on whatever it is placed on.
+  if (opts.ground !== false) {
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(size.length() * 4, size.length() * 4), new THREE.ShadowMaterial({ opacity: opts.shadow ?? 0.55 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(center.x, box.min.y + 0.0005, center.z);
+    ground.receiveShadow = true;
+    scene.add(ground);
+  }
   // warm key from upper left, cool faint rim from the right, soft fill
   const key = new THREE.DirectionalLight(0xffd9a8, 2.6); key.position.set(-1.2, 1.6, 1.1).multiplyScalar(size.length() * 2).add(center); key.target.position.copy(center);
-  key.castShadow = true; const r = size.length(); Object.assign(key.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 0.01, far: r * 10 }); key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0005;
+  key.castShadow = true; const r = size.length(); Object.assign(key.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 0.01, far: r * 10 }); key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0005; key.shadow.radius = 6;
   scene.add(key, key.target);
   const rim = new THREE.DirectionalLight(0xbfd2ff, 0.7); rim.position.set(1.5, 0.8, -1).multiplyScalar(r * 2).add(center); scene.add(rim);
   scene.add(new THREE.HemisphereLight(0xfff1dc, 0x2a1a10, 0.35));
   const fov = 22; const camera = new THREE.PerspectiveCamera(fov, W / H, r / 100, r * 20);
-  const elev = (opts.elev ?? 12) * Math.PI / 180;
+  const elev = (opts.elev ?? 9) * Math.PI / 180;
   const fitH = size.y / 2 / Math.tan(fov * Math.PI / 360), fitW = Math.max(size.x, size.z) / 2 / Math.tan(fov * Math.PI / 360) / (W / H);
   const dist = Math.max(fitH, fitW) * 1.25 + Math.max(size.x, size.z);
   camera.position.set(center.x, center.y + Math.sin(elev) * dist, center.z + Math.cos(elev) * dist); camera.lookAt(center);

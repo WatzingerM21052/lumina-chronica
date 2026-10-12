@@ -5,9 +5,6 @@ namespace LuminaChronica.Client.Components;
 
 public partial class ClassicShelfBook
 {
-    // How deep a book reaches into the shelf, at zoom 1.
-    public const int Depth = 140;
-
     // "Zuletzt gelesen" shows the cover instead of the spine.
     [Parameter]
     public bool CoverForward { get; set; }
@@ -16,9 +13,12 @@ public partial class ClassicShelfBook
     [Parameter]
     public int CoverWidth { get; set; } = ShelfLineLayout.CoverWidth;
 
-    // Sideways slide while the cover is turned out (see ClassicShelf).
+    // data-spread-key: where BookSpread takes the book from.
     [Parameter]
-    public double HoverShift { get; set; }
+    public string? SpreadKey { get; set; }
+
+    [Parameter]
+    public EventCallback OnOpen { get; set; }
 
     private string SlotStyle
     {
@@ -29,7 +29,7 @@ public partial class ClassicShelfBook
                 return $"--w: {Px(CoverWidth * Zoom)}; --h: {Px(CoverWidth * 1.44 * Zoom)}; --c: {Colour}";
             }
             var size = ShelfLineLayout.SizeFor(Book);
-            return $"--w: {Px(size.Width * Zoom)}; --h: {Px(size.Height * Zoom)}; --d: {Px(Depth * Zoom)}; --c: {Colour}; --shift: {Px(HoverShift)}";
+            return $"--w: {Px(size.Width * Zoom)}; --h: {Px(size.Height * Zoom)}; --c: {Colour}";
         }
     }
 }
