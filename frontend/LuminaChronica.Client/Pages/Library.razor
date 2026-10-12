@@ -174,9 +174,14 @@ else
         var visibleSections = TakeSectionsUpTo(sections, _visibleBookCount);
         @if (_shelfStyle == ShelfStyles.Rotunda)
         {
-            @* The rotunda holds the whole library at once: its ring is sized
-               from all bays, so it isn't revealed in batches. *@
+            @* The rotunda and the 3D room hold the whole library at once (the
+               ring and the cabinet are sized from all of it), so they aren't
+               revealed in batches. *@
             <RotundaShelf Sections="@sections" />
+        }
+        else if (_shelfStyle == ShelfStyles.Room)
+        {
+            <ShelfRoom Sections="@sections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" />
         }
         else if (_shelfStyle == ShelfStyles.Leather)
         {
@@ -186,7 +191,7 @@ else
         {
             <ClassicShelf Sections="@visibleSections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" />
         }
-        @if (_shelfStyle != ShelfStyles.Rotunda && _visibleBookCount < (_allItems?.Count ?? 0))
+        @if (_shelfStyle is not (ShelfStyles.Rotunda or ShelfStyles.Room) && _visibleBookCount < (_allItems?.Count ?? 0))
         {
             <div class="shelf-load-more-sentinel" @ref="_loadMoreSentinelRef"></div>
         }

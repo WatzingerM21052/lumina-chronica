@@ -1,0 +1,66 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Models
+@using LuminaChronica.Client.Services
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+@inject II18nService I18n
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+
+@* Shelf style C "3D-Raum" (spec 2026-10-11 §6): a WebGL cabinet
+   (js/shelfRoom.js). The scene is decoration for pointer users; the list
+   of links underneath is what keyboards and screen readers use, and
+   focusing one brings its book out in the scene. Without WebGL the
+   classic shelf stands in. *@
+@if (_fallback)
+{
+    <p class="shelf-room-fallback text-muted">@I18n.T("shelfRoom.noWebGl")</p>
+    <ClassicShelf Sections="Sections" Zoom="Zoom" ShowCoverText="ShowCoverText" />
+}
+else
+{
+    <div class="shelf-room" @ref="_containerRef">
+        <div class="shelf-room-stage">
+            <span class="shelf-decor shelf-decor--left shelf-room-decor-probe" aria-hidden="true"></span>
+            <span class="shelf-decor shelf-decor--right shelf-room-decor-probe" aria-hidden="true"></span>
+            <div class="shelf-room-hint" aria-hidden="true">@I18n.T("shelfRoom.hint")</div>
+            @if (_picked is { } picked)
+            {
+                <div class="shelf-room-card" role="dialog" aria-labelledby="shelf-room-card-title" tabindex="-1" @onkeydown="OnCardKeyDown">
+                    <h3 id="shelf-room-card-title">@picked.Title</h3>
+                    @if (!string.IsNullOrWhiteSpace(picked.Author))
+                    {
+                        <p class="shelf-room-card-author">@picked.Author</p>
+                    }
+                    @if (ProgressOf(picked) is { } progress)
+                    {
+                        <p class="shelf-room-card-progress">
+                            <span>@string.Format(I18n.T("library.shelfProgress"), Math.Round(Math.Clamp(progress, 0, 100)))</span>
+                            <span class="shelf-room-card-bar"><span style="width: @Percent(progress)"></span></span>
+                        </p>
+                    }
+                    <div class="shelf-room-card-actions">
+                        <a class="btn btn-primary" href="library/books/@picked.Id/read">@I18n.T(ProgressOf(picked) is null ? "rotunda.read" : "rotunda.continue")</a>
+                        <a class="btn" href="library/books/@picked.Id">@I18n.T("rotunda.details")</a>
+                        <button type="button" class="btn shelf-room-card-close" @ref="_closeRef" @onclick="ReleaseAsync">@I18n.T("shelfRoom.putBack")</button>
+                    </div>
+                </div>
+            }
+            <nav class="shelf-room-index" aria-label="@I18n.T("shelfRoom.indexLabel")">
+                @foreach (var bay in Sections)
+                {
+                    <h3 class="shelf-room-index-heading">@bay.Label</h3>
+                    <ul>
+                        @foreach (var book in bay.Books)
+                        {
+                            <li @key="(bay.Label, book.Id)">
+                                <a href="library/books/@book.Id" data-book-id="@book.Id" @onfocus="() => FocusAsync(book)"
+                                   @onclick="() => PickAsync(book)" @onclick:preventDefault="true">@Label(book)</a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </nav>
+        </div>
+    </div>
+}
