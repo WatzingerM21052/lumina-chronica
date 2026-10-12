@@ -142,16 +142,6 @@
     opacity: 0.9;
 }
 
-.rotunda-ribbon {
-    position: absolute;
-    left: 35%;
-    bottom: -14px;
-    width: 5px;
-    height: 18px;
-    background: linear-gradient(90deg, #5e0f16, #a8202c 45%, #6d121a);
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
-}
-
 /* The gilt catches the lantern's light. */
 .rotunda-shine {
     position: absolute;

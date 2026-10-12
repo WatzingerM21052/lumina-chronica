@@ -13,6 +13,8 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Fixed
 
+- Home (immersive): the recently read book no longer flies in with a drawn cover and then swaps to its picture -- it waits for the cover (at most 2.5 s) and the picture fades in over the drawn front.
+- Bookshelf: "Klassisch" shows only spines at rest (no more slanted page-edge flags and cover slivers between books); "Lederrücken" tips a book forward instead of sideways into its neighbour; the red ribbons in "Lederrücken" and "Rotunde" are gone; the "3D-Raum" no longer tilts with the mouse.
 - Sign-up works again: since #504 every normal registration was rejected ("confirmNewAccount must be a boolean.") (#603).
 - Security: a Markdown link to `javascript:` in lore, a project file or an MD book ran in the visitor's session when clicked; such links are now plain text (#604).
 - A finished EPUB counts as read: progress reaches 100% on the last page and moves within a chapter. Opening a book on another device no longer lowers its saved progress, and pressing "Next" while a book is still opening no longer breaks the reader (#606).

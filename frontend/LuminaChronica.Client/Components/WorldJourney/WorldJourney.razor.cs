@@ -44,6 +44,7 @@ public partial class WorldJourney : IAsyncDisposable
 
     // Cover pictures by book id / the project's, as blob URLs.
     private readonly Dictionary<int, string> _covers = [];
+    private readonly HashSet<int> _coversTried = [];
     private string? _projectCover;
     private ProjectFacts? _facts;
     private TimelineEvent? _lastEvent;
@@ -85,13 +86,17 @@ public partial class WorldJourney : IAsyncDisposable
 
     private async Task LoadCoverAsync(Book book)
     {
-        if (_covers.ContainsKey(book.Id) || book.CoverUrl is null) return;
+        if (_covers.ContainsKey(book.Id) || _coversTried.Contains(book.Id) || book.CoverUrl is null) return;
         var result = await ApiClient.GetBytesAsync(book.CoverUrl);
         if (result is { } cover && !_covers.ContainsKey(book.Id))
         {
             _covers[book.Id] = await BlobUrlService.CreateObjectUrlAsync(cover.Bytes, cover.ContentType);
         }
+        _coversTried.Add(book.Id);
     }
+
+    // A cover is on its way (it has one, and loading it hasn't finished).
+    private bool CoverPending(Book book) => book.CoverUrl is not null && !_coversTried.Contains(book.Id);
 
     private string? CoverOf(Book book) => _covers.TryGetValue(book.Id, out var url) ? url : null;
 

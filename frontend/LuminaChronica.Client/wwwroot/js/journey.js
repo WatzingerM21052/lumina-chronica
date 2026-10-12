@@ -120,14 +120,27 @@ export function start(root) {
         for (const entry of entries) {
             if (!entry.isIntersecting) continue;
             const el = entry.target;
-            el.classList.add("is-in");
             enterObserver.unobserve(el);
+            whenCoverReady(el, () => el.classList.add("is-in"));
             el.querySelectorAll("[data-count-to]").forEach(runCount);
             if (el.matches("[data-count-to]")) runCount(el);
         }
     }, { rootMargin: "0px 0px -18% 0px" });
     root.querySelectorAll("[data-enter]").forEach((el) => enterObserver.observe(el));
     cleanups.push(() => enterObserver.disconnect());
+
+    // The featured book waits for its cover (data-cover-pending, removed by
+    // Blazor once loaded or failed), at most 2.5 s, so it enters with its
+    // real face instead of swapping it mid-way.
+    function whenCoverReady(el, go) {
+        if (!el.hasAttribute("data-cover-pending")) { go(); return; }
+        let done = false;
+        const finish = () => { if (done) return; done = true; watcher.disconnect(); clearTimeout(timer); go(); };
+        const watcher = new MutationObserver(() => { if (!el.hasAttribute("data-cover-pending")) finish(); });
+        watcher.observe(el, { attributes: true, attributeFilter: ["data-cover-pending"] });
+        const timer = setTimeout(finish, 2500);
+        cleanups.push(finish);
+    }
 
     function runCount(el) {
         const target = Number(el.dataset.countTo);

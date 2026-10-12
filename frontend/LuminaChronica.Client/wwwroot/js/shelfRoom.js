@@ -512,12 +512,12 @@ function loop(room) {
         const still = reduceMotion();
         const { camera, lights } = room;
 
-        // camera: follows scroll, leans a little towards the mouse
+        // camera: follows the scroll only -- a cabinet doesn't tilt
+        // because a pointer moves over it
         room.camY += (room.camYTarget - room.camY) * (still ? 1 : Math.min(1, dt * 6));
-        const mx = room.pointer.x > 2 ? 0 : room.mouse.x, my = room.pointer.x > 2 ? 0 : room.mouse.y;
-        const tx = still ? 0 : mx * 0.6, ty = still ? 0 : my * 0.25;
-        camera.position.x += (tx - camera.position.x) * Math.min(1, dt * 4);
-        camera.position.y = room.camY + 0.35 + ty;
+        const tx = 0;
+        camera.position.x = 0;
+        camera.position.y = room.camY + 0.35;
         camera.position.z = room.distance;
         camera.lookAt(0, room.camY, 0);
 

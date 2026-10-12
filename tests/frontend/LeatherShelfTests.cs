@@ -22,7 +22,7 @@ public class LeatherShelfTests : BunitContext
     private static Book B(int id, string title, string? author = null, string? genre = null) => new() { Id = id, Title = title, Author = author, Genre = genre };
 
     [Fact]
-    public void EveryBookIsALink_WithAPlaquePerSection_AndARibbonOnRecentBooks()
+    public void EveryBookIsALink_WithAPlaquePerSection_AndProgressOnTheCard()
     {
         var sections = new List<ShelfSection>
         {
@@ -36,7 +36,6 @@ public class LeatherShelfTests : BunitContext
         var links = cut.FindAll("a.leather-shelf-book");
         Assert.Equal(["library/books/1", "library/books/2", "library/books/3"], links.Select(l => l.GetAttribute("href")));
         Assert.Equal("Momo, Michael Ende", links[0].GetAttribute("aria-label"));
-        Assert.Single(cut.FindAll(".leather-shelf-ribbon"));
         Assert.Equal("42 % gelesen", cut.Find(".leather-shelf-card-meta span").TextContent);
         Assert.Equal("Fantasy", links[1].QuerySelector(".leather-shelf-card-meta")!.TextContent);
     }
