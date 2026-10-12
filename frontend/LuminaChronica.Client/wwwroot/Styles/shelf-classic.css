@@ -10,7 +10,8 @@
     --classic-cabinet-pad: 30px;
     --classic-row-inset: 18px;
     position: relative;
-    padding: 34px 64px 36px;
+    /* Room above the cornice for the decor. */
+    padding: 172px 64px 36px;
     border-radius: var(--radius-lg);
     background: var(--shelf-room);
 }
@@ -608,52 +609,27 @@
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
 }
 
-/* ---- Candle at the cabinet's edge ---- */
+/* ---- Theme decor on the cornice (pictures: shelf-decor.css) ---- */
 
-.classic-shelf-candle {
-    position: absolute;
-    right: -56px;
-    bottom: 40px;
-    z-index: 7;
-    width: 46px;
-    height: 150px;
-    pointer-events: none;
+.classic-shelf-decor {
+    bottom: calc(100% + 18px);
 }
 
-.classic-shelf-candle-brass-lo { stop-color: var(--shelf-brass-lo); }
-.classic-shelf-candle-brass-hi { stop-color: var(--shelf-brass-hi); }
-
-.classic-shelf-candle-flame {
-    transform-box: fill-box;
-    transform-origin: 50% 90%;
-    animation: classic-shelf-flicker 2.6s infinite ease-in-out;
+.classic-shelf-decor.shelf-decor--left {
+    left: 18px;
+    background-position: left bottom;
 }
 
-.classic-shelf-candle-glow {
-    animation: classic-shelf-glow 2.6s infinite ease-in-out;
+.classic-shelf-decor.shelf-decor--right {
+    right: 18px;
+    background-position: right bottom;
 }
 
-@keyframes classic-shelf-flicker {
-    0%, 100% { transform: scale(1, 1) rotate(0); }
-    20% { transform: scale(0.94, 1.06) rotate(-2deg); }
-    45% { transform: scale(1.04, 0.96) rotate(1.5deg); }
-    70% { transform: scale(0.97, 1.03) rotate(-1deg); }
-}
-
-@keyframes classic-shelf-glow {
-    0%, 100% { opacity: 1; }
-    45% { opacity: 0.8; }
-}
-
-/* ---- Narrow screens: slimmer cabinet, no candle ---- */
+/* ---- Narrow screens: slimmer cabinet, one decor object ---- */
 
 @media (max-width: 900px) {
     .classic-shelf {
-        padding: 26px 18px 24px;
-    }
-
-    .classic-shelf-candle {
-        display: none;
+        padding: 160px 18px 24px;
     }
 }
 
@@ -661,7 +637,17 @@
     .classic-shelf {
         --classic-cabinet-pad: 12px;
         --classic-row-inset: 8px;
-        padding: 22px 6px 16px;
+        padding: 124px 6px 16px;
+    }
+
+    /* One smaller object on a phone. */
+    .classic-shelf-decor.shelf-decor--left {
+        left: 8px;
+        height: calc(var(--decor-h) * 0.72);
+    }
+
+    .classic-shelf-decor.shelf-decor--right {
+        display: none;
     }
 
     .classic-shelf-cabinet {
@@ -710,10 +696,5 @@
     .classic-shelf-spine,
     .classic-shelf-display {
         transition: none;
-    }
-
-    .classic-shelf-candle-flame,
-    .classic-shelf-candle-glow {
-        animation: none;
     }
 }

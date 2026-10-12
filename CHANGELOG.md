@@ -6,7 +6,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Added
 
-- New shelf style "Klassisch" for the library's shelf view, now the default: a wooden cabinet in the theme's wood and brass, recently read books standing cover-forward with their progress, one compartment per genre, books that slide out and turn their cover towards you, brass bookends and a candle. The previous shelf stays available as "Legacy" in Settings > Library > Shelf style.
+- New shelf style "Klassisch" for the library's shelf view, now the default: a wooden cabinet in the theme's wood and brass, recently read books standing cover-forward with their progress, one compartment per genre, books that slide out and turn their cover towards you, brass bookends and two objects per theme on the cornice (a mantel clock and candelabra, a marble bust, a compass and ship's lantern, potted plants …, rendered from CC0 Poly Haven models). The previous shelf stays available as "Legacy" in Settings > Library > Shelf style.
 
 ### Fixed
 
