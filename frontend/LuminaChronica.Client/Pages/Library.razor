@@ -172,16 +172,11 @@ else
     {
         var sections = LibraryShelfGrouping.GroupForShelf(_allItems ?? [], _recent, I18n.T("library.recentShelfLabel"), I18n.T("library.noGenreLabel"));
         var visibleSections = TakeSectionsUpTo(sections, _visibleBookCount);
-        @if (_shelfStyle == ShelfStyles.Rotunda)
+        @if (_shelfStyle == ShelfStyles.Library)
         {
-            @* The rotunda and the 3D room hold the whole library at once (the
-               ring and the cabinet are sized from all of it), so they aren't
-               revealed in batches. *@
-            <RotundaShelf Sections="@sections" OnOpen="OpenBookAsync" />
-        }
-        else if (_shelfStyle == ShelfStyles.Room)
-        {
-            <ShelfRoom Sections="@sections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" OnOpen="OpenBookAsync" />
+            @* The 3D library holds the whole library at once (its cases are
+               laid out from all of it), so it isn't revealed in batches. *@
+            <LibraryRoom Sections="@sections" OnOpen="OpenBookAsync" />
         }
         else if (_shelfStyle == ShelfStyles.Leather)
         {
@@ -191,7 +186,7 @@ else
         {
             <ClassicShelf Sections="@visibleSections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" OnOpen="OpenBookAsync" />
         }
-        @if (_shelfStyle is not (ShelfStyles.Rotunda or ShelfStyles.Room) && _visibleBookCount < (_allItems?.Count ?? 0))
+        @if (_shelfStyle != ShelfStyles.Library && _visibleBookCount < (_allItems?.Count ?? 0))
         {
             <div class="shelf-load-more-sentinel" @ref="_loadMoreSentinelRef"></div>
         }

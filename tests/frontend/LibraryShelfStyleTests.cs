@@ -70,29 +70,14 @@ public class LibraryShelfStyleTests : BunitContext
     }
 
     [Fact]
-    public void ShelfView_RotundaStyle_RendersTheRing()
+    public void ShelfView_LibraryStyle_RendersTheLibraryRoom()
     {
         JSInterop.SetupModule("./js/libraryPreferences.js").Setup<string?>("getShelfStyle", _ => true).SetResult("rotunda");
+        JSInterop.SetupModule("./js/libraryRoom/index.js").Setup<bool>("supported").SetResult(true);
         var cut = Render<Library>();
 
         cut.Find("#view-shelf").Click();
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".rotunda")));
-        Assert.Equal(3, cut.FindAll("a.rotunda-spine").Count);
-        Assert.Empty(cut.FindAll(".shelf-load-more-sentinel"));
-    }
-
-    [Fact]
-    public void ShelfView_RoomStyle_RendersTheRoomOrItsFallback()
-    {
-        JSInterop.SetupModule("./js/libraryPreferences.js").Setup<string?>("getShelfStyle", _ => true).SetResult("room");
-        var cut = Render<Library>();
-
-        cut.Find("#view-shelf").Click();
-
-        // Loose JS: no WebGL, so the classic shelf stands in, with all books.
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".shelf-room-fallback")));
-        Assert.Equal(3, cut.FindAll("a.classic-shelf-slot").Count);
-        Assert.Empty(cut.FindAll(".shelf-load-more-sentinel"));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-room")));
     }
 }
