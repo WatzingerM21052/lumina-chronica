@@ -85,6 +85,20 @@ public class ClassicShelfTests : BunitContext
     }
 
     [Fact]
+    public void SpineTitles_ShortAtFullSize_LongSmallerOrInTwoLines()
+    {
+        var cut = Render<ClassicShelf>(p => p.Add(x => x.Sections,
+        [
+            new ShelfSection("Fantasy", ShelfSectionKind.Genre, [B(1, "Momo"), B(2, "Die unendliche Geschichte vom verlorenen Leuchtturm am Rande der Welt")]),
+        ]));
+
+        var slots = cut.FindAll("a.classic-shelf-slot");
+        Assert.Contains("--title-size: 11px; --title-lines: 1", slots[0].GetAttribute("style"));
+        var longStyle = slots[1].GetAttribute("style")!;
+        Assert.DoesNotContain("--title-size: 11px", longStyle);
+    }
+
+    [Fact]
     public void ClickingABook_AsksToOpenIt_FromItsPlaceOnTheShelf()
     {
         BookOpenRequest? request = null;

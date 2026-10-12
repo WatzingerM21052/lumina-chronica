@@ -62,7 +62,9 @@
         get
         {
             var size = ShelfLineLayout.SizeFor(Book);
-            return $"--w: {Px(LeatherShelf.WidthOf(Book) * Zoom)}; --h: {Px((size.Height + 10) * Zoom)}; --c: {Colour}";
+            // title piece: 47 % of the height, 82 % of the width, less its rules
+            var title = TitleFit((size.Height + 10) * Zoom * 0.47 - 10, LeatherShelf.WidthOf(Book) * Zoom * 0.82 - 6, 11.5);
+            return $"--w: {Px(LeatherShelf.WidthOf(Book) * Zoom)}; --h: {Px((size.Height + 10) * Zoom)}; --c: {Colour}; {title}";
         }
     }
 }

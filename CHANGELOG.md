@@ -16,6 +16,7 @@ All notable changes to Lumina Chronica are documented here. Format follows [Keep
 
 ### Fixed
 
+- Bookshelf spacing: compartment plaques ("Zuletzt gelesen", genres) keep clear of the books in "Klassisch" and "Lederrücken" at every zoom (a fixed band above each row); the progress badge sits inside the cover. Spine titles are set per book -- full size if they fit, smaller or in two lines if not -- so most titles are whole instead of cut.
 - Bookshelf motion and decor: in every style a book is now tipped out by its top -- its foot stays on the board and its top edge shows -- instead of sliding out and floating up (Klassisch no longer drifts into its left neighbour, the 3D-Raum no longer kicks the foot out); the objects on the boards are gone and the decor on the cornice is smaller; the Rotunde's drawn lantern is replaced by just its flickering light; opening a book is one calm movement without overshoot.
 - Home (immersive): the recently read book no longer flies in with a drawn cover and then swaps to its picture -- it waits for the cover (at most 2.5 s) and the picture fades in over the drawn front.
 - Bookshelf: "Klassisch" shows only spines at rest (no more slanted page-edge flags and cover slivers between books); "Lederrücken" tips a book forward instead of sideways into its neighbour; the red ribbons in "Lederrücken" and "Rotunde" are gone; the "3D-Raum" no longer tilts with the mouse.

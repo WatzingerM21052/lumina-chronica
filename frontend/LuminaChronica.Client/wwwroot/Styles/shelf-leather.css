@@ -5,7 +5,8 @@
 .leather-shelf {
     --shelf-texture: url("../images/library/shelf-wood-texture.webp");
     --leather-texture: url("../images/library/book-leather-texture.webp");
-    --leather-row-height: calc(248px * var(--zoom, 1));
+    /* The tallest volume (232 px) plus a fixed band for the plaque. */
+    --leather-row-height: calc(232px * var(--zoom, 1) + 44px);
     --leather-row-pad: 22px;
     position: relative;
     padding: 150px 36px 30px;
@@ -54,7 +55,7 @@
     margin: 0 auto 40px;
 }
 
-/* One compartment on a board, its plaque hanging from the board's top edge. */
+/* One compartment on a board, its plaque in the band above its books. */
 .leather-shelf-group {
     position: relative;
     display: flex;
@@ -71,7 +72,8 @@
     position: absolute;
     z-index: 6;
     left: 0;
-    top: -12px;
+    /* the group starts 16 px below the row's top edge */
+    top: -10px;
     max-width: 320px;
 }
 
@@ -202,8 +204,8 @@
     position: absolute;
     left: 9%;
     right: 9%;
-    top: 26%;
-    height: 40%;
+    top: 23%;
+    height: 47%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -215,22 +217,26 @@
     transform: rotate(180deg);
 }
 
+/* Size and lines are set per book (ShelfBookBase.TitleFit). */
 .leather-shelf-title span {
+    display: -webkit-box;
     overflow: hidden;
     max-height: 94%;
     color: var(--shelf-brass-hi);
-    font: 700 calc(11.5px * var(--zoom, 1)) / 1 "Cormorant Garamond", Georgia, serif;
+    font: 700 var(--title-size, calc(11.5px * var(--zoom, 1))) / 1.05 "Cormorant Garamond", Georgia, serif;
     letter-spacing: 0.06em;
-    text-overflow: ellipsis;
+    text-align: center;
     text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 240, 200, 0.25);
-    white-space: nowrap;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--title-lines, 1);
+    overflow-wrap: anywhere;
 }
 
 .leather-shelf-emboss {
     position: absolute;
     left: 50%;
-    top: 69%;
-    width: 58%;
+    top: 71.5%;
+    width: 36%;
     aspect-ratio: 1;
     transform: translateX(-50%);
     background: linear-gradient(160deg, var(--shelf-brass-hi), var(--shelf-brass) 50%, var(--shelf-brass-lo));
