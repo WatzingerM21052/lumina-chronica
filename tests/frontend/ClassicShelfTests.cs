@@ -69,7 +69,7 @@ public class ClassicShelfTests : BunitContext
     }
 
     [Fact]
-    public void SmallCompartmentsShareABoard_AndAnObjectFillsTheFreeEnd()
+    public void SmallCompartmentsShareABoard_WithoutObjectsOnTheBoards()
     {
         var sections = new List<ShelfSection>
         {
@@ -81,7 +81,7 @@ public class ClassicShelfTests : BunitContext
 
         var bay = Assert.Single(cut.FindAll(".classic-shelf-bay"));
         Assert.Equal(["Fantasy", "Roman"], bay.QuerySelectorAll(".classic-shelf-plaque").Select(p => p.TextContent));
-        Assert.Single(bay.QuerySelectorAll(".shelf-object"));
+        Assert.Empty(cut.FindAll(".shelf-object"));
     }
 
     [Fact]

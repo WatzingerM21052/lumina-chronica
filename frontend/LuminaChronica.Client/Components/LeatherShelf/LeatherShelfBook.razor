@@ -8,6 +8,7 @@
    the cover and, for a recently read book, the progress. *@
 <a class="leather-shelf-book" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" data-spread-key="@SpreadKey"
    style="@BookStyle" @onclick="OnOpen" @onclick:preventDefault="true">
+    <span class="leather-shelf-top" aria-hidden="true"></span>
     <span class="leather-shelf-spine" aria-hidden="true">
         <span class="leather-shelf-gilt leather-shelf-gilt--top"></span>
         <span class="leather-shelf-rib leather-shelf-rib--1"></span>

@@ -21,16 +21,3 @@ Alpha-Kanal), transparenter Hintergrund, auf 520 px Höhe/Breite zugeschnitten (
 | `wooden-lantern.webp` | Wooden Lantern 01 (`wooden_lantern_01`) | James Ray Cock |
 | `potted-plant-04.webp` | Potted Plant 04 (`potted_plant_04`) | James Ray Cock |
 | `ceramic-vase-01.webp` | Ceramic Vase 01 (`ceramic_vase_01`) | James Ray Cock |
-
-## Objekte in den Regalfächern (`../shelf-objects/`)
-
-| Datei | Poly-Haven-Modell | Autor:innen |
-|---|---|---|
-| `book-stack.webp` | Book Encyclopedia Set 01 (`book_encyclopedia_set_01`, drei Bände liegend gestapelt) | John Malcolm |
-| `pocket-watch.webp` | Vintage Pocket Watch (`vintage_pocket_watch`) | Tal Swicegood |
-| `shell.webp` | Lambis Shell (`lambis_shell`) | Kuutti Siitonen |
-| `elephant.webp` | Carved Wooden Elephant (`carved_wooden_elephant`) | Greg Zaal |
-| `ship.webp` | Ship Pinnace (`ship_pinnace`) | James Ray Cock, Rico Cilliers, Nicolò Zubbini, Yann Kervran |
-| `microscope.webp` | Vintage Microscope (`vintage_microscope`) | Luis José Fernández Rodríguez |
-| `horse.webp` | Horse Statue 01 (`horse_statue_01`) | Rico Cilliers |
-| `teapot.webp` | Tea Set 01 (`tea_set_01`, nur die Kanne) | James Ray Cock, Rico Cilliers, Jurita Burger |

@@ -75,15 +75,6 @@
     max-width: 320px;
 }
 
-/* One of the theme's small objects at the free end of a board. */
-.leather-shelf-object {
-    position: relative;
-    flex: none;
-    margin: 0 calc(20px * var(--zoom, 1)) 0 auto;
-    height: calc(var(--obj-h, 60px) * var(--zoom, 1));
-    width: calc(150px * var(--zoom, 1));
-}
-
 .leather-shelf-row {
     position: relative;
     display: flex;
@@ -116,8 +107,7 @@
     position: relative;
     flex: none;
     /* Depth for tipping the spine out towards the reader. */
-    perspective: 700px;
-    perspective-origin: 50% 100%;
+    perspective: 900px;
     width: var(--w);
     height: var(--h);
     color: inherit;
@@ -144,6 +134,32 @@
         var(--c);
     background-blend-mode: normal, normal, normal, overlay, normal;
     box-shadow: 2px 0 3px rgba(0, 0, 0, 0.6), -1px 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* The top edge of the volume (boards and page block), hinged at the top of
+   the spine and turning with it about the foot of the book; it faces away
+   at rest and shows once the book is tipped out. */
+.leather-shelf-top {
+    --tip: 0deg;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: calc(110px * var(--zoom, 1));
+    transform-origin: 50% 100%;
+    transform: translateY(var(--h)) rotateX(var(--tip)) translateY(calc(var(--h) * -1)) rotateX(90deg);
+    transition: transform 0.5s cubic-bezier(0.2, 0.75, 0.25, 1);
+    backface-visibility: hidden;
+    pointer-events: none;
+    background:
+        linear-gradient(0deg, transparent, rgba(0, 0, 0, 0.55)),
+        repeating-linear-gradient(90deg, rgba(120, 95, 60, 0.18) 0 1px, transparent 1px 3px),
+        linear-gradient(90deg, var(--c) 0 3px, #e8dcbd 3px calc(100% - 3px), var(--c) calc(100% - 3px));
+}
+
+.leather-shelf-book:hover .leather-shelf-top,
+.leather-shelf-book:focus-visible .leather-shelf-top {
+    --tip: -13deg;
 }
 
 /* A sheen that glides over the leather when the book tips out. */
@@ -359,7 +375,7 @@
     }
 
     .leather-shelf-book:hover .leather-shelf-spine {
-        transform: rotateX(-20deg) translateY(-6px);
+        transform: rotateX(-13deg);
         filter: brightness(1.12);
     }
 
@@ -378,7 +394,7 @@
 }
 
 .leather-shelf-book:focus-visible .leather-shelf-spine {
-    transform: rotateX(-20deg) translateY(-6px);
+    transform: rotateX(-13deg);
     box-shadow: 0 0 0 2px var(--shelf-brass-hi);
 }
 
@@ -412,7 +428,7 @@
 
     .leather-shelf-decor.shelf-decor--left {
         left: 10px;
-        height: calc(var(--decor-h) * 0.72);
+        height: calc(var(--decor-h) * 0.6);
     }
 
     .leather-shelf-decor.shelf-decor--right {

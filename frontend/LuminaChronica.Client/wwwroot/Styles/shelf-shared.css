@@ -44,7 +44,8 @@
     position: absolute;
     z-index: 2;
     width: 240px;
-    height: var(--decor-h, 0px);
+    /* a touch smaller than the pictures, so decor accents and never crowds */
+    height: calc(var(--decor-h, 0px) * 0.8);
     background: var(--decor, none) center bottom / contain no-repeat;
     pointer-events: none;
 }
@@ -78,57 +79,6 @@ html[data-theme="modern-light"] .shelf-decor--right { --decor: url("../images/sh
 @media (prefers-color-scheme: dark) {
     html[data-theme="system"] .shelf-decor--left { --decor: url("../images/shelf-decor/marble-bust.webp"); --decor-h: 138px; }
     html[data-theme="system"] .shelf-decor--right { --decor: url("../images/shelf-decor/ship-lantern.webp"); --decor-h: 140px; }
-}
-
-/* Small objects in the free space at the end of a board (rendered from CC0
-   Poly Haven models like the decor; images/shelf-objects). Three per theme,
-   used in turn; --obj-h is the height at zoom 1. */
-.shelf-object {
-    pointer-events: none;
-    background: var(--obj, none) right bottom / contain no-repeat;
-}
-
-html[data-theme="classic-library"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="classic-library"] .shelf-object--2 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
-html[data-theme="classic-library"] .shelf-object--3 { --obj: url("../images/shelf-objects/elephant.webp"); --obj-h: 96px; }
-html[data-theme="dark-library"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="dark-library"] .shelf-object--2 { --obj: url("../images/shelf-objects/microscope.webp"); --obj-h: 120px; }
-html[data-theme="dark-library"] .shelf-object--3 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
-html[data-theme="skriptorium"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="skriptorium"] .shelf-object--2 { --obj: url("../images/shelf-objects/teapot.webp"); --obj-h: 80px; }
-html[data-theme="skriptorium"] .shelf-object--3 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
-html[data-theme="alexandria"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="alexandria"] .shelf-object--2 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
-html[data-theme="alexandria"] .shelf-object--3 { --obj: url("../images/shelf-objects/horse.webp"); --obj-h: 112px; }
-html[data-theme="babylon"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="babylon"] .shelf-object--2 { --obj: url("../images/shelf-objects/elephant.webp"); --obj-h: 96px; }
-html[data-theme="babylon"] .shelf-object--3 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
-html[data-theme="ischtar"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="ischtar"] .shelf-object--2 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
-html[data-theme="ischtar"] .shelf-object--3 { --obj: url("../images/shelf-objects/horse.webp"); --obj-h: 112px; }
-html[data-theme="abendhafen"] .shelf-object--1 { --obj: url("../images/shelf-objects/ship.webp"); --obj-h: 118px; }
-html[data-theme="abendhafen"] .shelf-object--2 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
-html[data-theme="abendhafen"] .shelf-object--3 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
-html[data-theme="daemmergarten"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="daemmergarten"] .shelf-object--2 { --obj: url("../images/shelf-objects/teapot.webp"); --obj-h: 80px; }
-html[data-theme="daemmergarten"] .shelf-object--3 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
-html[data-theme="nachtgarten"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="nachtgarten"] .shelf-object--2 { --obj: url("../images/shelf-objects/teapot.webp"); --obj-h: 80px; }
-html[data-theme="nachtgarten"] .shelf-object--3 { --obj: url("../images/shelf-objects/elephant.webp"); --obj-h: 96px; }
-html[data-theme="modern-light"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-html[data-theme="modern-light"] .shelf-object--2 { --obj: url("../images/shelf-objects/horse.webp"); --obj-h: 112px; }
-html[data-theme="modern-light"] .shelf-object--3 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
-
-@media (prefers-color-scheme: light) {
-    html[data-theme="system"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-    html[data-theme="system"] .shelf-object--2 { --obj: url("../images/shelf-objects/horse.webp"); --obj-h: 112px; }
-    html[data-theme="system"] .shelf-object--3 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
-}
-
-@media (prefers-color-scheme: dark) {
-    html[data-theme="system"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
-    html[data-theme="system"] .shelf-object--2 { --obj: url("../images/shelf-objects/microscope.webp"); --obj-h: 120px; }
-    html[data-theme="system"] .shelf-object--3 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
 }
 
 /* Warm light from a candle or lantern among the decor, on the wall behind

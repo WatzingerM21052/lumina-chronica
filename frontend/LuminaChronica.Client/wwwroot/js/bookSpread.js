@@ -43,16 +43,16 @@ export async function open(root, sourceKey, rect) {
         cover.style.transform = `translateZ(${DEPTH}px) rotateY(-178deg)`;
         return;
     }
+    // One calm movement: out of the shelf, turning its cover to you.
     await book.animate([
         { transform: start },
-        { transform: "translate(0, -30px) scale(1.04) rotateY(28deg) rotateX(6deg)", offset: 0.65 },
         { transform: "translate(0, 0) scale(1) rotateY(0deg)" },
-    ], { duration: 720, easing: "cubic-bezier(.3,.6,.2,1)", fill: "forwards" }).finished;
+    ], { duration: 700, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" }).finished;
     if (!states.has(root)) return;
     book.animate([{ transform: "translate(0, 0) scale(1) rotateY(0deg)" }, { transform: `translateX(${BOOK_W / 2}px)` }],
         { duration: 950, easing: "cubic-bezier(.45,.05,.2,1)", fill: "forwards" });
     cover.animate([{ transform: `translateZ(${DEPTH}px) rotateY(0deg)` }, { transform: `translateZ(${DEPTH}px) rotateY(-178deg)` }],
-        { duration: 1000, easing: "cubic-bezier(.45,.05,.15,1.04)", fill: "forwards" });
+        { duration: 950, easing: "cubic-bezier(.45,.05,.25,1)", fill: "forwards" });
 }
 
 export async function close(root) {

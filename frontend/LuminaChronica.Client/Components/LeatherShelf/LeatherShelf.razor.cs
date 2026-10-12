@@ -9,8 +9,6 @@ public partial class LeatherShelf
     // Gap between two compartments on one board (room for the plaque).
     private const int GroupGap = 44;
 
-    // Space an object needs at the end of a board.
-    private const int ObjectRoom = 170;
 
     // Leather volumes are a little wider than the classic books.
     internal static int WidthOf(Book book) => ShelfLineLayout.SizeFor(book).Width + 4;
@@ -26,10 +24,4 @@ public partial class LeatherShelf
         ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"min-width: {PlaqueWidth(segment.Section):0}px")
         : null;
 
-    private bool ObjectFits(List<ShelfSegment> row)
-    {
-        if (Width <= 0) return false;
-        var used = row.Sum(s => Math.Max(ShelfLineLayout.UsedWidth(s.Books, Zoom, WidthOf), s.First ? PlaqueWidth(s.Section) : 0)) + GroupGap * Zoom * (row.Count - 1);
-        return used + ObjectRoom * Zoom <= Width;
-    }
 }

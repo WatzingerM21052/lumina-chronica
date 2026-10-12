@@ -13,7 +13,6 @@
         <span class="shelf-decor shelf-decor--right leather-shelf-decor"></span>
     </div>
     <div class="leather-shelf-measure" @ref="MeasureRef" aria-hidden="true"></div>
-    @{ var rowIndex = 0; }
     @foreach (var row in Rows)
     {
         <div class="leather-shelf-bay">
@@ -37,13 +36,8 @@
                     </section>
                     left += GroupGap * Zoom;
                 }
-                @if (ObjectFits(row))
-                {
-                    <span class="shelf-object shelf-object--@(rowIndex % 3 + 1) leather-shelf-object" aria-hidden="true"></span>
-                }
             </div>
             <div class="leather-shelf-plank" aria-hidden="true"></div>
         </div>
-        rowIndex++;
     }
 </div>

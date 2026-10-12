@@ -9,7 +9,7 @@
 @* Shelf style D "Rotunde" (spec 2026-10-11 §6, polish 2026-10-12): the
    compartments stand as bays around the reader -- a full ring from twelve
    bays, an arc below -- who turns through them (drag, wheel, arrows, keys
-   or the bay list). The room is dark; a lantern follows the pointer. A
+   or the bay list). The room is dark; a warm light follows the pointer. A
    click takes the book out (OnOpen → BookSpread). rotunda.js owns
    rotation, lantern, title and the hint; the markup is Blazor's. *@
 <div class="rotunda @(Partial ? "is-arc" : null)" @ref="_roomRef" tabindex="0" role="region" aria-label="@I18n.T("rotunda.label")" aria-describedby="rotunda-hint"
@@ -66,13 +66,6 @@
     </div>
     <div class="rotunda-dark" aria-hidden="true"></div>
     <div class="rotunda-warm" aria-hidden="true"></div>
-    <svg class="rotunda-lantern" viewBox="0 0 34 52" aria-hidden="true" focusable="false">
-        <path d="M17 2v6" stroke="var(--shelf-brass)" stroke-width="2" />
-        <path d="M9 10h16l2 6H7z" class="rotunda-lantern-metal" />
-        <rect x="8" y="16" width="18" height="24" rx="3" fill="rgba(255,214,140,.85)" stroke="var(--shelf-brass)" stroke-width="2" />
-        <path class="rotunda-lantern-flame" d="M17 22c3 4 3 8 0 11-3-3-3-7 0-11z" fill="#fff1c4" />
-        <path d="M6 40h22l-2 6H8z" class="rotunda-lantern-metal" />
-    </svg>
     <div class="rotunda-tip" aria-hidden="true"><strong></strong><span></span></div>
     <span id="rotunda-hint" class="visually-hidden">@I18n.T("rotunda.hint")</span>
     <div class="rotunda-ui">
