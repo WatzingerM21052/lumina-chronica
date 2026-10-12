@@ -47,7 +47,15 @@ export function attachPicking(room, getBooks) {
     room.on(room.container, "click", (e) => {
         if (room.dragged || e.target.closest(".library-room-ui, .library-room-index")) return;
         const book = hit(e.clientX, e.clientY);
-        if (!book) return;
+        if (!book) {
+            // a case (not a book) walks there
+            ray.setFromCamera(ndc(e.clientX, e.clientY), room.camera);
+            const caseHit = ray.intersectObjects(room.cases.map((c) => c.group), true)[0]?.object;
+            let o = caseHit;
+            while (o && o.userData.caseIndex === undefined) o = o.parent;
+            if (o) room.goTo(o.userData.caseIndex);
+            return;
+        }
         // touch: first tap shows it, the second opens it
         if (e.pointerType === "touch" && armed !== book) { armed = book; setHovered(book); return; }
         room.pickBook(book.userData.id);

@@ -5,6 +5,7 @@ import { createAssets } from "./assets.js";
 import { buildRotunda } from "./rotunda.js";
 import { buildCase, caseMaterials, setSpineTextures } from "./shelf.js";
 import { attachPicking } from "./pick.js";
+import { attachCamera } from "./camera.js";
 
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -140,11 +141,15 @@ export async function createScene(container, dotNet, data) {
         renderer.domElement.remove();
     };
     // Filled in by shelf/pick/camera/lighting.
-    room.focusBook = (id) => { room.focusedId = id; room.wake(600); };
-    room.goTo = room.goHome = () => {};
+    attachCamera(room);
+    // Keyboard focus on a book in the list: walk to its case, lift it out.
+    room.focusBook = (id) => {
+        const entry = room.cases.find((c) => c.books.some((b) => b.userData.id === id));
+        room.focusedId = id;
+        if (entry && room.cameraState.caseIndex !== entry.index) room.goTo(entry.index);
+        room.wake(600);
+    };
 
-    camera.position.set(0, 1.7, 2.2);
-    camera.lookAt(0, 1.45, -5);
     room.wake(800);
     return room;
 }
