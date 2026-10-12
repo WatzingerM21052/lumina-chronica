@@ -1,0 +1,534 @@
+/* Shelf style A "Klassisch" (spec 2026-10-11 §6, component ClassicShelf).
+   Colours come from the --shelf-* tokens each theme sets (tokens.css,
+   themes/*.css); --zoom is the library's book-size setting. The legacy
+   shelf's .shelf-* rules in app.css are untouched by this file. */
+
+.classic-shelf {
+    --shelf-texture: url("../images/library/shelf-wood-texture.webp");
+    --shelf-leather: url("../images/themes/books/leather_grain.webp");
+    --classic-row-height: calc(236px * var(--zoom, 1));
+    --classic-cabinet-pad: 30px;
+    --classic-row-inset: 18px;
+    position: relative;
+    padding: 34px 64px 36px;
+    border-radius: var(--radius-lg);
+    background: var(--shelf-room);
+}
+
+.classic-shelf-cabinet {
+    position: relative;
+    margin: 0 auto;
+    max-width: 1180px;
+    padding: 44px var(--classic-cabinet-pad) 24px;
+    border-radius: 6px;
+    background: linear-gradient(var(--shelf-wood-tint), var(--shelf-wood-tint)), var(--shelf-texture) center / 420px, var(--shelf-wood);
+    box-shadow: 0 34px 70px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+/* Cornice with a gilt rule. */
+.classic-shelf-cabinet::before {
+    content: "";
+    position: absolute;
+    left: -16px;
+    right: -16px;
+    top: -18px;
+    height: 42px;
+    border-radius: 6px 6px 2px 2px;
+    background: linear-gradient(180deg, rgba(255, 220, 160, 0.18), rgba(0, 0, 0, 0.35)), linear-gradient(var(--shelf-wood-tint), var(--shelf-wood-tint)), var(--shelf-texture) center / 420px, var(--shelf-wood);
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.55), 0 10px 18px rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 220, 160, 0.25);
+}
+
+.classic-shelf-cabinet::after {
+    content: "";
+    position: absolute;
+    left: -8px;
+    right: -8px;
+    top: 13px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--shelf-brass) 10%, var(--shelf-brass-hi) 50%, var(--shelf-brass) 90%, transparent);
+    opacity: 0.85;
+}
+
+.classic-shelf-post {
+    position: absolute;
+    top: 24px;
+    bottom: 0;
+    width: var(--classic-cabinet-pad);
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(255, 220, 160, 0.08) 40%, rgba(0, 0, 0, 0.5)), var(--shelf-texture) center / 300px, var(--shelf-wood);
+}
+
+.classic-shelf-post--left { left: 0; }
+.classic-shelf-post--right { right: 0; }
+
+/* Zero-height element with the rows' own horizontal insets: what
+   shelfLayout.js measures. */
+.classic-shelf-measure {
+    height: 0;
+    margin: 0 calc(6px + var(--classic-row-inset));
+}
+
+.classic-shelf-bay {
+    position: relative;
+    margin: 0 6px 28px;
+    padding-top: 22px;
+}
+
+.classic-shelf-bay:last-of-type {
+    margin-bottom: 4px;
+}
+
+.classic-shelf-plaque {
+    position: absolute;
+    z-index: 6;
+    left: 26px;
+    top: 4px;
+    max-width: calc(100% - 52px);
+    overflow: hidden;
+    padding: 4px 18px 5px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--shelf-brass-hi) 0%, var(--shelf-brass) 50%, var(--shelf-brass-lo) 130%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.25), 0 3px 6px rgba(0, 0, 0, 0.55);
+    color: var(--shelf-plaque-ink);
+    font: 600 0.8rem/1.2 "Cinzel", var(--font-family-display);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Two brass rivets. */
+.classic-shelf-plaque::before,
+.classic-shelf-plaque::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    margin-top: -2.5px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, var(--shelf-brass-hi), var(--shelf-brass-lo));
+    box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
+}
+
+.classic-shelf-plaque::before { left: 6px; }
+.classic-shelf-plaque::after { right: 6px; }
+
+.classic-shelf-back {
+    position: relative;
+    height: calc(var(--classic-row-height) + 18px);
+    border-radius: 2px;
+    perspective: 1400px;
+    perspective-origin: 50% 30%;
+    background:
+        radial-gradient(ellipse at 50% 0%, var(--shelf-light), transparent 70%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.78)),
+        var(--shelf-texture) center / 520px,
+        var(--shelf-wood);
+    box-shadow: inset 0 18px 30px rgba(0, 0, 0, 0.75), inset 0 -10px 20px rgba(0, 0, 0, 0.6), inset 14px 0 24px rgba(0, 0, 0, 0.6), inset -14px 0 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Only the first line of a compartment leaves room for the plaque. */
+.classic-shelf-plank + .classic-shelf-back {
+    margin-top: 10px;
+}
+
+.classic-shelf-row {
+    position: absolute;
+    left: var(--classic-row-inset);
+    right: var(--classic-row-inset);
+    bottom: 0;
+    height: var(--classic-row-height);
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    transform-style: preserve-3d;
+}
+
+.classic-shelf-plank {
+    position: relative;
+    z-index: 5;
+    height: 20px;
+    margin: 0 -6px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, rgba(255, 225, 170, 0.28), rgba(0, 0, 0, 0.25) 40%, rgba(0, 0, 0, 0.55)), var(--shelf-texture) center / 380px, var(--shelf-wood);
+    box-shadow: 0 14px 18px -6px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 230, 180, 0.35);
+}
+
+/* ---- Books ---- */
+
+.classic-shelf-slot {
+    position: relative;
+    flex: none;
+    width: var(--w);
+    height: var(--h);
+    color: inherit;
+    text-decoration: none;
+    transform-style: preserve-3d;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.classic-shelf-slot:focus-visible {
+    outline: none;
+}
+
+.classic-shelf-book {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transform-style: preserve-3d;
+    transform-origin: 50% 50% calc(var(--d) * -0.5);
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.classic-shelf-face {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+}
+
+.classic-shelf-spine {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 2px 2px 1px 1px;
+    backface-visibility: hidden;
+    background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.14) 22%, rgba(255, 255, 255, 0.04) 40%, rgba(0, 0, 0, 0.15) 70%, rgba(0, 0, 0, 0.6)),
+        var(--shelf-leather) center / 180px,
+        var(--c);
+    background-blend-mode: normal, multiply, normal;
+    transition: filter 0.3s ease;
+}
+
+/* Raised bands with a gilt line. */
+.classic-shelf-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.18) 45%, rgba(0, 0, 0, 0.45));
+}
+
+.classic-shelf-band::after {
+    content: "";
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 50%;
+    height: 1px;
+    background: var(--shelf-brass-hi);
+    opacity: 0.85;
+}
+
+.classic-shelf-band--1 { top: 5%; }
+.classic-shelf-band--2 { top: 14%; }
+.classic-shelf-band--3 { bottom: 14%; }
+.classic-shelf-band--4 { bottom: 5%; }
+
+/* Title piece: a darker panel of the book's own colour, so the gilt
+   title stays readable on light covers too. */
+.classic-shelf-label {
+    position: absolute;
+    left: 13%;
+    right: 13%;
+    top: 22%;
+    bottom: 38%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 6px 0;
+    border-radius: 1px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05)), color-mix(in srgb, var(--c) 45%, #0b0705);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--shelf-brass) 70%, transparent), inset 0 0 0 3px rgba(0, 0, 0, 0.35);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+.classic-shelf-label span {
+    overflow: hidden;
+    max-height: 100%;
+    color: var(--shelf-brass-hi);
+    font: 700 calc(11px * var(--zoom, 1)) / 1.1 "Cormorant Garamond", Georgia, serif;
+    letter-spacing: 0.05em;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+    white-space: nowrap;
+}
+
+.classic-shelf-ornament {
+    position: absolute;
+    left: 50%;
+    top: 67%;
+    width: 60%;
+    aspect-ratio: 1;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, var(--shelf-brass-hi), var(--shelf-brass-lo));
+    -webkit-mask: url("../images/themes/books/fleuron.svg") center / contain no-repeat;
+    mask: url("../images/themes/books/fleuron.svg") center / contain no-repeat;
+    opacity: 0.9;
+}
+
+/* Reading progress of "Zuletzt gelesen": a gilt line up the spine's edge. */
+.classic-shelf-spine-progress {
+    position: absolute;
+    right: 1px;
+    bottom: 0;
+    width: 2px;
+    background: var(--shelf-brass-hi);
+    box-shadow: 0 0 4px var(--shelf-brass);
+}
+
+.classic-shelf-cover {
+    left: var(--w);
+    width: var(--d);
+    height: 100%;
+    overflow: hidden;
+    border-radius: 0 3px 3px 0;
+    transform: rotateY(90deg);
+    transform-origin: left center;
+    backface-visibility: hidden;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.35), transparent 10%), linear-gradient(160deg, rgba(255, 255, 255, 0.12), transparent 40%), var(--shelf-leather) center / 220px, var(--c);
+    background-blend-mode: normal, normal, multiply, normal;
+}
+
+.classic-shelf-cover img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Without a picture: gilt frame and rosette under title and author. */
+.classic-shelf-cover:not(.has-image)::before {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    border: 1px solid color-mix(in srgb, var(--shelf-brass) 60%, transparent);
+    border-radius: 2px;
+}
+
+.classic-shelf-cover:not(.has-image)::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, var(--shelf-brass-hi), var(--shelf-brass-lo));
+    -webkit-mask: url("../images/themes/books/rosette.svg") center / contain no-repeat;
+    mask: url("../images/themes/books/rosette.svg") center / contain no-repeat;
+    opacity: 0.85;
+}
+
+.classic-shelf-cover-title,
+.classic-shelf-cover-author {
+    position: absolute;
+    z-index: 1;
+    left: 10%;
+    right: 10%;
+    overflow: hidden;
+    color: var(--shelf-brass-hi);
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.classic-shelf-cover-title {
+    top: 12%;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    font: 700 calc(16px * var(--zoom, 1)) / 1.1 "Cormorant Garamond", Georgia, serif;
+}
+
+.classic-shelf-cover-author {
+    bottom: 11%;
+    font: 500 calc(10px * var(--zoom, 1)) / 1.2 var(--font-family-ui);
+    letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Over a real cover the text sits on a soft shade -- or not at all when
+   the "Titel/Autor auf Regal-Cover" setting is off. */
+.classic-shelf-cover.has-image .classic-shelf-cover-title,
+.classic-shelf-cover.has-image .classic-shelf-cover-author {
+    padding: 3px 4px;
+    border-radius: 2px;
+    background: rgba(10, 6, 3, 0.55);
+}
+
+.classic-shelf-cover.has-image.hide-text .classic-shelf-cover-title,
+.classic-shelf-cover.has-image.hide-text .classic-shelf-cover-author {
+    display: none;
+}
+
+.classic-shelf-progress {
+    position: absolute;
+    z-index: 1;
+    left: 10%;
+    right: 10%;
+    bottom: 5%;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.classic-shelf-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--shelf-brass-hi);
+}
+
+/* Page edges on top. */
+.classic-shelf-top {
+    top: 0;
+    bottom: auto;
+    width: 100%;
+    height: var(--d);
+    transform: rotateX(-90deg);
+    transform-origin: top center;
+    background: repeating-linear-gradient(90deg, #efe2c2 0 1px, #d9c8a1 1px 2px);
+}
+
+.classic-shelf-shadow {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 12px;
+    transform: translateZ(1px);
+    background: radial-gradient(ellipse at 50% 0, rgba(0, 0, 0, 0.6), transparent 70%);
+}
+
+/* Hover (mouse only) and keyboard focus: the book slides out and turns
+   its cover towards the reader. */
+@media (hover: hover) {
+    .classic-shelf-slot:hover {
+        z-index: 20;
+    }
+
+    .classic-shelf-slot:hover .classic-shelf-book {
+        transform: translateY(-14px) translateZ(calc(150px * var(--zoom, 1))) rotateY(-78deg);
+    }
+
+    .classic-shelf-slot:hover .classic-shelf-spine {
+        filter: brightness(1.15);
+    }
+}
+
+.classic-shelf-slot:focus-visible {
+    z-index: 20;
+}
+
+.classic-shelf-slot:focus-visible .classic-shelf-book {
+    transform: translateY(-14px) translateZ(calc(150px * var(--zoom, 1))) rotateY(-78deg);
+}
+
+.classic-shelf-slot:focus-visible .classic-shelf-cover {
+    box-shadow: inset 0 0 0 2px var(--shelf-brass-hi);
+}
+
+/* ---- Candle at the cabinet's edge ---- */
+
+.classic-shelf-candle {
+    position: absolute;
+    right: -56px;
+    bottom: 40px;
+    z-index: 7;
+    width: 46px;
+    height: 150px;
+    pointer-events: none;
+}
+
+.classic-shelf-candle-brass-lo { stop-color: var(--shelf-brass-lo); }
+.classic-shelf-candle-brass-hi { stop-color: var(--shelf-brass-hi); }
+
+.classic-shelf-candle-flame {
+    transform-box: fill-box;
+    transform-origin: 50% 90%;
+    animation: classic-shelf-flicker 2.6s infinite ease-in-out;
+}
+
+.classic-shelf-candle-glow {
+    animation: classic-shelf-glow 2.6s infinite ease-in-out;
+}
+
+@keyframes classic-shelf-flicker {
+    0%, 100% { transform: scale(1, 1) rotate(0); }
+    20% { transform: scale(0.94, 1.06) rotate(-2deg); }
+    45% { transform: scale(1.04, 0.96) rotate(1.5deg); }
+    70% { transform: scale(0.97, 1.03) rotate(-1deg); }
+}
+
+@keyframes classic-shelf-glow {
+    0%, 100% { opacity: 1; }
+    45% { opacity: 0.8; }
+}
+
+/* ---- Narrow screens: slimmer cabinet, no candle ---- */
+
+@media (max-width: 900px) {
+    .classic-shelf {
+        padding: 26px 18px 24px;
+    }
+
+    .classic-shelf-candle {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .classic-shelf {
+        --classic-cabinet-pad: 12px;
+        --classic-row-inset: 8px;
+        padding: 22px 6px 16px;
+    }
+
+    .classic-shelf-cabinet {
+        padding-top: 36px;
+        padding-bottom: 16px;
+    }
+
+    .classic-shelf-cabinet::before {
+        left: -6px;
+        right: -6px;
+        top: -14px;
+        height: 34px;
+    }
+
+    .classic-shelf-cabinet::after {
+        left: 0;
+        right: 0;
+        top: 9px;
+    }
+
+    .classic-shelf-bay {
+        margin: 0 2px 22px;
+    }
+
+    .classic-shelf-measure {
+        margin: 0 calc(2px + var(--classic-row-inset));
+    }
+
+    .classic-shelf-plaque {
+        left: 14px;
+        max-width: calc(100% - 28px);
+        font-size: 0.72rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .classic-shelf-book,
+    .classic-shelf-spine {
+        transition: none;
+    }
+
+    .classic-shelf-candle-flame,
+    .classic-shelf-candle-glow {
+        animation: none;
+    }
+}
