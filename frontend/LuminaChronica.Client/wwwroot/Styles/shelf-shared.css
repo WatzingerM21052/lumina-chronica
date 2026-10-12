@@ -47,7 +47,6 @@
     height: var(--decor-h, 0px);
     background: var(--decor, none) center bottom / contain no-repeat;
     pointer-events: none;
-    filter: drop-shadow(4px 6px 5px rgba(0, 0, 0, 0.55));
 }
 
 html[data-theme="classic-library"] .shelf-decor--left { --decor: url("../images/shelf-decor/mantel-clock.webp"); --decor-h: 96px; }
@@ -79,4 +78,96 @@ html[data-theme="modern-light"] .shelf-decor--right { --decor: url("../images/sh
 @media (prefers-color-scheme: dark) {
     html[data-theme="system"] .shelf-decor--left { --decor: url("../images/shelf-decor/marble-bust.webp"); --decor-h: 138px; }
     html[data-theme="system"] .shelf-decor--right { --decor: url("../images/shelf-decor/ship-lantern.webp"); --decor-h: 140px; }
+}
+
+/* Small objects in the free space at the end of a board (rendered from CC0
+   Poly Haven models like the decor; images/shelf-objects). Three per theme,
+   used in turn; --obj-h is the height at zoom 1. */
+.shelf-object {
+    pointer-events: none;
+    background: var(--obj, none) right bottom / contain no-repeat;
+}
+
+html[data-theme="classic-library"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="classic-library"] .shelf-object--2 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
+html[data-theme="classic-library"] .shelf-object--3 { --obj: url("../images/shelf-objects/elephant.webp"); --obj-h: 96px; }
+html[data-theme="dark-library"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="dark-library"] .shelf-object--2 { --obj: url("../images/shelf-objects/microscope.webp"); --obj-h: 120px; }
+html[data-theme="dark-library"] .shelf-object--3 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
+html[data-theme="skriptorium"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="skriptorium"] .shelf-object--2 { --obj: url("../images/shelf-objects/teapot.webp"); --obj-h: 80px; }
+html[data-theme="skriptorium"] .shelf-object--3 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
+html[data-theme="alexandria"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="alexandria"] .shelf-object--2 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
+html[data-theme="alexandria"] .shelf-object--3 { --obj: url("../images/shelf-objects/horse.webp"); --obj-h: 112px; }
+html[data-theme="babylon"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="babylon"] .shelf-object--2 { --obj: url("../images/shelf-objects/elephant.webp"); --obj-h: 96px; }
+html[data-theme="babylon"] .shelf-object--3 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
+html[data-theme="ischtar"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="ischtar"] .shelf-object--2 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
+html[data-theme="ischtar"] .shelf-object--3 { --obj: url("../images/shelf-objects/horse.webp"); --obj-h: 112px; }
+html[data-theme="abendhafen"] .shelf-object--1 { --obj: url("../images/shelf-objects/ship.webp"); --obj-h: 118px; }
+html[data-theme="abendhafen"] .shelf-object--2 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
+html[data-theme="abendhafen"] .shelf-object--3 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
+html[data-theme="daemmergarten"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="daemmergarten"] .shelf-object--2 { --obj: url("../images/shelf-objects/teapot.webp"); --obj-h: 80px; }
+html[data-theme="daemmergarten"] .shelf-object--3 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
+html[data-theme="nachtgarten"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="nachtgarten"] .shelf-object--2 { --obj: url("../images/shelf-objects/teapot.webp"); --obj-h: 80px; }
+html[data-theme="nachtgarten"] .shelf-object--3 { --obj: url("../images/shelf-objects/elephant.webp"); --obj-h: 96px; }
+html[data-theme="modern-light"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+html[data-theme="modern-light"] .shelf-object--2 { --obj: url("../images/shelf-objects/horse.webp"); --obj-h: 112px; }
+html[data-theme="modern-light"] .shelf-object--3 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
+
+@media (prefers-color-scheme: light) {
+    html[data-theme="system"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+    html[data-theme="system"] .shelf-object--2 { --obj: url("../images/shelf-objects/horse.webp"); --obj-h: 112px; }
+    html[data-theme="system"] .shelf-object--3 { --obj: url("../images/shelf-objects/shell.webp"); --obj-h: 46px; }
+}
+
+@media (prefers-color-scheme: dark) {
+    html[data-theme="system"] .shelf-object--1 { --obj: url("../images/shelf-objects/book-stack.webp"); --obj-h: 58px; }
+    html[data-theme="system"] .shelf-object--2 { --obj: url("../images/shelf-objects/microscope.webp"); --obj-h: 120px; }
+    html[data-theme="system"] .shelf-object--3 { --obj: url("../images/shelf-objects/pocket-watch.webp"); --obj-h: 74px; }
+}
+
+/* Warm light from a candle or lantern among the decor, on the wall behind
+   and the cornice under it. Only where the decor is a light. */
+.shelf-decor-glow {
+    position: absolute;
+    z-index: 1;
+    width: 420px;
+    height: 300px;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(ellipse at 72% 62%, rgba(255, 186, 96, 0.22), transparent 62%);
+}
+
+html[data-theme="classic-library"] .shelf-decor-glow,
+html[data-theme="dark-library"] .shelf-decor-glow,
+html[data-theme="abendhafen"] .shelf-decor-glow,
+html[data-theme="daemmergarten"] .shelf-decor-glow,
+html[data-theme="nachtgarten"] .shelf-decor-glow {
+    opacity: 1;
+    animation: shelf-decor-flicker 3.4s infinite ease-in-out;
+}
+
+@media (prefers-color-scheme: dark) {
+    html[data-theme="system"] .shelf-decor-glow {
+        opacity: 1;
+        animation: shelf-decor-flicker 3.4s infinite ease-in-out;
+    }
+}
+
+@keyframes shelf-decor-flicker {
+    0%, 100% { opacity: 1; }
+    30% { opacity: 0.82; }
+    55% { opacity: 0.95; }
+    75% { opacity: 0.78; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shelf-decor-glow {
+        animation: none !important;
+    }
 }

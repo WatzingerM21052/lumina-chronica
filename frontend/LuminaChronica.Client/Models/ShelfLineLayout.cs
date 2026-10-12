@@ -49,4 +49,50 @@ public static class ShelfLineLayout
         lines.Add(line);
         return lines;
     }
+
+    // Rows of a shelf whose small compartments share a board: a compartment
+    // joins the current row when all its books fit there (after a gap); a
+    // bigger one starts its own rows. "Zuletzt gelesen" always stands
+    // alone. Without a known width every compartment is one row.
+    public static List<List<ShelfSegment>> Pack(
+        IReadOnlyList<ShelfSection> sections, double availableWidth, double zoom,
+        Func<ShelfSection, Func<Book, int>> widthOf, double groupGap, Func<ShelfSection, double>? minWidth = null)
+    {
+        var rows = new List<List<ShelfSegment>>();
+        double used = 0;
+        var rowTakesMore = false;
+        foreach (var section in sections)
+        {
+            var width = widthOf(section);
+            var lines = Lines(section.Books, availableWidth, zoom, width);
+            if (lines.Count == 0) continue;
+
+            var alone = section.Kind == ShelfSectionKind.Recent;
+            var first = lines[0];
+            // A compartment is at least as wide as its plaque.
+            var firstWidth = Math.Max(UsedWidth(first, zoom, width), minWidth?.Invoke(section) ?? 0);
+            if (availableWidth > 0 && rowTakesMore && !alone && lines.Count == 1 && used + groupGap * zoom + firstWidth <= availableWidth)
+            {
+                rows[^1].Add(new ShelfSegment(section, first, true));
+                used += groupGap * zoom + firstWidth;
+            }
+            else
+            {
+                rows.Add([new ShelfSegment(section, first, true)]);
+                used = firstWidth;
+            }
+
+            for (var i = 1; i < lines.Count; i++)
+            {
+                rows.Add([new ShelfSegment(section, lines[i], false)]);
+                used = UsedWidth(lines[i], zoom, width);
+            }
+            rowTakesMore = !alone;
+        }
+        return rows;
+    }
 }
+
+// Part of a shelf row: one compartment's books on it; First marks where
+// the compartment begins (it carries the plaque).
+public record ShelfSegment(ShelfSection Section, List<Book> Books, bool First);

@@ -1,27 +1,26 @@
 @namespace LuminaChronica.Client.Components
 @inherits ShelfBookBase
 
-@* One book of the classic shelf: a 3D body (spine in front, cover on the
-   right side, page edges on top) that turns its cover towards the reader
-   on hover/focus. The link is the slot; everything inside is decoration. *@
+@* One book of the classic shelf. At rest only its spine shows; on hover it
+   slides a little towards the reader and tips forward, staying under the
+   pointer. A click takes it out (OnOpen); the link stays for keyboard,
+   middle click and screen readers. *@
 @if (CoverForward)
 {
     @* "Zuletzt gelesen": the book stands cover-forward like in a shop window. *@
-    <a class="classic-shelf-slot classic-shelf-slot--display" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" style="@SlotStyle">
+    <a class="classic-shelf-slot classic-shelf-slot--display" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" data-spread-key="@SpreadKey"
+       style="@SlotStyle" @onclick="OnOpen" @onclick:preventDefault="true">
         <span class="classic-shelf-display" aria-hidden="true">
             <span class="classic-shelf-display-cover @(CoverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
-                @if (CoverObjectUrl is not null)
-                {
-                    <img src="@CoverObjectUrl" alt="" />
-                }
-                else
-                {
-                    <span class="classic-shelf-display-rosette"></span>
-                }
+                <span class="classic-shelf-display-rosette"></span>
                 <span class="classic-shelf-cover-title">@Book.Title</span>
                 @if (!string.IsNullOrWhiteSpace(Book.Author))
                 {
                     <span class="classic-shelf-cover-author">@Book.Author</span>
+                }
+                @if (CoverObjectUrl is not null)
+                {
+                    <img src="@CoverObjectUrl" alt="" />
                 }
                 @if (ProgressPercentage is { } displayProgress)
                 {
@@ -37,36 +36,16 @@
     </a>
     return;
 }
-<a class="classic-shelf-slot" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" style="@SlotStyle">
+<a class="classic-shelf-slot" href="library/books/@Book.Id" aria-label="@AccessibleLabel" data-book-id="@Book.Id" data-spread-key="@SpreadKey"
+   style="@SlotStyle" @onclick="OnOpen" @onclick:preventDefault="true">
     <span class="classic-shelf-book" aria-hidden="true">
-        <span class="classic-shelf-face classic-shelf-spine">
+        <span class="classic-shelf-spine">
             <span class="classic-shelf-band classic-shelf-band--1"></span>
             <span class="classic-shelf-band classic-shelf-band--2"></span>
             <span class="classic-shelf-label"><span>@Book.Title</span></span>
             <span class="classic-shelf-ornament"></span>
             <span class="classic-shelf-band classic-shelf-band--3"></span>
             <span class="classic-shelf-band classic-shelf-band--4"></span>
-            @if (ProgressPercentage is { } spineProgress)
-            {
-                <span class="classic-shelf-spine-progress" style="height: @Percent(spineProgress)"></span>
-            }
         </span>
-        <span class="classic-shelf-face classic-shelf-cover @(CoverObjectUrl is not null ? "has-image" : null) @(ShowCoverText ? null : "hide-text")">
-            @if (CoverObjectUrl is not null)
-            {
-                <img src="@CoverObjectUrl" alt="" />
-            }
-            <span class="classic-shelf-cover-title">@Book.Title</span>
-            @if (!string.IsNullOrWhiteSpace(Book.Author))
-            {
-                <span class="classic-shelf-cover-author">@Book.Author</span>
-            }
-            @if (ProgressPercentage is { } progress)
-            {
-                <span class="classic-shelf-progress"><span style="width: @Percent(progress)"></span></span>
-            }
-        </span>
-        <span class="classic-shelf-face classic-shelf-top"></span>
-        <span class="classic-shelf-shadow"></span>
     </span>
 </a>

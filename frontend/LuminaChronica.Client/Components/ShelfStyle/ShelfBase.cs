@@ -22,6 +22,10 @@ public abstract class ShelfBase : ComponentBase, IAsyncDisposable
     [Parameter]
     public bool ShowCoverText { get; set; } = true;
 
+    // A book was clicked: the library takes it out and opens it (BookSpread).
+    [Parameter]
+    public EventCallback<BookOpenRequest> OnOpen { get; set; }
+
     // 0 until shelfLayout.js reports it: then every compartment is a single
     // line, which is also what a test renderer without JS shows.
     protected double Width { get; private set; }
@@ -30,6 +34,14 @@ public abstract class ShelfBase : ComponentBase, IAsyncDisposable
 
     private IJSObjectReference? _module;
     private DotNetObjectReference<ShelfBase>? _selfRef;
+
+    // data-spread-key of a book on this shelf; unique per compartment, as a
+    // book can stand twice (recently read and in its genre).
+    protected static string SpreadKey(string style, ShelfSection section, Book book) =>
+        $"{style}-{section.Kind}-{section.Label}-{book.Id}";
+
+    protected Task OpenAsync(ShelfSection section, Book book, string style) =>
+        OnOpen.InvokeAsync(new BookOpenRequest(book, ProgressOf(section, book), new BookSpreadSource(SpreadKey(style, section, book))));
 
     protected static double? ProgressOf(ShelfSection section, Book book) =>
         section.Progress is { } progress && progress.TryGetValue(book.Id, out var percentage) ? percentage : null;
@@ -74,3 +86,5 @@ public abstract class ShelfBase : ComponentBase, IAsyncDisposable
         GC.SuppressFinalize(this);
     }
 }
+
+public record BookOpenRequest(Book Book, double? Progress, BookSpreadSource Source);

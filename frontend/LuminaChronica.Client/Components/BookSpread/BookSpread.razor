@@ -1,0 +1,75 @@
+@namespace LuminaChronica.Client.Components
+@using LuminaChronica.Client.Services
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+@inject II18nService I18n
+@inject ApiClient ApiClient
+@inject BlobUrlService BlobUrlService
+
+@* The book taken from the shelf and opened (spec 2026-10-12 §3): it flies
+   from its place on the shelf to the middle, turns its cover to the reader
+   and swings it open -- the endpaper with the cover as a plate on the
+   left, title, description, progress and the ways on on the right.
+   Closing runs it back to its place. Motion in js/bookSpread.js. *@
+@if (_book is { } book)
+{
+    <div class="book-spread" @ref="_rootRef" role="dialog" aria-modal="true" aria-labelledby="book-spread-title" tabindex="-1" @onkeydown="OnKeyDown">
+        <div class="book-spread-dim" @onclick="CloseAsync"></div>
+        <button type="button" class="book-spread-close" @onclick="CloseAsync">@I18n.T("bookSpread.close") <span aria-hidden="true">✕</span></button>
+        <div class="book-spread-fit">
+            <div class="book-spread-scene">
+                <div class="book-spread-book" style="--c: @_colour">
+                    <div class="book-spread-back"></div>
+                    <div class="book-spread-edge book-spread-edge--top"></div>
+                    <div class="book-spread-edge book-spread-edge--bottom"></div>
+                    <div class="book-spread-edge book-spread-edge--fore"></div>
+                    <div class="book-spread-spine"><span>@book.Title</span></div>
+                    <div class="book-spread-page">
+                        <h3 id="book-spread-title">@book.Title</h3>
+                        @if (!string.IsNullOrWhiteSpace(book.Author))
+                        {
+                            <p class="book-spread-by">@book.Author</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(book.Description))
+                        {
+                            <p class="book-spread-description">@book.Description</p>
+                        }
+                        <div class="book-spread-facts">
+                            <span>@(string.IsNullOrWhiteSpace(book.Genre) ? I18n.T("library.noGenreLabel") : book.Genre)</span>
+                            @if (_progress is { } progress)
+                            {
+                                <span>@string.Format(I18n.T("library.shelfProgress"), Math.Round(Math.Clamp(progress, 0, 100)))</span>
+                            }
+                        </div>
+                        @if (_progress is { } bar)
+                        {
+                            <div class="book-spread-bar"><span style="width: @Percent(bar)"></span></div>
+                        }
+                        <div class="book-spread-actions">
+                            <a class="book-spread-action book-spread-action--primary" href="library/books/@book.Id/read">@I18n.T(_progress is null ? "bookSpread.read" : "bookSpread.continue")</a>
+                            <a class="book-spread-action" href="library/books/@book.Id">@I18n.T("bookSpread.details")</a>
+                        </div>
+                    </div>
+                    <div class="book-spread-cover">
+                        <div class="book-spread-cover-out">
+                            <span class="book-spread-tooled"><b>@book.Title</b><i></i></span>
+                            @if (_coverUrl is not null)
+                            {
+                                <img src="@_coverUrl" alt="" />
+                            }
+                        </div>
+                        <div class="book-spread-cover-in">
+                            <div class="book-spread-plate">
+                                <b>@book.Title</b>
+                                @if (_coverUrl is not null)
+                                {
+                                    <img src="@_coverUrl" alt="" />
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

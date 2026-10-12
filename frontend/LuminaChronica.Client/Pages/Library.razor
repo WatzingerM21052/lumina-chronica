@@ -185,11 +185,11 @@ else
         }
         else if (_shelfStyle == ShelfStyles.Leather)
         {
-            <LeatherShelf Sections="@visibleSections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" />
+            <LeatherShelf Sections="@visibleSections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" OnOpen="OpenBookAsync" />
         }
         else
         {
-            <ClassicShelf Sections="@visibleSections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" />
+            <ClassicShelf Sections="@visibleSections" Zoom="@ShelfZoom" ShowCoverText="@_showCoverText" OnOpen="OpenBookAsync" />
         }
         @if (_shelfStyle is not (ShelfStyles.Rotunda or ShelfStyles.Room) && _visibleBookCount < (_allItems?.Count ?? 0))
         {
@@ -247,6 +247,9 @@ else
     }
 }
 </div>
+@* Outside .world-surface: a filtered ancestor would pin the fixed spread to
+   the card instead of the viewport. *@
+<BookSpread @ref="_spread" />
 
 @code {
     // Scrolls (Alexandria's scroll shelf) is only offered in that theme.
@@ -281,6 +284,12 @@ else
     private List<ContinueReadingItem> _recent = [];
     private bool _showCoverText = true;
     private IJSObjectReference? _shelfCoverTextModule;
+    // The shelf styles' "take the book out and open it".
+    private BookSpread? _spread;
+
+    private Task OpenBookAsync(BookOpenRequest request) =>
+        _spread?.OpenAsync(request.Book, request.Progress, request.Source) ?? Task.CompletedTask;
+
     private double ShelfZoom => double.Parse(_shelfBookZoom, System.Globalization.CultureInfo.InvariantCulture);
 
     private static readonly int[] RasterPageSizeOptions = [20, 40, 60, 100];
