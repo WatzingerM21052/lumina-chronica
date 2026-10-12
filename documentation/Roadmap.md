@@ -1627,10 +1627,22 @@ Not changed (design decisions, noted): English footer slogan in the German UI, l
 
 **Open bug-hunt points (follow-up)**: `.auth-page` column for Login/Register; footer motto via `journey.motto` (German now); `ProjectDetail` takes `?tab=` (character/place/lore back links and their delete redirects use it), others' books link back to Discover; `WorldJourney.Numeral()` numbers only the shown chapters; `.star-button` 28 px; static `Services/ProfileEvents` (Profile publishes, AccountMenu listens); TXT/MD paginated book mode saves a fraction (`F4`, `ConvertSavedPositionToPage` already read both), chapter mode keeps the segment number.
 
+**Small fixes and polish (2026-10-11, #610, #611)**: one unread notification per kind and subject (`notificationService.buildNotificationInsert`, comments excepted); the EPUB reader re-measures a frame narrower than its content (`attachLayoutCheck`, at most two fixes). Contrast of hint text and gold accents in Classic Library, Modern Light and Alexandria to WCAG AA, 24 px+ targets for footer links, the favourite star and the profile link, avatar placeholders with the initial, `::deep` for icons in scoped CSS.
+
+**Bookshelf styles (2026-10-12, #612–#616)**: spec `docs/superpowers/specs/2026-10-11-bookshelf-rework-design.md`. The Regal view comes in four styles plus the previous shelf, chosen under Settings › Library › Shelf style (`ShelfStyles`, `libraryPreferences.js` `lumina_shelf_style`):
+- Compartments for all new styles: `LibraryShelfGrouping.GroupForShelf` -- "Zuletzt gelesen" from `/api/dashboard` (filtered like the list), one per genre, "Ohne Genre" last; the toolbar sort orders inside each. `ShelfLineLayout` breaks lines in C# from the width `shelfLayout.js` reports; `Components/ShelfStyle/ShelfBase` + `ShelfBookBase` share width, compartments and cover loading.
+- `--shelf-*` tokens per theme (wood, brass, plaque ink ≥ 4.5:1, light); brass plaque and decor in `Styles/shelf-shared.css`. Decor: 14 CC0 Poly Haven models rendered with one camera/light setup (`tools/render-decor`, credits in `images/shelf-decor/CREDITS.md`), two per theme on the cabinet's top. Render lesson: serve the models through Playwright `page.route` -- `python -m http.server` drops connections under parallel texture loads.
+- **Klassisch** (default, `ClassicShelf`): CSS-3D cabinet; books slide out and turn their cover (near the left wall they slide right first so the cover stays inside; the turned book stays clickable); recently read books stand cover-forward with progress; brass bookends close short rows.
+- **Lederrücken** (`LeatherShelf`): wall shelves of leather volumes, tip-out with a sheen and a cover card that opens towards the middle; a silk ribbon marks recently read books.
+- **Rotunde** (`RotundaShelf`, `rotunda.js`, `RotundaTome`): bays (`RotundaLayout`, ≥ 10, full compartments continue in the next bay) facing the centre of a ring; drag/wheel/arrows/keys turn it, focus turns a spine's bay to the front, a lantern follows the mouse; a book opens as a two-page spread (`role=dialog`, the ring `inert` meanwhile, focus returns to the spine).
+- **3D-Raum** (`ShelfRoom`, `shelfRoom.js`, three.js r160 vendored under `lib/three`, MIT): a WebGL cabinet; a sticky stage while scrolling moves the camera down the shelves; hover/pick with the real cover (blob URL from .NET); spine textures only for rows near the camera; 20 fps while only the candle moves, nothing with reduced motion; hidden index of links for keyboard/screen readers; without WebGL the classic shelf stands in.
+- **Legacy**: the previous shelf (`ShelfRow`/`ShelfBook`/`shelf-physics.js`, its grouping) unchanged.
+- Rotunde and 3D-Raum get the whole library at once (no batch reveal). Lesson: after changing a JS module run `dotnet build` again -- the fingerprinted import map's integrity hash otherwise blocks the changed module. Frontend 767/767.
+
 ### Later (noted 2026-10-04)
 
-- **Library shelf rework**: a new design for the 3D bookshelf (wood, light, depth, free CC0/public-domain assets), in the spirit of the theme rounds.
-- **Polishing**: a pass over every page for spacing, motion and small inconsistencies across all eleven themes.
-- **Bug hunt**: a systematic pass through every flow (upload, reader, projects, sharing, Discover, settings) in Brave and at phone width.
+- ~~Library shelf rework~~ -- done, four shelf styles (#612–#616).
+- ~~Polishing~~ -- done (#611).
+- ~~Bug hunt~~ -- done (#603–#610).
 - Still open from before: AI tags/genres and book import via an external API (needs an API comparison first), logo decision (#497).
 - Legal: the privacy policy, terms and imprint follow the code as of 2026-10-04; a review by someone with legal training before wider promotion is advised.
