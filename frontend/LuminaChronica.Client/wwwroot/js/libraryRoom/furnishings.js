@@ -88,8 +88,9 @@ export async function readingCorner(room, { angle, radius, rugMaterial }) {
     }
     const chair = await assets.place("ArmChair_01", 0.85);
     if (chair) {
-        chair.position.set(0.25, 0, 0.95);
-        chair.rotation.y = Math.PI - 0.35;
+        // behind the table, facing the room (and whoever turns to it)
+        chair.position.set(0.15, 0, -0.95);
+        chair.rotation.y = 0.25;
         group.add(chair);
     }
 

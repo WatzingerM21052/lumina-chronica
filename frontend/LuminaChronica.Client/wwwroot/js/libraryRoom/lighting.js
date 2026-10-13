@@ -50,9 +50,17 @@ export async function attachLighting(room) {
         seeds.set([Math.random(), Math.random(), Math.random() * Math.PI * 2, 0.4 + Math.random() * 0.6], i * 4);
     }
     dustGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(dustCount * 3), 3));
+    const moteCanvas = document.createElement("canvas");
+    moteCanvas.width = moteCanvas.height = 32;
+    {
+        const g = moteCanvas.getContext("2d");
+        const grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+        grad.addColorStop(0, "rgba(255,255,255,1)"); grad.addColorStop(1, "rgba(255,255,255,0)");
+        g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
+    }
     const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
-        color: sky.clone().lerp(new THREE.Color(0xffffff), 0.4), size: 0.018, transparent: true, opacity: theme.night ? 0.25 : 0.55,
-        depthWrite: false, blending: THREE.AdditiveBlending,
+        map: new THREE.CanvasTexture(moteCanvas), color: sky.clone().lerp(new THREE.Color(0xffffff), 0.4), size: 0.012, sizeAttenuation: true,
+        transparent: true, opacity: theme.night ? 0.2 : 0.4, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
     }));
     group.add(dust);
     const placeDust = (t) => {
@@ -90,6 +98,63 @@ export async function attachLighting(room) {
 
     // Warm haze in the air: far walls soften, the room gains depth.
     scene.fog = new THREE.FogExp2(new THREE.Color(theme.wood).lerp(new THREE.Color(theme.night ? 0x0b0d18 : 0x3a2a1c), 0.6), theme.night ? 0.05 : 0.035);
+
+    // Sun (or moon) through the windows: a slanting shaft of light from each
+    // window and its bright patch on the floor, leaning towards the middle.
+    const shaftCanvas = document.createElement("canvas");
+    shaftCanvas.width = 64; shaftCanvas.height = 256;
+    {
+        const g = shaftCanvas.getContext("2d");
+        const grad = g.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0, "rgba(255,240,210,0.0)"); grad.addColorStop(0.15, "rgba(255,240,210,0.9)"); grad.addColorStop(1, "rgba(255,240,210,0.0)");
+        g.fillStyle = grad; g.fillRect(0, 0, 64, 256);
+        const side = g.createLinearGradient(0, 0, 64, 0);
+        side.addColorStop(0, "rgba(0,0,0,1)"); side.addColorStop(0.25, "rgba(0,0,0,0)"); side.addColorStop(0.75, "rgba(0,0,0,0)"); side.addColorStop(1, "rgba(0,0,0,1)");
+        g.globalCompositeOperation = "destination-out"; g.fillStyle = side; g.fillRect(0, 0, 64, 256);
+    }
+    const shaftMap = new THREE.CanvasTexture(shaftCanvas);
+    const patchCanvas = document.createElement("canvas");
+    patchCanvas.width = 128; patchCanvas.height = 256;
+    {
+        const g = patchCanvas.getContext("2d");
+        g.filter = "blur(6px)";
+        g.fillStyle = "rgba(255,236,200,0.95)";
+        g.beginPath(); g.moveTo(24, 250); g.lineTo(24, 70); g.arc(64, 70, 40, Math.PI, 0); g.lineTo(104, 250); g.closePath(); g.fill();
+        g.filter = "none";
+        g.globalCompositeOperation = "destination-out"; g.strokeStyle = "rgba(0,0,0,0.6)"; g.lineWidth = 3;
+        for (const x of [51, 77]) { g.beginPath(); g.moveTo(x, 40); g.lineTo(x, 250); g.stroke(); }
+    }
+    const patchMap = new THREE.CanvasTexture(patchCanvas);
+    const sunTint = theme.night ? new THREE.Color(0x9fb4ff) : new THREE.Color(theme.sky).lerp(new THREE.Color(0xffffff), 0.2);
+    const shafts = [];
+    for (const { frame: f } of architecture.windows) {
+        const inward = f.normal.clone();
+        const base = f.position.clone().setY(0);
+        // the patch on the floor, 2.2 m in from the window, 1.1 x 2.6 m
+        const patch = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.6), new THREE.MeshBasicMaterial({
+            map: patchMap, color: sunTint, transparent: true, opacity: theme.night ? 0.16 : 0.42, blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+        }));
+        patch.rotation.x = -Math.PI / 2;
+        patch.rotation.z = Math.atan2(inward.x, inward.z) + Math.PI;
+        patch.position.copy(base).addScaledVector(inward, 2.1).setY(0.012);
+        group.add(patch);
+        // the shaft: from the window's middle down to the patch
+        const from = f.position.clone().addScaledVector(inward, 0.05).setY(2.1);
+        const to = patch.position.clone().setY(0.05);
+        const length = from.distanceTo(to);
+        for (const twist of [0, Math.PI / 2]) {
+            const shaft = new THREE.Mesh(new THREE.PlaneGeometry(1.1, length), new THREE.MeshBasicMaterial({
+                map: shaftMap, color: sunTint, transparent: true, opacity: theme.night ? 0.05 : 0.11, blending: THREE.AdditiveBlending,
+                depthWrite: false, side: THREE.DoubleSide, fog: false,
+            }));
+            shaft.position.copy(from).add(to).multiplyScalar(0.5);
+            shaft.lookAt(to);
+            shaft.rotateX(-Math.PI / 2); // the bright end of the texture at the window
+            shaft.rotateY(twist);
+            group.add(shaft);
+            shafts.push(shaft);
+        }
+    }
 
     // Reading lamp on the table.
     const lamp = new THREE.PointLight(0xffb36a, 3.2, 6, 2);
@@ -159,7 +224,7 @@ export async function attachLighting(room) {
         scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => { m.needsUpdate = true; }); });
         room.wake(200);
     };
-    room.applyQuality = applyQuality;
+    room.applyQuality = (q) => { applyQuality(q); room.setBloom?.(q.level === "high"); };
     applyQuality(room.quality);
 
     let lastCandle = 0;

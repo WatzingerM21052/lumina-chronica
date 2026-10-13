@@ -7,6 +7,10 @@ import { buildCase, caseMaterials, setSpineTextures } from "./shelf.js";
 import { attachPicking } from "./pick.js";
 import { attachCamera } from "./camera.js";
 import { attachLighting } from "./lighting.js";
+import { EffectComposer } from "../../lib/three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "../../lib/three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "../../lib/three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "../../lib/three/addons/postprocessing/OutputPass.js";
 
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -85,6 +89,7 @@ export async function createScene(container, dotNet, data, restore) {
         const w = stage.clientWidth, h = stage.clientHeight;
         if (!w || !h) return;
         renderer.setSize(w, h, false);
+        room.composer?.setSize(w, h);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         room.reapplyCamera?.();
@@ -119,7 +124,7 @@ export async function createScene(container, dotNet, data, restore) {
         last = now;
         let moving = false;
         for (const hook of frameHooks) moving = hook(now, dt) === true || moving;
-        renderer.render(scene, camera);
+        if (room.composer) room.composer.render(dt); else renderer.render(scene, camera);
         if (moving || now < room.busyUntil) room.raf = requestAnimationFrame(frame);
         else if (!reduceMotion()) { room.raf = -1; room.timer = setTimeout(() => { room.raf = requestAnimationFrame(frame); }, 50); }
     }
@@ -145,6 +150,19 @@ export async function createScene(container, dotNet, data, restore) {
     };
     // Filled in by shelf/pick/camera/lighting.
     attachCamera(room);
+    // Strong devices: a soft glow round flames, windows and the sky.
+    room.setBloom = (on) => {
+        if (!on) { room.composer?.dispose(); room.composer = null; return; }
+        if (room.composer) return;
+        const composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        composer.addPass(new UnrealBloomPass(new THREE.Vector2(stage.clientWidth || 1, stage.clientHeight || 1), 0.38, 0.65, 0.82));
+        composer.addPass(new OutputPass());
+        composer.setPixelRatio(renderer.getPixelRatio());
+        composer.setSize(stage.clientWidth || 1, stage.clientHeight || 1);
+        room.composer = composer;
+    };
+    room.setBloom(room.quality.level === "high");
     await attachLighting(room);
     // Keyboard focus on a book in the list: walk to its case, lift it out.
     room.focusBook = (id) => {

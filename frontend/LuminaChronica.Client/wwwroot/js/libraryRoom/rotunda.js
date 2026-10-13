@@ -1,6 +1,7 @@
 import * as THREE from "../../lib/three/three.module.min.js";
 import { medallion, readingCorner } from "./furnishings.js";
 import { buildDome } from "./dome.js";
+import { buildWalls } from "./walls.js";
 
 // The rotunda (spec 2026-10-12 library-room §3.2): a round reading room with
 // a ring of twelve places per tier. Bookcases stand in the places the plan
@@ -109,7 +110,11 @@ export async function buildRotunda(room, data) {
     }
 
     // Coffered dome with the open oculus and the sky above it.
-    const domeParts = buildDome(room, { radius: WALL, baseY: wallHeight, oculus: OCULUS, wallTint });
+    const caseSlots = new Set(data.cases.filter((c) => c.tier === 0).map((c) => Math.round(c.angle / (360 / slots))));
+    const windowSlots = new Set([...Array(slots).keys()].filter((i) => !caseSlots.has(i)));
+    const finish = buildWalls(room, { radius: WALL, slots, wallHeight, wood, brass, windowSlots });
+    group.add(finish.group);
+    const domeParts = buildDome(room, { radius: WALL, baseY: finish.domeBase, oculus: OCULUS, wallTint });
     group.add(domeParts.group);
     ring(OCULUS + 0.02, 0.06, domeParts.topY - 0.02, brass);
     const sky = new THREE.Color(theme.sky);
@@ -121,13 +126,19 @@ export async function buildRotunda(room, data) {
     glassCanvas.width = 128; glassCanvas.height = 256;
     {
         const g = glassCanvas.getContext("2d");
-        const top = sky.clone().multiplyScalar(theme.night ? 0.25 : 0.75), low = sky.clone().multiplyScalar(theme.night ? 0.45 : 1.1);
+        // frosted panes: bright, a little brighter towards the sky, with
+        // small leaded rectangles and a faint mottle
+        const top = sky.clone().multiplyScalar(theme.night ? 0.4 : 1.05), low = sky.clone().multiplyScalar(theme.night ? 0.28 : 0.82);
         const grad = g.createLinearGradient(0, 0, 0, 256);
         grad.addColorStop(0, `#${top.getHexString()}`); grad.addColorStop(1, `#${low.getHexString()}`);
         g.fillStyle = grad; g.fillRect(0, 0, 128, 256);
-        g.strokeStyle = "rgba(40,30,20,.55)"; g.lineWidth = 1.5;
-        // diamond leading
-        for (let k = -256; k < 384; k += 32) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + 256, 256); g.stroke(); g.beginPath(); g.moveTo(k + 256, 0); g.lineTo(k, 256); g.stroke(); }
+        for (let i = 0; i < 900; i++) {
+            g.fillStyle = `rgba(255,255,255,${Math.random() * 0.08})`;
+            g.fillRect(Math.random() * 128, Math.random() * 256, 3, 3);
+        }
+        g.strokeStyle = "rgba(60,45,30,.45)"; g.lineWidth = 1.2;
+        for (let y = 0; y <= 256; y += 18) { g.beginPath(); g.moveTo(0, y); g.lineTo(128, y); g.stroke(); }
+        for (let x = 0; x <= 128; x += 14) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke(); }
     }
     const glassMap = new THREE.CanvasTexture(glassCanvas);
     glassMap.colorSpace = THREE.SRGBColorSpace;

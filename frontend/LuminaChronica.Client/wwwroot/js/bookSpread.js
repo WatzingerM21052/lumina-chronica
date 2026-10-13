@@ -49,16 +49,18 @@ export async function open(root, sourceKey, rect) {
         cover.style.transform = `translateZ(${DEPTH}px) rotateY(-178deg)`;
         return;
     }
-    // One calm movement: out of the shelf, turning its cover to you.
-    await book.animate([
-        { transform: start },
-        { transform: "translate(0, 0) scale(1) rotateY(0deg)" },
-    ], { duration: 700, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" }).finished;
-    if (!states.has(root)) return;
-    book.animate([{ transform: "translate(0, 0) scale(1) rotateY(0deg)" }, { transform: `translateX(${shift()}px)` }],
-        { duration: 950, easing: "cubic-bezier(.45,.05,.2,1)", fill: "forwards" });
+    // One calm movement: out of the shelf, turning its cover to you, then
+    // the cover swings open. Both run on one clock (the cover simply starts
+    // later) instead of waiting for each other -- on some phones the end of
+    // the first animation was never reported and the book stayed shut.
+    const centred = "translate(0, 0) scale(1) rotateY(0deg)";
+    book.animate([
+        { transform: start, easing: "cubic-bezier(.4,0,.2,1)" },
+        { transform: centred, offset: 0.42, easing: "cubic-bezier(.45,.05,.2,1)" },
+        { transform: `translateX(${shift()}px)` },
+    ], { duration: 1650, fill: "forwards" });
     cover.animate([{ transform: `translateZ(${DEPTH}px) rotateY(0deg)` }, { transform: `translateZ(${DEPTH}px) rotateY(-178deg)` }],
-        { duration: 950, easing: "cubic-bezier(.45,.05,.25,1)", fill: "forwards" });
+        { duration: 950, delay: 700, easing: "cubic-bezier(.45,.05,.25,1)", fill: "both" });
 }
 
 export async function close(root) {
@@ -70,14 +72,15 @@ export async function close(root) {
     const { book, cover, source, start } = state;
     if (!reduce()) {
         try {
-            await Promise.all([
-                cover.animate([{ transform: `translateZ(${DEPTH}px) rotateY(-178deg)` }, { transform: `translateZ(${DEPTH}px) rotateY(0deg)` }],
-                    { duration: 600, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" }).finished,
-                book.animate([{ transform: `translateX(${shift()}px)` }, { transform: "translate(0, 0) scale(1) rotateY(0deg)" }],
-                    { duration: 600, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" }).finished,
-            ]);
-            await book.animate([{ transform: "translate(0, 0) scale(1) rotateY(0deg)" }, { transform: start }],
-                { duration: 520, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" }).finished;
+            // the same clock as opening: cover shuts, then the book flies back
+            cover.animate([{ transform: `translateZ(${DEPTH}px) rotateY(-178deg)` }, { transform: `translateZ(${DEPTH}px) rotateY(0deg)` }],
+                { duration: 600, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" });
+            book.animate([
+                { transform: `translateX(${shift()}px)`, easing: "cubic-bezier(.5,0,.3,1)" },
+                { transform: "translate(0, 0) scale(1) rotateY(0deg)", offset: 0.54, easing: "cubic-bezier(.4,0,.2,1)" },
+                { transform: start },
+            ], { duration: 1120, fill: "forwards" });
+            await new Promise((resolve) => setTimeout(resolve, 1120));
         } catch {
             // Element removed meanwhile.
         }

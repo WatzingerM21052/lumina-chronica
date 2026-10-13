@@ -33,7 +33,9 @@ function cofferCanvas(theme, wallTint) {
     return c;
 }
 
-export function buildDome({ theme, renderer }, { radius, baseY, oculus, wallTint, rows = 5, perRow = 24 }) {
+// `flat` < 1 makes a shallower dome than a half sphere (a saucer dome over
+// a drum reads more like a reading room than a tall bell).
+export function buildDome({ theme, renderer }, { radius, baseY, oculus, wallTint, flat = 0.55, rows = 6, perRow = 28 }) {
     const group = new THREE.Group();
     const thetaStart = Math.asin(oculus / radius);
     const canvas = cofferCanvas(theme, wallTint);
@@ -49,11 +51,23 @@ export function buildDome({ theme, renderer }, { radius, baseY, oculus, wallTint
         new THREE.SphereGeometry(radius, 128, 48, 0, Math.PI * 2, thetaStart, Math.PI / 2 - thetaStart),
         new THREE.MeshStandardMaterial({ map, bumpMap: bump, bumpScale: 2.5, roughness: 0.85, side: THREE.BackSide }));
     dome.position.y = baseY;
+    dome.scale.y = flat;
     dome.receiveShadow = true;
     group.add(dome);
 
+    // gilt rings: at the springing and a third of the way up
+    const gold = new THREE.MeshStandardMaterial({ color: new THREE.Color(theme.brass), metalness: 1, roughness: 0.3 });
+    for (const k of [0.04, 0.42]) {
+        const y = Math.sin(k * Math.PI / 2) * radius;
+        const r = Math.cos(k * Math.PI / 2) * radius - 0.06;
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.03, 8, 160), gold);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = baseY + y * flat;
+        group.add(ring);
+    }
+
     // Sky above the oculus.
-    const topY = baseY + Math.sqrt(radius * radius - oculus * oculus);
+    const topY = baseY + Math.sqrt(radius * radius - oculus * oculus) * flat;
     const sky = new THREE.Mesh(
         new THREE.SphereGeometry(oculus * 3, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2),
         new THREE.ShaderMaterial({
