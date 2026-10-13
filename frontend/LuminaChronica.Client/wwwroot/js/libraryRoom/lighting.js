@@ -28,7 +28,7 @@ export async function attachLighting(room) {
     const topY = architecture.oculusY + 0.3;
     const skylight = new THREE.SpotLight(sky, (theme.night ? 260 : 900) * theme.skyIntensity, 0, 0.42, 0.75, 1.6);
     skylight.position.set(0, topY, 0);
-    skylight.target.position.set(0.6, 0, -0.4);
+    skylight.target.position.set(0, 0, 0);
     group.add(skylight, skylight.target);
 
     const beamHeight = topY - 0.05;
@@ -40,8 +40,7 @@ export async function attachLighting(room) {
             vertexShader: "varying float vY; varying vec3 vN; varying vec3 vV; void main(){ vY = uv.y; vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }",
             fragmentShader: "uniform vec3 colour; uniform float strength; varying float vY; varying vec3 vN; varying vec3 vV; void main(){ float edge = pow(1.0 - abs(dot(vN, vV)), 1.5); float fade = smoothstep(0.0, 0.85, vY); gl_FragColor = vec4(colour * strength * (1.0 - edge) * fade, 1.0); }",
         }));
-    beam.position.set(0.3, beamHeight / 2, -0.2);
-    beam.rotation.z = 0.06;
+    beam.position.set(0, beamHeight / 2, 0);
     group.add(beam);
 
     const dustCount = 320;
@@ -63,13 +62,34 @@ export async function attachLighting(room) {
             const y = ((v + t * 0.012 * speed) % 1) * beamHeight;
             const r = (1.0 + (2.6 - 1.0) * (1 - y / beamHeight)) * Math.sqrt(u) * 0.9;
             const a = phase + t * 0.05 * speed;
-            p[i * 3] = 0.3 + Math.cos(a) * r;
+            p[i * 3] = Math.cos(a) * r;
             p[i * 3 + 1] = beamHeight - y;
-            p[i * 3 + 2] = -0.2 + Math.sin(a) * r;
+            p[i * 3 + 2] = Math.sin(a) * r;
         }
         dustGeo.attributes.position.needsUpdate = true;
     };
     placeDust(0);
+
+    // A soft halo round every flame (no post-processing needed).
+    const haloCanvas = document.createElement("canvas");
+    haloCanvas.width = haloCanvas.height = 128;
+    {
+        const g = haloCanvas.getContext("2d");
+        const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+        grad.addColorStop(0, "rgba(255,214,150,0.9)"); grad.addColorStop(0.18, "rgba(255,180,100,0.35)"); grad.addColorStop(1, "rgba(255,150,60,0)");
+        g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+    }
+    const haloMap = new THREE.CanvasTexture(haloCanvas);
+    const halo = (pos, size) => {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloMap, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
+        s.position.copy(pos);
+        s.scale.setScalar(size);
+        group.add(s);
+        return s;
+    };
+
+    // Warm haze in the air: far walls soften, the room gains depth.
+    scene.fog = new THREE.FogExp2(new THREE.Color(theme.wood).lerp(new THREE.Color(theme.night ? 0x0b0d18 : 0x3a2a1c), 0.6), theme.night ? 0.05 : 0.035);
 
     // Reading lamp on the table.
     const lamp = new THREE.PointLight(0xffb36a, 3.2, 6, 2);
@@ -78,6 +98,16 @@ export async function attachLighting(room) {
     const flame = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false }));
     flame.position.copy(architecture.lamp);
     group.add(flame);
+    halo(architecture.lamp.clone().add(new THREE.Vector3(0, 0.12, 0)), 0.9);
+    // the candle beside the open book
+    const tableCandle = new THREE.PointLight(0xffa955, 0.9, 2.5, 2);
+    tableCandle.position.copy(architecture.candle).add(new THREE.Vector3(0, 0.03, 0));
+    group.add(tableCandle);
+    const tableFlame = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false }));
+    tableFlame.position.copy(tableCandle.position);
+    tableFlame.scale.set(1, 1.8, 1);
+    group.add(tableFlame);
+    const tableHalo = halo(tableCandle.position, 0.35);
 
     // Candles on every second pilaster (floor tier), brass holders.
     const candles = [];
@@ -103,7 +133,7 @@ export async function attachLighting(room) {
         const glow = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffcf8a, toneMapped: false }));
         glow.position.copy(pos);
         group.add(glow);
-        candles.push({ light, glow, pos, phase: Math.random() * 10 });
+        candles.push({ light, glow, pos, phase: Math.random() * 10, halo: halo(pos, 0.55) });
     }
     fillOnly(group);
 
@@ -161,8 +191,14 @@ export async function attachLighting(room) {
                 const flicker = still ? 1 : 1 + Math.sin(t * 9 + c.phase) * 0.08 + Math.sin(t * 23 + c.phase * 2) * 0.05 + Math.sin(t * 51 + c.phase) * 0.03;
                 c.light.intensity = on ? (theme.night ? 3.4 : 2.6) * flicker : 0;
                 c.glow.scale.setScalar(still ? 1 : flicker);
+                c.halo.material.opacity = on ? 0.9 * flicker : 0.55;
             });
             lamp.intensity = 3.2 * (still ? 1 : 1 + Math.sin(t * 7) * 0.03);
+            const f2 = still ? 1 : 1 + Math.sin(t * 11 + 1.3) * 0.1 + Math.sin(t * 29) * 0.06;
+            tableCandle.intensity = 0.9 * f2;
+            tableFlame.scale.set(f2, 1.8 * f2, f2);
+            tableHalo.material.opacity = 0.85 * f2;
+            if (!still) architecture.sky.tick(t);
             if (dust.visible) placeDust(t);
         }
         return Math.abs(caseLight.intensity - (entry ? 5.5 : 0)) > 0.05;

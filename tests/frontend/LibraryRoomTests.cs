@@ -72,6 +72,8 @@ public class LibraryRoomTests : BunitContext
 
         Assert.Equal("true", cut.FindAll(".library-room-case")[1].GetAttribute("aria-pressed"));
         Assert.NotEmpty(cut.FindAll(".library-room-home"));
+        // the case's books as a row to tap
+        Assert.Equal(["Momo", "Krabat"], cut.FindAll(".library-room-book-title").Select(t => t.TextContent));
     }
 
     [Fact]

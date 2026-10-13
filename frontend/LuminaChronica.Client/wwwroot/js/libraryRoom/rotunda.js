@@ -1,11 +1,14 @@
 import * as THREE from "../../lib/three/three.module.min.js";
+import { medallion, readingCorner } from "./furnishings.js";
+import { buildDome } from "./dome.js";
 
 // The rotunda (spec 2026-10-12 library-room §3.2): a round reading room with
 // a ring of twelve places per tier. Bookcases stand in the places the plan
 // fills; the free places on the floor become tall arched windows with a
 // piece of decor before them; a gallery with a brass railing carries the
-// next tier; a coffered dome with an open oculus closes the room. The
-// reading table stands in the middle. Units: metres, y up, floor at 0,
+// next tier; a coffered dome with an open oculus closes the room. In the
+// middle an inlaid compass rose takes the light from the oculus; a reading
+// corner stands to one side. Units: metres, y up, floor at 0,
 // place 0 straight ahead (-z), clockwise seen from above.
 export const R = 5.6;            // bookcase fronts stand on this circle
 export const WALL = R + 0.45;    // the wall behind them
@@ -36,11 +39,10 @@ export async function buildRotunda(room, data) {
     const wallTint = theme.key.includes("light") || theme.key === "alexandria"
         ? new THREE.Color(0xf2ece0)
         : new THREE.Color(theme.wood).lerp(new THREE.Color(0xe8dcc4), 0.55);
-    const [floor, wall, dome, rug, wood] = await Promise.all([
+    const [floor, wall, rug, wood] = await Promise.all([
         assets.material(theme.floor, { repeat: [(R + 0.6) * 2 / 1.6, (R + 0.6) * 2 / 1.6] }),
         assets.material(theme.wall, { repeat: [Math.round(2 * Math.PI * WALL / 2.4), wallHeight / 2.4], tint: wallTint }),
-        assets.material(theme.dome, { repeat: [10, 4], tint: wallTint }),
-        assets.material(theme.rug, { repeat: [3, 3], tint: new THREE.Color(theme.wood).lerp(new THREE.Color(0x6a2a22), 0.5).multiplyScalar(0.72) }),
+        assets.material(theme.rug, { repeat: [3, 3], tint: new THREE.Color(theme.wood).lerp(new THREE.Color(0x5a2420), 0.55).multiplyScalar(0.5) }),
         assets.material("walnut_veneer", { repeat: [1, 2], tint: woodTint, roughness: 0.8 }),
     ]);
     const brass = new THREE.MeshStandardMaterial({ color: new THREE.Color(theme.brass), metalness: 1, roughness: 0.32 });
@@ -51,12 +53,10 @@ export async function buildRotunda(room, data) {
         return mesh;
     };
 
-    // Floor, with a round rug under the reading table.
+    // Floor, with the compass rose in the middle.
     const floorMesh = add(new THREE.Mesh(new THREE.CircleGeometry(WALL + 0.1, 96), floor));
     floorMesh.rotation.x = -Math.PI / 2;
-    const rugMesh = add(new THREE.Mesh(new THREE.CircleGeometry(1.75, 64), rug));
-    rugMesh.rotation.x = -Math.PI / 2;
-    rugMesh.position.y = 0.006;
+    group.add(medallion(theme, 1.0));
 
     // Wall, skirting and cornice.
     add(new THREE.Mesh(new THREE.CylinderGeometry(WALL, WALL, wallHeight, 96, 1, true), wall)).position.y = wallHeight / 2;
@@ -108,17 +108,11 @@ export async function buildRotunda(room, data) {
         group.add(posts);
     }
 
-    // Dome with coffers (from the stucco's relief) and an open oculus.
-    const thetaStart = Math.asin(OCULUS / WALL);
-    const domeMesh = add(new THREE.Mesh(new THREE.SphereGeometry(WALL, 96, 32, 0, Math.PI * 2, thetaStart, Math.PI / 2 - thetaStart), dome));
-    domeMesh.material.side = THREE.BackSide;
-    domeMesh.position.y = wallHeight;
+    // Coffered dome with the open oculus and the sky above it.
+    const domeParts = buildDome(room, { radius: WALL, baseY: wallHeight, oculus: OCULUS, wallTint });
+    group.add(domeParts.group);
+    ring(OCULUS + 0.02, 0.06, domeParts.topY - 0.02, brass);
     const sky = new THREE.Color(theme.sky);
-    const skyDisc = add(new THREE.Mesh(new THREE.CircleGeometry(OCULUS + 0.05, 64),
-        new THREE.MeshBasicMaterial({ color: sky.clone().multiplyScalar(theme.night ? 0.5 : 1.4), toneMapped: false })), false);
-    skyDisc.rotation.x = Math.PI / 2;
-    skyDisc.position.y = wallHeight + Math.sqrt(WALL * WALL - OCULUS * OCULUS) + 0.25;
-    ring(OCULUS + 0.02, 0.06, wallHeight + Math.sqrt(WALL * WALL - OCULUS * OCULUS) - 0.02, brass);
 
     // Free places on the floor: tall arched windows, decor before them.
     const used = new Set(data.cases.filter((c) => c.tier === 0).map((c) => Math.round(c.angle / (360 / slots))));
@@ -204,34 +198,21 @@ export async function buildRotunda(room, data) {
         })());
     }
 
-    // The reading table in the middle: lamp, chair.
-    const middle = (async () => {
-        const table = await assets.place("round_wooden_table_01", 1.4);
-        if (!table) return null;
-        group.add(table);
-        const top = new THREE.Box3().setFromObject(table).max.y;
-        const lamp = await assets.place("vintage_oil_lamp", 0.5, "height");
-        if (lamp) {
-            lamp.position.set(-0.25, top, -0.15);
-            group.add(lamp);
-        }
-        const chair = await assets.place("ArmChair_01", 0.85);
-        if (chair) {
-            chair.position.set(0.55, 0, 1.15);
-            chair.rotation.y = Math.PI + 0.5;
-            group.add(chair);
-        }
-        return { tableTop: top, lampPosition: new THREE.Vector3(-0.25, top + 0.32, -0.15) };
-    })();
+    // The reading corner behind where one starts (one turns round to it),
+    // between two places and inside the circle the camera keeps to before
+    // a case.
+    const corner = readingCorner(room, { angle: Math.PI * 165 / 180, radius: 1.95, rugMaterial: rug }).then((c) => { group.add(c.group); return c; });
 
-    const [table] = await Promise.all([middle, ...decor]);
+    const [table] = await Promise.all([corner, ...decor]);
     return {
         group,
         tiers,
         slots,
         wallHeight,
-        oculusY: wallHeight + Math.sqrt(WALL * WALL - OCULUS * OCULUS),
-        lamp: table?.lampPosition ?? new THREE.Vector3(0, 1.1, 0),
+        oculusY: domeParts.topY,
+        sky: domeParts,
+        lamp: table.lamp,
+        candle: table.candle,
         windows,
         floorY: (tier) => tier * TIER,
     };

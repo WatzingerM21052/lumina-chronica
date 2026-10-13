@@ -104,7 +104,8 @@
                             @onclick='() => SetViewMode(LibraryViewMode.Scrolls)'><Icon Name="scrolls" /></button>
                 }
             </div>
-            @if (_viewMode == LibraryViewMode.Grid)
+            @* The 3D library has real book sizes, so no size choice there. *@
+            @if (_viewMode == LibraryViewMode.Grid && _shelfStyle != ShelfStyles.Library)
             {
                 <select class="library-shelf-book-zoom" aria-label="@I18n.T("library.bookSizeLabel")" title="@I18n.T("library.bookSizeLabel")"
                         @bind="_shelfBookZoom" @bind:after="OnShelfBookZoomChangedAsync">

@@ -24,6 +24,20 @@ else
             <div class="library-room-loading" role="status">@I18n.T("libraryRoom.loading")</div>
         }
         <div class="library-room-tip" aria-hidden="true"><strong></strong><span></span></div>
+        @if (_current >= 0 && _current < _plan.Cases.Count)
+        {
+            @* Touch screens: the books of the case one stands before, as a row
+               to tap -- easier than hitting a spine a few pixels wide. *@
+            <nav class="library-room-books" aria-label="@_plan.Cases[_current].Label">
+                @foreach (var book in _plan.Cases[_current].Boards.SelectMany(b => b))
+                {
+                    <button type="button" class="library-room-book" @key="book.Id" @onclick="() => PickAsync(book)">
+                        <span class="library-room-book-spine" style="@SpineStyle(book)"></span>
+                        <span class="library-room-book-title">@book.Title</span>
+                    </button>
+                }
+            </nav>
+        }
         <div class="library-room-ui">
             <nav class="library-room-cases" aria-label="@I18n.T("libraryRoom.cases")">
                 @foreach (var c in _plan.Cases.Where(c => !c.Continued))

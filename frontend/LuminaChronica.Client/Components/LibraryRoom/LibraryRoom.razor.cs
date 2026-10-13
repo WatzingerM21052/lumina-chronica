@@ -25,6 +25,8 @@ public partial class LibraryRoom
     private IJSObjectReference? _module;
     private DotNetObjectReference<LibraryRoom>? _selfRef;
 
+    private static string SpineStyle(Book book) => $"background-color: {Leathers[book.Id % Leathers.Length]}";
+
     private static string Label(Book book) => string.IsNullOrWhiteSpace(book.Author) ? book.Title : $"{book.Title}, {book.Author}";
 
     private string Key() => string.Join("|", Sections.Select(s => s.Label + ":" + string.Join(",", s.Books.Select(b => b.Id))));

@@ -21,9 +21,11 @@ export function attachCamera(room) {
     const target = new THREE.Vector3();
 
     const floorY = (tier) => room.architecture.floorY(tier);
+    // In the middle one turns on the spot (on the compass rose), like a
+    // visitor looking round the room -- slightly back from the centre so the
+    // rose shows at one's feet.
     const homePose = () => {
-        const back = camera.aspect < 1 ? 3.3 : 2.3;
-        const pos = new THREE.Vector3(Math.sin(state.yaw) * -back, EYE + (camera.aspect < 1 ? 0.25 : 0), Math.cos(state.yaw) * back);
+        const pos = new THREE.Vector3(Math.sin(state.yaw) * -0.6, EYE, Math.cos(state.yaw) * 0.6);
         const dir = new THREE.Vector3(Math.sin(state.yaw) * Math.cos(state.pitch), Math.sin(state.pitch), -Math.cos(state.yaw) * Math.cos(state.pitch));
         return { pos, look: pos.clone().add(dir.multiplyScalar(5)) };
     };
@@ -95,7 +97,7 @@ export function attachCamera(room) {
         if (!drag.moved) return;
         if (state.mode === "home") {
             state.yaw = drag.yaw - dx * 0.0042;
-            state.pitch = THREE.MathUtils.clamp(drag.pitch + dy * 0.0035, -0.35, 0.62);
+            state.pitch = THREE.MathUtils.clamp(drag.pitch + dy * 0.0035, -0.45, 1.15);
         } else {
             state.offYaw = THREE.MathUtils.clamp(drag.offYaw - dx * 0.0032, -0.44, 0.44);
             state.offPitch = THREE.MathUtils.clamp(drag.offPitch + dy * 0.0028, -0.21, 0.21);

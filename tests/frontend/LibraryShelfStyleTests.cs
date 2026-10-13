@@ -79,5 +79,7 @@ public class LibraryShelfStyleTests : BunitContext
         cut.Find("#view-shelf").Click();
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-room")));
+        // real book sizes there: no size choice
+        Assert.Empty(cut.FindAll(".library-shelf-book-zoom"));
     }
 }
