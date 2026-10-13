@@ -6,10 +6,16 @@ const BOOK_W = 300, BOOK_H = 440, DEPTH = 22;
 const reduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const states = new WeakMap();
 
+// On a phone the open book doesn't fit side by side at a readable size: the
+// page with title and buttons fills the middle and the cover page, swung
+// open to the left, is cut by the screen's edge.
+const narrow = () => window.innerWidth < 600;
+const shift = () => (narrow() ? 0 : BOOK_W / 2);
+
 function fitScale() {
-    const w = Math.min(window.innerWidth - 32, 760) / (BOOK_W * 2);
+    const w = narrow() ? (window.innerWidth - 24) / BOOK_W : Math.min(window.innerWidth - 32, 760) / (BOOK_W * 2);
     const h = (window.innerHeight - 140) / BOOK_H;
-    return Math.min(1, w, h);
+    return Math.min(narrow() ? 1.15 : 1, w, h);
 }
 
 export async function open(root, sourceKey, rect) {
@@ -39,7 +45,7 @@ export async function open(root, sourceKey, rect) {
     setTimeout(() => root.querySelector(".book-spread-close")?.focus({ preventScroll: true }), reduce() ? 0 : 900);
 
     if (reduce()) {
-        book.style.transform = `translateX(${BOOK_W / 2}px)`;
+        book.style.transform = `translateX(${shift()}px)`;
         cover.style.transform = `translateZ(${DEPTH}px) rotateY(-178deg)`;
         return;
     }
@@ -49,7 +55,7 @@ export async function open(root, sourceKey, rect) {
         { transform: "translate(0, 0) scale(1) rotateY(0deg)" },
     ], { duration: 700, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" }).finished;
     if (!states.has(root)) return;
-    book.animate([{ transform: "translate(0, 0) scale(1) rotateY(0deg)" }, { transform: `translateX(${BOOK_W / 2}px)` }],
+    book.animate([{ transform: "translate(0, 0) scale(1) rotateY(0deg)" }, { transform: `translateX(${shift()}px)` }],
         { duration: 950, easing: "cubic-bezier(.45,.05,.2,1)", fill: "forwards" });
     cover.animate([{ transform: `translateZ(${DEPTH}px) rotateY(0deg)` }, { transform: `translateZ(${DEPTH}px) rotateY(-178deg)` }],
         { duration: 950, easing: "cubic-bezier(.45,.05,.25,1)", fill: "forwards" });
@@ -67,7 +73,7 @@ export async function close(root) {
             await Promise.all([
                 cover.animate([{ transform: `translateZ(${DEPTH}px) rotateY(-178deg)` }, { transform: `translateZ(${DEPTH}px) rotateY(0deg)` }],
                     { duration: 600, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" }).finished,
-                book.animate([{ transform: `translateX(${BOOK_W / 2}px)` }, { transform: "translate(0, 0) scale(1) rotateY(0deg)" }],
+                book.animate([{ transform: `translateX(${shift()}px)` }, { transform: "translate(0, 0) scale(1) rotateY(0deg)" }],
                     { duration: 600, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" }).finished,
             ]);
             await book.animate([{ transform: "translate(0, 0) scale(1) rotateY(0deg)" }, { transform: start }],

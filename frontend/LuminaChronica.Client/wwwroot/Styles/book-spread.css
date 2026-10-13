@@ -363,6 +363,22 @@
     visibility: hidden;
 }
 
+/* Phones: the page is shown about full width; the buttons are real
+   touch targets. */
+@media (max-width: 599px) {
+    .book-spread-action {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .book-spread-close {
+        min-height: 44px;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .book-spread-dim,
     .book-spread-close {
