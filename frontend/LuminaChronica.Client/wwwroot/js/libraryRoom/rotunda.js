@@ -2,6 +2,7 @@ import * as THREE from "../../lib/three/three.module.min.js";
 import { medallion, readingCorner } from "./furnishings.js";
 import { buildDome } from "./dome.js";
 import { buildWalls } from "./walls.js";
+import { capital, curtains, fireplace } from "./victorian.js";
 
 // The rotunda (spec 2026-10-12 library-room §3.2): a round reading room with
 // a ring of twelve places per tier. Bookcases stand in the places the plan
@@ -41,10 +42,10 @@ export async function buildRotunda(room, data) {
         ? new THREE.Color(0xf2ece0)
         : new THREE.Color(theme.wood).lerp(new THREE.Color(0xe8dcc4), 0.55);
     const [floor, wall, rug, wood] = await Promise.all([
-        assets.material(theme.floor, { repeat: [(R + 0.6) * 2 / 1.6, (R + 0.6) * 2 / 1.6] }),
+        assets.material(theme.floor, { repeat: [(R + 0.6) * 2 / 1.6, (R + 0.6) * 2 / 1.6], sheen: true }),
         assets.material(theme.wall, { repeat: [Math.round(2 * Math.PI * WALL / 2.4), wallHeight / 2.4], tint: wallTint }),
         assets.material(theme.rug, { repeat: [3, 3], tint: new THREE.Color(theme.wood).lerp(new THREE.Color(0x5a2420), 0.55).multiplyScalar(0.5) }),
-        assets.material("walnut_veneer", { repeat: [1, 2], tint: woodTint, roughness: 0.8 }),
+        assets.material("walnut_veneer", { repeat: [1, 2], tint: woodTint, roughness: 0.72, envMapIntensity: 0.2 }),
     ]);
     const brass = new THREE.MeshStandardMaterial({ color: new THREE.Color(theme.brass), metalness: 1, roughness: 0.32 });
     const add = (mesh, receive = true, cast = false) => {
@@ -78,9 +79,10 @@ export async function buildRotunda(room, data) {
         const p = add(new THREE.Mesh(new THREE.BoxGeometry(0.34, wallHeight, 0.3), wood), true, true);
         p.position.set(Math.sin(a) * (WALL - 0.12), wallHeight / 2, -Math.cos(a) * (WALL - 0.12));
         p.rotation.y = -a;
-        const cap = add(new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.08, 0.36), brass));
-        cap.position.set(p.position.x, TIER - 0.35, p.position.z);
+        const cap = capital(0.34, 0.3, wood, brass);
+        cap.position.set(p.position.x, wallHeight - 0.42, p.position.z);
         cap.rotation.y = -a;
+        group.add(cap);
     }
 
     // Galleries: a walk and a railing for every tier above the floor.
@@ -119,6 +121,36 @@ export async function buildRotunda(room, data) {
     ring(OCULUS + 0.02, 0.06, domeParts.topY - 0.02, brass);
     const sky = new THREE.Color(theme.sky);
 
+    // One free place on the floor (the one nearest to the right of where one
+    // starts) holds the fireplace; the others are tall windows with curtains.
+    const freeSlots = [...windowSlots];
+    const fireSlot = freeSlots.length
+        ? freeSlots.reduce((best, i) => (Math.abs(slotAngle(i, slots) - Math.PI / 2) < Math.abs(slotAngle(best, slots) - Math.PI / 2) ? i : best))
+        : -1;
+    let fire = null;
+    let fireDressing = null;
+    if (fireSlot >= 0) {
+        const f = slotFrame(fireSlot, 0, slots);
+        const fp = fireplace(theme, { dark: theme.night });
+        fp.group.position.set(Math.sin(f.angle) * (WALL - 0.04), 0, -Math.cos(f.angle) * (WALL - 0.04));
+        fp.group.rotation.y = f.rotationY;
+        group.add(fp.group);
+        fp.group.updateMatrixWorld(true);
+        fire = { tick: fp.tick, light: fp.group.localToWorld(fp.light.clone()) };
+        // mirror above, clock and vases on the mantel, a fern and the tall clock beside
+        fireDressing = (async () => {
+            const at = (object, x, y, z) => { if (!object) return; object.position.set(x, y, z); fp.group.add(object); };
+            at(await assets.place("ornate_mirror_01", 1.05, "height"), 0, 1.3, 0.04);
+            at(await assets.place("mantel_clock_01", 0.34, "height"), 0, fp.mantelY, 0.3);
+            const vase = await assets.place("antique_ceramic_vase_01", 0.3, "height");
+            at(vase, -0.72, fp.mantelY, 0.3);
+            if (vase) at(vase.clone(true), 0.72, fp.mantelY, 0.3);
+            at(await assets.place("fern_02", 0.9, "height"), 1.35, 0, 0.35);
+            at(await assets.place("vintage_grandfather_clock_01", 2.05, "height"), -1.4, 0, 0.25);
+        })();
+        windowSlots.delete(fireSlot);
+    }
+
     // Free places on the floor: tall arched windows, decor before them.
     const used = new Set(data.cases.filter((c) => c.tier === 0).map((c) => Math.round(c.angle / (360 / slots))));
     // Glass: a soft sky -- brighter low (the light outside), leaded panes.
@@ -147,7 +179,7 @@ export async function buildRotunda(room, data) {
     const windows = [];
     let propIndex = 0;
     for (let slot = 0; slot < slots; slot++) {
-        if (used.has(slot)) continue;
+        if (used.has(slot) || slot === fireSlot) continue;
         const f = slotFrame(slot, 0, slots);
         const w = new THREE.Group();
         const pane = new THREE.Shape();
@@ -174,6 +206,10 @@ export async function buildRotunda(room, data) {
         w.position.set(Math.sin(f.angle) * (WALL - 0.03), 0.9, -Math.cos(f.angle) * (WALL - 0.03));
         w.rotation.y = f.rotationY;
         group.add(w);
+        const drapes = curtains(theme);
+        drapes.position.set(Math.sin(f.angle) * (WALL - 0.1), 0, -Math.cos(f.angle) * (WALL - 0.1));
+        drapes.rotation.y = f.rotationY;
+        group.add(drapes);
         windows.push({ slot, frame: f });
     }
 
@@ -209,12 +245,35 @@ export async function buildRotunda(room, data) {
         })());
     }
 
+    // The chandelier over the compass rose.
+    const chandelier = (async () => {
+        const object = await assets.place("Chandelier_01", 1.1, "width");
+        if (!object) return null;
+        const hangY = wallHeight + 0.1;
+        object.position.y = hangY - new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).y;
+        group.add(object);
+        const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 3, 6), brass);
+        chain.position.y = hangY + 1.5;
+        group.add(chain);
+        return new THREE.Vector3(0, object.position.y + 0.35, 0);
+    })();
+
+    // Paintings in the framed fields above every second case.
+    const paintings = [...caseSlots].filter((i) => i % 2 === 1).map(async (i) => {
+        const object = await assets.place("fancy_picture_frame_01", 0.85, "height");
+        if (!object) return;
+        const a = slotAngle(i, slots);
+        object.position.set(Math.sin(a) * (WALL - 0.06), 2.98, -Math.cos(a) * (WALL - 0.06));
+        object.rotation.y = -a;
+        group.add(object);
+    });
+
     // The reading corner behind where one starts (one turns round to it),
     // between two places and inside the circle the camera keeps to before
     // a case.
-    const corner = readingCorner(room, { angle: Math.PI * 165 / 180, radius: 1.95, rugMaterial: rug }).then((c) => { group.add(c.group); return c; });
+    const corner = readingCorner(room, { angle: Math.PI * 165 / 180, radius: 2.2, rugMaterial: rug }).then((c) => { group.add(c.group); return c; });
 
-    const [table] = await Promise.all([corner, ...decor]);
+    const [table, chandelierLight] = await Promise.all([corner, chandelier, ...decor, ...paintings, fireDressing]);
     return {
         group,
         tiers,
@@ -224,6 +283,8 @@ export async function buildRotunda(room, data) {
         sky: domeParts,
         lamp: table.lamp,
         candle: table.candle,
+        chandelier: chandelierLight,
+        fire,
         windows,
         floorY: (tier) => tier * TIER,
     };

@@ -154,7 +154,9 @@ export async function createScene(container, dotNet, data, restore) {
     room.setBloom = (on) => {
         if (!on) { room.composer?.dispose(); room.composer = null; return; }
         if (room.composer) return;
-        const composer = new EffectComposer(renderer);
+        // multisampled target, so edges stay smooth with the glow on
+        const target = new THREE.WebGLRenderTarget(stage.clientWidth || 1, stage.clientHeight || 1, { samples: 4, type: THREE.HalfFloatType });
+        const composer = new EffectComposer(renderer, target);
         composer.addPass(new RenderPass(scene, camera));
         composer.addPass(new UnrealBloomPass(new THREE.Vector2(stage.clientWidth || 1, stage.clientHeight || 1), 0.38, 0.65, 0.82));
         composer.addPass(new OutputPass());

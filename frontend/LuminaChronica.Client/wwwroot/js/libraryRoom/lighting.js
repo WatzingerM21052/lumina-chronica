@@ -1,5 +1,6 @@
 import * as THREE from "../../lib/three/three.module.min.js";
-import { WALL, TIER, slotAngle } from "./rotunda.js";
+import { WALL, slotAngle } from "./rotunda.js";
+import { sconce } from "./victorian.js";
 
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -18,7 +19,8 @@ export async function attachLighting(room) {
     // The image light only fills; the lamps make the mood.
     const fillOnly = (root) => root.traverse((o) => {
         if (!o.isMesh) return;
-        for (const m of [].concat(o.material)) if (m.isMeshStandardMaterial) m.envMapIntensity = theme.night ? 0.24 : 0.36;
+        // materials that set their own (wood: low) keep it; the rest are toned down
+        for (const m of [].concat(o.material)) if (m.isMeshStandardMaterial && m.envMapIntensity === 1) m.envMapIntensity = theme.night ? 0.24 : 0.36;
     });
     fillOnly(scene);
     room.base.intensity = theme.night ? 0.1 : 0.16;
@@ -174,31 +176,38 @@ export async function attachLighting(room) {
     group.add(tableFlame);
     const tableHalo = halo(tableCandle.position, 0.35);
 
-    // Candles on every second pilaster (floor tier), brass holders.
+    // A gas sconce on every pilaster; the four nearest the camera burn
+    // (to keep the number of lights small), the others still glow.
     const candles = [];
     const slots = architecture.slots;
-    for (let i = 0; i < slots; i += 2) {
+    for (let i = 0; i < slots; i++) {
         const a = slotAngle(i + 0.5, slots);
-        const r = WALL - 0.42;
-        const pos = new THREE.Vector3(Math.sin(a) * r, TIER - 0.5, -Math.cos(a) * r);
-        const holder = await room.assets.place("brass_candleholders", 0.34, "height");
-        if (holder) {
-            holder.position.copy(pos).setY(TIER - 0.82);
-            holder.rotation.y = -a;
-            group.add(holder);
-        }
-        // a wrought bracket from the pilaster to the holder
-        const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.34), new THREE.MeshStandardMaterial({ color: new THREE.Color(theme.brassLo), metalness: 1, roughness: 0.45 }));
-        bracket.position.set(Math.sin(a) * (WALL - 0.3), TIER - 0.84, -Math.cos(a) * (WALL - 0.3));
-        bracket.rotation.y = -a;
-        group.add(bracket);
-        const light = new THREE.PointLight(0xffa955, 0, 5.5, 2);
+        const fixture = sconce(theme);
+        fixture.group.position.set(Math.sin(a) * (WALL - 0.27), 2.15, -Math.cos(a) * (WALL - 0.27));
+        fixture.group.rotation.y = -a;
+        group.add(fixture.group);
+        fixture.group.updateMatrixWorld(true);
+        const pos = fixture.group.localToWorld(fixture.flame.clone());
+        const light = new THREE.PointLight(0xffb066, 0, 5.5, 2);
         light.position.copy(pos);
         group.add(light);
-        const glow = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffcf8a, toneMapped: false }));
-        glow.position.copy(pos);
-        group.add(glow);
-        candles.push({ light, glow, pos, phase: Math.random() * 10, halo: halo(pos, 0.55) });
+        candles.push({ light, glow: fixture.shade, pos, phase: Math.random() * 10, halo: halo(pos, 0.5) });
+    }
+
+    // The chandelier and the fire.
+    let chandelier = null;
+    if (architecture.chandelier) {
+        chandelier = new THREE.PointLight(0xffc27a, 7, 9, 2);
+        chandelier.position.copy(architecture.chandelier);
+        group.add(chandelier);
+        halo(architecture.chandelier, 1.4);
+    }
+    let fireLight = null;
+    if (architecture.fire) {
+        fireLight = new THREE.PointLight(0xff7a2a, 6, 7, 2);
+        fireLight.position.copy(architecture.fire.light);
+        group.add(fireLight);
+        halo(architecture.fire.light, 1.2);
     }
     fillOnly(group);
 
@@ -215,6 +224,7 @@ export async function attachLighting(room) {
         skylight.shadow.bias = -0.0004;
         skylight.shadow.radius = 4;
         lamp.castShadow = q.shadowLights >= 2;
+        if (fireLight) { fireLight.castShadow = q.shadowLights >= 3; fireLight.shadow.mapSize.set(512, 512); }
         lamp.shadow.mapSize.set(512, 512);
         caseLight.castShadow = q.shadowLights >= 3;
         caseLight.shadow.mapSize.set(1024, 1024);
@@ -255,7 +265,7 @@ export async function attachLighting(room) {
                 const on = i < 4;
                 const flicker = still ? 1 : 1 + Math.sin(t * 9 + c.phase) * 0.08 + Math.sin(t * 23 + c.phase * 2) * 0.05 + Math.sin(t * 51 + c.phase) * 0.03;
                 c.light.intensity = on ? (theme.night ? 3.4 : 2.6) * flicker : 0;
-                c.glow.scale.setScalar(still ? 1 : flicker);
+                c.glow.material.emissiveIntensity = (on ? 1.6 : 1.0) * flicker;
                 c.halo.material.opacity = on ? 0.9 * flicker : 0.55;
             });
             lamp.intensity = 3.2 * (still ? 1 : 1 + Math.sin(t * 7) * 0.03);
@@ -264,6 +274,11 @@ export async function attachLighting(room) {
             tableFlame.scale.set(f2, 1.8 * f2, f2);
             tableHalo.material.opacity = 0.85 * f2;
             if (!still) architecture.sky.tick(t);
+            if (fireLight) {
+                const ff = still ? 1 : 1 + Math.sin(t * 13) * 0.12 + Math.sin(t * 31 + 2) * 0.08 + Math.sin(t * 57) * 0.05;
+                fireLight.intensity = 6 * ff;
+                if (!still) architecture.fire.tick(t);
+            }
             if (dust.visible) placeDust(t);
         }
         return Math.abs(caseLight.intensity - (entry ? 5.5 : 0)) > 0.05;

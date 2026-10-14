@@ -66,7 +66,9 @@ export function createAssets(renderer) {
             wrapper.add(object);
             return wrapper;
         },
-        material: async (id, { repeat = [1, 1], tint, roughness = 1 } = {}) => {
+        // The ARM map's roughness is only used where asked (`sheen`): on
+        // wood it made boards mirror the room and glow white.
+        material: async (id, { repeat = [1, 1], tint, roughness = 1, sheen = false, envMapIntensity = 0.3 } = {}) => {
             const [map, normalMap, arm] = await Promise.all([
                 texture(`${BASE}textures/${id}_diff.webp`, repeat, true),
                 texture(`${BASE}textures/${id}_nor.webp`, repeat, false),
@@ -74,8 +76,8 @@ export function createAssets(renderer) {
             ]);
             if (!map) warn(id, "missing texture");
             return new THREE.MeshStandardMaterial({
-                map, normalMap, roughnessMap: arm, aoMap: arm,
-                roughness, metalness: 0,
+                map, normalMap, roughnessMap: sheen ? arm : null, aoMap: arm,
+                roughness, metalness: 0, envMapIntensity,
                 color: tint ? new THREE.Color(tint) : new THREE.Color(0xffffff),
             });
         },

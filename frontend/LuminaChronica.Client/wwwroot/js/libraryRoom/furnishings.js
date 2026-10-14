@@ -1,4 +1,5 @@
 import * as THREE from "../../lib/three/three.module.min.js";
+import { persianRug } from "./victorian.js";
 
 // What furnishes the rotunda besides its cases: the inlaid compass rose in
 // the middle of the floor (where the light from the oculus falls) and a
@@ -69,10 +70,8 @@ export async function readingCorner(room, { angle, radius, rugMaterial }) {
     group.position.set(Math.sin(angle) * radius, 0, -Math.cos(angle) * radius);
     group.rotation.y = -angle;
 
-    const rug = new THREE.Mesh(new THREE.CircleGeometry(0.92, 64), rugMaterial);
-    rug.rotation.x = -Math.PI / 2;
+    const rug = persianRug(theme, 2.7, 1.9);
     rug.position.y = 0.006;
-    rug.receiveShadow = true;
     group.add(rug);
 
     const table = await assets.place("round_wooden_table_01", 1.05);
@@ -93,6 +92,21 @@ export async function readingCorner(room, { angle, radius, rugMaterial }) {
         chair.rotation.y = 0.25;
         group.add(chair);
     }
+
+    // a side table with tea, a footstool, a plant
+    const side = await assets.place("round_wooden_table_01", 0.5);
+    if (side) {
+        side.scale.y *= 0.82;
+        side.position.set(0.95, 0, -0.55);
+        group.add(side);
+        const sideTop = new THREE.Box3().setFromObject(side).max.y;
+        const tea = await assets.place("tea_set_01", 0.36);
+        if (tea) { tea.position.set(0.95, sideTop, -0.55); tea.rotation.y = 0.6; group.add(tea); }
+    }
+    const stool = await assets.place("Ottoman_01", 0.5);
+    if (stool) { stool.position.set(0.55, 0, 0.55); stool.rotation.y = 0.3; group.add(stool); }
+    const plant = await assets.place("potted_plant_04", 1.1, "height");
+    if (plant) { plant.position.set(-1.05, 0, -0.6); group.add(plant); }
 
     // an open book, a stack, a candle
     const leather = (hex) => new THREE.MeshStandardMaterial({ color: new THREE.Color(hex), roughness: 0.6 });

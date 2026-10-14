@@ -85,8 +85,8 @@ export async function buildCase(room, c, materials) {
 // The shared materials of all bookcases (in the theme's wood).
 export async function caseMaterials(room) {
     const tint = new THREE.Color(room.theme.wood).multiplyScalar(2.4);
-    const wood = await room.assets.material("walnut_veneer", { repeat: [1, 1.5], tint, roughness: 0.75 });
-    const back = await room.assets.material("walnut_veneer", { repeat: [2, 3], tint: tint.clone().multiplyScalar(0.8), roughness: 0.9 });
+    const wood = await room.assets.material("walnut_veneer", { repeat: [1, 1.5], tint, roughness: 0.72, envMapIntensity: 0.18 });
+    const back = await room.assets.material("walnut_veneer", { repeat: [2, 3], tint: tint.clone().multiplyScalar(0.8), roughness: 0.9, envMapIntensity: 0.12 });
     const brass = new THREE.MeshStandardMaterial({ color: new THREE.Color(room.theme.brass), metalness: 1, roughness: 0.3 });
     const paper = new THREE.MeshStandardMaterial({ color: 0xeadfc2, roughness: 0.95 });
     return { wood, back, brass, paper };

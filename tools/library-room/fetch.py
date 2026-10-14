@@ -6,7 +6,9 @@ from PIL import Image
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'frontend/LuminaChronica.Client/wwwroot/assets/library-room'
 MODELS = ['round_wooden_table_01', 'vintage_oil_lamp', 'Chandelier_01', 'ArmChair_01', 'brass_candleholders',
-          'marble_bust_01', 'vintage_grandfather_clock_01', 'Lantern_01']
+          'marble_bust_01', 'vintage_grandfather_clock_01', 'Lantern_01',
+          'ornate_mirror_01', 'fancy_picture_frame_01', 'mantel_clock_01', 'fern_02', 'potted_plant_04',
+          'Ottoman_01', 'tea_set_01', 'antique_ceramic_vase_01']
 TEXTURES = ['herringbone_parquet', 'dark_wooden_planks', 'walnut_veneer', 'white_stucco', 'plastered_wall_04',
             'marble_tiles', 'blue_floor_tiles_01', 'quatrefoil_jacquard_fabric']
 HDRIS = ['reading_room', 'sepulchral_chapel_rotunda']
